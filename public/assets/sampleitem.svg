@@ -1,0 +1,19 @@
+<svg width="200" height="200" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+
+  <circle cx="500" cy="300" r="160" fill="none" stroke="#000" stroke-width="28"></circle>
+
+  <path d="M390 350 L490 270 L520 300" fill="none" stroke="#000" stroke-width="38" stroke-linecap="square" stroke-linejoin="miter"></path>
+
+  <path d="M515 300 L630 190" fill="none" stroke="#000" stroke-width="38" stroke-linecap="square"></path>
+
+  <text x="500" y="620" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="120" font-weight="900" fill="#000">
+    SAMPLE
+  </text>
+
+  <line x1="250" y1="670" x2="750" y2="670" stroke="#000" stroke-width="8"></line>
+
+  <text x="500" y="770" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="80" letter-spacing="12" fill="#000">
+    ITEM
+  </text>
+
+</svg>

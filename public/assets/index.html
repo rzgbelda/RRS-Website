@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Ready Supply</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<script>
+document.getElementById('invoiceUpload').addEventListener('change', function() {
+
+    if (this.files.length > 0) {
+
+        document.getElementById('fileName').textContent =
+            this.files[0].name;
+
+    }
+
+});
+</script>
+
+
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div>
+      <span>📞 (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="index.html" class="logo">
+      <div class="logo-rr">
+        <span class="blue-r">R</span><span class="orange-r">R</span>
+      </div>
+      <div class="logo-text">
+        <h2>Room Ready</h2>
+        <p>SUPPLY</p>
+      </div>
+    </a>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="shopcatalog.html">Catalog</a>
+    <a href="#how-it-works">How it Works</a>
+    <a href="#reorder-program">Reorder Program</a>
+    <a href="#business-pricing">Business Pricing</a>
+    <a href="#about-us">About Us</a>
+    <a href="#contact">Contact</a>
+  </nav>
+
+    <button class="cart-btn">🛒 3 Items</button>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <h1>
+        Keep Your<br>
+        Rooms Ready<br>
+        <span>Without Chasing Supplies</span>
+      </h1>
+
+      <p>
+        Room Ready Supply helps hotels, motels, short-term rentals,
+        cleaning companies, and facilities order the everyday supplies
+        they need with simple pricing, easy reordering, and local support.
+      </p>
+
+      <div class="hero-buttons">
+        <a href="shopcatalog.html" class="btn-primary">
+    🛒 Shop Catalog
+</a>
+        <a href="#business-pricing" class="btn-secondary">
+    📄 Request Business Pricing
+</a>
+      </div>
+    </div>
+
+    <div class="hero-image">
+      <img src="banner1.png" alt="Room Ready Supply Banner">
+    </div>
+  </section>
+
+  <section class="supply-section">
+    <h2>What We Supply</h2>
+    <div class="underline"></div>
+    <p>Everyday hospitality and facility essentials.</p>
+  </section>
+
+  <section class="product-section">
+    <button class="arrow left-arrow">‹</button>
+
+    <div class="product-grid">
+      <div class="product-card">
+        <div class="product-box">
+          <img src="sampleitem.svg" alt="Sample Item">
+          <p>ITEM NAME</p>
+        </div>
+        <button class="add-cart">🛒 ADD TO CART</button>
+      </div>
+
+      <div class="product-card">
+        <div class="product-box">
+          <img src="sampleitem.svg" alt="Sample Item">
+          <p>ITEM NAME</p>
+        </div>
+        <button class="add-cart">🛒 ADD TO CART</button>
+      </div>
+
+      <div class="product-card">
+        <div class="product-box">
+          <img src="sampleitem.svg" alt="Sample Item">
+          <p>ITEM NAME</p>
+        </div>
+        <button class="add-cart">🛒 ADD TO CART</button>
+      </div>
+
+      <div class="product-card">
+        <div class="product-box">
+          <img src="sampleitem.svg" alt="Sample Item">
+          <p>ITEM NAME</p>
+        </div>
+        <button class="add-cart">🛒 ADD TO CART</button>
+      </div>
+    </div>
+
+    <button class="arrow right-arrow">›</button>
+
+    <a href="shopcatalog.html" class="view-more">
+    View More &gt;&gt;
+</a>
+  </section>
+
+  <section class="serve-section">
+    <h2>Who We Serve</h2>
+    <div class="underline"></div>
+  </section>
+
+  <section class="customer-types">
+
+    <div class="customer-card">
+
+        <div class="customer-item">
+            <img src="Hotel.png" alt="Hotels">
+            <span>Hotels</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="Motel.png" alt="Motels">
+            <span>Motels</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="ShortTermRental.png" alt="Short Term Rentals">
+            <span>Short-Term Rentals</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="CleaningCompany.png" alt="Cleaning Companies">
+            <span>Cleaning Companies</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="Restaurant.png" alt="Restaurants">
+            <span>Restaurants</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="Campgrounds.png" alt="Campgrounds">
+            <span>Campgrounds</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="RV.png" alt="RV Parks">
+            <span>RV Parks</span>
+        </div>
+
+        <div class="customer-item">
+            <img src="Facilities.png" alt="Facilities">
+            <span>Facilities</span>
+        </div>
+
+    </div>
+</section>
+
+<section class="ordering-section">
+
+    <div class="ordering-left">
+  <h2>How Ordering Works</h2>
+
+  <div class="steps-row">
+
+    <div class="step">
+      <div class="step-icon">⌕</div>
+      <h3>1. Browse</h3>
+      <p>Explore products by category.</p>
+    </div>
+
+    <div class="step-arrow">→</div>
+
+    <div class="step">
+      <div class="step-icon">🛒</div>
+      <h3>2. Select</h3>
+      <p>Add items and quantities to your order.</p>
+    </div>
+
+    <div class="step-arrow">→</div>
+
+    <div class="step">
+      <div class="step-icon">📋</div>
+      <h3>3. Submit</h3>
+      <p>Send your order request with delivery details.</p>
+    </div>
+
+    <div class="step-arrow">→</div>
+
+    <div class="step">
+      <div class="step-icon">✓</div>
+      <h3>4. Confirm</h3>
+      <p>We confirm pricing, availability, and delivery.</p>
+    </div>
+
+    <div class="step-arrow">→</div>
+
+    <div class="step">
+      <div class="step-icon">🚚</div>
+      <h3>5. Reorder</h3>
+      <p>Set a reminder or recurring schedule.</p>
+    </div>
+
+  </div>
+</div>
+
+    <div class="reorder-card">
+
+        <h2>Reorder Program</h2>
+
+        <p>
+            Build your supply list and choose a reminder or recurring schedule.
+        </p>
+
+        <div class="schedule-grid">
+
+            <div>✓ Weekly</div>
+            <div>✓ Every 45 Days</div>
+
+            <div>✓ Every 2 Weeks</div>
+            <div>✓ Every 60 Days</div>
+
+            <div>✓ Monthly</div>
+            <div>✓ Custom Schedule</div>
+
+        </div>
+
+        <a href="#" class="schedule-btn">
+            ⏰ SCHEDULE NOW!
+        </a>
+
+    </div>
+
+</section>
+
+<section class="pricing-request-section">
+
+    <div class="pricing-content">
+
+        <div class="pricing-left">
+<section id="business-pricing" class="pricing-request-section">
+  <div class="pricing-wrapper">
+
+    <div class="pricing-form-area">
+      <h2>Request Business Pricing</h2>
+      <div class="pricing-title-line"></div>
+
+      <p class="pricing-intro">
+        Let us quote the products you already buy. Send your current supply list,
+        invoice, or estimated monthly usage and we will help review available options
+      </p>
+
+      <div class="pricing-benefits">
+        <div class="benefit-item">
+          <span class="benefit-icon">🏷️</span>
+          <strong>Competitive<br>Case Pricing</strong>
+        </div>
+
+        <div class="benefit-item">
+          <span class="benefit-icon">▦</span>
+          <strong>Hospitality<br>Focused Products</strong>
+        </div>
+
+        <div class="benefit-item">
+          <span class="benefit-icon">📍</span>
+          <strong>Local<br>Support</strong>
+        </div>
+
+        <div class="benefit-item">
+          <span class="benefit-icon">↻</span>
+          <strong>Easy Reorder<br>Program</strong>
+        </div>
+      </div>
+
+      <form class="business-form">
+        <div class="form-columns">
+
+          <div class="form-column">
+            <h3>Business Information</h3>
+
+            <label>Business Name</label>
+            <input type="text" placeholder="Enter business name">
+
+            <label>Customer Type</label>
+            <input type="text" placeholder="Enter customer type">
+
+            <label>Contact Name</label>
+            <input type="text" placeholder="Enter contact name">
+
+            <label>Email</label>
+            <input type="email" placeholder="Enter email address">
+          </div>
+
+          <div class="form-column">
+            <h3>Supply Information</h3>
+
+            <label>Current Supplier (if known)</label>
+            <input type="text" placeholder="Enter current supplier">
+
+            <label>Regular Products You Buy</label>
+            <input type="text" placeholder="e.g., paper products, cleaning supplies, soaps">
+
+            <label>Estimated Monthly Usage</label>
+            <input type="text" placeholder="e.g., $500–$1,000">
+
+            <label>Upload Current Invoice / Sample Order</label>
+            <label class="upload-box">
+
+    <div class="upload-icon">
+    <svg width="40" height="40" viewBox="0 0 24 24" fill="none">
+        <path d="M14 2H6C4.9 2 4 2.9 4 4V20C4 21.1 4.9 22 6 22H18C19.1 22 20 21.1 20 20V8L14 2Z"
+            stroke="#F26F21"
+            stroke-width="2"/>
+        <path d="M14 2V8H20"
+            stroke="#F26F21"
+            stroke-width="2"/>
+        <path d="M12 18V12"
+            stroke="#F26F21"
+            stroke-width="2"/>
+        <path d="M9.5 14.5L12 12L14.5 14.5"
+            stroke="#F26F21"
+            stroke-width="2"/>
+    </svg>
+</div>
+
+    <strong>Drag & drop your file here</strong>
+
+    <span>or browse to upload</span>
+
+    <small>PDF, JPG, PNG (Max 10MB)</small>
+
+    <input
+        type="file"
+        id="invoiceUpload"
+        accept=".pdf,.jpg,.jpeg,.png"
+    >
+
+</label>
+
+          </div>
+
+        </div>
+
+        <div class="notes-area">
+          <label>
+            Additional Notes<br>
+            <span>(delivery location, recurring supplies, etc.)</span>
+          </label>
+          <textarea placeholder="Tell us anything else that will help us quote your business"></textarea>
+        </div>
+
+        <button type="submit" class="quote-btn">Get My Business Quote</button>
+      </form>
+    </div>
+
+    <div class="pricing-image">
+      <img src="banner4.png" alt="Business pricing hotel supplies">
+    </div>
+
+  </div>
+  </section>
+  
+</section>
+
+</div>
+<section id="about-us" class="about-section">
+
+    <div class="about-top">
+
+        <div class="about-content">
+
+            <span class="about-label">ABOUT US</span>
+
+            <div class="about-line"></div>
+
+            <h2>
+                We Help Operators<br>
+                Stay Ready
+            </h2>
+
+            <div class="about-line large"></div>
+
+            <p>
+                Keeping rooms, rentals, kitchens, and facilities ready takes more
+                than just products — it takes a supply partner that understands
+                repeat ordering.
+            </p>
+
+            <p>
+                Room Ready Supply provides hospitality and facility essentials such
+                as paper products, trash liners, cleaning supplies, soaps, laundry
+                items, dishwashing products, guest room supplies, linens, food
+                service supplies, and facility essentials.
+            </p>
+
+            <p>
+                Our goal is simple: help businesses stop chasing supplies and start
+                using a clear, organized reorder system.
+            </p>
+
+        </div>
+
+        <div class="about-image">
+    <img src="banner3.png" alt="Room Ready Supply">
+</div>
+
+    </div>
+
+    <div class="about-features">
+
+        <div class="feature-card">
+
+            <img src="au1.svg" alt="Everyday Essentials">
+
+            <div>
+                <h3>Everyday Essentials</h3>
+
+                <p>
+                    Quality products for hospitality,
+                    rentals, cleaning teams,
+                    restaurants, and facilities.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="feature-card">
+
+            <img src="au2.svg" alt="Simple Ordering">
+
+            <div>
+                <h3>Simple Business Ordering</h3>
+
+                <p>
+                    Organized ordering designed for
+                    recurring purchases and
+                    repeat supply management.
+                </p>
+            </div>
+
+        </div>
+
+        <div class="feature-card">
+
+            <img src="au3.svg" alt="Reorder Program">
+
+            <div>
+                <h3>Reorder Made Easy</h3>
+
+                <p>
+                    Set reorder reminders or recurring
+                    schedules with approval before
+                    processing.
+                </p>
+            </div>
+
+        </div>
+
+    </div>
+
+</section>
+</body>
+<div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div>
+      <span>📞 (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+</footer>
+</html>

@@ -1,0 +1,24 @@
+<svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer Circle -->
+  <circle cx="60" cy="60" r="38" fill="none" stroke="#F26A21" stroke-width="3"></circle>
+
+  <!-- Clipboard -->
+  <g fill="none" stroke="#F26A21" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Clipboard Body -->
+    <rect x="47" y="36" width="26" height="40" rx="2"></rect>
+
+    <!-- Clipboard Clip -->
+    <path d="M54 36v-4h12v4"></path>
+    <rect x="54" y="30" width="12" height="6" rx="1"></rect>
+
+    <!-- Checklist -->
+    <path d="M53 46l2 2 4-4"></path>
+    <line x1="60" y1="46" x2="68" y2="46"></line>
+
+    <path d="M53 55l2 2 4-4"></path>
+    <line x1="60" y1="55" x2="68" y2="55"></line>
+
+    <path d="M53 64l2 2 4-4"></path>
+    <line x1="60" y1="64" x2="68" y2="64"></line>
+  </g>
+</svg>
