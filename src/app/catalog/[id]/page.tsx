@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import TopBar from "@/components/TopBar";
@@ -47,11 +47,12 @@ const PRODUCTS: Record<
 export default function ProductDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id: rawId } = use(params);
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
-  const id = parseInt(params.id, 10);
+  const id = parseInt(rawId, 10);
   const product = PRODUCTS[id] ?? {
     id,
     name: "Product Item",
