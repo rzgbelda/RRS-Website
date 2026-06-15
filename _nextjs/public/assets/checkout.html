@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+  <a href="index.html" class="logo">
+    <img src="RR logo.png" alt="Room Ready Supply Logo" />
+  </a>
+
+  <nav class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="catalog.html">Catalog</a>
+    <a href="index.html#how-it-works">How it Works</a>
+    <a href="index.html#reorder-header">Reorder Program</a>
+    <a href="index.html#business-pricing">Business Pricing</a>
+    <a href="index.html#about-us">About Us</a>
+    <a href="index.html#about-us">Contact</a>
+  </nav>
+
+  <div class="nav-icons">
+
+    <!-- Search -->
+    <a href="catalog.html">
+      <img src="hl1.svg" alt="Search">
+    </a>
+
+    <!-- Guest Only -->
+    <a href="login.html" class="guest-only login-nav-btn">
+      Login
+    </a>
+
+    <!-- Logged In -->
+    <div class="logged-in-only account-dropdown">
+
+      <button class="account-btn">
+        <img src="hl2.svg" alt="Account">
+      </button>
+
+      <div class="dropdown-menu">
+
+        <a href="profile.html">
+          My Account
+        </a>
+
+        <a href="orders.html">
+          Order History
+        </a>
+
+        <a href="reorder.html">
+          Reorder Program
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <button id="logout-btn">
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Cart -->
+    <div class="cart-container">
+      <a href="cart.html">
+        <img src="hl3.svg" alt="Cart">
+      </a>
+
+      <span id="cart-count" class="cart-count">
+        0
+      </span>
+    </div>
+
+  </div>
+
+</header>
+
+  <main class="checkout-page">
+
+  <a href="cart.html" class="back-link">← Back</a>
+
+  <h1>Submit Your Order Request</h1>
+  <p class="checkout-intro">
+    Tell us what you need and when. We’ll review your request and confirm pricing, availability, and delivery details.
+  </p>
+
+  <div class="checkout-layout">
+
+    <section class="checkout-left">
+
+      <div class="checkout-card">
+        <h2>1. Customer details</h2>
+
+        <div class="form-grid">
+          <label>Business Name* <input type="text" placeholder="Enter business name"></label>
+          <label>Contact Name: <input type="text" placeholder="Enter contact name"></label>
+          <label>Phone Number* <input type="text" placeholder="(123) 456-7890"></label>
+          <label>Email Address: <input type="email" placeholder="email@business.com"></label>
+        </div>
+
+        <label class="full-field">Delivery Address* <input type="text" placeholder="Street address"></label>
+
+        <div class="address-grid">
+          <input type="text" placeholder="City">
+          <select>
+            <option>State</option>
+          </select>
+          <input type="text" placeholder="ZIP Code">
+        </div>
+
+        <label class="checkbox-line">
+          <input type="checkbox">
+          Billing address is the same as delivery address.
+        </label>
+      </div>
+
+      <div class="checkout-card">
+        <h2>2. Order details</h2>
+
+        <p class="field-title">How would you like to order*</p>
+
+        <div class="order-options">
+
+    <label class="order-option">
+        <input type="radio" name="orderType">
+        <div class="option-card">
+
+            <span class="radio-circle"></span>
+
+            <div class="option-content">
+                <h4>Set Up Reorder</h4>
+                <p>Schedule automatic reorders with approval before proceeding.</p>
+            </div>
+
+        </div>
+    </label>
+
+    <label class="order-option">
+        <input type="radio" name="orderType" checked>
+        <div class="option-card">
+
+            <span class="radio-circle"></span>
+
+            <div class="option-content">
+                <h4>One-Time Order</h4>
+                <p>Place a one-time order with no future commitment.</p>
+            </div>
+
+        </div>
+    </label>
+
+</div>
+
+        <h3 class="product-list-title">Product List</h3>
+
+<div id="checkout-products"></div>
+
+      </div>
+
+    </section>
+
+    <aside class="checkout-summary">
+      <div class="summary-head">
+        <h2>Order Summary</h2>
+        <span id="summary-count">0 Items</span>
+      </div>
+
+      <div id="summary-items"></div>
+
+      <div class="summary-price">
+        <p>
+  <span>Subtotal</span>
+  <strong id="summary-subtotal">$1,049.70</strong>
+</p>
+        <p><span>Estimated Shipping</span><strong>TBD</strong></p>
+      </div>
+
+      <div class="summary-total">
+  <span>Estimated Total</span>
+  <strong id="summary-total">$0.00</strong>
+</div>
+
+      <p class="summary-note">
+        You'll receive final pricing, availability, and delivery details in your confirmation.
+      </p>
+    </aside>
+
+  </div>
+</main>
+
+
+<script src="script.js"></script>
+</body>
+</html>

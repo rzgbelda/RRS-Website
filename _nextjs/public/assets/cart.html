@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+  <a href="index.html" class="logo">
+    <img src="RR logo.png" alt="Room Ready Supply Logo" />
+  </a>
+
+  <nav class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="catalog.html">Catalog</a>
+    <a href="index.html#how-it-works">How it Works</a>
+    <a href="index.html#reorder-header">Reorder Program</a>
+    <a href="index.html#business-pricing">Business Pricing</a>
+    <a href="index.html#about-us">About Us</a>
+    <a href="index.html#about-us">Contact</a>
+  </nav>
+
+  <div class="nav-icons">
+
+    <!-- Search -->
+    <a href="catalog.html">
+      <img src="hl1.svg" alt="Search">
+    </a>
+
+    <!-- Guest Only -->
+    <a href="login.html" class="guest-only login-nav-btn">
+      Login
+    </a>
+
+    <!-- Logged In -->
+    <div class="logged-in-only account-dropdown">
+
+      <button class="account-btn">
+        <img src="hl2.svg" alt="Account">
+      </button>
+
+      <div class="dropdown-menu">
+
+        <a href="profile.html">
+          My Account
+        </a>
+
+        <a href="orders.html">
+          Order History
+        </a>
+
+        <a href="reorder.html">
+          Reorder Program
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <button id="logout-btn">
+          Logout
+        </button>
+
+      </div>
+
+    </div>
+
+    <!-- Cart -->
+    <div class="cart-container">
+      <a href="cart.html">
+        <img src="hl3.svg" alt="Cart">
+      </a>
+
+      <span id="cart-count" class="cart-count">
+        0
+      </span>
+    </div>
+
+  </div>
+
+</header>
+
+<main class="cart-page">
+  <section class="cart-left">
+    <h1>Your Cart</h1>
+    <div class="cart-title-line"></div>
+
+    <div class="cart-table">
+  <div class="cart-header">
+    <span>PRODUCT</span>
+    <span>PRICE</span>
+    <span>QUANTITY</span>
+    <span>REORDER</span>
+    <span>TOTAL</span>
+    <span></span>
+  </div>
+
+  <div class="cart-items" id="cart-items"></div>
+</div>
+
+  </section>
+
+  <aside class="order-summary">
+    <h2>Order Summary</h2>
+    <div class="summary-line"></div>
+
+    <div class="summary-row">
+      <span>Subtotal (80 items)</span>
+      <span id="subtotal">$349.90</span>
+    </div>
+
+    <div class="summary-row">
+      <span>Shipping</span>
+      <strong>Free</strong>
+    </div>
+
+    <div class="summary-row discount">
+      <span>Discount</span>
+      <span id="discount">-$0.00</span>
+    </div>
+
+    <div class="summary-total">
+      <span>Estimated Total</span>
+      <span id="estimated-total">$349.90</span>
+    </div>
+
+    <p>Taxes calculated at checkout</p>
+
+    <a href="checkout.html" class="checkout-btn">
+    Proceed to Checkout
+    </a>
+
+    <div class="summary-benefits">
+
+    <div class="benefit-item">
+        <img src="fs.svg" alt="Free Shipping">
+
+        <div>
+            <strong>Free Shipping</strong>
+            <p>On orders over $500</p>
+        </div>
+    </div>
+
+    <div class="benefit-item">
+        <img src="secure.svg" alt="Secure Checkout">
+
+        <div>
+            <strong>Secure Checkout</strong>
+            <p>Your information is safe and protected.</p>
+        </div>
+    </div>
+
+    <div class="benefit-item">
+        <img src="cs.svg" alt="Customer Support">
+
+        <div>
+            <strong>Customer Support</strong>
+            <p>We're here to help.</p>
+        </div>
+    </div>
+
+</div>
+  </aside>
+</main>
+
+
+<script src="script.js"></script>
+
+
+</body>
+</html>
