@@ -1,19 +1,4 @@
-"use client";
-
-import { useState } from "react";
 import Link from "next/link";
-import TopBar from "@/components/TopBar";
-import Footer from "@/components/Footer";
-
-const NAV_ITEMS = [
-  { href: "/admin", label: "📊 Overview" },
-  { href: "/admin/products", label: "📦 Products" },
-  { href: "/admin/orders", label: "🧾 Orders" },
-  { href: "/admin/quotes", label: "📄 Quotes" },
-  { href: "/admin/customers", label: "👥 Customers" },
-  { href: "/admin/reorders", label: "🔄 Reorders" },
-  { href: "/admin/invoices", label: "📁 Invoices" },
-];
 
 const RECENT_ORDERS = [
   { id: "ORD-041", biz: "Blue Heron Hotel", items: 4, status: "New", date: "2024-05-14", total: "$480" },
@@ -39,119 +24,87 @@ const statusBadge = (s: string) => {
   return map[s] || "badge-blue";
 };
 
+export const metadata = { title: "Admin Overview | Room Ready Supply" };
+
 export default function AdminPage() {
   return (
-    <>
-      <TopBar />
-      <div style={{ background: "#0f2b57", padding: "0 40px", display: "flex", alignItems: "center", height: "64px" }}>
-        <Link href="/" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: "13px" }}>
-          ← Back to Site
+    <main className="dashboard-content">
+      <h1 className="dashboard-title">Admin Overview</h1>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="label">Total Orders</div>
+          <div className="value">41</div>
+        </div>
+        <div className="stat-card">
+          <div className="label">New Orders</div>
+          <div className="value accent">3</div>
+        </div>
+        <div className="stat-card">
+          <div className="label">Active Customers</div>
+          <div className="value">28</div>
+        </div>
+        <div className="stat-card">
+          <div className="label">Pending Quotes</div>
+          <div className="value accent">5</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
+        <div className="data-table">
+          <h2>Recent Orders</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Business</th><th>Total</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {RECENT_ORDERS.map((o) => (
+                <tr key={o.id}>
+                  <td style={{ fontWeight: "600", color: "#f26f21", fontSize: "12px" }}>{o.id}</td>
+                  <td style={{ fontSize: "13px" }}>{o.biz}</td>
+                  <td style={{ fontSize: "13px" }}>{o.total}</td>
+                  <td><span className={`badge ${statusBadge(o.status)}`}>{o.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="data-table">
+          <h2>Recent Quote Requests</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Business</th><th>Type</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {RECENT_QUOTES.map((q) => (
+                <tr key={q.id}>
+                  <td style={{ fontWeight: "600", color: "#f26f21", fontSize: "12px" }}>{q.id}</td>
+                  <td style={{ fontSize: "13px" }}>{q.biz}</td>
+                  <td style={{ fontSize: "13px" }}>{q.type}</td>
+                  <td><span className={`badge ${statusBadge(q.status)}`}>{q.status}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style={{ marginTop: "24px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
+        <Link href="/admin/products" className="btn-primary" style={{ textAlign: "center", padding: "16px" }}>
+          + Add Product
         </Link>
-        <span style={{ color: "white", fontWeight: "700", fontSize: "18px", marginLeft: "auto", marginRight: "auto" }}>
-          🏢 Room Ready Supply — Admin
-        </span>
+        <Link href="/admin/orders" className="btn-secondary" style={{ textAlign: "center", padding: "16px" }}>
+          View All Orders
+        </Link>
+        <Link href="/admin/quotes" className="btn-secondary" style={{ textAlign: "center", padding: "16px" }}>
+          Review Quotes
+        </Link>
       </div>
-
-      <div className="dashboard-layout">
-        <aside className="sidebar-nav">
-          {NAV_ITEMS.map((item) => (
-            <Link key={item.href} href={item.href} className="active">
-              {item.label}
-            </Link>
-          ))}
-        </aside>
-
-        <main className="dashboard-content">
-          <h1 className="dashboard-title">Admin Overview</h1>
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="label">Total Orders</div>
-              <div className="value">41</div>
-            </div>
-            <div className="stat-card">
-              <div className="label">New Orders</div>
-              <div className="value accent">3</div>
-            </div>
-            <div className="stat-card">
-              <div className="label">Active Customers</div>
-              <div className="value">28</div>
-            </div>
-            <div className="stat-card">
-              <div className="label">Pending Quotes</div>
-              <div className="value accent">5</div>
-            </div>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px" }}>
-            <div className="data-table">
-              <h2>Recent Orders</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Business</th>
-                    <th>Total</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT_ORDERS.map((o) => (
-                    <tr key={o.id}>
-                      <td style={{ fontWeight: "600", color: "#f26f21", fontSize: "12px" }}>{o.id}</td>
-                      <td style={{ fontSize: "13px" }}>{o.biz}</td>
-                      <td style={{ fontSize: "13px" }}>{o.total}</td>
-                      <td>
-                        <span className={`badge ${statusBadge(o.status)}`}>{o.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="data-table">
-              <h2>Recent Quote Requests</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Business</th>
-                    <th>Type</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {RECENT_QUOTES.map((q) => (
-                    <tr key={q.id}>
-                      <td style={{ fontWeight: "600", color: "#f26f21", fontSize: "12px" }}>{q.id}</td>
-                      <td style={{ fontSize: "13px" }}>{q.biz}</td>
-                      <td style={{ fontSize: "13px" }}>{q.type}</td>
-                      <td>
-                        <span className={`badge ${statusBadge(q.status)}`}>{q.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div style={{ marginTop: "24px", display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: "16px" }}>
-            <Link href="/admin/products" className="btn-primary" style={{ textAlign: "center", padding: "16px" }}>
-              + Add Product
-            </Link>
-            <Link href="/admin/orders" className="btn-secondary" style={{ textAlign: "center", padding: "16px" }}>
-              View All Orders
-            </Link>
-            <Link href="/admin/quotes" className="btn-secondary" style={{ textAlign: "center", padding: "16px" }}>
-              Review Quotes
-            </Link>
-          </div>
-        </main>
-      </div>
-
-      <Footer />
-    </>
+    </main>
   );
 }
