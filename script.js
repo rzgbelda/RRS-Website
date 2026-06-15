@@ -162,35 +162,151 @@ function setupReorderDropdowns() {
    LOGIN
 ========================= */
 
+/* ---------- USER AUTH HELPERS ---------- */
+
+function getUsers() {
+  return JSON.parse(localStorage.getItem("rrs_users") || "[]");
+}
+
+function saveUsers(users) {
+  localStorage.setItem("rrs_users", JSON.stringify(users));
+}
+
+function hashPass(str) {
+  return btoa(encodeURIComponent(str));
+}
+
+function currentUser() {
+  try { return JSON.parse(sessionStorage.getItem("rrs_user")); }
+  catch { return null; }
+}
+
+/* ---------- LOGIN SETUP ---------- */
+
 function setupLogin() {
   updateLoginUI();
+  setupAuthTabs();
+  setupRegister();
 
   const loginForm = document.getElementById("loginForm");
+  if (!loginForm) return;
 
-  if (loginForm) {
-    loginForm.addEventListener("submit", e => {
-      e.preventDefault();
+  loginForm.addEventListener("submit", e => {
+    e.preventDefault();
+    const email    = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
+    const password = (document.getElementById("passwordInput")?.value || "").trim();
+    const errEl    = document.getElementById("loginError");
 
-      const email = document.getElementById("emailInput")?.value.trim();
-      const password = document.getElementById("passwordInput")?.value.trim();
+    const users = getUsers();
+    const user  = users.find(u => u.email.toLowerCase() === email && u.passwordHash === hashPass(password));
 
-      if (email === "test@test.com" && password === "test") {
-        localStorage.setItem("loggedIn", "true");
-        window.location.href = "index.html";
-      } else {
-        alert("Invalid email or password");
-      }
-    });
-  }
+    if (user) {
+      localStorage.setItem("loggedIn", "true");
+      sessionStorage.setItem("rrs_user", JSON.stringify({
+        id           : user.id,
+        email        : user.email,
+        contactName  : user.contactName,
+        businessName : user.businessName,
+      }));
+      window.location.href = "index.html";
+    } else {
+      if (errEl) { errEl.textContent = "Incorrect email or password. Please try again."; errEl.style.display = "block"; }
+    }
+  });
 
   const logoutBtn = document.getElementById("logout-btn");
-
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("loggedIn");
+      sessionStorage.removeItem("rrs_user");
       window.location.href = "login.html";
     });
   }
+}
+
+/* ---------- AUTH TABS (Sign In / Create Account) ---------- */
+
+function setupAuthTabs() {
+  const tabSignIn   = document.getElementById("tabSignIn");
+  const tabRegister = document.getElementById("tabRegister");
+  const signInPanel   = document.getElementById("signInPanel");
+  const registerPanel = document.getElementById("registerPanel");
+
+  if (!tabSignIn || !tabRegister) return;
+
+  function showSignIn() {
+    signInPanel.style.display   = "";
+    registerPanel.style.display = "none";
+    tabSignIn.classList.add("active");
+    tabRegister.classList.remove("active");
+  }
+
+  function showRegister() {
+    signInPanel.style.display   = "none";
+    registerPanel.style.display = "";
+    tabRegister.classList.add("active");
+    tabSignIn.classList.remove("active");
+  }
+
+  tabSignIn.addEventListener("click",   showSignIn);
+  tabRegister.addEventListener("click", showRegister);
+
+  document.getElementById("switchToRegister")?.addEventListener("click", e => { e.preventDefault(); showRegister(); });
+  document.getElementById("switchToSignIn")?.addEventListener("click",   e => { e.preventDefault(); showSignIn(); });
+  document.getElementById("goToSignIn")?.addEventListener("click",       e => { e.preventDefault(); showSignIn(); });
+}
+
+/* ---------- REGISTER ---------- */
+
+function setupRegister() {
+  const registerForm = document.getElementById("registerForm");
+  if (!registerForm) return;
+
+  registerForm.addEventListener("submit", e => {
+    e.preventDefault();
+
+    const businessName   = document.getElementById("regBusiness")?.value.trim() || "";
+    const businessType   = document.getElementById("regBusinessType")?.value || "";
+    const contactName    = document.getElementById("regName")?.value.trim() || "";
+    const email          = (document.getElementById("regEmail")?.value || "").trim().toLowerCase();
+    const phone          = document.getElementById("regPhone")?.value.trim() || "";
+    const password       = document.getElementById("regPassword")?.value || "";
+    const confirm        = document.getElementById("regConfirm")?.value || "";
+    const errEl          = document.getElementById("registerError");
+    const successEl      = document.getElementById("registerSuccess");
+
+    const showErr = msg => { errEl.textContent = msg; errEl.style.display = "block"; successEl.style.display = "none"; };
+
+    if (!businessName)  return showErr("Business name is required.");
+    if (!businessType)  return showErr("Please select a business type.");
+    if (!contactName)   return showErr("Contact name is required.");
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return showErr("Please enter a valid email address.");
+    if (password.length < 8) return showErr("Password must be at least 8 characters.");
+    if (password !== confirm) return showErr("Passwords do not match.");
+
+    const users = getUsers();
+    if (users.find(u => u.email.toLowerCase() === email)) {
+      return showErr("An account with this email already exists.");
+    }
+
+    const newUser = {
+      id           : "u" + Date.now().toString(36),
+      businessName,
+      businessType,
+      contactName,
+      email,
+      phone,
+      passwordHash : hashPass(password),
+      createdAt    : new Date().toISOString(),
+    };
+
+    users.push(newUser);
+    saveUsers(users);
+
+    errEl.style.display = "none";
+    registerForm.reset();
+    successEl.style.display = "block";
+  });
 }
 
 function updateLoginUI() {

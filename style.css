@@ -2246,6 +2246,95 @@ textarea:focus {
     cursor: pointer;
 }
 
+/* AUTH TABS */
+.auth-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 28px;
+    border-bottom: 2px solid #eee;
+}
+.auth-tab {
+    flex: 1;
+    height: 44px;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #999;
+    cursor: pointer;
+    transition: color .2s, border-color .2s;
+}
+.auth-tab.active {
+    color: #ED7226;
+    border-bottom-color: #ED7226;
+}
+.auth-tab:hover:not(.active) { color: #555; }
+
+/* AUTH PANEL SUBTITLES */
+.auth-subtitle { font-size: 14px; color: #666; margin-bottom: 24px; }
+
+/* AUTH ERRORS / SUCCESS */
+.auth-error {
+    background: #fef2f2;
+    border: 1px solid #fca5a5;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #dc2626;
+    margin-bottom: 16px;
+}
+.auth-success {
+    background: #f0fdf4;
+    border: 1px solid #86efac;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #16a34a;
+    margin-bottom: 16px;
+}
+.auth-success span { font-weight: 700; margin-right: 4px; }
+.auth-success a { color: #16a34a; font-weight: 700; }
+
+/* AUTH SWITCH LINK */
+.auth-switch {
+    margin-top: 20px;
+    font-size: 13px;
+    text-align: center;
+    color: #666;
+}
+.auth-switch a { color: #ED7226; font-weight: 600; text-decoration: none; }
+.auth-switch a:hover { text-decoration: underline; }
+
+/* REQUIRED ASTERISK */
+.req { color: #ED7226; }
+
+/* REGISTRATION — TWO-COLUMN FORM ROWS */
+.form-row-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 0;
+}
+.form-col { display: flex; flex-direction: column; }
+.form-col .input-group { margin-bottom: 18px; }
+.form-col > label { margin-bottom: 8px; }
+
+/* SELECT INSIDE INPUT GROUP */
+.input-group.select-wrap {
+    padding: 0 10px;
+}
+.input-group.select-wrap select {
+    flex: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    cursor: pointer;
+}
+
 .terms {
     margin-top: 28px;
 
@@ -2259,6 +2348,18 @@ textarea:focus {
     color: #ED7226;
     font-size: inherit;
     text-decoration: underline;
+}
+
+/* REGISTER PANEL — SCROLL if tall */
+#registerPanel { overflow-y: auto; }
+.login-form     { overflow-y: auto; }
+
+/* Responsive: stack 2-col register form on mobile */
+@media (max-width: 600px) {
+    .form-row-2 { grid-template-columns: 1fr; gap: 0; }
+    .login-container { grid-template-columns: 1fr; }
+    .login-banner    { display: none; }
+    .login-form      { padding: 32px 24px; }
 }
 
 /* RIGHT */

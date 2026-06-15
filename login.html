@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room Ready Supply</title>
+  <title>Sign In — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -16,11 +16,10 @@
     </div>
   </div>
 
-    <header class="navbar">
+  <header class="navbar">
     <a href="index.html" class="logo">
       <img src="RR logo.png" alt="Room Ready Supply Logo" />
     </a>
-
     <nav class="nav-links">
       <a href="index.html">Home</a>
       <a href="catalog.html">Catalog</a>
@@ -30,139 +29,196 @@
       <a href="index.html#about-us">About Us</a>
       <a href="index.html#about-us">Contact</a>
     </nav>
+  </header>
 
-    </header>
-
-    <section class="login-section">
-
+  <section class="login-section">
     <div class="login-container">
 
-        <!-- LEFT -->
-        <div class="login-form">
+      <!-- LEFT: AUTH FORMS -->
+      <div class="login-form">
 
-            <h1>Welcome Back</h1>
-            <p>Sign in to your account</p>
+        <!-- TABS -->
+        <div class="auth-tabs">
+          <button class="auth-tab active" id="tabSignIn">Sign In</button>
+          <button class="auth-tab" id="tabRegister">Create Account</button>
+        </div>
 
-            <form id="loginForm">
+        <!-- ============ SIGN IN PANEL ============ -->
+        <div id="signInPanel">
 
-                <label>Email Address</label>
+          <h1>Welcome Back</h1>
+          <p class="auth-subtitle">Sign in to your business account</p>
 
-                <div class="input-group">
-                <img src="mail-line.svg" alt="" class="input-icon">
+          <div id="loginError" class="auth-error" style="display:none"></div>
 
-                <input
-                        type="email"
-                        id="emailInput"
-                        placeholder="Email Address">
-                </div>
+          <form id="loginForm">
 
-                <label>Password</label>
-
-                <div class="input-group">
-                <img src="lock-line.svg" alt="" class="input-icon">
-
-                <input
-                    type="password"
-                    id="passwordInput"
-                    placeholder="Password">
-
-                <img
-                    src="eye-off-line.svg"
-                    alt="Show password"
-                    id="togglePassword"
-                    class="eye-icon">
-                </div>
-
-                <div class="login-options">
-
-                    <label class="remember-me">
-                        <input type="checkbox">
-                        Remember me
-                    </label>
-
-                    <a href="#">Forgot password?</a>
-
-                </div>
-
-                <button type="submit" class="signin-btn">
-                    Sign In
-                </button>
-
-            </form>
-
-            <div class="divider">
-                <span>or</span>
+            <label>Email Address</label>
+            <div class="input-group">
+              <img src="mail-line.svg" alt="" class="input-icon">
+              <input type="email" id="emailInput" placeholder="Business Email" required>
             </div>
 
-            <button class="create-account-btn">
-                Create an Account
-            </button>
+            <label>Password</label>
+            <div class="input-group">
+              <img src="lock-line.svg" alt="" class="input-icon">
+              <input type="password" id="passwordInput" placeholder="Password" required>
+              <img src="eye-off-line.svg" alt="Show password" id="togglePassword" class="eye-icon">
+            </div>
 
-            <p class="terms">
-                By signing in, you agree to our
-                <a href="#">Terms of Service</a>
-                and
-                <a href="#">Privacy Policy</a>.
-            </p>
+            <div class="login-options">
+              <label class="remember-me">
+                <input type="checkbox" id="rememberMe"> Remember me
+              </label>
+              <a href="#">Forgot password?</a>
+            </div>
+
+            <button type="submit" class="signin-btn">Sign In</button>
+
+          </form>
+
+          <div class="divider"><span>or</span></div>
+
+          <p class="auth-switch">
+            Don't have an account?
+            <a href="#" id="switchToRegister">Create one</a>
+          </p>
 
         </div>
 
-        <!-- RIGHT -->
+        <!-- ============ REGISTER PANEL ============ -->
+        <div id="registerPanel" style="display:none">
 
-        <div class="login-banner">
+          <h1>Create Account</h1>
+          <p class="auth-subtitle">Join Room Ready Supply today</p>
 
-            <div class="banner-overlay">
+          <div id="registerSuccess" class="auth-success" style="display:none">
+            <span>✓</span> Account created! <a href="#" id="goToSignIn">Sign in now</a>
+          </div>
 
-                <h2>Welcome!</h2>
+          <div id="registerError" class="auth-error" style="display:none"></div>
 
-                <p>
-                    Sign in to access your account, view
-                    order history, and manage your
-                    business with ease.
-                </p>
+          <form id="registerForm">
 
-                <div class="banner-feature">
-
-                    <img src="easyreordering.png" alt="">
-
-                    <div>
-                        <h3>Easy Reordering</h3>
-                        <p>Quickly reorder the supplies you need.</p>
-                    </div>
-
+            <div class="form-row-2">
+              <div class="form-col">
+                <label>Business Name <span class="req">*</span></label>
+                <div class="input-group">
+                  <input type="text" id="regBusiness" placeholder="Hotel / Business Name" required>
                 </div>
-
-                <div class="banner-feature">
-
-                    <img src="orderhistory.png" alt="">
-
-                    <div>
-                        <h3>Order History</h3>
-                        <p>View and track your past orders.</p>
-                    </div>
-
+              </div>
+              <div class="form-col">
+                <label>Business Type <span class="req">*</span></label>
+                <div class="input-group select-wrap">
+                  <select id="regBusinessType" required>
+                    <option value="">Select type…</option>
+                    <option>Hotel</option>
+                    <option>Motel</option>
+                    <option>Short-Term Rental</option>
+                    <option>Cleaning Company</option>
+                    <option>Restaurant</option>
+                    <option>Campground</option>
+                    <option>RV Park</option>
+                    <option>Facility Manager</option>
+                    <option>Property Manager</option>
+                    <option>Other</option>
+                  </select>
                 </div>
-
-                <div class="banner-feature">
-
-                    <img src="businesspricing.png" alt="">
-
-                    <div>
-                        <h3>Business Pricing</h3>
-                        <p>Access exclusive pricing for your business.</p>
-                    </div>
-
-                </div>
-
+              </div>
             </div>
 
+            <label>Contact Name <span class="req">*</span></label>
+            <div class="input-group">
+              <input type="text" id="regName" placeholder="Your Full Name" required>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-col">
+                <label>Email Address <span class="req">*</span></label>
+                <div class="input-group">
+                  <img src="mail-line.svg" alt="" class="input-icon">
+                  <input type="email" id="regEmail" placeholder="Business Email" required>
+                </div>
+              </div>
+              <div class="form-col">
+                <label>Phone Number</label>
+                <div class="input-group">
+                  <input type="tel" id="regPhone" placeholder="(555) 000-0000">
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row-2">
+              <div class="form-col">
+                <label>Password <span class="req">*</span></label>
+                <div class="input-group">
+                  <img src="lock-line.svg" alt="" class="input-icon">
+                  <input type="password" id="regPassword" placeholder="Min. 8 characters" required>
+                </div>
+              </div>
+              <div class="form-col">
+                <label>Confirm Password <span class="req">*</span></label>
+                <div class="input-group">
+                  <img src="lock-line.svg" alt="" class="input-icon">
+                  <input type="password" id="regConfirm" placeholder="Re-enter password" required>
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="signin-btn">Create Account</button>
+
+          </form>
+
+          <p class="auth-switch">
+            Already have an account?
+            <a href="#" id="switchToSignIn">Sign in</a>
+          </p>
+
         </div>
+
+        <p class="terms">
+          By signing in or creating an account, you agree to our
+          <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+        </p>
+
+      </div>
+
+      <!-- RIGHT: BANNER -->
+      <div class="login-banner">
+        <div class="banner-overlay">
+          <h2>Welcome!</h2>
+          <p>
+            Sign in to access your account, view
+            order history, and manage your
+            business with ease.
+          </p>
+          <div class="banner-feature">
+            <img src="easyreordering.png" alt="">
+            <div>
+              <h3>Easy Reordering</h3>
+              <p>Quickly reorder the supplies you need.</p>
+            </div>
+          </div>
+          <div class="banner-feature">
+            <img src="orderhistory.png" alt="">
+            <div>
+              <h3>Order History</h3>
+              <p>View and track your past orders.</p>
+            </div>
+          </div>
+          <div class="banner-feature">
+            <img src="businesspricing.png" alt="">
+            <div>
+              <h3>Business Pricing</h3>
+              <p>Access exclusive pricing for your business.</p>
+            </div>
+          </div>
+        </div>
+      </div>
 
     </div>
+  </section>
 
-</section>
-
-
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
