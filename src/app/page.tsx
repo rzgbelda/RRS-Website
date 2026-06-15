@@ -105,38 +105,40 @@ export default function HomePage() {
         <div className="product-grid">
           {featuredProducts.map((p) => (
             <div className="product-card" key={p.name}>
-              <Link href="/catalog">
+              <Link href="/catalog" tabIndex={-1} aria-hidden="true">
                 <Image
                   src={p.img}
                   alt={p.name}
-                  width={241}
-                  height={150}
-                  style={{ width: "100%", height: "150px", objectFit: "contain", background: "#f3f3f3", borderRadius: "4px", marginBottom: "14px" }}
+                  width={280}
+                  height={200}
+                  style={{ width: "100%", height: "200px", objectFit: "contain", display: "block" }}
                 />
               </Link>
-              <h3 className="product-name">{p.name}</h3>
-              <p className="product-description">{p.desc}</p>
-              <div className="product-meta">
-                <div className="meta-item">
-                  <Image src="/assets/box.svg" alt="Case Qty" width={14} height={14} />
-                  <span>Case Qty: {p.caseQty}</span>
+              <div className="product-card-body">
+                <h3 className="product-name">{p.name}</h3>
+                <p className="product-description">{p.desc}</p>
+                <div className="product-meta">
+                  <div className="meta-item">
+                    <Image src="/assets/box.svg" alt="Case Qty" width={14} height={14} />
+                    <span>Case Qty: {p.caseQty}</span>
+                  </div>
+                  <div className="meta-item">
+                    <Image src="/assets/pack.svg" alt="Pack Size" width={14} height={14} />
+                    <span>Pack Size: {p.packSize}</span>
+                  </div>
                 </div>
-                <div className="meta-item">
-                  <Image src="/assets/pack.svg" alt="Pack Size" width={14} height={14} />
-                  <span>Pack Size: {p.packSize}</span>
+                <div className="stock-status">
+                  <span className="dot" />
+                  In Stock
                 </div>
+                <div className="feat-price">
+                  ${p.price} <span>/Case</span>
+                </div>
+                <button className="add-btn">
+                  <Image src="/assets/cart.svg" alt="" width={15} height={15} style={{ filter: "brightness(0) invert(1)" }} />
+                  ADD TO CART
+                </button>
               </div>
-              <div className="stock-status">
-                <span className="dot" />
-                In Stock
-              </div>
-              <div className="feat-price">
-                ${p.price} <span>/Case</span>
-              </div>
-              <button className="add-btn">
-                <Image src="/assets/cart.svg" alt="" width={15} height={15} style={{ filter: "brightness(0) invert(1)" }} />
-                ADD TO CART
-              </button>
             </div>
           ))}
         </div>
