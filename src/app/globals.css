@@ -778,12 +778,16 @@ nav a:hover::after {
     font-size: 38px;
   }
   .how-steps-row {
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 20px;
+    flex-direction: column;
+    align-items: center;
+    gap: 36px;
   }
   .how-step-dots {
     display: none;
+  }
+  .how-step {
+    width: 100%;
+    max-width: 200px;
   }
   .supply-section h2 {
     font-size: 38px;
@@ -1358,12 +1362,22 @@ nav a:hover::after {
   .schedule-grid {
     grid-template-columns: 1fr;
   }
+  .customer-card {
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 16px 10px;
+  }
   .customer-item {
-    width: 100px;
+    width: 25%;
+    flex: 0 0 25%;
+    padding: 8px 6px;
+  }
+  .customer-item:not(:last-child)::after {
+    display: none;
   }
   .customer-item img {
-    width: 75px;
-    height: 75px;
+    width: 64px;
+    height: 64px;
   }
   .catalog-header h1 {
     font-size: 42px;
@@ -1373,7 +1387,7 @@ nav a:hover::after {
   }
   .product-card {
     width: 100%;
-    max-width: 241px;
+    max-width: 100%;
   }
   .form-columns {
     grid-template-columns: 1fr;
@@ -1431,7 +1445,10 @@ nav a:hover::after {
     padding: 20px;
   }
   .product-grid {
-    grid-template-columns: 241px;
+    grid-template-columns: 1fr;
+    max-width: 340px;
+    margin-left: auto;
+    margin-right: auto;
   }
   .arrow {
     display: none;
@@ -2776,5 +2793,134 @@ nav a:hover::after {
 @media (max-width: 900px) {
   .product-detail {
     grid-template-columns: 1fr;
+  }
+}
+
+/* ========================
+   MOBILE & TABLET — GLOBAL RESPONSIVE FIXES
+======================== */
+
+body {
+  overflow-x: hidden;
+}
+
+/* Tablet: How Ordering Works center-align left column when stacked */
+@media (max-width: 1100px) {
+  .how-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .how-steps-row {
+    justify-content: center;
+  }
+  .how-left-divider {
+    margin: 4px auto 0;
+  }
+}
+
+/* Mobile: How Ordering Works */
+@media (max-width: 600px) {
+  .how-ordering-section {
+    padding: 0 16px;
+    margin: 40px auto 48px;
+    gap: 40px;
+  }
+  .how-left-headline {
+    font-size: 34px;
+  }
+  .reorder-card-outer {
+    margin: 0;
+  }
+}
+
+/* Mobile: Who We Serve */
+@media (max-width: 600px) {
+  .serve-section h2 {
+    font-size: 34px;
+  }
+  .serve-section {
+    padding-top: 30px;
+  }
+}
+
+/* Mobile: What We Supply heading */
+@media (max-width: 480px) {
+  .supply-section h2 {
+    font-size: 30px;
+  }
+  .supply-section {
+    padding: 30px 16px 8px;
+  }
+  .supply-section p {
+    font-size: 16px;
+  }
+}
+
+/* Mobile: page headers, forms, auth, dashboard */
+@media (max-width: 600px) {
+  .ph-title {
+    font-size: 34px;
+  }
+  .ph-sub {
+    font-size: 15px;
+  }
+  .hiw-steps-grid {
+    gap: 20px;
+  }
+  .hiw-step-card {
+    padding: 24px 16px;
+  }
+  .auth-box {
+    padding: 32px 20px;
+  }
+  .not-found-code {
+    font-size: 80px;
+  }
+  .not-found-title {
+    font-size: 26px;
+  }
+  .dashboard-content {
+    padding: 20px 16px;
+  }
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .confirm-box {
+    padding: 36px 24px;
+  }
+  .confirm-title {
+    font-size: 26px;
+  }
+  .contact-form-box {
+    padding: 24px 20px;
+  }
+}
+
+/* Small phones (< 380px) */
+@media (max-width: 380px) {
+  .hero-content h1 {
+    font-size: 32px;
+  }
+  .supply-section h2 {
+    font-size: 26px;
+  }
+  .serve-section h2 {
+    font-size: 26px;
+  }
+  .reorder-schedule-grid {
+    grid-template-columns: 1fr;
+  }
+  .customer-item span {
+    font-size: 10px;
+  }
+  .customer-item img {
+    width: 52px;
+    height: 52px;
+  }
+  .how-left-headline {
+    font-size: 30px;
   }
 }
