@@ -5,10 +5,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const featuredProducts = [
-  { name: "TOILET PAPER", img: "/assets/sampleitem.svg" },
-  { name: "PAPER TOWELS", img: "/assets/sampleitem.svg" },
-  { name: "TRASH LINERS", img: "/assets/sampleitem.svg" },
-  { name: "HAND SOAP", img: "/assets/sampleitem.svg" },
+  { name: "Toilet Paper", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Paper Towels", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Trash Liners", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Hand Soap", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
 ];
 
 const customerTypes = [
@@ -71,10 +71,12 @@ export default function HomePage() {
           </p>
           <div className="hero-buttons">
             <Link href="/catalog" className="btn-primary">
-              🛒 Shop Catalog
+              <Image src="/assets/cart.svg" alt="" width={18} height={18} style={{ filter: "brightness(0) invert(1)" }} />
+              Shop Catalog
             </Link>
             <Link href="/business-pricing" className="btn-secondary">
-              📄 Request Business Pricing
+              <Image src="/assets/file-list-3-line.svg" alt="" width={18} height={18} style={{ filter: "invert(55%) sepia(78%) saturate(1713%) hue-rotate(347deg) brightness(98%) contrast(90%)" }} />
+              Request Business Pricing
             </Link>
           </div>
         </div>
@@ -104,12 +106,38 @@ export default function HomePage() {
           {featuredProducts.map((p) => (
             <div className="product-card" key={p.name}>
               <Link href="/catalog">
-                <div className="product-box">
-                  <Image src={p.img} alt={p.name} width={95} height={95} />
-                  <p>{p.name}</p>
-                </div>
+                <Image
+                  src={p.img}
+                  alt={p.name}
+                  width={241}
+                  height={150}
+                  style={{ width: "100%", height: "150px", objectFit: "contain", background: "#f3f3f3", borderRadius: "4px", marginBottom: "14px" }}
+                />
               </Link>
-              <button className="add-cart">🛒 ADD TO CART</button>
+              <h3 className="product-name">{p.name}</h3>
+              <p className="product-description">{p.desc}</p>
+              <div className="product-meta">
+                <div className="meta-item">
+                  <Image src="/assets/box.svg" alt="Case Qty" width={14} height={14} />
+                  <span>Case Qty: {p.caseQty}</span>
+                </div>
+                <div className="meta-item">
+                  <Image src="/assets/pack.svg" alt="Pack Size" width={14} height={14} />
+                  <span>Pack Size: {p.packSize}</span>
+                </div>
+              </div>
+              <div className="stock-status">
+                <span className="dot" />
+                In Stock
+              </div>
+              <div className="price-row">
+                <span className="price">${p.price}</span>
+                <span className="unit">/Case</span>
+              </div>
+              <button className="add-btn">
+                <Image src="/assets/cart.svg" alt="" width={15} height={15} />
+                ADD TO CART
+              </button>
             </div>
           ))}
         </div>

@@ -208,6 +208,7 @@ nav a:hover::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
@@ -366,7 +367,7 @@ nav a:hover::after {
 
 .arrow {
   position: absolute;
-  top: 125px;
+  top: 200px;
   transform: translateY(-50%);
   background: white;
   border: 1px solid #ececec;
