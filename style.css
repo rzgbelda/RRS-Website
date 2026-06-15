@@ -3159,3 +3159,211 @@ textarea:focus {
     border-radius: 6px;
     letter-spacing: 0.5px;
 }
+
+/* ================================================
+   RESPONSIVE — FULL SITE
+   Breakpoints: 1200 · 1024 · 900 · 768 · 600 · 480
+================================================ */
+
+/* ── 1200px ─────────────────────────────────── */
+@media (max-width: 1200px) {
+    .section-heading h2 { font-size: 44px; }
+    .section-heading p  { font-size: 20px; }
+    .supply-section { padding: 70px 0; }
+    .serve-section  { padding: 70px 0; }
+    .pricing-section { padding: 70px 4%; }
+    .about-left h2  { font-size: 42px; }
+}
+
+/* ── 1024px: small laptop ───────────────────── */
+@media (max-width: 1024px) {
+    .navbar     { padding: 0 20px; }
+    .nav-links  { gap: 2px; }
+    .nav-links a { padding: 8px 10px; font-size: 13px; }
+
+    .supply-section .product-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .ordering-left h2 { font-size: 40px; }
+
+    .about-features {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* ── 900px: tablet landscape ────────────────── */
+@media (max-width: 900px) {
+    .nav-links a { padding: 6px 8px; font-size: 12px; }
+
+    .supply-section .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .ordering-left h4  { font-size: 30px; }
+    .ordering-left h2  { font-size: 34px; }
+    .ordering-steps    { justify-content: center; }
+    .step-dots         { display: none; }
+    .step-item         { width: 120px; }
+}
+
+/* ── 768px: tablet portrait ─────────────────── */
+@media (max-width: 768px) {
+    /* Top bar: stack */
+    .top-bar {
+        height: auto;
+        padding: 5px 12px;
+        flex-direction: column;
+        gap: 2px;
+        text-align: center;
+    }
+
+    /* Navbar: logo + icons on top row, links wrap below */
+    .navbar {
+        height: auto;
+        padding: 12px 16px;
+        flex-wrap: wrap;
+        gap: 8px;
+        position: relative;
+    }
+    .logo img  { width: 140px; }
+    .nav-links {
+        margin-left: 0;
+        width: 100%;
+        order: 3;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+    .nav-icons { margin-left: auto; }
+
+    /* Section headings */
+    .section-heading h2 { font-size: 30px; }
+    .section-heading p  { font-size: 15px; }
+    .section-heading    { margin-bottom: 28px; }
+
+    /* Supply cards: 2 col on tablet */
+    .supply-section .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .slider-arrow { font-size: 48px; width: 28px; }
+
+    /* Serve */
+    .serve-section  { padding: 50px 0; }
+    .serve-grid     { margin-top: 36px; gap: 30px 10px; }
+    .serve-item img { width: 90px; height: 70px; }
+    .serve-item span { font-size: 13px; margin-top: 10px; }
+
+    /* Ordering: center the left column text */
+    .ordering-section { padding: 50px 20px; }
+    .ordering-left    { text-align: center; }
+    .ordering-left h4 { font-size: 26px; }
+    .ordering-left h2 { font-size: 28px; margin-bottom: 28px; }
+    .ordering-line    { margin: 20px auto 0; }
+    .ordering-steps   { gap: 16px; flex-wrap: wrap; justify-content: center; }
+    .step-item        { width: 100px; }
+    .step-icon        { width: 90px; height: 90px; margin-bottom: 18px; }
+    .step-icon img    { width: 56px; height: 56px; }
+
+    /* Schedule card */
+    .schedule-grid { grid-template-columns: 1fr; gap: 8px; }
+    .choose-schedule-btn { width: 100%; font-size: 17px; }
+
+    /* Pricing */
+    .pricing-left h2 { font-size: 32px; }
+    .pricing-intro   { font-size: 16px; }
+
+    /* About */
+    .about-section  { padding: 28px 16px 20px; }
+    .about-left h2  { font-size: 30px; }
+    .about-image img { height: 240px; }
+    .about-feature  { grid-template-columns: 65px 1fr; gap: 18px; }
+    .about-feature img { width: 55px; height: 55px; }
+}
+
+/* ── 600px: mobile landscape ────────────────── */
+@media (max-width: 600px) {
+    /* Nav links collapse; icons stay accessible */
+    .nav-links { display: none; }
+    .navbar    { flex-wrap: nowrap; padding: 10px 14px; }
+    .nav-icons { margin-left: auto; }
+
+    /* Supply: single column, centered */
+    .supply-section .product-grid {
+        grid-template-columns: 1fr;
+        max-width: 340px;
+        margin: 0 auto;
+    }
+    .supply-slider { gap: 6px; }
+
+    /* Serve: 2-col centered */
+    .serve-grid {
+        max-width: 300px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Ordering steps: smaller */
+    .step-item  { width: 90px; }
+    .step-icon  { width: 78px; height: 78px; }
+    .step-icon img { width: 48px; height: 48px; }
+}
+
+/* ── 480px: phone portrait ──────────────────── */
+@media (max-width: 480px) {
+    .top-bar { display: none; }
+
+    .logo img  { width: 118px; }
+    .nav-icons { gap: 14px; }
+    .nav-icons a img { width: 20px; height: 20px; }
+
+    /* Section headings */
+    .section-heading h2 { font-size: 22px; }
+    .section-heading p  { font-size: 13px; }
+
+    /* Hero */
+    .hero-content { padding: 28px 16px; }
+
+    /* Supply */
+    .supply-section { padding: 40px 0; }
+    .slider-arrow   { font-size: 34px; }
+
+    /* Serve */
+    .serve-section  { padding: 34px 0; }
+    .serve-grid     { max-width: 280px; gap: 18px 8px; margin-top: 24px; }
+    .serve-item img { width: 64px; height: 50px; }
+    .serve-item span { font-size: 11px; margin-top: 8px; }
+
+    /* Ordering */
+    .ordering-section { padding: 34px 14px; }
+    .ordering-left h4 { font-size: 20px; }
+    .ordering-left h2 { font-size: 22px; margin-bottom: 18px; }
+    .step-item        { width: 78px; }
+    .step-icon        { width: 68px; height: 68px; }
+    .step-icon img    { width: 42px; height: 42px; }
+    .step-item h3     { font-size: 11px; }
+    .step-item p      { font-size: 10px; }
+
+    .reorder-card     { margin-top: 14px; }
+    .schedule-content { padding: 18px 14px 16px; }
+    .schedule-content h3 { font-size: 17px; margin-bottom: 18px; }
+    .choose-schedule-btn { height: 48px; font-size: 15px; }
+
+    /* Pricing */
+    .pricing-section { padding: 40px 14px; }
+    .pricing-left    { padding: 22px 18px; }
+    .pricing-left h2 { font-size: 24px; }
+    .pricing-intro   { font-size: 14px; }
+    .pricing-left h3 { font-size: 20px; }
+
+    /* About */
+    .about-section { padding: 22px 14px 16px; }
+    .about-left h4 { font-size: 18px; }
+    .about-left h2 { font-size: 22px; }
+
+    /* View more */
+    .view-more-btn { font-size: 17px; min-width: 160px; height: 46px; }
+
+    /* Bottom bar */
+    .bottom-bar { font-size: 11px; }
+}
