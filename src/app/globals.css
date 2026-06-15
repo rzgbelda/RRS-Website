@@ -269,10 +269,20 @@ nav a:hover::after {
   padding: 5px 20px 20px;
 }
 
-.supply-section h2,
-.serve-section h2 {
+.serve-section {
+  padding-top: 50px;
+}
+
+.supply-section h2 {
   font-size: 38px;
   color: #28476a;
+  font-weight: 700;
+}
+
+.serve-section h2 {
+  font-size: 46px;
+  color: #0f2b50;
+  font-weight: 800;
 }
 
 .underline {
@@ -308,7 +318,7 @@ nav a:hover::after {
 
 .product-card {
   width: 241px;
-  text-align: center;
+  text-align: left;
 }
 
 .product-box {
@@ -441,24 +451,34 @@ nav a:hover::after {
    WHO WE SERVE
 ======================== */
 .customer-types {
-  padding: 20px 0 40px;
+  padding: 10px 0 48px;
 }
 
 .customer-card {
   max-width: 1400px;
   margin: auto;
-  background: #d9d9d9;
-  border-radius: 8px;
-  padding: 18px 25px;
+  background: white;
+  padding: 20px 30px 28px;
   display: flex;
-  justify-content: space-between;
+  justify-content: space-evenly;
   align-items: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .customer-item {
-  width: 120px;
+  flex: 1;
   text-align: center;
+  padding: 6px 10px;
+  position: relative;
+}
+
+.customer-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 8%;
+  height: 84%;
+  width: 1px;
+  background: #c8c8c8;
 }
 
 .customer-item img {
@@ -469,14 +489,268 @@ nav a:hover::after {
 }
 
 .customer-item span {
-  font-size: 14px;
-  color: #111;
-  line-height: 1.3;
+  font-size: 13px;
+  color: #222;
+  line-height: 1.35;
   display: block;
 }
 
 /* ========================
-   ORDERING + REORDER
+   HOW ORDERING WORKS (new design)
+======================== */
+.how-ordering-section {
+  max-width: 1300px;
+  margin: 50px auto 70px;
+  padding: 0 50px;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 60px;
+  align-items: center;
+}
+
+.how-left-tag {
+  font-size: 14px;
+  font-weight: 800;
+  color: #f26f21;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+}
+
+.how-left-headline {
+  font-size: 50px;
+  font-weight: 900;
+  color: #0f2b50;
+  line-height: 1.1;
+  margin-bottom: 36px;
+}
+
+.how-steps-row {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
+.how-step {
+  text-align: center;
+  flex-shrink: 0;
+  width: 96px;
+}
+
+.how-step-circle {
+  width: 86px;
+  height: 86px;
+  background: white;
+  border-radius: 50%;
+  border: 1px solid #e8e8e8;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
+}
+
+.how-step-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 10px;
+  margin-top: 40px;
+  flex-shrink: 0;
+}
+
+.how-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f26f21;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.how-step-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #0f2b50;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+  line-height: 1.4;
+}
+
+.how-step-desc {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+
+.how-left-divider {
+  width: 340px;
+  height: 3px;
+  background: #f26f21;
+}
+
+/* ========================
+   AUTO-REORDER CARD (new design)
+======================== */
+.reorder-card-outer {
+  position: relative;
+  padding-top: 30px;
+}
+
+.reorder-card-icon-wrap {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 58px;
+  height: 58px;
+  background: #f26f21;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  box-shadow: 0 4px 14px rgba(242, 111, 33, 0.45);
+}
+
+.reorder-program-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.reorder-card-header {
+  background: #0f2b50;
+  clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
+  padding: 42px 32px 72px;
+  text-align: center;
+}
+
+.reorder-card-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+.reorder-card-line {
+  width: 60px;
+  height: 2px;
+  background: #f26f21;
+  margin: 0 auto 14px;
+}
+
+.reorder-card-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.65;
+}
+
+.reorder-card-body {
+  padding: 26px 28px 22px;
+}
+
+.reorder-schedule-label {
+  font-size: 12px;
+  font-weight: 800;
+  color: #0f2b50;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.reorder-schedule-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 9px;
+  margin-bottom: 18px;
+}
+
+.reorder-schedule-option {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: #f8f9fa;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 11px 13px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.reorder-schedule-option:hover {
+  border-color: #f26f21;
+  background: #fff8f4;
+}
+
+.reorder-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: #f26f21;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 15px 20px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  cursor: pointer;
+  transition: background 0.2s;
+  text-decoration: none;
+}
+
+.reorder-cta-btn:hover {
+  background: #df5f16;
+  color: white;
+}
+
+.reorder-cancel-note {
+  text-align: center;
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 11px;
+}
+
+@media (max-width: 1024px) {
+  .how-ordering-section {
+    grid-template-columns: 1fr;
+    padding: 0 30px;
+  }
+  .how-left-divider {
+    width: 100%;
+    max-width: 340px;
+  }
+}
+
+@media (max-width: 600px) {
+  .how-left-headline {
+    font-size: 36px;
+  }
+  .how-steps-row {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 20px;
+  }
+  .how-step-dots {
+    display: none;
+  }
+}
+
+/* ========================
+   ORDERING + REORDER (old — kept for any legacy usage)
 ======================== */
 .ordering-section {
   max-width: 1400px;
@@ -541,37 +815,6 @@ nav a:hover::after {
   color: #f26f21;
   font-size: 32px;
   margin-top: 16px;
-}
-
-.reorder-card {
-  background: #e6d7cc;
-  padding: 35px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.reorder-card h2 {
-  color: #f26f21;
-  font-size: 42px;
-  margin-bottom: 10px;
-}
-
-.reorder-card p {
-  font-size: 20px;
-  margin-bottom: 30px;
-  line-height: 1.5;
-}
-
-.schedule-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px;
-  margin-bottom: 30px;
-}
-
-.schedule-grid div {
-  color: #111;
-  font-size: 18px;
 }
 
 .schedule-btn {
@@ -1520,15 +1763,18 @@ nav a:hover::after {
   background: #0f2b50;
   color: white;
   border: none;
-  padding: 10px 18px;
+  padding: 11px 18px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 700;
+  letter-spacing: 0.5px;
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   transition: all 0.2s;
+  width: 100%;
 }
 
 .add-btn:hover {

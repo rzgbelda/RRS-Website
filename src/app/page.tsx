@@ -134,7 +134,7 @@ export default function HomePage() {
                 ${p.price} <span>/Case</span>
               </div>
               <button className="add-btn">
-                <Image src="/assets/cart.svg" alt="" width={15} height={15} />
+                <Image src="/assets/cart.svg" alt="" width={15} height={15} style={{ filter: "brightness(0) invert(1)" }} />
                 ADD TO CART
               </button>
             </div>
@@ -155,47 +155,112 @@ export default function HomePage() {
         <div className="customer-card">
           {customerTypes.map((c) => (
             <div className="customer-item" key={c.name}>
-              <Image src={c.img} alt={c.name} width={100} height={85} />
+              <Image src={c.img} alt={c.name} width={100} height={85} style={{ objectFit: "contain" }} />
               <span>{c.name}</span>
             </div>
           ))}
         </div>
       </section>
 
-      {/* HOW ORDERING WORKS + REORDER PROGRAM */}
-      <section className="ordering-section" id="how-it-works">
-        <div className="ordering-left">
-          <h2>How Ordering Works</h2>
-          <div className="steps-row">
-            {steps.map((s, i) => (
-              <>
-                <div className="step" key={s.label}>
-                  <div className="step-icon">{s.icon}</div>
-                  <h3>{s.label}</h3>
-                  <p>{s.desc}</p>
-                </div>
-                {i < steps.length - 1 && (
-                  <div className="step-arrow" key={`arrow-${i}`}>→</div>
-                )}
-              </>
-            ))}
+      {/* HOW ORDERING WORKS + AUTO-REORDER */}
+      <section className="how-ordering-section" id="how-it-works">
+        {/* LEFT */}
+        <div className="how-left">
+          <p className="how-left-tag">HOW ORDERING WORKS</p>
+          <h2 className="how-left-headline">
+            Simple. Fast.<br />
+            Built for repeat ordering
+          </h2>
+          <div className="how-steps-row">
+            {/* Step 1 */}
+            <div className="how-step">
+              <div className="how-step-circle">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#f26f21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+                  <path d="M1 1h4l2.68 13.39a2 2 0 001.98 1.61h9.72a2 2 0 001.98-1.61L23 6H6"/>
+                </svg>
+              </div>
+              <p className="how-step-label">BROWSE &amp;<br />BUILD</p>
+              <p className="how-step-desc">Explore products and<br />build your cart.</p>
+            </div>
+            <div className="how-step-dots">
+              <span className="how-dot" /><span className="how-dot" /><span className="how-dot" />
+            </div>
+            {/* Step 2 */}
+            <div className="how-step">
+              <div className="how-step-circle">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#f26f21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/>
+                  <rect x="8" y="2" width="8" height="4" rx="1"/>
+                  <line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="15" y2="16"/>
+                </svg>
+              </div>
+              <p className="how-step-label">SUBMIT</p>
+              <p className="how-step-desc">Add items and quantities<br />to your order.</p>
+            </div>
+            <div className="how-step-dots">
+              <span className="how-dot" /><span className="how-dot" /><span className="how-dot" />
+            </div>
+            {/* Step 3 */}
+            <div className="how-step">
+              <div className="how-step-circle">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#f26f21" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                  <polyline points="22 4 12 14.01 9 11.01"/>
+                </svg>
+              </div>
+              <p className="how-step-label">CONFIRM &amp;<br />REORDER</p>
+              <p className="how-step-desc">Send your order request<br />with delivery details.</p>
+            </div>
           </div>
+          <div className="how-left-divider" />
         </div>
 
-        <div className="reorder-card" id="reorder-program">
-          <h2>Reorder Program</h2>
-          <p>Build your supply list and choose a reminder or recurring schedule.</p>
-          <div className="schedule-grid">
-            <div>✓ Weekly</div>
-            <div>✓ Every 45 Days</div>
-            <div>✓ Every 2 Weeks</div>
-            <div>✓ Every 60 Days</div>
-            <div>✓ Monthly</div>
-            <div>✓ Custom Schedule</div>
+        {/* RIGHT — Auto-Reorder Card */}
+        <div className="reorder-card-outer">
+          <div className="reorder-card-icon-wrap" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+              <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+              <line x1="12" y1="22.08" x2="12" y2="12"/>
+            </svg>
           </div>
-          <Link href="/auto-reorder" className="schedule-btn">
-            ⏰ SCHEDULE NOW!
-          </Link>
+          <div className="reorder-program-card">
+            <div className="reorder-card-header">
+              <h3 className="reorder-card-title">AUTO-REORDER PROGRAM</h3>
+              <div className="reorder-card-line" />
+              <p className="reorder-card-sub">
+                Never run out of critical supplies.<br />
+                Set it once, we&apos;ll handle the rest.
+              </p>
+            </div>
+            <div className="reorder-card-body">
+              <p className="reorder-schedule-label">CHOOSE YOUR SCHEDULE</p>
+              <div className="reorder-schedule-grid">
+                {["Weekly", "Every 2 Weeks", "Monthly", "Every 45 Days", "Every 60 Days", "Custom Schedule"].map((s) => (
+                  <div key={s} className="reorder-schedule-option">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#f26f21" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                      <line x1="16" y1="2" x2="16" y2="6"/>
+                      <line x1="8" y1="2" x2="8" y2="6"/>
+                      <line x1="3" y1="10" x2="21" y2="10"/>
+                    </svg>
+                    {s}
+                  </div>
+                ))}
+              </div>
+              <Link href="/auto-reorder" className="reorder-cta-btn">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                  <line x1="16" y1="2" x2="16" y2="6"/>
+                  <line x1="8" y1="2" x2="8" y2="6"/>
+                  <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                CHOOSE YOUR SCHEDULE
+              </Link>
+              <p className="reorder-cancel-note">You can update or cancel anytime.</p>
+            </div>
+          </div>
         </div>
       </section>
 
