@@ -400,6 +400,19 @@ nav a:hover::after {
   box-shadow: 0 8px 18px rgba(242, 111, 33, 0.25);
 }
 
+.feat-price {
+  margin-top: 10px;
+  font-size: 28px;
+  font-weight: 700;
+  color: #f26f21;
+}
+
+.feat-price span {
+  font-size: 18px;
+  font-weight: 700;
+  color: #002b55;
+}
+
 .view-more {
   display: inline-block;
   margin-top: 22px;

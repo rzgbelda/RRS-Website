@@ -5,10 +5,10 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
 const featuredProducts = [
-  { name: "Toilet Paper", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
-  { name: "Paper Towels", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
-  { name: "Trash Liners", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
-  { name: "Hand Soap", img: "/assets/sampleitem.svg", desc: "Commercial Grade", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Premium Hospitality Blanket", img: "/assets/blanket.png", desc: "Commercial Grade Comfort", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Premium Hospitality Blanket", img: "/assets/blanket.png", desc: "Commercial Grade Comfort", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Premium Hospitality Blanket", img: "/assets/blanket.png", desc: "Commercial Grade Comfort", caseQty: 6, packSize: 1, price: "34.99" },
+  { name: "Premium Hospitality Blanket", img: "/assets/blanket.png", desc: "Commercial Grade Comfort", caseQty: 6, packSize: 1, price: "34.99" },
 ];
 
 const customerTypes = [
@@ -130,9 +130,8 @@ export default function HomePage() {
                 <span className="dot" />
                 In Stock
               </div>
-              <div className="price-row">
-                <span className="price">${p.price}</span>
-                <span className="unit">/Case</span>
+              <div className="feat-price">
+                ${p.price} <span>/Case</span>
               </div>
               <button className="add-btn">
                 <Image src="/assets/cart.svg" alt="" width={15} height={15} />
