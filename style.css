@@ -3064,9 +3064,21 @@ textarea:focus {
     }
 
     .pricing-benefits {
-        flex-wrap: wrap;
-        gap: 20px;
-        justify-content: flex-start;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px 16px;
+        justify-content: unset;
+    }
+
+    .pricing-benefit {
+        align-items: center;
+        gap: 10px;
+    }
+
+    .pricing-benefit img {
+        width: 44px;
+        height: 44px;
+        flex-shrink: 0;
     }
 
     .benefit-divider {
