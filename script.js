@@ -1,24 +1,256 @@
-console.log("Script loaded!");
+/* ============================================================
+   Room Ready Supply — Main Script
+   Auth: Supabase Auth   |   Cart: localStorage
+   ============================================================ */
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+  await initAuth();
   updateCartBadge();
   setupReorderDropdowns();
   setupAddToCartButtons();
   setupProductCardClicks();
-  setupLogin();
   setupAccountDropdown();
   setupPasswordToggle();
   setupProductQuantity();
   setupProductGallery();
   loadCartPage();
-  setupCheckoutQuantity();
-  updateCheckoutSummary();
-  loadCheckoutProducts();
+  setupCheckoutPage();
+  setupLoginPage();
+  setupResetPasswordPage();
 });
 
-/* =========================
-   CART BADGE
-========================= */
+/* ============================================================
+   AUTH — Supabase
+   ============================================================ */
+
+async function initAuth() {
+  if (typeof window.sb === "undefined") return;
+
+  /* Listen for auth changes globally */
+  window.sb.auth.onAuthStateChange((_event, session) => {
+    updateLoginUI(!!session);
+    if (_event === "PASSWORD_RECOVERY") {
+      if (!window.location.pathname.includes("reset-password")) {
+        window.location.href = "reset-password.html";
+      }
+    }
+  });
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  updateLoginUI(!!session);
+
+  /* Wire logout button */
+  document.getElementById("logout-btn")?.addEventListener("click", async () => {
+    await window.sb.auth.signOut();
+    localStorage.removeItem("cart");
+    window.location.href = "index.html";
+  });
+}
+
+function updateLoginUI(loggedIn) {
+  document.querySelectorAll(".guest-only").forEach(el => {
+    el.style.display = loggedIn ? "none" : "inline-flex";
+  });
+  document.querySelectorAll(".logged-in-only").forEach(el => {
+    el.style.display = loggedIn ? "inline-flex" : "none";
+  });
+}
+
+/* ============================================================
+   LOGIN PAGE
+   ============================================================ */
+
+function setupLoginPage() {
+  setupAuthTabs();
+  setupSignIn();
+  setupRegister();
+  setupForgotPassword();
+}
+
+function setupAuthTabs() {
+  const tabSignIn   = document.getElementById("tabSignIn");
+  const tabRegister = document.getElementById("tabRegister");
+  const signInPanel   = document.getElementById("signInPanel");
+  const registerPanel = document.getElementById("registerPanel");
+  if (!tabSignIn || !tabRegister) return;
+
+  const showSignIn = () => {
+    signInPanel.style.display   = "";
+    registerPanel.style.display = "none";
+    tabSignIn.classList.add("active");
+    tabRegister.classList.remove("active");
+  };
+  const showRegister = () => {
+    signInPanel.style.display   = "none";
+    registerPanel.style.display = "";
+    tabRegister.classList.add("active");
+    tabSignIn.classList.remove("active");
+  };
+
+  tabSignIn.addEventListener("click", showSignIn);
+  tabRegister.addEventListener("click", showRegister);
+  document.getElementById("switchToRegister")?.addEventListener("click", e => { e.preventDefault(); showRegister(); });
+  document.getElementById("switchToSignIn")?.addEventListener("click",   e => { e.preventDefault(); showSignIn(); });
+  document.getElementById("goToSignIn")?.addEventListener("click",       e => { e.preventDefault(); showSignIn(); });
+}
+
+function setupSignIn() {
+  const loginForm = document.getElementById("loginForm");
+  if (!loginForm) return;
+
+  loginForm.addEventListener("submit", async e => {
+    e.preventDefault();
+    const email    = document.getElementById("emailInput")?.value.trim() || "";
+    const password = document.getElementById("passwordInput")?.value || "";
+    const errEl    = document.getElementById("loginError");
+    const btn      = loginForm.querySelector("button[type=submit]");
+
+    errEl.style.display = "none";
+    btn.disabled = true;
+    btn.textContent = "Signing in…";
+
+    if (typeof window.sb === "undefined") {
+      errEl.textContent = "Backend not connected. Please configure Supabase credentials.";
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Sign In";
+      return;
+    }
+
+    const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errEl.textContent = error.message === "Invalid login credentials"
+        ? "Incorrect email or password. Please try again."
+        : error.message;
+      errEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Sign In";
+      return;
+    }
+
+    /* Redirect admin to admin dashboard */
+    const { data: profile } = await window.sb.from("profiles").select("role").eq("id", data.user.id).single();
+    if (profile?.role === "admin") {
+      window.location.href = "admin.html";
+    } else {
+      window.location.href = "index.html";
+    }
+  });
+}
+
+function setupRegister() {
+  const registerForm = document.getElementById("registerForm");
+  if (!registerForm) return;
+
+  registerForm.addEventListener("submit", async e => {
+    e.preventDefault();
+
+    const businessName = document.getElementById("regBusiness")?.value.trim() || "";
+    const businessType = document.getElementById("regBusinessType")?.value || "";
+    const contactName  = document.getElementById("regName")?.value.trim() || "";
+    const email        = (document.getElementById("regEmail")?.value || "").trim().toLowerCase();
+    const phone        = document.getElementById("regPhone")?.value.trim() || "";
+    const password     = document.getElementById("regPassword")?.value || "";
+    const confirm      = document.getElementById("regConfirm")?.value || "";
+    const errEl        = document.getElementById("registerError");
+    const successEl    = document.getElementById("registerSuccess");
+    const btn          = registerForm.querySelector("button[type=submit]");
+
+    errEl.style.display = "none";
+
+    if (!businessName) return showErr(errEl, "Business name is required.");
+    if (!businessType) return showErr(errEl, "Please select a business type.");
+    if (!contactName)  return showErr(errEl, "Contact name is required.");
+    if (!email || !/\S+@\S+\.\S+/.test(email)) return showErr(errEl, "Please enter a valid email address.");
+    if (password.length < 8) return showErr(errEl, "Password must be at least 8 characters.");
+    if (password !== confirm) return showErr(errEl, "Passwords do not match.");
+
+    if (typeof window.sb === "undefined") {
+      return showErr(errEl, "Backend not connected. Please configure Supabase credentials.");
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Creating account…";
+
+    const { error } = await window.sb.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { business_name: businessName, business_type: businessType, contact_name: contactName, phone }
+      }
+    });
+
+    btn.disabled = false;
+    btn.textContent = "Create Account";
+
+    if (error) return showErr(errEl, error.message);
+
+    errEl.style.display = "none";
+    registerForm.reset();
+    successEl.style.display = "block";
+    successEl.textContent = "Account created! Check your email to verify, then sign in.";
+  });
+}
+
+function setupForgotPassword() {
+  const forgotLink = document.getElementById("forgotPasswordLink");
+  if (!forgotLink) return;
+
+  forgotLink.addEventListener("click", async e => {
+    e.preventDefault();
+    const email = document.getElementById("emailInput")?.value.trim();
+    if (!email) {
+      const errEl = document.getElementById("loginError");
+      errEl.textContent = "Enter your email above, then click 'Forgot password'.";
+      errEl.style.display = "block";
+      return;
+    }
+    if (typeof window.sb === "undefined") return;
+    await window.sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/reset-password.html"
+    });
+    const errEl = document.getElementById("loginError");
+    errEl.style.display = "none";
+    const successEl = document.createElement("div");
+    successEl.className = "auth-success";
+    successEl.textContent = "Password reset email sent! Check your inbox.";
+    forgotLink.closest("form")?.prepend(successEl);
+    setTimeout(() => successEl.remove(), 6000);
+  });
+}
+
+/* ============================================================
+   RESET PASSWORD PAGE
+   ============================================================ */
+
+function setupResetPasswordPage() {
+  const form = document.getElementById("resetPasswordForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const password = document.getElementById("newPassword")?.value || "";
+    const confirm  = document.getElementById("confirmNewPassword")?.value || "";
+    const errEl    = document.getElementById("resetError");
+    const successEl = document.getElementById("resetSuccess");
+
+    errEl.style.display = "none";
+    if (password.length < 8) return showErr(errEl, "Password must be at least 8 characters.");
+    if (password !== confirm) return showErr(errEl, "Passwords do not match.");
+
+    const { error } = await window.sb.auth.updateUser({ password });
+    if (error) return showErr(errEl, error.message);
+
+    successEl.style.display = "block";
+    form.reset();
+    setTimeout(() => { window.location.href = "login.html"; }, 2500);
+  });
+}
+
+/* ============================================================
+   CART — localStorage
+   ============================================================ */
 
 function getCart() {
   return JSON.parse(localStorage.getItem("cart")) || [];
@@ -31,57 +263,38 @@ function saveCart(cart) {
 function updateCartBadge() {
   const badge = document.getElementById("cart-count");
   if (!badge) return;
-
-  const cart = getCart();
-
-  const totalItems = cart.reduce((sum, item) => {
-    return sum + item.quantity;
-  }, 0);
-
-  badge.textContent = totalItems;
-  badge.style.display = totalItems > 0 ? "flex" : "none";
+  const total = getCart().reduce((s, i) => s + i.quantity, 0);
+  badge.textContent = total;
+  badge.style.display = total > 0 ? "flex" : "none";
 }
 
-/* =========================
+/* ============================================================
    ADD TO CART
-========================= */
+   ============================================================ */
 
 function setupAddToCartButtons() {
   document.querySelectorAll(".add-btn").forEach(button => {
     button.addEventListener("click", e => {
       e.stopPropagation();
-
       const card = button.closest(".product-card");
-
-      let product;
-
-      if (card) {
-        product = {
-          name: card.querySelector("h3")?.textContent.trim() || button.dataset.name,
-          description: card.querySelector(".product-description")?.textContent.trim() || "",
-          price: parseFloat(card.querySelector(".price")?.textContent.replace("$", "")) || Number(button.dataset.price) || 0,
-          image: card.querySelector(".product-image img")?.getAttribute("src") || button.dataset.image || "",
-          quantity: Number(document.getElementById("qtyValue")?.textContent) || 1
-        };
-      } else {
-        product = {
-          name: button.dataset.name,
-          price: Number(button.dataset.price) || 0,
-          image: button.dataset.image || "",
-          quantity: 1
-        };
-      }
+      const product = card ? {
+        id    : card.dataset.productId || null,
+        name  : card.querySelector("h3")?.textContent.trim() || button.dataset.name,
+        description: card.querySelector(".product-description")?.textContent.trim() || "",
+        price : parseFloat(card.querySelector(".price")?.textContent.replace("$","")) || Number(button.dataset.price) || 0,
+        image : card.querySelector(".product-image img")?.getAttribute("src") || button.dataset.image || "",
+        quantity: Number(document.getElementById("qtyValue")?.textContent) || 1
+      } : {
+        name : button.dataset.name,
+        price: Number(button.dataset.price) || 0,
+        image: button.dataset.image || "",
+        quantity: 1
+      };
 
       let cart = getCart();
-
-      const existingProduct = cart.find(item => item.name === product.name);
-
-      if (existingProduct) {
-        existingProduct.quantity += 1;
-      } else {
-        cart.push(product);
-      }
-
+      const existing = cart.find(i => i.name === product.name);
+      if (existing) { existing.quantity += product.quantity; }
+      else { cart.push(product); }
       saveCart(cart);
       updateCartBadge();
       flyToCart(button);
@@ -89,485 +302,162 @@ function setupAddToCartButtons() {
   });
 }
 
-/* =========================
-   FLY TO CART ANIMATION
-========================= */
-
 function flyToCart(button) {
   const cartIcon = document.querySelector(".cart-container");
   if (!cartIcon) return;
-
-  const buttonRect = button.getBoundingClientRect();
-  const cartRect = cartIcon.getBoundingClientRect();
-
-  const flyingItem = document.createElement("div");
-  flyingItem.classList.add("flying-cart-item");
-
-  flyingItem.innerHTML = `<img src="Cart.png" alt="">`;
-
-  document.body.appendChild(flyingItem);
-
-  flyingItem.style.left = buttonRect.left + buttonRect.width / 2 + "px";
-  flyingItem.style.top = buttonRect.top + buttonRect.height / 2 + "px";
-
+  const bRect = button.getBoundingClientRect();
+  const cRect = cartIcon.getBoundingClientRect();
+  const el = document.createElement("div");
+  el.className = "flying-cart-item";
+  el.innerHTML = `<img src="Cart.png" alt="">`;
+  document.body.appendChild(el);
+  el.style.left = bRect.left + bRect.width  / 2 + "px";
+  el.style.top  = bRect.top  + bRect.height / 2 + "px";
   setTimeout(() => {
-    flyingItem.style.left = cartRect.left + cartRect.width / 2 + "px";
-    flyingItem.style.top = cartRect.top + cartRect.height / 2 + "px";
-    flyingItem.style.transform = "scale(0.2)";
-    flyingItem.style.opacity = "0";
+    el.style.left = cRect.left + cRect.width  / 2 + "px";
+    el.style.top  = cRect.top  + cRect.height / 2 + "px";
+    el.style.transform = "scale(0.2)";
+    el.style.opacity   = "0";
   }, 10);
-
-  setTimeout(() => {
-    flyingItem.remove();
-  }, 800);
+  setTimeout(() => el.remove(), 800);
 }
 
-/* =========================
+/* ============================================================
    PRODUCT CARD CLICK
-========================= */
+   ============================================================ */
 
 function setupProductCardClicks() {
-  document.querySelectorAll(".product-card").forEach(card => {
-    card.addEventListener("click", () => {
-      if (card.dataset.url) {
-        window.location.href = card.dataset.url;
-      }
-    });
+  document.querySelectorAll(".product-card[data-url]").forEach(card => {
+    card.addEventListener("click", () => { window.location.href = card.dataset.url; });
   });
 }
 
-/* =========================
+/* ============================================================
    REORDER DROPDOWN
-========================= */
+   ============================================================ */
 
 function setupReorderDropdowns() {
-  document.querySelectorAll(".reorder-dropdown").forEach(dropdown => {
-
-    function updateDropdown() {
-      if (dropdown.value === "Once") {
-        dropdown.classList.remove("selected");
-      } else {
-        dropdown.classList.add("selected");
-      }
-    }
-
-    updateDropdown(); // run on page load
-
-    dropdown.addEventListener("change", updateDropdown);
-
+  document.querySelectorAll(".reorder-dropdown").forEach(dd => {
+    const update = () => dd.classList.toggle("selected", dd.value !== "Once");
+    update();
+    dd.addEventListener("change", update);
   });
 }
 
-/* =========================
-   LOGIN
-========================= */
-
-/* ---------- USER AUTH HELPERS ---------- */
-
-function getUsers() {
-  return JSON.parse(localStorage.getItem("rrs_users") || "[]");
-}
-
-function saveUsers(users) {
-  localStorage.setItem("rrs_users", JSON.stringify(users));
-}
-
-function hashPass(str) {
-  return btoa(encodeURIComponent(str));
-}
-
-function currentUser() {
-  try { return JSON.parse(sessionStorage.getItem("rrs_user")); }
-  catch { return null; }
-}
-
-/* ---------- LOGIN SETUP ---------- */
-
-function setupLogin() {
-  updateLoginUI();
-  setupAuthTabs();
-  setupRegister();
-
-  const loginForm = document.getElementById("loginForm");
-  if (!loginForm) return;
-
-  loginForm.addEventListener("submit", e => {
-    e.preventDefault();
-    const email    = (document.getElementById("emailInput")?.value || "").trim().toLowerCase();
-    const password = (document.getElementById("passwordInput")?.value || "").trim();
-    const errEl    = document.getElementById("loginError");
-
-    const users = getUsers();
-    const user  = users.find(u => u.email.toLowerCase() === email && u.passwordHash === hashPass(password));
-
-    if (user) {
-      localStorage.setItem("loggedIn", "true");
-      sessionStorage.setItem("rrs_user", JSON.stringify({
-        id           : user.id,
-        email        : user.email,
-        contactName  : user.contactName,
-        businessName : user.businessName,
-      }));
-      window.location.href = "index.html";
-    } else {
-      if (errEl) { errEl.textContent = "Incorrect email or password. Please try again."; errEl.style.display = "block"; }
-    }
-  });
-
-  const logoutBtn = document.getElementById("logout-btn");
-  if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-      localStorage.removeItem("loggedIn");
-      sessionStorage.removeItem("rrs_user");
-      window.location.href = "login.html";
-    });
-  }
-}
-
-/* ---------- AUTH TABS (Sign In / Create Account) ---------- */
-
-function setupAuthTabs() {
-  const tabSignIn   = document.getElementById("tabSignIn");
-  const tabRegister = document.getElementById("tabRegister");
-  const signInPanel   = document.getElementById("signInPanel");
-  const registerPanel = document.getElementById("registerPanel");
-
-  if (!tabSignIn || !tabRegister) return;
-
-  function showSignIn() {
-    signInPanel.style.display   = "";
-    registerPanel.style.display = "none";
-    tabSignIn.classList.add("active");
-    tabRegister.classList.remove("active");
-  }
-
-  function showRegister() {
-    signInPanel.style.display   = "none";
-    registerPanel.style.display = "";
-    tabRegister.classList.add("active");
-    tabSignIn.classList.remove("active");
-  }
-
-  tabSignIn.addEventListener("click",   showSignIn);
-  tabRegister.addEventListener("click", showRegister);
-
-  document.getElementById("switchToRegister")?.addEventListener("click", e => { e.preventDefault(); showRegister(); });
-  document.getElementById("switchToSignIn")?.addEventListener("click",   e => { e.preventDefault(); showSignIn(); });
-  document.getElementById("goToSignIn")?.addEventListener("click",       e => { e.preventDefault(); showSignIn(); });
-}
-
-/* ---------- REGISTER ---------- */
-
-function setupRegister() {
-  const registerForm = document.getElementById("registerForm");
-  if (!registerForm) return;
-
-  registerForm.addEventListener("submit", e => {
-    e.preventDefault();
-
-    const businessName   = document.getElementById("regBusiness")?.value.trim() || "";
-    const businessType   = document.getElementById("regBusinessType")?.value || "";
-    const contactName    = document.getElementById("regName")?.value.trim() || "";
-    const email          = (document.getElementById("regEmail")?.value || "").trim().toLowerCase();
-    const phone          = document.getElementById("regPhone")?.value.trim() || "";
-    const password       = document.getElementById("regPassword")?.value || "";
-    const confirm        = document.getElementById("regConfirm")?.value || "";
-    const errEl          = document.getElementById("registerError");
-    const successEl      = document.getElementById("registerSuccess");
-
-    const showErr = msg => { errEl.textContent = msg; errEl.style.display = "block"; successEl.style.display = "none"; };
-
-    if (!businessName)  return showErr("Business name is required.");
-    if (!businessType)  return showErr("Please select a business type.");
-    if (!contactName)   return showErr("Contact name is required.");
-    if (!email || !/\S+@\S+\.\S+/.test(email)) return showErr("Please enter a valid email address.");
-    if (password.length < 8) return showErr("Password must be at least 8 characters.");
-    if (password !== confirm) return showErr("Passwords do not match.");
-
-    const users = getUsers();
-    if (users.find(u => u.email.toLowerCase() === email)) {
-      return showErr("An account with this email already exists.");
-    }
-
-    const newUser = {
-      id           : "u" + Date.now().toString(36),
-      businessName,
-      businessType,
-      contactName,
-      email,
-      phone,
-      passwordHash : hashPass(password),
-      createdAt    : new Date().toISOString(),
-    };
-
-    users.push(newUser);
-    saveUsers(users);
-
-    errEl.style.display = "none";
-    registerForm.reset();
-    successEl.style.display = "block";
-  });
-}
-
-function updateLoginUI() {
-  const isLoggedIn = localStorage.getItem("loggedIn") === "true";
-
-  document.querySelectorAll(".guest-only").forEach(el => {
-    el.style.display = isLoggedIn ? "none" : "inline-flex";
-  });
-
-  document.querySelectorAll(".logged-in-only").forEach(el => {
-    el.style.display = isLoggedIn ? "inline-flex" : "none";
-  });
-}
-
-/* =========================
+/* ============================================================
    ACCOUNT DROPDOWN
-========================= */
+   ============================================================ */
 
 function setupAccountDropdown() {
-    const accountDropdown = document.querySelector(".account-dropdown");
-const accountBtn = document.querySelector(".account-btn");
-
-if (accountDropdown && accountBtn) {
-  accountBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    accountDropdown.classList.toggle("active");
-  });
-
-  document.addEventListener("click", () => {
-    accountDropdown.classList.remove("active");
-  });
-}
+  const dropdown = document.querySelector(".account-dropdown");
+  const btn = document.querySelector(".account-btn");
+  if (!dropdown || !btn) return;
+  btn.addEventListener("click", e => { e.stopPropagation(); dropdown.classList.toggle("active"); });
+  document.addEventListener("click", () => dropdown.classList.remove("active"));
 }
 
-/* =========================
+/* ============================================================
    PASSWORD EYE TOGGLE
-========================= */
+   ============================================================ */
 
 function setupPasswordToggle() {
-  const passwordInput = document.getElementById("passwordInput");
-  const togglePassword = document.getElementById("togglePassword");
-
-  if (passwordInput && togglePassword) {
-    togglePassword.addEventListener("click", () => {
-      const isPassword = passwordInput.type === "password";
-
-      passwordInput.type = isPassword ? "text" : "password";
-      togglePassword.src = isPassword ? "eye-line.svg" : "eye-off-line.svg";
-    });
-  }
+  const input  = document.getElementById("passwordInput");
+  const toggle = document.getElementById("togglePassword");
+  if (!input || !toggle) return;
+  toggle.addEventListener("click", () => {
+    const isPass = input.type === "password";
+    input.type = isPass ? "text" : "password";
+    toggle.src = isPass ? "eye-line.svg" : "eye-off-line.svg";
+  });
 }
 
-/* =========================
-   PRODUCT QUANTITY
-========================= */
+/* ============================================================
+   PRODUCT QUANTITY (product detail page)
+   ============================================================ */
 
 function setupProductQuantity() {
-  const qtyValue = document.getElementById("qtyValue");
-  const plusQty = document.getElementById("plusQty");
-  const minusQty = document.getElementById("minusQty");
-
-  if (!qtyValue || !plusQty || !minusQty) return;
-
-  plusQty.addEventListener("click", () => {
-    qtyValue.textContent = Number(qtyValue.textContent) + 1;
-  });
-
-  minusQty.addEventListener("click", () => {
-    if (Number(qtyValue.textContent) > 1) {
-      qtyValue.textContent = Number(qtyValue.textContent) - 1;
-    }
-  });
+  const val   = document.getElementById("qtyValue");
+  const plus  = document.getElementById("plusQty");
+  const minus = document.getElementById("minusQty");
+  if (!val || !plus || !minus) return;
+  plus.addEventListener("click",  () => { val.textContent = Number(val.textContent) + 1; });
+  minus.addEventListener("click", () => { if (Number(val.textContent) > 1) val.textContent = Number(val.textContent) - 1; });
 }
 
-/* =========================
-   PRODUCT IMAGE GALLERY
-========================= */
+/* ============================================================
+   PRODUCT GALLERY (product detail page)
+   ============================================================ */
 
 function setupProductGallery() {
-  const images = [
-    "75902.jpg",
-    "Hotel.png",
-    "Facilities.png",
-    "pricetag.png"
-  ];
-
-  let currentImage = 0;
-
-  const mainImage = document.getElementById("mainProductImage");
+  const images = ["75902.jpg","Hotel.png","Facilities.png","pricetag.png"];
+  let cur = 0;
+  const mainImage    = document.getElementById("mainProductImage");
   const thumbContainer = document.querySelector(".thumb-row");
-  const nextBtn = document.getElementById("nextBtn");
-  const prevBtn = document.getElementById("prevBtn");
-
+  const nextBtn      = document.getElementById("nextBtn");
+  const prevBtn      = document.getElementById("prevBtn");
   if (!mainImage || !thumbContainer || !nextBtn || !prevBtn) return;
 
-  function renderThumbnails() {
+  const renderThumbs = () => {
     thumbContainer.innerHTML = "";
-
-    images.forEach((image, index) => {
-      const thumb = document.createElement("img");
-      thumb.src = image;
-      thumb.className = "thumb";
-
-      if (index === currentImage) {
-        thumb.classList.add("active");
-      }
-
-      thumb.addEventListener("click", () => {
-        currentImage = index;
-        updateGallery();
-      });
-
-      thumbContainer.appendChild(thumb);
+    images.forEach((img, i) => {
+      const t = document.createElement("img");
+      t.src = img; t.className = "thumb";
+      if (i === cur) t.classList.add("active");
+      t.addEventListener("click", () => { cur = i; update(); });
+      thumbContainer.appendChild(t);
     });
-  }
-
-  function updateGallery() {
-    mainImage.src = images[currentImage];
-
-    document.querySelectorAll(".thumb").forEach((thumb, index) => {
-      thumb.classList.toggle("active", index === currentImage);
-    });
-  }
-
-  nextBtn.addEventListener("click", () => {
-    currentImage = (currentImage + 1) % images.length;
-    updateGallery();
-  });
-
-  prevBtn.addEventListener("click", () => {
-    currentImage = (currentImage - 1 + images.length) % images.length;
-    updateGallery();
-  });
-
-  renderThumbnails();
-  updateGallery();
+  };
+  const update = () => {
+    mainImage.src = images[cur];
+    document.querySelectorAll(".thumb").forEach((t,i) => t.classList.toggle("active", i === cur));
+  };
+  nextBtn.addEventListener("click", () => { cur = (cur + 1) % images.length; update(); });
+  prevBtn.addEventListener("click", () => { cur = (cur - 1 + images.length) % images.length; update(); });
+  renderThumbs(); update();
 }
 
-
-// Checkout page quantity buttons
-function setupCheckoutQuantity() {
-  document.querySelectorAll(".checkout-product").forEach(product => {
-    const minusBtn = product.querySelector(".qty-minus");
-    const plusBtn = product.querySelector(".qty-plus");
-    const qtyValue = product.querySelector(".qty-value");
-
-    if (!minusBtn || !plusBtn || !qtyValue) return;
-
-    plusBtn.addEventListener("click", () => {
-      qtyValue.textContent = Number(qtyValue.textContent) + 1;
-      updateCheckoutSummary();
-    });
-
-    minusBtn.addEventListener("click", () => {
-      let qty = Number(qtyValue.textContent);
-
-      if (qty > 1) {
-        qtyValue.textContent = qty - 1;
-        updateCheckoutSummary();
-      }
-    });
-  });
-}
-
-function updateCheckoutSummary() {
-  const summaryItems = document.querySelector(".summary-items");
-  const summaryCount = document.querySelector(".summary-head span");
-  const subtotalText =
-  document.getElementById("summary-subtotal");
-
-  const totalText =
-  document.getElementById("summary-total");
-
-  if (!summaryItems || !summaryCount || !subtotalText || !totalText) return;
-
-  summaryItems.innerHTML = "";
-
-  let subtotal = 0;
-  let totalItems = 0;
-
-  document.querySelectorAll(".checkout-product").forEach(product => {
-    const name = product.querySelector("h4").textContent;
-    const priceText =
-  product.querySelector(".product-price").textContent;
-
-    const price = parseFloat(priceText.replace(/[^0-9.]/g, ""));
-    const qty = Number(product.querySelector(".qty-value").textContent);
-    const itemTotal = price * qty;
-
-    subtotal += itemTotal;
-    totalItems += qty;
-
-    const productTotal =
-  product.querySelector(".product-total");
-
-    if (productTotal) {
-      productTotal.textContent = `$${itemTotal.toFixed(2)}`;
-    }
-
-    summaryItems.innerHTML += `
-      <div>
-        <strong>${name}</strong>
-        <span>$${itemTotal.toFixed(2)}</span>
-        <p>Qty: ${qty}</p>
-      </div>
-    `;
-  });
-
-  summaryCount.textContent = `${totalItems} Items`;
-  subtotalText.textContent = `$${subtotal.toFixed(2)}`;
-  totalText.textContent = `$${subtotal.toFixed(2)}`;
-}
-
-//Products on cart page
+/* ============================================================
+   CART PAGE
+   ============================================================ */
 
 function loadCartPage() {
-  const cartItemsContainer = document.getElementById("cart-items");
+  const container  = document.getElementById("cart-items");
   const subtotalEl = document.getElementById("subtotal");
-  const estimatedTotalEl = document.getElementById("estimated-total");
-
-  if (!cartItemsContainer || !subtotalEl || !estimatedTotalEl) return;
+  const totalEl    = document.getElementById("estimated-total");
+  if (!container) return;
 
   const cart = getCart();
-
-  cartItemsContainer.innerHTML = "";
-
-  let subtotal = 0;
-  let totalItems = 0;
+  container.innerHTML = "";
+  let subtotal = 0, totalItems = 0;
 
   if (cart.length === 0) {
-    cartItemsContainer.innerHTML = `<p class="empty-cart">Your cart is empty.</p>`;
+    container.innerHTML = `<p class="empty-cart">Your cart is empty. <a href="catalog.html">Shop now</a></p>`;
     subtotalEl.textContent = "$0.00";
-    estimatedTotalEl.textContent = "$0.00";
+    totalEl.textContent    = "$0.00";
     document.querySelector(".summary-row span").textContent = "Subtotal (0 items)";
     return;
   }
 
   cart.forEach((item, index) => {
     const itemTotal = item.price * item.quantity;
-    subtotal += itemTotal;
+    subtotal   += itemTotal;
     totalItems += item.quantity;
-
-    cartItemsContainer.innerHTML += `
+    container.innerHTML += `
       <div class="cart-row">
         <div class="cart-product">
-          <img src="${item.image}" alt="${item.name}">
+          <img src="${item.image || 'blanket.png'}" alt="${escHtml(item.name)}">
           <div>
-            <h3>${item.name}</h3>
-            <p>${item.description || ""}</p>
+            <h3>${escHtml(item.name)}</h3>
+            <p>${escHtml(item.description || "")}</p>
             <small class="in-stock">⊙ In Stock</small>
           </div>
         </div>
-
         <span class="product-price">$${item.price.toFixed(2)}</span>
-
         <div class="qty-box">
           <button class="qty-minus" data-index="${index}">−</button>
           <span class="qty-value">${item.quantity}</span>
-          <button class="qty-plus" data-index="${index}">+</button>
+          <button class="qty-plus"  data-index="${index}">+</button>
         </div>
-
         <select class="reorder-dropdown">
           <option value="Once">Once</option>
           <option value="Weekly">Weekly</option>
@@ -577,22 +467,14 @@ function loadCartPage() {
           <option value="Every 60 Days">Every 60 Days</option>
           <option value="Custom Schedule">Custom Schedule</option>
         </select>
-
         <span class="item-total">$${itemTotal.toFixed(2)}</span>
-
-        <button class="trash-btn" data-index="${index}">
-          <img src="trash.svg" alt="Delete">
-        </button>
-      </div>
-    `;
+        <button class="trash-btn" data-index="${index}"><img src="trash.svg" alt="Delete"></button>
+      </div>`;
   });
 
-  document.querySelector(".summary-row span").textContent =
-    `Subtotal (${totalItems} items)`;
-
+  document.querySelector(".summary-row span").textContent = `Subtotal (${totalItems} items)`;
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  estimatedTotalEl.textContent = `$${subtotal.toFixed(2)}`;
-
+  totalEl.textContent    = `$${subtotal.toFixed(2)}`;
   setupCartButtons();
   setupReorderDropdowns();
 }
@@ -601,115 +483,270 @@ function setupCartButtons() {
   document.querySelectorAll(".qty-plus").forEach(btn => {
     btn.addEventListener("click", () => {
       const cart = getCart();
-      const index = btn.dataset.index;
-
-      cart[index].quantity += 1;
-
-      saveCart(cart);
-      updateCartBadge();
-      loadCartPage();
+      cart[btn.dataset.index].quantity += 1;
+      saveCart(cart); updateCartBadge(); loadCartPage();
     });
   });
-
   document.querySelectorAll(".qty-minus").forEach(btn => {
     btn.addEventListener("click", () => {
       const cart = getCart();
-      const index = btn.dataset.index;
-
-      if (cart[index].quantity > 1) {
-        cart[index].quantity -= 1;
-      }
-
-      saveCart(cart);
-      updateCartBadge();
-      loadCartPage();
+      if (cart[btn.dataset.index].quantity > 1) cart[btn.dataset.index].quantity -= 1;
+      saveCart(cart); updateCartBadge(); loadCartPage();
     });
   });
-
   document.querySelectorAll(".trash-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const cart = getCart();
-      const index = btn.dataset.index;
-
-      cart.splice(index, 1);
-
-      saveCart(cart);
-      updateCartBadge();
-      loadCartPage();
+      cart.splice(btn.dataset.index, 1);
+      saveCart(cart); updateCartBadge(); loadCartPage();
     });
   });
 }
 
-// Checkout from cart page
+/* ============================================================
+   CHECKOUT PAGE
+   ============================================================ */
+
+function setupCheckoutPage() {
+  loadCheckoutProducts();
+  const form = document.getElementById("checkoutForm");
+  if (!form) return;
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    await submitOrder(form);
+  });
+
+  /* Pre-fill if logged in */
+  if (typeof window.sb !== "undefined") {
+    window.sb.auth.getSession().then(async ({ data: { session } }) => {
+      if (!session) return;
+      const { data: profile } = await window.sb.from("profiles").select("*").eq("id", session.user.id).single();
+      if (!profile) return;
+      const set = (id, val) => { const el = document.getElementById(id); if (el && val) el.value = val; };
+      set("checkoutBusiness", profile.business_name);
+      set("checkoutContact",  profile.contact_name);
+      set("checkoutPhone",    profile.phone);
+      set("checkoutEmail",    session.user.email);
+    });
+  }
+}
+
 function loadCheckoutProducts() {
-  const checkoutProducts = document.getElementById("checkout-products");
-  const summaryItems = document.getElementById("summary-items");
+  const container  = document.getElementById("checkout-products");
+  const summaryEl  = document.getElementById("summary-items");
   const subtotalEl = document.getElementById("summary-subtotal");
-  const totalEl = document.getElementById("summary-total");
-  const countEl = document.getElementById("summary-count");
+  const totalEl    = document.getElementById("summary-total");
+  const countEl    = document.getElementById("summary-count");
+  if (!container) return;
 
-  if (!checkoutProducts) return;
-
-  const cart = JSON.parse(localStorage.getItem("cart")) || [];
-
+  const cart = getCart();
   if (cart.length === 0) {
-    checkoutProducts.innerHTML = `<p>Your cart is empty.</p>`;
-
-    if (summaryItems) summaryItems.innerHTML = "";
-
-    const itemCount = cart.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    if (countEl) countEl.textContent = `${itemCount} Items`;
+    container.innerHTML = `<p>Your cart is empty. <a href="catalog.html">Shop now</a></p>`;
+    if (countEl) countEl.textContent = "0 Items";
     if (subtotalEl) subtotalEl.textContent = "$0.00";
-    if (totalEl) totalEl.textContent = "$0.00";
-
+    if (totalEl)    totalEl.textContent    = "$0.00";
     return;
   }
 
-  checkoutProducts.innerHTML = cart.map(item => {
-    const qty = item.quantity || 1;
-    const price = Number(item.price);
-    const total = price * qty;
-
+  container.innerHTML = cart.map(item => {
+    const qty   = item.quantity || 1;
+    const total = Number(item.price) * qty;
     return `
       <div class="checkout-product">
-        <img src="${item.image}" alt="${item.name}">
-
+        <img src="${item.image || 'blanket.png'}" alt="${escHtml(item.name)}">
         <div>
-          <h4>${item.name}</h4>
-          <p>${item.description || "Commercial Grade Comfort"}</p>
+          <h4>${escHtml(item.name)}</h4>
+          <p>${escHtml(item.description || "")}</p>
           <small>⊙ In Stock</small>
         </div>
-
-        <strong class="product-price">$${price.toFixed(2)}</strong>
-
-        <div class="qty-box">
-          <span class="qty-value">${qty}</span>
-        </div>
-
+        <strong class="product-price">$${Number(item.price).toFixed(2)}</strong>
+        <div class="qty-box"><span class="qty-value">${qty}</span></div>
         <strong class="product-total">$${total.toFixed(2)}</strong>
-      </div>
-    `;
+      </div>`;
   }).join("");
 
-  if (summaryItems) {
-    summaryItems.innerHTML = cart.map(item => {
-      const qty = item.quantity || 1;
-      const price = Number(item.price);
-      const total = price * qty;
-
-      return `
-        <p>
-          <span>${item.name} × ${qty}</span>
-          <strong>$${total.toFixed(2)}</strong>
-        </p>
-      `;
+  if (summaryEl) {
+    summaryEl.innerHTML = cart.map(item => {
+      const qty   = item.quantity || 1;
+      const total = Number(item.price) * qty;
+      return `<p><span>${escHtml(item.name)} × ${qty}</span><strong>$${total.toFixed(2)}</strong></p>`;
     }).join("");
   }
 
-  const subtotal = cart.reduce((sum, item) => {
-    return sum + Number(item.price) * (item.quantity || 1);
-  }, 0);
-
+  const subtotal = cart.reduce((s, i) => s + Number(i.price) * (i.quantity || 1), 0);
+  if (countEl)    countEl.textContent    = `${cart.reduce((s,i) => s + (i.quantity||1), 0)} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${subtotal.toFixed(2)}`;
+  if (totalEl)    totalEl.textContent    = `$${subtotal.toFixed(2)}`;
+}
+
+async function submitOrder(form) {
+  const errEl  = document.getElementById("checkoutError");
+  const successEl = document.getElementById("checkoutSuccess");
+  const btn    = form.querySelector("button[type=submit]");
+  const cart   = getCart();
+  if (!cart.length) return;
+
+  if (errEl) errEl.style.display = "none";
+  if (btn) { btn.disabled = true; btn.textContent = "Placing order…"; }
+
+  const businessName = document.getElementById("checkoutBusiness")?.value.trim() || "";
+  const contactName  = document.getElementById("checkoutContact")?.value.trim() || "";
+  const phone        = document.getElementById("checkoutPhone")?.value.trim() || "";
+  const email        = document.getElementById("checkoutEmail")?.value.trim() || "";
+  const street       = document.getElementById("checkoutStreet")?.value.trim() || "";
+  const city         = document.getElementById("checkoutCity")?.value.trim() || "";
+  const state        = document.getElementById("checkoutState")?.value.trim() || "";
+  const zip          = document.getElementById("checkoutZip")?.value.trim() || "";
+  const orderType    = document.querySelector("input[name=orderType]:checked")?.value || "one_time";
+
+  const subtotal = cart.reduce((s,i) => s + Number(i.price) * (i.quantity||1), 0);
+
+  if (typeof window.sb === "undefined") {
+    if (btn) { btn.disabled = false; btn.textContent = "Place Order Request"; }
+    if (errEl) { errEl.textContent = "Backend not connected. Configure Supabase first."; errEl.style.display = "block"; }
+    return;
+  }
+
+  const { data: { session } } = await window.sb.auth.getSession();
+
+  const orderPayload = {
+    user_id       : session?.user?.id || null,
+    customer_name : contactName,
+    customer_email: email,
+    business_name : businessName,
+    phone,
+    shipping_address: { street, city, state, zip },
+    order_type    : orderType,
+    subtotal,
+    total         : subtotal,
+    status        : "pending",
+    payment_method: "cod",
+  };
+
+  const { data: order, error } = await window.sb.from("orders").insert(orderPayload).select().single();
+
+  if (error) {
+    if (btn) { btn.disabled = false; btn.textContent = "Place Order Request"; }
+    if (errEl) { errEl.textContent = "Failed to place order: " + error.message; errEl.style.display = "block"; }
+    return;
+  }
+
+  /* Insert order items */
+  const items = cart.map(i => ({
+    order_id  : order.id,
+    product_id: i.id || null,
+    name      : i.name,
+    price     : Number(i.price),
+    quantity  : i.quantity || 1,
+    subtotal  : Number(i.price) * (i.quantity || 1),
+  }));
+  await window.sb.from("order_items").insert(items);
+
+  /* Clear cart */
+  saveCart([]);
+  updateCartBadge();
+
+  if (successEl) {
+    successEl.textContent = `Order ${order.order_number} placed! We'll confirm shortly.`;
+    successEl.style.display = "block";
+  }
+  if (btn) { btn.disabled = false; btn.textContent = "Place Order Request"; }
+  form.reset();
+  loadCheckoutProducts();
+
+  setTimeout(() => { window.location.href = "account.html"; }, 3000);
+}
+
+/* ============================================================
+   CATALOG — Dynamic product loading
+   ============================================================ */
+
+async function loadCatalogProducts(filterCategories = [], searchQuery = "") {
+  const grid = document.getElementById("catalog-grid");
+  if (!grid) return;
+
+  grid.innerHTML = `<div class="catalog-loading">Loading products…</div>`;
+
+  if (typeof window.sb === "undefined") {
+    grid.innerHTML = `<p class="catalog-empty">Backend not connected. Please configure Supabase.</p>`;
+    return;
+  }
+
+  let query = window.sb.from("products")
+    .select("*, inventory(stock_qty, status)")
+    .eq("is_active", true)
+    .order("name");
+
+  if (filterCategories.length > 0) {
+    query = query.in("category_name", filterCategories);
+  }
+  if (searchQuery) {
+    query = query.ilike("name", `%${searchQuery}%`);
+  }
+
+  const { data: products, error } = await query;
+
+  if (error || !products?.length) {
+    grid.innerHTML = `<p class="catalog-empty">No products found.</p>`;
+    return;
+  }
+
+  grid.innerHTML = products.map(p => {
+    const inv     = p.inventory?.[0];
+    const stock   = inv?.status || "in_stock";
+    const imgSrc  = p.image_url || "blanket.png";
+    const salePrice = p.is_on_sale && p.sale_price ? p.sale_price : null;
+    const displayPrice = salePrice ? salePrice : p.price;
+
+    return `
+      <div class="product-card" data-url="product.html?id=${p.id}" data-product-id="${p.id}">
+        ${p.is_on_sale ? `<div class="badge-sale">SALE</div>` : ""}
+        ${p.is_featured ? `<div class="badge-featured">FEATURED</div>` : ""}
+        <div class="product-image">
+          <img src="${escHtml(imgSrc)}" alt="${escHtml(p.name)}" onerror="this.src='blanket.png'">
+        </div>
+        <div class="product-content">
+          <h3>${escHtml(p.name)}</h3>
+          ${p.sku ? `<p class="product-sku">SKU: ${escHtml(p.sku)}</p>` : ""}
+          <p class="product-description">${escHtml(p.description || "")}</p>
+          <div class="product-details">
+            <div class="detail-item"><img src="box.svg" alt=""><span>Case Qty: ${p.case_qty || 1}</span></div>
+            <div class="detail-item"><img src="pack.svg" alt=""><span>Pack Size: ${p.pack_size || 1}</span></div>
+          </div>
+          <div class="product-footer">
+            <div class="price-group">
+              ${salePrice
+                ? `<span class="price-original">$${Number(p.price).toFixed(2)}</span>
+                   <span class="price sale">$${Number(salePrice).toFixed(2)}</span>`
+                : `<span class="price">$${Number(p.price).toFixed(2)}</span>`}
+            </div>
+            ${stock === "out_of_stock"
+              ? `<button class="add-btn" disabled>Out of Stock</button>`
+              : `<button class="add-btn"
+                   data-name="${escHtml(p.name)}"
+                   data-price="${displayPrice}"
+                   data-image="${escHtml(imgSrc)}"
+                   data-product-id="${p.id}">Add to Order</button>`}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+
+  /* Re-attach event handlers for dynamically rendered cards */
+  setupAddToCartButtons();
+  setupProductCardClicks();
+}
+
+/* ============================================================
+   UTIL
+   ============================================================ */
+
+function escHtml(str) {
+  return String(str ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.style.display = "block";
 }

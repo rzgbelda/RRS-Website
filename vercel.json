@@ -7,12 +7,16 @@
     }
   ],
   "routes": [
-    { "src": "/", "dest": "/index.html" },
-    { "src": "/catalog", "dest": "/catalog.html" },
-    { "src": "/cart", "dest": "/cart.html" },
-    { "src": "/login", "dest": "/login.html" },
-    { "src": "/checkout", "dest": "/checkout.html" },
-    { "src": "/product", "dest": "/product.html" },
-    { "src": "/(.*)", "dest": "/$1" }
+    { "src": "/",               "dest": "/index.html" },
+    { "src": "/catalog",        "dest": "/catalog.html" },
+    { "src": "/cart",           "dest": "/cart.html" },
+    { "src": "/login",          "dest": "/login.html" },
+    { "src": "/checkout",       "dest": "/checkout.html" },
+    { "src": "/product",        "dest": "/product.html" },
+    { "src": "/admin",          "dest": "/admin.html" },
+    { "src": "/account",        "dest": "/account.html" },
+    { "src": "/wishlist",       "dest": "/wishlist.html" },
+    { "src": "/reset-password", "dest": "/reset-password.html" },
+    { "src": "/(.*)",           "dest": "/$1" }
   ]
 }

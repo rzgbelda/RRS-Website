@@ -1,728 +1,564 @@
-/* ==================================================
-   Room Ready Supply — Admin Dashboard
-   Credentials: admin@roomreadysupply.com / RRS@Admin2024
-================================================== */
+/* ============================================================
+   Room Ready Supply — Admin Dashboard  (Supabase-powered)
+   ============================================================ */
 
-const ADMIN_EMAIL    = "admin@roomreadysupply.com";
-const ADMIN_PASS_KEY = "rrs_admin_pass";
-const DEFAULT_PASS   = "RRS@Admin2024";
+/* ── Bootstrap ─────────────────────────────────────────────── */
+document.addEventListener("DOMContentLoaded", async () => {
+  if (typeof window.sb === "undefined") {
+    showLoginError("Supabase not configured. Set your credentials in supabase.js.");
+    return;
+  }
+  const { data: { session } } = await window.sb.auth.getSession();
+  if (!session) { showLogin(); return; }
 
-const KEYS = {
-  products : "rrs_products",
-  orders   : "rrs_orders",
-  users    : "rrs_users",
-  siteInfo : "rrs_site_info",
-  session  : "rrs_admin_session",
-};
+  const { data: profile } = await window.sb.from("profiles").select("role").eq("id", session.user.id).single();
+  if (profile?.role !== "admin") {
+    showLogin();
+    showLoginError("Access denied. Admin privileges required.");
+    return;
+  }
+  document.getElementById("adminNameDisplay").textContent = session.user.email;
+  showDashboard();
+  switchTab("dashboard");
 
-/* ---- Default seed products ---- */
-const DEFAULT_PRODUCTS = [
-  { id:"p001", name:"Premium Hospitality Blanket",    category:"Towels and Linens",     description:"Commercial Grade Comfort",             price:34.99, unit:"Case", caseQty:6, packSize:1, stockQty:120, stock:"in_stock",  image:"blanket.png",    featured:true  },
-  { id:"p002", name:"Heavy Duty Trash Liners",        category:"Trash Liners",          description:"40-42 Gallon, 1.5mil strength",         price:45.00, unit:"Case", caseQty:100, packSize:1, stockQty:85,  stock:"in_stock",  image:"trashbag.png",   featured:true  },
-  { id:"p003", name:"Commercial Toilet Paper",        category:"Toilet Paper",          description:"2-Ply, 550 Sheets per Roll",             price:52.00, unit:"Case", caseQty:96,  packSize:1, stockQty:200, stock:"in_stock",  image:"toiletpaper.png",featured:true  },
-  { id:"p004", name:"Hand Soap Dispenser Refill",     category:"Hand Soap",             description:"Foaming Hand Soap, Gentle Formula",      price:28.50, unit:"Case", caseQty:6,   packSize:1, stockQty:60,  stock:"in_stock",  image:"handsoap.png",   featured:true  },
-  { id:"p005", name:"Multi-Surface Cleaner",          category:"Cleaning Chemicals",    description:"Ready-to-use disinfectant spray",         price:38.00, unit:"Case", caseQty:12,  packSize:1, stockQty:45,  stock:"in_stock",  image:"cleaner.png",    featured:false },
-  { id:"p006", name:"Paper Towel Rolls",              category:"Paper Towels",          description:"2-Ply Jumbo Roll, 350 Sheets",            price:41.00, unit:"Case", caseQty:30,  packSize:1, stockQty:150, stock:"in_stock",  image:"papertowel.png", featured:false },
-  { id:"p007", name:"Laundry Detergent",              category:"Laundry Supplies",      description:"HE Commercial Formula, 5-Gallon",         price:62.00, unit:"Pail", caseQty:1,   packSize:1, stockQty:18,  stock:"low_stock", image:"detergent.png",  featured:false },
-  { id:"p008", name:"Dish Soap Concentrate",          category:"Dishwashing Supplies",  description:"Commercial Concentrate, cuts grease",     price:24.00, unit:"Case", caseQty:4,   packSize:1, stockQty:0,   stock:"out_of_stock", image:"dishsoap.png", featured:false },
-  { id:"p009", name:"Hotel Shampoo Bottles",          category:"Guest Room Supplies",   description:"2oz individually packaged, lightly scented",price:35.00, unit:"Case", caseQty:288, packSize:1, stockQty:96,  stock:"in_stock",  image:"shampoo.png",    featured:false },
-  { id:"p010", name:"White Bath Towels",              category:"Towels and Linens",     description:"27x52in, 6lb ring-spun cotton",           price:78.00, unit:"Dozen", caseQty:12, packSize:1, stockQty:60,  stock:"in_stock",  image:"towel.png",      featured:false },
-  { id:"p011", name:"Compostable To-Go Containers",  category:"Food Service Supplies",  description:"9-inch clamshell, eco-friendly",           price:31.00, unit:"Case", caseQty:200, packSize:1, stockQty:12,  stock:"low_stock", image:"container.png",  featured:false },
-  { id:"p012", name:"Mop & Bucket Kit",              category:"Facility Supplies",      description:"32oz cotton loop mop with wringer bucket", price:49.00, unit:"Kit",  caseQty:1,   packSize:1, stockQty:30,  stock:"in_stock",  image:"mop.png",        featured:false },
-];
+  /* Wire buttons */
+  document.getElementById("openAddProduct")?.addEventListener("click", openAddProduct);
+  document.getElementById("saveProduct")?.addEventListener("click", saveProduct);
+  document.querySelectorAll("[data-goto]").forEach(btn => {
+    btn.addEventListener("click", () => switchTab(btn.dataset.goto));
+  });
+  setupSettings(session.user.id);
+});
 
-/* ==================================================
-   UTILS
-================================================== */
+/* ── Auth ──────────────────────────────────────────────────── */
 
-function getProducts() { return JSON.parse(localStorage.getItem(KEYS.products) || "[]"); }
-function saveProducts(p) { localStorage.setItem(KEYS.products, JSON.stringify(p)); }
+function showLogin()    { document.getElementById("adminLoginOverlay").style.display = "flex"; document.getElementById("adminDashboard").style.display = "none"; }
+function showDashboard(){ document.getElementById("adminLoginOverlay").style.display = "none"; document.getElementById("adminDashboard").style.display = "flex"; }
+function showLoginError(msg){ const el = document.getElementById("adminLoginError"); if (el){ el.textContent = msg; el.style.display = msg ? "block" : "none"; } }
 
-function getOrders() { return JSON.parse(localStorage.getItem(KEYS.orders) || "[]"); }
-function saveOrders(o) { localStorage.setItem(KEYS.orders, JSON.stringify(o)); }
+document.getElementById("adminLoginForm")?.addEventListener("submit", async e => {
+  e.preventDefault();
+  const email    = document.getElementById("adminEmail")?.value.trim() || "";
+  const password = document.getElementById("adminPassword")?.value || "";
+  const btn      = e.target.querySelector("button[type=submit]");
+  btn.disabled   = true; btn.textContent = "Signing in…";
+  showLoginError("");
 
-function getUsers() { return JSON.parse(localStorage.getItem(KEYS.users) || "[]"); }
+  const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+  btn.disabled = false; btn.textContent = "Sign In";
+  if (error) { showLoginError(error.message); return; }
 
-function getSiteInfo() {
-  return JSON.parse(localStorage.getItem(KEYS.siteInfo) || '{"phone":"(123)-456-789","email":"roomready@email.com","address":""}');
-}
-function saveSiteInfo(s) { localStorage.setItem(KEYS.siteInfo, JSON.stringify(s)); }
+  const { data: profile } = await window.sb.from("profiles").select("role").eq("id", data.user.id).single();
+  if (profile?.role !== "admin") {
+    await window.sb.auth.signOut();
+    showLoginError("This account does not have admin access.");
+    return;
+  }
+  document.getElementById("adminNameDisplay").textContent = data.user.email;
+  showDashboard();
+  switchTab("dashboard");
+  setupSettings(data.user.id);
+});
 
-function getAdminPass() { return localStorage.getItem(ADMIN_PASS_KEY) || DEFAULT_PASS; }
+document.getElementById("adminLogout")?.addEventListener("click", async () => {
+  await window.sb.auth.signOut();
+  showLogin();
+});
 
-function uid() { return "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" });
-}
-
-function stockBadge(stock) {
-  if (stock === "in_stock")      return '<span class="a-badge a-badge-green">In Stock</span>';
-  if (stock === "low_stock")     return '<span class="a-badge a-badge-yellow">Low Stock</span>';
-  if (stock === "out_of_stock")  return '<span class="a-badge a-badge-red">Out of Stock</span>';
-  return '<span class="a-badge a-badge-gray">Unknown</span>';
-}
-
-function orderBadge(status) {
-  const map = {
-    pending    : "a-badge-orange",
-    confirmed  : "a-badge-blue",
-    processing : "a-badge-yellow",
-    shipped    : "a-badge-blue",
-    delivered  : "a-badge-green",
-    cancelled  : "a-badge-red",
-  };
-  const cls = map[status] || "a-badge-gray";
-  return `<span class="a-badge ${cls}">${status.charAt(0).toUpperCase() + status.slice(1)}</span>`;
-}
-
-function escHtml(str) {
-  return String(str || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
-}
-
-/* ==================================================
-   AUTH
-================================================== */
-
-function isAdminLoggedIn() {
-  return sessionStorage.getItem(KEYS.session) === "1";
-}
-
-function showDashboard() {
-  document.getElementById("adminLoginOverlay").style.display = "none";
-  document.getElementById("adminDashboard").style.display   = "flex";
-  refreshStats();
-  renderDashboardTab();
-}
-
-function showLogin() {
-  sessionStorage.removeItem(KEYS.session);
-  document.getElementById("adminDashboard").style.display   = "none";
-  document.getElementById("adminLoginOverlay").style.display = "flex";
-}
-
-/* ==================================================
-   NAVIGATION
-================================================== */
-
-let currentTab = "dashboard";
+/* ── Tab navigation ────────────────────────────────────────── */
 
 function switchTab(tab) {
-  currentTab = tab;
-
   document.querySelectorAll(".a-nav-item").forEach(el => {
     el.classList.toggle("active", el.dataset.tab === tab);
   });
   document.querySelectorAll(".a-tab").forEach(el => {
-    el.style.display = el.id === "tab-" + tab ? "" : "none";
+    el.style.display = el.id === "tab-" + tab ? "block" : "none";
   });
-
-  const titles = {
-    dashboard : "Dashboard",
-    products  : "Products",
-    inventory : "Inventory",
-    orders    : "Orders",
-    users     : "Users",
-    settings  : "Settings",
-  };
-  document.getElementById("adminPageTitle").textContent = titles[tab] || tab;
+  document.getElementById("adminPageTitle").textContent =
+    { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
+      orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings" }[tab] || tab;
 
   if (tab === "dashboard")  renderDashboardTab();
   if (tab === "products")   renderProductsTable();
   if (tab === "inventory")  renderInventoryTable();
   if (tab === "orders")     renderOrdersTable();
   if (tab === "users")      renderUsersTable();
-  if (tab === "settings")   loadSettings();
+  if (tab === "reports")    renderReportsTab();
 }
 
-/* ==================================================
-   STATS
-================================================== */
+document.querySelectorAll(".a-nav-item").forEach(el => {
+  el.addEventListener("click", e => { e.preventDefault(); switchTab(el.dataset.tab); });
+});
 
-function refreshStats() {
-  const products = getProducts();
-  const orders   = getOrders();
-  const users    = getUsers();
-  const outOfStock = products.filter(p => p.stock === "out_of_stock").length;
+/* ── Dashboard ─────────────────────────────────────────────── */
 
-  const el = id => document.getElementById(id);
-  if (el("statProducts"))  el("statProducts").textContent  = products.length;
-  if (el("statOrders"))    el("statOrders").textContent    = orders.length;
-  if (el("statUsers"))     el("statUsers").textContent     = users.length;
-  if (el("statOutOfStock"))el("statOutOfStock").textContent= outOfStock;
-}
+async function renderDashboardTab() {
+  const [
+    { count: prodCount },
+    { count: orderCount },
+    { count: userCount },
+    { data: lowStockItems },
+    { data: recentOrders },
+    { data: recentUsers }
+  ] = await Promise.all([
+    window.sb.from("products").select("*",  { count:"exact", head:true }).eq("is_active", true),
+    window.sb.from("orders").select("*",    { count:"exact", head:true }),
+    window.sb.from("profiles").select("*",  { count:"exact", head:true }).eq("role","customer"),
+    window.sb.from("inventory").select("*, products(name, category_name)").eq("status","out_of_stock"),
+    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(5),
+    window.sb.from("profiles").select("contact_name, business_name, created_at").eq("role","customer").order("created_at",{ascending:false}).limit(5),
+  ]);
 
-/* ==================================================
-   DASHBOARD TAB
-================================================== */
+  setEl("statProducts",  prodCount  ?? 0);
+  setEl("statOrders",    orderCount ?? 0);
+  setEl("statUsers",     userCount  ?? 0);
+  setEl("statOutOfStock",(lowStockItems || []).length);
 
-function renderDashboardTab() {
-  renderRecentOrders();
-  renderLowStock();
-}
-
-function renderRecentOrders() {
-  const orders = getOrders().slice(-5).reverse();
-  const tbody = document.getElementById("recentOrdersBody");
-  if (!tbody) return;
-  if (!orders.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="a-empty">No orders yet.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = orders.map(o => `
+  const ro = document.getElementById("recentOrdersBody");
+  if (ro) ro.innerHTML = (recentOrders || []).map(o => `
     <tr>
-      <td><strong>#${escHtml(o.id)}</strong></td>
-      <td>${escHtml(o.customerName)}</td>
-      <td>${escHtml(o.businessName)}</td>
-      <td>${formatDate(o.createdAt)}</td>
-      <td>${orderBadge(o.status)}</td>
-      <td><button class="a-action-btn" onclick="openOrderModal('${escHtml(o.id)}')">View</button></td>
-    </tr>
-  `).join("");
-}
+      <td>${escHtml(o.order_number)}</td>
+      <td>${escHtml(o.customer_name || "—")}</td>
+      <td>${escHtml(o.business_name || "—")}</td>
+      <td>${fmt(o.created_at)}</td>
+      <td><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></td>
+      <td>$${Number(o.total).toFixed(2)}</td>
+    </tr>`).join("") || "<tr><td colspan='6' class='a-empty'>No orders yet</td></tr>";
 
-function renderLowStock() {
-  const products = getProducts().filter(p => p.stock !== "in_stock");
-  const tbody = document.getElementById("lowStockBody");
-  if (!tbody) return;
-  if (!products.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="a-empty">All products in stock.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = products.map(p => `
+  const ls = document.getElementById("lowStockBody");
+  if (ls) ls.innerHTML = (lowStockItems || []).map(i => `
     <tr>
-      <td>${escHtml(p.name)}</td>
-      <td>${escHtml(p.category)}</td>
-      <td>${p.stockQty ?? 0}</td>
-      <td>${stockBadge(p.stock)}</td>
-    </tr>
-  `).join("");
+      <td>${escHtml(i.products?.name || "—")}</td>
+      <td>${escHtml(i.products?.category_name || "—")}</td>
+      <td>${i.stock_qty}</td>
+      <td><span class="a-badge a-badge-red">Out of Stock</span></td>
+    </tr>`).join("") || "<tr><td colspan='4' class='a-empty'>All products in stock.</td></tr>";
 }
 
-/* ==================================================
-   PRODUCTS TAB
-================================================== */
+/* ── Products ──────────────────────────────────────────────── */
 
-function renderProductsTable(filter = "") {
-  let products = getProducts();
-  const catFilter = document.getElementById("productCategoryFilter")?.value || "";
-  const search = (document.getElementById("productSearch")?.value || filter).toLowerCase();
-  if (catFilter) products = products.filter(p => p.category === catFilter);
-  if (search)    products = products.filter(p => p.name.toLowerCase().includes(search) || p.category.toLowerCase().includes(search));
-
+async function renderProductsTable(filter) {
+  filter = filter || "";
   const tbody = document.getElementById("productsTableBody");
   if (!tbody) return;
-  if (!products.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="a-empty">No products found. Click + Add Product to get started.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = products.map(p => `
-    <tr>
-      <td><img class="a-prod-img" src="${escHtml(p.image || "")}" alt="" onerror="this.style.visibility='hidden'"></td>
-      <td><strong>${escHtml(p.name)}</strong></td>
-      <td>${escHtml(p.category)}</td>
-      <td><strong>$${Number(p.price).toFixed(2)}</strong> <span style="color:#999;font-size:11px">/${escHtml(p.unit||"Case")}</span></td>
-      <td>${p.caseQty || "—"}</td>
-      <td>${stockBadge(p.stock)}</td>
-      <td>${p.featured ? '<span class="a-badge a-badge-blue">Yes</span>' : '<span style="color:#ccc">—</span>'}</td>
+  tbody.innerHTML = `<tr><td colspan="8" class="a-empty" style="padding:30px">Loading…</td></tr>`;
+
+  let q = window.sb.from("products").select("*, inventory(stock_qty, status)").order("name");
+  if (filter) q = q.ilike("name", `%${filter}%`);
+  const { data: products } = await q;
+
+  tbody.innerHTML = (products || []).map(p => {
+    const inv = p.inventory?.[0];
+    return `<tr>
+      <td><img src="${escHtml(p.image_url || "blanket.png")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='blanket.png'"></td>
       <td>
-        <button class="a-action-btn edit" onclick="openEditProduct('${escHtml(p.id)}')">Edit</button>
-        <button class="a-action-btn delete" onclick="openDeleteProduct('${escHtml(p.id)}', '${escHtml(p.name)}')">Delete</button>
+        <strong>${escHtml(p.name)}</strong>
+        ${p.sku ? `<br><small style="color:#aaa">SKU: ${escHtml(p.sku)}</small>` : ""}
       </td>
-    </tr>
-  `).join("");
+      <td>${escHtml(p.category_name || "—")}</td>
+      <td>
+        $${Number(p.price).toFixed(2)}
+        ${p.is_on_sale && p.sale_price ? `<br><small style="color:#ED7226">Sale: $${Number(p.sale_price).toFixed(2)}</small>` : ""}
+      </td>
+      <td>${p.case_qty || 1}</td>
+      <td>${inv?.stock_qty ?? 0} — <span class="a-badge ${badgeClass(inv?.status)}">${inv?.status || "?"}</span></td>
+      <td><span class="a-badge ${p.is_featured ? "a-badge-orange" : "a-badge-gray"}">${p.is_featured ? "Yes" : "No"}</span></td>
+      <td>
+        <button class="a-btn-sm" onclick="openEditProduct('${p.id}')">Edit</button>
+        <button class="a-btn-sm a-btn-danger" onclick="openDeleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="8" class="a-empty">No products found.</td></tr>`;
 }
 
-/* ==================================================
-   INVENTORY TAB
-================================================== */
+document.getElementById("productSearch")?.addEventListener("input", e => renderProductsTable(e.target.value.trim()));
 
-function renderInventoryTable() {
-  let products = getProducts();
-  const search = (document.getElementById("inventorySearch")?.value || "").toLowerCase();
-  const stockFilter = document.getElementById("inventoryStockFilter")?.value || "";
-  if (search)      products = products.filter(p => p.name.toLowerCase().includes(search));
-  if (stockFilter) products = products.filter(p => p.stock === stockFilter);
+/* ── Product Modal ─────────────────────────────────────────── */
 
+function openAddProduct() {
+  document.getElementById("modalTitle").textContent = "Add Product";
+  document.getElementById("productForm")?.reset();
+  document.getElementById("editProductId").value = "";
+  const prev = document.getElementById("prodImagePreview");
+  if (prev) prev.src = "blanket.png";
+  document.getElementById("productFormError").style.display = "none";
+  openModal("productModal");
+}
+
+async function openEditProduct(id) {
+  const { data: p } = await window.sb.from("products").select("*, inventory(stock_qty, status)").eq("id", id).single();
+  if (!p) return;
+  document.getElementById("modalTitle").textContent = "Edit Product";
+  setVal("editProductId",  p.id);
+  setVal("prodName",       p.name           || "");
+  setVal("prodSku",        p.sku            || "");
+  setVal("prodCategory",   p.category_name  || "");
+  setVal("prodDescription",p.description    || "");
+  setVal("prodPrice",      p.price          || 0);
+  setVal("prodSalePrice",  p.sale_price     || "");
+  setVal("prodUnit",       p.unit           || "Case");
+  setVal("prodCaseQty",    p.case_qty       || 1);
+  setVal("prodPackSize",   p.pack_size      || 1);
+  setVal("prodStockQty",   p.inventory?.[0]?.stock_qty ?? 0);
+  setVal("prodStock",      p.inventory?.[0]?.status    || "in_stock");
+  setVal("prodImage",      p.image_url      || "");
+  setChk("prodIsOnSale",   !!p.is_on_sale);
+  setChk("prodFeatured",   !!p.is_featured);
+  setChk("prodActive",     !!p.is_active);
+  const prev = document.getElementById("prodImagePreview");
+  if (prev) prev.src = p.image_url || "blanket.png";
+  document.getElementById("productFormError").style.display = "none";
+  openModal("productModal");
+}
+
+document.getElementById("prodImage")?.addEventListener("input", e => {
+  const prev = document.getElementById("prodImagePreview");
+  if (prev) prev.src = e.target.value || "blanket.png";
+});
+
+async function saveProduct() {
+  const errEl    = document.getElementById("productFormError");
+  const id       = document.getElementById("editProductId").value;
+  const isOnSale = document.getElementById("prodIsOnSale")?.checked || false;
+  const spRaw    = parseFloat(document.getElementById("prodSalePrice")?.value) || null;
+  const name     = (document.getElementById("prodName")?.value || "").trim();
+
+  if (!name) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
+  errEl.style.display = "none";
+
+  const payload = {
+    name,
+    sku           : (document.getElementById("prodSku")?.value || "").trim() || null,
+    category_name : (document.getElementById("prodCategory")?.value || "").trim(),
+    description   : (document.getElementById("prodDescription")?.value || "").trim(),
+    price         : parseFloat(document.getElementById("prodPrice")?.value) || 0,
+    sale_price    : isOnSale ? spRaw : null,
+    is_on_sale    : isOnSale,
+    unit          : document.getElementById("prodUnit")?.value || "Case",
+    case_qty      : parseInt(document.getElementById("prodCaseQty")?.value) || 1,
+    pack_size     : parseInt(document.getElementById("prodPackSize")?.value) || 1,
+    image_url     : (document.getElementById("prodImage")?.value || "").trim() || null,
+    is_featured   : document.getElementById("prodFeatured")?.checked || false,
+    is_active     : document.getElementById("prodActive")?.checked ?? true,
+    updated_at    : new Date().toISOString(),
+  };
+
+  const stockQty    = parseInt(document.getElementById("prodStockQty")?.value) || 0;
+  const stockStatus = document.getElementById("prodStock")?.value || "in_stock";
+  let productId = id;
+
+  if (id) {
+    const { error } = await window.sb.from("products").update(payload).eq("id", id);
+    if (error) { errEl.textContent = "Error: " + error.message; errEl.style.display = "block"; return; }
+  } else {
+    const { data, error } = await window.sb.from("products").insert(payload).select().single();
+    if (error) { errEl.textContent = "Error: " + error.message; errEl.style.display = "block"; return; }
+    productId = data.id;
+  }
+
+  await window.sb.from("inventory").upsert(
+    { product_id: productId, stock_qty: stockQty, status: stockStatus, updated_at: new Date().toISOString() },
+    { onConflict: "product_id" }
+  );
+
+  closeModal("productModal");
+  showToast(id ? "Product updated!" : "Product added!");
+  renderProductsTable();
+}
+
+async function openDeleteProduct(id) {
+  if (!confirm("Delete this product? This cannot be undone.")) return;
+  const { error } = await window.sb.from("products").delete().eq("id", id);
+  if (error) { showToast("Error: " + error.message); return; }
+  showToast("Product deleted.");
+  renderProductsTable();
+}
+
+/* ── Image Upload ───────────────────────────────────────────── */
+
+document.getElementById("prodImageFile")?.addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const ext  = file.name.split(".").pop();
+  const path = `products/${Date.now()}.${ext}`;
+  showToast("Uploading…");
+  const { error } = await window.sb.storage.from("product-images").upload(path, file, { upsert: true });
+  if (error) { showToast("Upload failed: " + error.message); return; }
+  const { data: { publicUrl } } = window.sb.storage.from("product-images").getPublicUrl(path);
+  setVal("prodImage", publicUrl);
+  const prev = document.getElementById("prodImagePreview");
+  if (prev) prev.src = publicUrl;
+  showToast("Image uploaded!");
+});
+
+/* ── Inventory ─────────────────────────────────────────────── */
+
+async function renderInventoryTable() {
   const tbody = document.getElementById("inventoryTableBody");
   if (!tbody) return;
-  if (!products.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="a-empty">No products found.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = products.map(p => `
+  tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Loading…</td></tr>`;
+  const { data: items } = await window.sb.from("inventory")
+    .select("*, products(id, name, sku, category_name, price)")
+    .order("updated_at", { ascending: false });
+
+  tbody.innerHTML = (items || []).map(i => `
     <tr>
-      <td><strong>${escHtml(p.name)}</strong></td>
-      <td>${escHtml(p.category)}</td>
-      <td>$${Number(p.price).toFixed(2)}</td>
-      <td>${p.stockQty ?? 0}</td>
-      <td>${stockBadge(p.stock)}</td>
+      <td>${escHtml(i.products?.name || "—")}</td>
+      <td>${escHtml(i.products?.category_name || "—")}</td>
+      <td>$${Number(i.products?.price || 0).toFixed(2)}</td>
+      <td><input class="stock-qty-input" type="number" min="0" value="${i.stock_qty}" data-inv-id="${i.id}" style="width:80px;padding:6px;border:1.5px solid #ddd;border-radius:6px"></td>
+      <td><span class="a-badge ${badgeClass(i.status)}">${i.status}</span></td>
       <td>
-        <input class="stock-qty-input" type="number" min="0" value="${p.stockQty ?? 0}"
-               id="sqty_${escHtml(p.id)}" />
-        <select class="status-select" id="sstatus_${escHtml(p.id)}">
-          <option value="in_stock"     ${p.stock==="in_stock"?"selected":""}>In Stock</option>
-          <option value="low_stock"    ${p.stock==="low_stock"?"selected":""}>Low Stock</option>
-          <option value="out_of_stock" ${p.stock==="out_of_stock"?"selected":""}>Out of Stock</option>
+        <select class="a-select stock-status-select" data-inv-id="${i.id}" style="font-size:12px;padding:6px">
+          <option value="in_stock"     ${i.status==="in_stock"?"selected":""}>In Stock</option>
+          <option value="low_stock"    ${i.status==="low_stock"?"selected":""}>Low Stock</option>
+          <option value="out_of_stock" ${i.status==="out_of_stock"?"selected":""}>Out of Stock</option>
         </select>
-        <button class="a-action-btn" onclick="updateInventory('${escHtml(p.id)}')">Save</button>
+        <button class="a-btn-sm" onclick="updateInventory('${i.id}')">Save</button>
       </td>
-    </tr>
-  `).join("");
+    </tr>`).join("") || `<tr><td colspan="6" class="a-empty">No inventory records.</td></tr>`;
 }
 
-function updateInventory(id) {
-  const products = getProducts();
-  const idx = products.findIndex(p => p.id === id);
-  if (idx === -1) return;
-  const qty    = parseInt(document.getElementById("sqty_" + id)?.value || 0);
-  const status = document.getElementById("sstatus_" + id)?.value || "in_stock";
-  products[idx].stockQty = qty;
-  products[idx].stock    = status;
-  saveProducts(products);
-  renderInventoryTable();
-  refreshStats();
-  showToast("Inventory updated.");
+async function updateInventory(id) {
+  const qty    = parseInt(document.querySelector(`.stock-qty-input[data-inv-id="${id}"]`)?.value) || 0;
+  const status = document.querySelector(`.stock-status-select[data-inv-id="${id}"]`)?.value || "in_stock";
+  await window.sb.from("inventory").update({ stock_qty: qty, status, updated_at: new Date().toISOString() }).eq("id", id);
+  showToast("Inventory updated!");
 }
 
-/* ==================================================
-   ORDERS TAB
-================================================== */
+/* ── Orders ────────────────────────────────────────────────── */
 
-function renderOrdersTable() {
-  let orders = getOrders().slice().reverse();
-  const search = (document.getElementById("orderSearch")?.value || "").toLowerCase();
-  const statusFilter = document.getElementById("orderStatusFilter")?.value || "";
-  if (search)       orders = orders.filter(o => o.id.toLowerCase().includes(search) || (o.customerName||"").toLowerCase().includes(search) || (o.businessName||"").toLowerCase().includes(search));
-  if (statusFilter) orders = orders.filter(o => o.status === statusFilter);
-
+async function renderOrdersTable(filter) {
+  filter = filter || "";
   const tbody = document.getElementById("ordersTableBody");
   if (!tbody) return;
-  if (!orders.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="a-empty">No orders found.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = orders.map(o => `
+  tbody.innerHTML = `<tr><td colspan="8" class="a-empty">Loading…</td></tr>`;
+  let q = window.sb.from("orders").select("*, order_items(id)").order("created_at", { ascending: false });
+  if (filter) q = q.ilike("order_number", `%${filter}%`);
+  const { data: orders } = await q;
+
+  tbody.innerHTML = (orders || []).map(o => `
     <tr>
-      <td><strong>#${escHtml(o.id)}</strong></td>
-      <td>${escHtml(o.customerName || "—")}</td>
-      <td>${escHtml(o.businessName || "—")}</td>
-      <td>${(o.items||[]).length} item(s)</td>
-      <td><strong>$${Number(o.total||0).toFixed(2)}</strong></td>
-      <td>${formatDate(o.createdAt)}</td>
+      <td><strong>${escHtml(o.order_number)}</strong></td>
+      <td>${escHtml(o.customer_name || "—")}</td>
+      <td>${escHtml(o.business_name || "—")}</td>
+      <td>${(o.order_items || []).length}</td>
+      <td>$${Number(o.total).toFixed(2)}</td>
+      <td>${fmt(o.created_at)}</td>
       <td>
-        <select class="status-select" onchange="updateOrderStatus('${escHtml(o.id)}', this.value)">
+        <select onchange="updateOrderStatus('${o.id}', this.value)" class="a-select" style="font-size:12px">
           ${["pending","confirmed","processing","shipped","delivered","cancelled"].map(s =>
             `<option value="${s}" ${o.status===s?"selected":""}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`
           ).join("")}
         </select>
       </td>
-      <td>
-        <button class="a-action-btn" onclick="openOrderModal('${escHtml(o.id)}')">View</button>
-        <button class="a-action-btn delete" onclick="openDeleteOrder('${escHtml(o.id)}')">Delete</button>
-      </td>
-    </tr>
-  `).join("");
+      <td><button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button></td>
+    </tr>`).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
 }
 
-function updateOrderStatus(orderId, status) {
-  const orders = getOrders();
-  const o = orders.find(o => o.id === orderId);
-  if (o) { o.status = status; saveOrders(orders); refreshStats(); showToast("Order status updated."); }
+document.getElementById("orderSearch")?.addEventListener("input", e => renderOrdersTable(e.target.value.trim()));
+
+async function updateOrderStatus(orderId, status) {
+  await window.sb.from("orders").update({ status, updated_at: new Date().toISOString() }).eq("id", orderId);
+  showToast("Order status updated.");
 }
 
-/* ==================================================
-   USERS TAB
-================================================== */
-
-function renderUsersTable() {
-  let users = getUsers();
-  const search = (document.getElementById("userSearch")?.value || "").toLowerCase();
-  if (search) users = users.filter(u =>
-    (u.contactName||"").toLowerCase().includes(search) ||
-    (u.businessName||"").toLowerCase().includes(search) ||
-    (u.email||"").toLowerCase().includes(search)
-  );
-
-  const tbody = document.getElementById("usersTableBody");
-  if (!tbody) return;
-  if (!users.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="a-empty">No registered users yet.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = users.map(u => `
-    <tr>
-      <td><strong>${escHtml(u.contactName)}</strong></td>
-      <td>${escHtml(u.businessName)}</td>
-      <td>${escHtml(u.businessType || "—")}</td>
-      <td>${escHtml(u.email)}</td>
-      <td>${escHtml(u.phone || "—")}</td>
-      <td>${formatDate(u.createdAt)}</td>
-      <td><button class="a-action-btn delete" onclick="openDeleteUser('${escHtml(u.id)}', '${escHtml(u.email)}')">Remove</button></td>
-    </tr>
-  `).join("");
-}
-
-/* ==================================================
-   PRODUCT MODAL (Add / Edit)
-================================================== */
-
-function openAddProduct() {
-  document.getElementById("modalTitle").textContent = "Add Product";
-  document.getElementById("editProductId").value = "";
-  clearProductForm();
-  showModal("productModal");
-}
-
-function openEditProduct(id) {
-  const p = getProducts().find(p => p.id === id);
-  if (!p) return;
-  document.getElementById("modalTitle").textContent = "Edit Product";
-  document.getElementById("editProductId").value    = id;
-  document.getElementById("prodName").value         = p.name || "";
-  document.getElementById("prodCategory").value     = p.category || "";
-  document.getElementById("prodDescription").value  = p.description || "";
-  document.getElementById("prodPrice").value        = p.price || "";
-  document.getElementById("prodUnit").value         = p.unit || "Case";
-  document.getElementById("prodCaseQty").value      = p.caseQty || "";
-  document.getElementById("prodPackSize").value     = p.packSize || "";
-  document.getElementById("prodStockQty").value     = p.stockQty ?? "";
-  document.getElementById("prodStock").value        = p.stock || "in_stock";
-  document.getElementById("prodImage").value        = p.image || "";
-  document.getElementById("prodFeatured").checked   = !!p.featured;
-  showModal("productModal");
-}
-
-function clearProductForm() {
-  ["prodName","prodDescription","prodPrice","prodUnit","prodCaseQty","prodPackSize","prodStockQty","prodImage"].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = "";
-  });
-  const cat = document.getElementById("prodCategory"); if (cat) cat.value = "";
-  const st  = document.getElementById("prodStock");    if (st)  st.value  = "in_stock";
-  const ft  = document.getElementById("prodFeatured"); if (ft)  ft.checked = false;
-  const err = document.getElementById("productFormError"); if (err) { err.style.display = "none"; err.textContent = ""; }
-}
-
-function saveProduct() {
-  const id = document.getElementById("editProductId").value;
-  const name     = document.getElementById("prodName").value.trim();
-  const category = document.getElementById("prodCategory").value;
-  const price    = parseFloat(document.getElementById("prodPrice").value);
-
-  const errEl = document.getElementById("productFormError");
-  if (!name)              { showFormError(errEl, "Product name is required."); return; }
-  if (!category)          { showFormError(errEl, "Please select a category."); return; }
-  if (isNaN(price) || price < 0) { showFormError(errEl, "Please enter a valid price."); return; }
-  errEl.style.display = "none";
-
-  const product = {
-    id         : id || uid(),
-    name,
-    category,
-    description: document.getElementById("prodDescription").value.trim(),
-    price,
-    unit       : document.getElementById("prodUnit").value.trim() || "Case",
-    caseQty    : parseInt(document.getElementById("prodCaseQty").value) || 1,
-    packSize   : parseInt(document.getElementById("prodPackSize").value) || 1,
-    stockQty   : parseInt(document.getElementById("prodStockQty").value) || 0,
-    stock      : document.getElementById("prodStock").value,
-    image      : document.getElementById("prodImage").value.trim(),
-    featured   : document.getElementById("prodFeatured").checked,
-    updatedAt  : new Date().toISOString(),
-  };
-
-  const products = getProducts();
-  if (id) {
-    const idx = products.findIndex(p => p.id === id);
-    if (idx !== -1) products[idx] = { ...products[idx], ...product };
-  } else {
-    product.createdAt = new Date().toISOString();
-    products.push(product);
-  }
-  saveProducts(products);
-  hideModal("productModal");
-  renderProductsTable();
-  refreshStats();
-  showToast(id ? "Product updated." : "Product added.");
-}
-
-/* ==================================================
-   ORDER DETAIL MODAL
-================================================== */
-
-function openOrderModal(id) {
-  const o = getOrders().find(o => o.id === id);
+async function openOrderModal(id) {
+  const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
-  const body = document.getElementById("orderModalBody");
-  body.innerHTML = `
-    <div class="order-meta">
-      <div class="order-meta-item"><strong>Order ID</strong>#${escHtml(o.id)}</div>
-      <div class="order-meta-item"><strong>Date</strong>${formatDate(o.createdAt)}</div>
-      <div class="order-meta-item"><strong>Customer</strong>${escHtml(o.customerName||"—")}</div>
-      <div class="order-meta-item"><strong>Business</strong>${escHtml(o.businessName||"—")}</div>
-      <div class="order-meta-item"><strong>Email</strong>${escHtml(o.email||"—")}</div>
-      <div class="order-meta-item"><strong>Phone</strong>${escHtml(o.phone||"—")}</div>
-      <div class="order-meta-item"><strong>Delivery Address</strong>${escHtml(o.address||"—")}</div>
-      <div class="order-meta-item"><strong>Status</strong>${orderBadge(o.status)}</div>
-    </div>
-    <h4 style="font-size:14px;font-weight:700;margin-bottom:10px">Items Ordered</h4>
-    <table class="order-detail-table">
-      <thead><tr><th>Product</th><th>Qty</th><th>Unit Price</th><th>Total</th></tr></thead>
+  const addr = o.shipping_address || {};
+  document.getElementById("orderModalBody").innerHTML = `
+    <p><strong>Order:</strong> ${escHtml(o.order_number)}</p>
+    <p><strong>Customer:</strong> ${escHtml(o.customer_name || "—")}</p>
+    <p><strong>Business:</strong> ${escHtml(o.business_name || "—")}</p>
+    <p><strong>Email:</strong> ${escHtml(o.customer_email || "—")}</p>
+    <p><strong>Phone:</strong> ${escHtml(o.phone || "—")}</p>
+    <p><strong>Address:</strong> ${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</p>
+    <p><strong>Type:</strong> ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</p>
+    <p><strong>Status:</strong> <span class="a-badge ${badgeClass(o.status)}">${o.status}</span></p>
+    <p><strong>Date:</strong> ${fmt(o.created_at)}</p>
+    <hr style="margin:16px 0;border:1px solid #eee">
+    <h4 style="margin-bottom:12px">Items</h4>
+    <table style="width:100%;font-size:13px;border-collapse:collapse">
+      <thead><tr style="background:#f5f7fa">
+        <th style="padding:8px 12px;text-align:left">Product</th>
+        <th style="padding:8px;text-align:center">Qty</th>
+        <th style="padding:8px;text-align:right">Price</th>
+        <th style="padding:8px;text-align:right">Subtotal</th>
+      </tr></thead>
       <tbody>
-        ${(o.items||[]).map(item => `
-          <tr>
-            <td>${escHtml(item.name)}</td>
-            <td>${item.quantity||1}</td>
-            <td>$${Number(item.price||0).toFixed(2)}</td>
-            <td>$${(Number(item.price||0) * (item.quantity||1)).toFixed(2)}</td>
-          </tr>
-        `).join("")}
-        <tr style="font-weight:800">
-          <td colspan="3" style="text-align:right">Total</td>
-          <td>$${Number(o.total||0).toFixed(2)}</td>
-        </tr>
+        ${(o.order_items || []).map(i => `<tr style="border-top:1px solid #eee">
+          <td style="padding:8px 12px">${escHtml(i.name)}</td>
+          <td style="text-align:center">${i.quantity}</td>
+          <td style="text-align:right">$${Number(i.price).toFixed(2)}</td>
+          <td style="text-align:right">$${Number(i.subtotal).toFixed(2)}</td>
+        </tr>`).join("")}
       </tbody>
     </table>
-    ${o.notes ? `<p style="margin-top:14px;font-size:13px"><strong>Notes:</strong> ${escHtml(o.notes)}</p>` : ""}
-  `;
-  showModal("orderModal");
+    <div style="text-align:right;margin-top:12px;font-size:16px;font-weight:700">Total: $${Number(o.total).toFixed(2)}</div>`;
+  openModal("orderModal");
 }
 
-/* ==================================================
-   DELETE HELPERS
-================================================== */
+/* ── Users ─────────────────────────────────────────────────── */
 
-let pendingDelete = null;
+async function renderUsersTable(filter) {
+  filter = filter || "";
+  const tbody = document.getElementById("usersTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Loading…</td></tr>`;
+  let q = window.sb.from("profiles").select("*").eq("role","customer").order("created_at",{ascending:false});
+  if (filter) q = q.ilike("business_name", `%${filter}%`);
+  const { data: users } = await q;
 
-function openDeleteProduct(id, name) {
-  document.getElementById("deleteModalMsg").textContent = `Delete "${name}"? This cannot be undone.`;
-  pendingDelete = () => {
-    const products = getProducts().filter(p => p.id !== id);
-    saveProducts(products);
-    renderProductsTable();
-    if (currentTab === "inventory") renderInventoryTable();
-    refreshStats();
-    showToast("Product deleted.");
-  };
-  showModal("deleteModal");
+  tbody.innerHTML = (users || []).map(u => `
+    <tr>
+      <td>${escHtml(u.contact_name  || "—")}</td>
+      <td>${escHtml(u.business_name || "—")}</td>
+      <td>${escHtml(u.business_type || "—")}</td>
+      <td>${escHtml(u.email         || "—")}</td>
+      <td>${escHtml(u.phone         || "—")}</td>
+      <td>${fmt(u.created_at)}</td>
+      <td><button class="a-btn-sm a-btn-danger" onclick="deleteUser('${u.id}')">Remove</button></td>
+    </tr>`).join("") || `<tr><td colspan="7" class="a-empty">No customers yet.</td></tr>`;
 }
 
-function openDeleteOrder(id) {
-  document.getElementById("deleteModalMsg").textContent = `Delete order #${id}? This cannot be undone.`;
-  pendingDelete = () => {
-    const orders = getOrders().filter(o => o.id !== id);
-    saveOrders(orders);
-    renderOrdersTable();
-    refreshStats();
-    showToast("Order deleted.");
-  };
-  showModal("deleteModal");
+document.getElementById("userSearch")?.addEventListener("input", e => renderUsersTable(e.target.value.trim()));
+
+async function deleteUser(id) {
+  if (!confirm("Remove this user? This cannot be undone.")) return;
+  await window.sb.from("profiles").delete().eq("id", id);
+  showToast("User removed.");
+  renderUsersTable();
 }
 
-function openDeleteUser(id, email) {
-  document.getElementById("deleteModalMsg").textContent = `Remove user "${email}"? This cannot be undone.`;
-  pendingDelete = () => {
-    const users = getUsers().filter(u => u.id !== id);
-    localStorage.setItem(KEYS.users, JSON.stringify(users));
-    renderUsersTable();
-    refreshStats();
-    showToast("User removed.");
-  };
-  showModal("deleteModal");
+/* ── Reports ───────────────────────────────────────────────── */
+
+async function renderReportsTab() {
+  const panel = document.getElementById("tab-reports");
+  if (!panel) return;
+  panel.innerHTML = `<div style="text-align:center;padding:40px;color:#888">Loading analytics…</div>`;
+
+  const [
+    { data: orders },
+    { count: customerCount },
+    { count: productCount }
+  ] = await Promise.all([
+    window.sb.from("orders").select("status, total, created_at"),
+    window.sb.from("profiles").select("*", { count:"exact", head:true }).eq("role","customer"),
+    window.sb.from("products").select("*", { count:"exact", head:true }).eq("is_active", true),
+  ]);
+
+  const allOrders    = orders || [];
+  const totalRevenue = allOrders.filter(o => o.status !== "cancelled").reduce((s,o) => s + Number(o.total), 0);
+  const byStatus     = {};
+  allOrders.forEach(o => { byStatus[o.status] = (byStatus[o.status] || 0) + 1; });
+  const byMonth      = {};
+  allOrders.filter(o => o.status !== "cancelled").forEach(o => {
+    const key = (o.created_at || "").slice(0,7) || "unknown";
+    byMonth[key] = (byMonth[key] || 0) + Number(o.total);
+  });
+
+  panel.innerHTML = `
+    <h2 style="font-size:22px;color:#0b2d52;margin-bottom:24px">Reports &amp; Analytics</h2>
+    <div class="a-stats-grid" style="margin-bottom:32px">
+      <div class="a-stat-card"><div><p class="a-stat-label">Total Revenue</p><p class="a-stat-value">$${totalRevenue.toFixed(2)}</p></div></div>
+      <div class="a-stat-card"><div><p class="a-stat-label">Total Orders</p><p class="a-stat-value">${allOrders.length}</p></div></div>
+      <div class="a-stat-card"><div><p class="a-stat-label">Customers</p><p class="a-stat-value">${customerCount ?? 0}</p></div></div>
+      <div class="a-stat-card"><div><p class="a-stat-label">Active Products</p><p class="a-stat-value">${productCount ?? 0}</p></div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+      <div class="a-card">
+        <div class="a-card-header"><h3>Orders by Status</h3></div>
+        <div style="padding:16px">
+          ${Object.entries(byStatus).length
+            ? Object.entries(byStatus).map(([s, n]) => `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+                  <span class="a-badge ${badgeClass(s)}">${s}</span>
+                  <strong>${n}</strong>
+                </div>`).join("")
+            : "<p style='color:#aaa;font-size:13px'>No orders yet.</p>"}
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><h3>Revenue by Month</h3></div>
+        <div style="padding:16px">
+          ${Object.entries(byMonth).length
+            ? Object.entries(byMonth).sort().map(([m, rev]) => `
+                <div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+                  <span>${m}</span><strong>$${Number(rev).toFixed(2)}</strong>
+                </div>`).join("")
+            : "<p style='color:#aaa;font-size:13px'>No revenue data yet.</p>"}
+        </div>
+      </div>
+    </div>`;
 }
 
-/* ==================================================
-   MODAL HELPERS
-================================================== */
+/* ── Settings ──────────────────────────────────────────────── */
 
-function showModal(id) { document.getElementById(id).style.display = "flex"; }
-function hideModal(id) { document.getElementById(id).style.display = "none"; }
+function setupSettings(userId) {
+  document.getElementById("changePasswordForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const newPw  = document.getElementById("newPass")?.value || "";
+    const confPw = document.getElementById("confirmPass")?.value || "";
+    const msgEl  = document.getElementById("passwordChangeMsg");
+    const errEl  = document.getElementById("passwordChangeErr");
+    if (msgEl) msgEl.style.display = "none";
+    if (errEl) errEl.style.display = "none";
+    if (newPw.length < 8) { if (errEl){ errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = "block"; } return; }
+    if (newPw !== confPw) { if (errEl){ errEl.textContent = "Passwords do not match."; errEl.style.display = "block"; } return; }
+    const { error } = await window.sb.auth.updateUser({ password: newPw });
+    if (error) { if (errEl){ errEl.textContent = error.message; errEl.style.display = "block"; } return; }
+    if (msgEl){ msgEl.textContent = "Password updated successfully!"; msgEl.style.display = "block"; }
+    e.target.reset();
+  });
 
-function showFormError(el, msg) {
-  if (!el) return;
-  el.textContent = msg;
-  el.style.display = "block";
+  document.getElementById("siteInfoForm")?.addEventListener("submit", e => {
+    e.preventDefault();
+    showToast("Site info saved.");
+  });
 }
 
-/* ==================================================
-   SETTINGS
-================================================== */
+/* ── Modal helpers ─────────────────────────────────────────── */
 
-function loadSettings() {
-  const info = getSiteInfo();
-  const el = id => document.getElementById(id);
-  if (el("sitePhone"))   el("sitePhone").value   = info.phone   || "";
-  if (el("siteEmail"))   el("siteEmail").value    = info.email   || "";
-  if (el("siteAddress")) el("siteAddress").value  = info.address || "";
-}
+function openModal(id)  { const el = document.getElementById(id); if (el) el.style.display = "flex"; }
+function closeModal(id) { const el = document.getElementById(id); if (el) el.style.display = "none"; }
 
-/* ==================================================
-   TOAST NOTIFICATION
-================================================== */
+document.querySelectorAll(".a-modal-close, .a-modal-cancel, [id^=cancel][id$=Modal], [id^=close][id$=Modal]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const overlay = btn.closest(".a-modal-overlay");
+    if (overlay) overlay.style.display = "none";
+  });
+});
+
+/* ── Toast ─────────────────────────────────────────────────── */
 
 function showToast(msg) {
-  let toast = document.getElementById("rrs-toast");
+  let toast = document.getElementById("adminToast");
   if (!toast) {
     toast = document.createElement("div");
-    toast.id = "rrs-toast";
-    toast.style.cssText = "position:fixed;bottom:28px;right:28px;background:#0b2d52;color:#fff;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:99999;box-shadow:0 6px 20px rgba(0,0,0,.2);transition:opacity .3s;";
+    toast.id = "adminToast";
+    toast.style.cssText = "position:fixed;bottom:24px;right:24px;background:#0b2d52;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:600;z-index:9999;display:none";
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
-  toast.style.opacity = "1";
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(() => { toast.style.opacity = "0"; }, 2500);
+  toast.style.display = "block";
+  clearTimeout(window._adminToast);
+  window._adminToast = setTimeout(() => { toast.style.display = "none"; }, 3000);
 }
 
-/* ==================================================
-   INIT
-================================================== */
+/* ── Util ──────────────────────────────────────────────────── */
 
-document.addEventListener("DOMContentLoaded", () => {
+function escHtml(str)   { return String(str ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+function fmt(iso)       { if (!iso) return "—"; return new Date(iso).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}); }
+function setEl(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+function setVal(id, v)  { const el = document.getElementById(id); if (el) el.value = v; }
+function setChk(id, v)  { const el = document.getElementById(id); if (el) el.checked = v; }
 
-  /* Admin login */
-  document.getElementById("adminLoginForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const email = document.getElementById("adminEmail").value.trim().toLowerCase();
-    const pass  = document.getElementById("adminPassword").value;
-    const errEl = document.getElementById("adminLoginError");
-
-    if (email !== ADMIN_EMAIL.toLowerCase() || pass !== getAdminPass()) {
-      errEl.textContent = "Invalid email or password.";
-      errEl.style.display = "block";
-      return;
-    }
-    errEl.style.display = "none";
-    sessionStorage.setItem(KEYS.session, "1");
-    showDashboard();
-  });
-
-  /* Logout */
-  document.getElementById("adminLogout").addEventListener("click", () => { showLogin(); });
-
-  /* Sidebar nav */
-  document.querySelectorAll(".a-nav-item").forEach(el => {
-    el.addEventListener("click", e => { e.preventDefault(); switchTab(el.dataset.tab); });
-  });
-
-  /* "View All" links in dashboard */
-  document.querySelectorAll(".a-link-btn[data-goto]").forEach(btn => {
-    btn.addEventListener("click", () => switchTab(btn.dataset.goto));
-  });
-
-  /* Product search / filter */
-  document.getElementById("productSearch")?.addEventListener("input", () => renderProductsTable());
-  document.getElementById("productCategoryFilter")?.addEventListener("change", () => renderProductsTable());
-
-  /* Inventory search / filter */
-  document.getElementById("inventorySearch")?.addEventListener("input", () => renderInventoryTable());
-  document.getElementById("inventoryStockFilter")?.addEventListener("change", () => renderInventoryTable());
-
-  /* Order search / filter */
-  document.getElementById("orderSearch")?.addEventListener("input", () => renderOrdersTable());
-  document.getElementById("orderStatusFilter")?.addEventListener("change", () => renderOrdersTable());
-
-  /* User search */
-  document.getElementById("userSearch")?.addEventListener("input", () => renderUsersTable());
-
-  /* Product modal */
-  document.getElementById("openAddProduct").addEventListener("click", openAddProduct);
-  document.getElementById("saveProduct").addEventListener("click", saveProduct);
-  document.getElementById("closeProductModal").addEventListener("click", () => hideModal("productModal"));
-  document.getElementById("cancelProductModal").addEventListener("click", () => hideModal("productModal"));
-
-  /* Order modal */
-  document.getElementById("closeOrderModal").addEventListener("click", () => hideModal("orderModal"));
-  document.getElementById("cancelOrderModal").addEventListener("click", () => hideModal("orderModal"));
-
-  /* Delete modal */
-  document.getElementById("closeDeleteModal").addEventListener("click", () => hideModal("deleteModal"));
-  document.getElementById("cancelDeleteModal").addEventListener("click", () => hideModal("deleteModal"));
-  document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
-    if (pendingDelete) { pendingDelete(); pendingDelete = null; }
-    hideModal("deleteModal");
-  });
-
-  /* Close modals on overlay click */
-  document.querySelectorAll(".a-modal-overlay").forEach(overlay => {
-    overlay.addEventListener("click", e => {
-      if (e.target === overlay) overlay.style.display = "none";
-    });
-  });
-
-  /* Settings: change password */
-  document.getElementById("changePasswordForm")?.addEventListener("submit", e => {
-    e.preventDefault();
-    const cur     = document.getElementById("currentPass").value;
-    const newP    = document.getElementById("newPass").value;
-    const confirm = document.getElementById("confirmPass").value;
-    const errEl   = document.getElementById("passwordChangeErr");
-    const msgEl   = document.getElementById("passwordChangeMsg");
-
-    if (cur !== getAdminPass())        { showFormError(errEl, "Current password is incorrect."); msgEl.style.display="none"; return; }
-    if (newP.length < 8)               { showFormError(errEl, "New password must be at least 8 characters."); msgEl.style.display="none"; return; }
-    if (newP !== confirm)              { showFormError(errEl, "Passwords do not match."); msgEl.style.display="none"; return; }
-    localStorage.setItem(ADMIN_PASS_KEY, newP);
-    errEl.style.display = "none";
-    msgEl.textContent = "Password updated successfully.";
-    msgEl.style.display = "block";
-    document.getElementById("changePasswordForm").reset();
-  });
-
-  /* Settings: site info */
-  document.getElementById("siteInfoForm")?.addEventListener("submit", e => {
-    e.preventDefault();
-    const info = {
-      phone  : document.getElementById("sitePhone").value.trim(),
-      email  : document.getElementById("siteEmail").value.trim(),
-      address: document.getElementById("siteAddress").value.trim(),
-    };
-    saveSiteInfo(info);
-    const msgEl = document.getElementById("siteInfoMsg");
-    msgEl.textContent = "Contact info saved.";
-    msgEl.style.display = "block";
-    setTimeout(() => { msgEl.style.display = "none"; }, 2500);
-  });
-
-  /* Settings: seed products */
-  document.getElementById("seedProducts")?.addEventListener("click", () => {
-    const existing = getProducts();
-    if (existing.length && !confirm("Products already exist. Seed default products anyway? Existing products will not be affected.")) return;
-    const toAdd = DEFAULT_PRODUCTS.filter(d => !existing.find(e => e.id === d.id));
-    saveProducts([...existing, ...toAdd]);
-    refreshStats();
-    showToast(`${toAdd.length} default products added.`);
-    if (currentTab === "products") renderProductsTable();
-    if (currentTab === "inventory") renderInventoryTable();
-  });
-
-  /* Settings: clear products */
-  document.getElementById("clearProducts")?.addEventListener("click", () => {
-    if (!confirm("Delete ALL products? This cannot be undone.")) return;
-    localStorage.removeItem(KEYS.products);
-    refreshStats();
-    showToast("All products cleared.");
-    if (currentTab === "products") renderProductsTable();
-  });
-
-  /* Settings: clear orders */
-  document.getElementById("clearOrders")?.addEventListener("click", () => {
-    if (!confirm("Delete ALL orders? This cannot be undone.")) return;
-    localStorage.removeItem(KEYS.orders);
-    refreshStats();
-    showToast("All orders cleared.");
-    if (currentTab === "orders") renderOrdersTable();
-  });
-
-  /* Check session */
-  if (isAdminLoggedIn()) {
-    showDashboard();
-    /* Seed products if empty on first load */
-    if (!getProducts().length) {
-      saveProducts(DEFAULT_PRODUCTS.map(p => ({ ...p, createdAt: new Date().toISOString() })));
-    }
-  }
-});
+function badgeClass(status) {
+  const m = {
+    pending:"a-badge-yellow", confirmed:"a-badge-blue", processing:"a-badge-blue",
+    shipped:"a-badge-green",  delivered:"a-badge-green", cancelled:"a-badge-red",
+    in_stock:"a-badge-green", low_stock:"a-badge-yellow", out_of_stock:"a-badge-red",
+  };
+  return m[status] || "a-badge-gray";
+}

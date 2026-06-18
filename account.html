@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Account — Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .account-page { max-width:1100px; margin:60px auto; padding:0 24px; display:grid; grid-template-columns:240px 1fr; gap:32px; }
+    .account-sidebar { background:#fff; border:1px solid #eee; border-radius:12px; padding:24px; height:fit-content; }
+    .account-sidebar h3 { font-size:13px; color:#999; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
+    .account-nav { list-style:none; margin:0; padding:0; }
+    .account-nav li a { display:block; padding:10px 12px; border-radius:8px; color:#333; text-decoration:none; font-size:14px; transition:background .15s; }
+    .account-nav li a:hover, .account-nav li a.active { background:#ED722610; color:#ED7226; font-weight:600; }
+    .account-main { background:#fff; border:1px solid #eee; border-radius:12px; padding:32px; }
+    .account-main h2 { font-size:22px; color:#0b2d52; margin-bottom:24px; }
+    .account-panel { display:none; }
+    .account-panel.active { display:block; }
+    .account-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+    .account-form-group { display:flex; flex-direction:column; gap:6px; }
+    .account-form-group label { font-size:13px; font-weight:600; color:#555; }
+    .account-form-group input, .account-form-group select { padding:10px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:14px; outline:none; }
+    .account-form-group input:focus { border-color:#ED7226; }
+    .acc-btn { background:#ED7226; color:#fff; border:none; border-radius:8px; padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; }
+    .acc-btn:hover { background:#d4621e; }
+    .acc-btn-outline { background:#fff; color:#ED7226; border:1.5px solid #ED7226; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer; margin-right:8px; }
+    .order-list { display:flex; flex-direction:column; gap:16px; }
+    .order-card { border:1px solid #eee; border-radius:10px; padding:20px; }
+    .order-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+    .order-num { font-weight:700; color:#0b2d52; }
+    .order-date { font-size:13px; color:#888; }
+    .order-status { font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px; }
+    .status-pending { background:#fff3cd; color:#856404; }
+    .status-confirmed { background:#d1ecf1; color:#0c5460; }
+    .status-processing { background:#cce5ff; color:#004085; }
+    .status-shipped { background:#d4edda; color:#155724; }
+    .status-delivered { background:#d4edda; color:#155724; }
+    .status-cancelled { background:#f8d7da; color:#721c24; }
+    .order-total { font-weight:700; color:#333; font-size:15px; }
+    .empty-state { text-align:center; padding:60px 0; color:#999; }
+    .empty-state p { margin-top:12px; font-size:15px; }
+    .loading-state { text-align:center; padding:40px; color:#888; }
+    .acc-msg-success { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:12px 16px; color:#16a34a; font-size:13px; margin-bottom:16px; display:none; }
+    .acc-msg-error { background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:12px 16px; color:#dc2626; font-size:13px; margin-bottom:16px; display:none; }
+    @media (max-width:768px) {
+      .account-page { grid-template-columns:1fr; }
+      .account-form-grid { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="index.html" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
+    <div class="nav-icons">
+      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
+        <div class="dropdown-menu">
+          <a href="account.html">My Account</a>
+          <a href="account.html#orders">Order History</a>
+          <a href="wishlist.html">Wishlist</a>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div class="cart-container">
+        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="account-page" id="accountPage" style="display:none">
+
+    <aside class="account-sidebar">
+      <h3>My Account</h3>
+      <ul class="account-nav">
+        <li><a href="#profile"  class="acc-tab active" data-panel="panel-profile">Profile</a></li>
+        <li><a href="#orders"   class="acc-tab"        data-panel="panel-orders">Order History</a></li>
+        <li><a href="#wishlist" class="acc-tab"        data-panel="panel-wishlist">Wishlist</a></li>
+        <li><a href="#security" class="acc-tab"        data-panel="panel-security">Security</a></li>
+      </ul>
+    </aside>
+
+    <div class="account-main">
+
+      <!-- PROFILE -->
+      <div class="account-panel active" id="panel-profile">
+        <h2>Business Profile</h2>
+        <div class="acc-msg-success" id="profileSuccess"></div>
+        <div class="acc-msg-error"   id="profileError"></div>
+        <form id="profileForm">
+          <div class="account-form-grid">
+            <div class="account-form-group">
+              <label>Business Name</label>
+              <input type="text" id="profileBusiness" placeholder="Your business name">
+            </div>
+            <div class="account-form-group">
+              <label>Business Type</label>
+              <select id="profileBusinessType">
+                <option value="">Select type…</option>
+                <option>Hotel</option><option>Motel</option><option>Short-Term Rental</option>
+                <option>Cleaning Company</option><option>Restaurant</option>
+                <option>Campground</option><option>RV Park</option>
+                <option>Facility Manager</option><option>Property Manager</option><option>Other</option>
+              </select>
+            </div>
+            <div class="account-form-group">
+              <label>Contact Name</label>
+              <input type="text" id="profileContact" placeholder="Your name">
+            </div>
+            <div class="account-form-group">
+              <label>Phone</label>
+              <input type="text" id="profilePhone" placeholder="(123) 456-7890">
+            </div>
+            <div class="account-form-group">
+              <label>Email</label>
+              <input type="email" id="profileEmail" placeholder="email@business.com" disabled style="background:#f9f9f9">
+            </div>
+          </div>
+          <button type="submit" class="acc-btn">Save Changes</button>
+        </form>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="account-panel" id="panel-orders">
+        <h2>Order History</h2>
+        <div class="order-list" id="orderList">
+          <div class="loading-state">Loading orders…</div>
+        </div>
+      </div>
+
+      <!-- WISHLIST -->
+      <div class="account-panel" id="panel-wishlist">
+        <h2>My Wishlist</h2>
+        <p style="color:#666;margin-bottom:16px">Items you've saved for later.</p>
+        <div id="accountWishlist"><div class="loading-state">Loading wishlist…</div></div>
+        <p><a href="wishlist.html" style="color:#ED7226;font-weight:600">View full wishlist →</a></p>
+      </div>
+
+      <!-- SECURITY -->
+      <div class="account-panel" id="panel-security">
+        <h2>Change Password</h2>
+        <div class="acc-msg-success" id="securitySuccess"></div>
+        <div class="acc-msg-error"   id="securityError"></div>
+        <form id="securityForm">
+          <div class="account-form-grid" style="max-width:440px">
+            <div class="account-form-group" style="grid-column:1/-1">
+              <label>New Password</label>
+              <input type="password" id="newPw" placeholder="At least 8 characters">
+            </div>
+            <div class="account-form-group" style="grid-column:1/-1">
+              <label>Confirm New Password</label>
+              <input type="password" id="confirmPw" placeholder="Repeat new password">
+            </div>
+          </div>
+          <button type="submit" class="acc-btn">Update Password</button>
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Not logged in state -->
+  <div id="notLoggedIn" style="display:none;text-align:center;padding:80px 24px">
+    <h2 style="color:#0b2d52">Please sign in to view your account</h2>
+    <p style="color:#666;margin:12px 0 24px">You need to be logged in to access your account page.</p>
+    <a href="login.html" class="acc-btn" style="display:inline-block;text-decoration:none">Sign In</a>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (typeof window.sb === "undefined") {
+        document.getElementById("notLoggedIn").style.display = "block";
+        return;
+      }
+
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (!session) {
+        document.getElementById("notLoggedIn").style.display = "block";
+        return;
+      }
+
+      document.getElementById("accountPage").style.display = "grid";
+
+      /* Load profile */
+      const { data: profile } = await window.sb.from("profiles").select("*").eq("id", session.user.id).single();
+      if (profile) {
+        document.getElementById("profileBusiness").value     = profile.business_name || "";
+        document.getElementById("profileContact").value      = profile.contact_name  || "";
+        document.getElementById("profilePhone").value        = profile.phone         || "";
+        document.getElementById("profileEmail").value        = session.user.email    || "";
+        document.getElementById("profileBusinessType").value = profile.business_type || "";
+      }
+
+      /* Tab navigation */
+      document.querySelectorAll(".acc-tab").forEach(tab => {
+        tab.addEventListener("click", e => {
+          e.preventDefault();
+          document.querySelectorAll(".acc-tab").forEach(t => t.classList.remove("active"));
+          document.querySelectorAll(".account-panel").forEach(p => p.classList.remove("active"));
+          tab.classList.add("active");
+          document.getElementById(tab.dataset.panel).classList.add("active");
+          if (tab.dataset.panel === "panel-orders")   loadOrders(session.user.id);
+          if (tab.dataset.panel === "panel-wishlist") loadAccountWishlist(session.user.id);
+        });
+      });
+
+      /* Handle hash navigation */
+      if (window.location.hash === "#orders") {
+        document.querySelector('[data-panel="panel-orders"]').click();
+      }
+
+      /* Profile save */
+      document.getElementById("profileForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const successEl = document.getElementById("profileSuccess");
+        const errorEl   = document.getElementById("profileError");
+        successEl.style.display = "none"; errorEl.style.display = "none";
+        const { error } = await window.sb.from("profiles").update({
+          business_name: document.getElementById("profileBusiness").value.trim(),
+          business_type: document.getElementById("profileBusinessType").value,
+          contact_name : document.getElementById("profileContact").value.trim(),
+          phone        : document.getElementById("profilePhone").value.trim(),
+          updated_at   : new Date().toISOString(),
+        }).eq("id", session.user.id);
+        if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; }
+        else { successEl.textContent = "Profile saved!"; successEl.style.display = "block"; }
+      });
+
+      /* Change password */
+      document.getElementById("securityForm").addEventListener("submit", async e => {
+        e.preventDefault();
+        const successEl = document.getElementById("securitySuccess");
+        const errorEl   = document.getElementById("securityError");
+        successEl.style.display = "none"; errorEl.style.display = "none";
+        const pw  = document.getElementById("newPw").value;
+        const cpw = document.getElementById("confirmPw").value;
+        if (pw.length < 8) { errorEl.textContent = "Password must be at least 8 characters."; errorEl.style.display = "block"; return; }
+        if (pw !== cpw)    { errorEl.textContent = "Passwords do not match."; errorEl.style.display = "block"; return; }
+        const { error } = await window.sb.auth.updateUser({ password: pw });
+        if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; }
+        else { successEl.textContent = "Password updated!"; successEl.style.display = "block"; document.getElementById("securityForm").reset(); }
+      });
+    });
+
+    async function loadOrders(userId) {
+      const list = document.getElementById("orderList");
+      list.innerHTML = `<div class="loading-state">Loading…</div>`;
+      const { data: orders, error } = await window.sb
+        .from("orders")
+        .select("*, order_items(*)")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false });
+      if (error || !orders?.length) {
+        list.innerHTML = `<div class="empty-state"><p>No orders yet. <a href="catalog.html" style="color:#ED7226">Start shopping!</a></p></div>`;
+        return;
+      }
+      list.innerHTML = orders.map(o => `
+        <div class="order-card">
+          <div class="order-card-header">
+            <span class="order-num">${o.order_number}</span>
+            <span class="order-date">${new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
+            <span class="order-status status-${o.status}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span>
+            <span class="order-total">$${Number(o.total).toFixed(2)}</span>
+          </div>
+          <p style="font-size:13px;color:#666">${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</p>
+        </div>`).join("");
+    }
+
+    async function loadAccountWishlist(userId) {
+      const container = document.getElementById("accountWishlist");
+      container.innerHTML = `<div class="loading-state">Loading…</div>`;
+      const { data: wishlist } = await window.sb
+        .from("wishlists").select("id").eq("user_id", userId).single();
+      if (!wishlist) { container.innerHTML = `<div class="empty-state"><p>Wishlist is empty.</p></div>`; return; }
+      const { data: items } = await window.sb
+        .from("wishlist_items")
+        .select("*, products(id, name, price, image_url)")
+        .eq("wishlist_id", wishlist.id)
+        .limit(6);
+      if (!items?.length) { container.innerHTML = `<div class="empty-state"><p>Wishlist is empty.</p></div>`; return; }
+      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+        ${items.map(i => {
+          const p = i.products;
+          return `<div style="border:1px solid #eee;border-radius:8px;padding:12px;text-align:center">
+            <img src="${p.image_url || 'blanket.png'}" style="width:80px;height:80px;object-fit:cover;border-radius:6px" alt="${p.name}" onerror="this.src='blanket.png'">
+            <p style="font-size:13px;font-weight:600;margin:8px 0 4px;color:#0b2d52">${p.name}</p>
+            <p style="font-size:13px;color:#ED7226;font-weight:700">$${Number(p.price).toFixed(2)}</p>
+          </div>`;
+        }).join("")}
+      </div>`;
+    }
+  </script>
+</body>
+</html>

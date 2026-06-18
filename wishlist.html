@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wishlist — Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .wishlist-page { max-width:1100px; margin:60px auto; padding:0 24px; }
+    .wishlist-page h1 { font-size:32px; color:#0b2d52; margin-bottom:8px; }
+    .wishlist-page .subtitle { color:#666; margin-bottom:32px; }
+    .wishlist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:24px; }
+    .wishlist-card { background:#fff; border:1px solid #eee; border-radius:12px; overflow:hidden; transition:box-shadow .2s; }
+    .wishlist-card:hover { box-shadow:0 4px 16px rgba(0,0,0,.08); }
+    .wishlist-card-img { width:100%; height:200px; object-fit:cover; }
+    .wishlist-card-body { padding:16px; }
+    .wishlist-card-body h3 { font-size:15px; color:#0b2d52; margin-bottom:4px; }
+    .wishlist-card-body .price { font-size:16px; color:#ED7226; font-weight:700; margin-bottom:12px; display:block; }
+    .wishlist-card-actions { display:flex; gap:8px; }
+    .wl-add-btn { flex:1; background:#ED7226; color:#fff; border:none; border-radius:7px; padding:9px; font-size:13px; font-weight:600; cursor:pointer; }
+    .wl-add-btn:hover { background:#d4621e; }
+    .wl-remove-btn { background:#fff; border:1.5px solid #eee; border-radius:7px; padding:9px 13px; cursor:pointer; color:#999; font-size:13px; }
+    .wl-remove-btn:hover { border-color:#f87171; color:#dc2626; }
+    .wishlist-empty { text-align:center; padding:80px 0; color:#999; }
+    .wishlist-empty h2 { color:#0b2d52; margin-bottom:12px; }
+    .wishlist-empty p { font-size:15px; margin-bottom:24px; }
+    .wishlist-empty a { background:#ED7226; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; }
+    .wishlist-loading { text-align:center; padding:60px 0; color:#888; font-size:15px; }
+    .wishlist-toast { position:fixed; bottom:24px; right:24px; background:#0b2d52; color:#fff; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600; display:none; z-index:999; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="index.html" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
+    <div class="nav-icons">
+      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
+        <div class="dropdown-menu">
+          <a href="account.html">My Account</a>
+          <a href="account.html#orders">Order History</a>
+          <a href="wishlist.html">Wishlist</a>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div class="cart-container">
+        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="wishlist-page">
+    <h1>My Wishlist</h1>
+    <p class="subtitle">Items you've saved for later.</p>
+    <div id="wishlistContent"><div class="wishlist-loading">Loading…</div></div>
+  </div>
+
+  <div class="wishlist-toast" id="wishlistToast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+  <script>
+    let wishlistId = null;
+
+    document.addEventListener("DOMContentLoaded", async () => {
+      if (typeof window.sb === "undefined") {
+        showEmpty("Backend not connected."); return;
+      }
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (!session) {
+        document.getElementById("wishlistContent").innerHTML = `
+          <div class="wishlist-empty">
+            <h2>Sign in to view your wishlist</h2>
+            <p>Create an account to save products for later.</p>
+            <a href="login.html">Sign In</a>
+          </div>`;
+        return;
+      }
+      await loadWishlist(session.user.id);
+    });
+
+    async function loadWishlist(userId) {
+      const { data: wl } = await window.sb.from("wishlists").select("id").eq("user_id", userId).single();
+      if (!wl) { showEmpty(); return; }
+      wishlistId = wl.id;
+      const { data: items } = await window.sb
+        .from("wishlist_items")
+        .select("id, products(id, name, price, image_url, description, case_qty, pack_size)")
+        .eq("wishlist_id", wl.id)
+        .order("created_at", { ascending: false });
+      if (!items?.length) { showEmpty(); return; }
+      renderWishlist(items);
+    }
+
+    function renderWishlist(items) {
+      document.getElementById("wishlistContent").innerHTML = `
+        <div class="wishlist-grid">
+          ${items.map(i => {
+            const p = i.products;
+            return `
+              <div class="wishlist-card" id="wl-item-${i.id}">
+                <img class="wishlist-card-img" src="${p.image_url || 'blanket.png'}" alt="${p.name}" onerror="this.src='blanket.png'">
+                <div class="wishlist-card-body">
+                  <h3>${p.name}</h3>
+                  <span class="price">$${Number(p.price).toFixed(2)}</span>
+                  <div class="wishlist-card-actions">
+                    <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'blanket.png'}')">Add to Order</button>
+                    <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">✕</button>
+                  </div>
+                </div>
+              </div>`;
+          }).join("")}
+        </div>`;
+    }
+
+    function showEmpty(msg) {
+      document.getElementById("wishlistContent").innerHTML = `
+        <div class="wishlist-empty">
+          <h2>Your wishlist is empty</h2>
+          <p>${msg || "Browse our catalog and save items you love."}</p>
+          <a href="catalog.html">Shop Catalog</a>
+        </div>`;
+    }
+
+    async function removeWishlistItem(itemId) {
+      await window.sb.from("wishlist_items").delete().eq("id", itemId);
+      document.getElementById("wl-item-" + itemId)?.remove();
+      toast("Removed from wishlist");
+      if (!document.querySelector(".wishlist-card")) showEmpty();
+    }
+
+    function addToCart(wlItemId, productId, name, price, image) {
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const existing = cart.find(i => i.name === name);
+      if (existing) { existing.quantity += 1; }
+      else { cart.push({ id: productId, name, price: Number(price), image, quantity: 1 }); }
+      localStorage.setItem("cart", JSON.stringify(cart));
+      updateCartBadge();
+      toast(name + " added to order!");
+    }
+
+    function toast(msg) {
+      const el = document.getElementById("wishlistToast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(window._wlToast);
+      window._wlToast = setTimeout(() => { el.style.display = "none"; }, 2500);
+    }
+  </script>
+</body>
+</html>

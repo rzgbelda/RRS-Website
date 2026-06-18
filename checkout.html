@@ -52,16 +52,16 @@
 
       <div class="dropdown-menu">
 
-        <a href="profile.html">
+        <a href="account.html">
           My Account
         </a>
 
-        <a href="orders.html">
+        <a href="account.html#orders">
           Order History
         </a>
 
-        <a href="reorder.html">
-          Reorder Program
+        <a href="wishlist.html">
+          Wishlist
         </a>
 
         <div class="dropdown-divider"></div>
@@ -98,6 +98,10 @@
     Tell us what you need and when. We’ll review your request and confirm pricing, availability, and delivery details.
   </p>
 
+  <div id="checkoutError"   style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;color:#dc2626;font-size:14px;margin-bottom:16px;display:none;max-width:640px"></div>
+  <div id="checkoutSuccess" style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;color:#16a34a;font-size:14px;margin-bottom:16px;display:none;max-width:640px"></div>
+
+  <form id="checkoutForm">
   <div class="checkout-layout">
 
     <section class="checkout-left">
@@ -106,20 +110,18 @@
         <h2>1. Customer details</h2>
 
         <div class="form-grid">
-          <label>Business Name* <input type="text" placeholder="Enter business name"></label>
-          <label>Contact Name: <input type="text" placeholder="Enter contact name"></label>
-          <label>Phone Number* <input type="text" placeholder="(123) 456-7890"></label>
-          <label>Email Address: <input type="email" placeholder="email@business.com"></label>
+          <label>Business Name* <input type="text" id="checkoutBusiness" placeholder="Enter business name" required></label>
+          <label>Contact Name: <input type="text" id="checkoutContact" placeholder="Enter contact name"></label>
+          <label>Phone Number* <input type="text" id="checkoutPhone" placeholder="(123) 456-7890" required></label>
+          <label>Email Address: <input type="email" id="checkoutEmail" placeholder="email@business.com"></label>
         </div>
 
-        <label class="full-field">Delivery Address* <input type="text" placeholder="Street address"></label>
+        <label class="full-field">Delivery Address* <input type="text" id="checkoutStreet" placeholder="Street address" required></label>
 
         <div class="address-grid">
-          <input type="text" placeholder="City">
-          <select>
-            <option>State</option>
-          </select>
-          <input type="text" placeholder="ZIP Code">
+          <input type="text" id="checkoutCity"  placeholder="City">
+          <input type="text" id="checkoutState" placeholder="State">
+          <input type="text" id="checkoutZip"   placeholder="ZIP Code">
         </div>
 
         <label class="checkbox-line">
@@ -136,7 +138,7 @@
         <div class="order-options">
 
     <label class="order-option">
-        <input type="radio" name="orderType">
+        <input type="radio" name="orderType" value="reorder">
         <div class="option-card">
 
             <span class="radio-circle"></span>
@@ -150,7 +152,7 @@
     </label>
 
     <label class="order-option">
-        <input type="radio" name="orderType" checked>
+        <input type="radio" name="orderType" value="one_time" checked>
         <div class="option-card">
 
             <span class="radio-circle"></span>
@@ -197,12 +199,19 @@
       <p class="summary-note">
         You'll receive final pricing, availability, and delivery details in your confirmation.
       </p>
+
+      <button type="submit" class="checkout-btn" style="width:100%;margin-top:16px;border:none;cursor:pointer">
+        Place Order Request
+      </button>
     </aside>
 
   </div>
+  </form>
 </main>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
 <script src="script.js"></script>
 </body>
 </html>

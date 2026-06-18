@@ -3,8 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room Ready Supply</title>
+  <title>Shop Catalog — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .catalog-loading { text-align:center; padding:60px 0; color:#888; font-size:15px; width:100%; }
+    .catalog-empty   { text-align:center; padding:60px 0; color:#888; font-size:15px; width:100%; }
+    #catalog-grid    { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:20px; }
+    .badge-sale      { position:absolute; top:10px; left:10px; background:#ED7226; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; z-index:1; }
+    .badge-featured  { position:absolute; top:10px; right:10px; background:#0b2d52; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; z-index:1; }
+    .product-card    { position:relative; }
+    .price-group     { display:flex; align-items:baseline; gap:6px; }
+    .price-original  { text-decoration:line-through; color:#aaa; font-size:13px; }
+    .price.sale      { color:#ED7226; }
+    .product-sku     { font-size:11px; color:#aaa; margin-bottom:4px; }
+  </style>
 </head>
 <body>
 
@@ -17,990 +29,117 @@
   </div>
 
   <header class="navbar">
-  <a href="index.html" class="logo">
-    <img src="RR logo.png" alt="Room Ready Supply Logo" />
-  </a>
-
-  <nav class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="catalog.html">Catalog</a>
-    <a href="index.html#how-it-works">How it Works</a>
-    <a href="index.html#reorder-header">Reorder Program</a>
-    <a href="index.html#business-pricing">Business Pricing</a>
-    <a href="index.html#about-us">About Us</a>
-    <a href="index.html#about-us">Contact</a>
-  </nav>
-
-  <div class="nav-icons">
-
-    <!-- Search -->
-    <a href="catalog.html">
-      <img src="hl1.svg" alt="Search">
+    <a href="index.html" class="logo">
+      <img src="RR logo.png" alt="Room Ready Supply Logo" />
     </a>
 
-    <!-- Guest Only -->
-    <a href="login.html" class="guest-only login-nav-btn">
-      Login
-    </a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
 
-    <!-- Logged In -->
-    <div class="logged-in-only account-dropdown">
+    <div class="nav-icons">
 
-      <button class="account-btn">
-        <img src="hl2.svg" alt="Account">
-      </button>
+      <a href="catalog.html">
+        <img src="hl1.svg" alt="Search">
+      </a>
 
-      <div class="dropdown-menu">
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
 
-        <a href="profile.html">
-          My Account
-        </a>
-
-        <a href="orders.html">
-          Order History
-        </a>
-
-        <a href="reorder.html">
-          Reorder Program
-        </a>
-
-        <div class="dropdown-divider"></div>
-
-        <button id="logout-btn">
-          Logout
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn">
+          <img src="hl2.svg" alt="Account">
         </button>
+        <div class="dropdown-menu">
+          <a href="account.html">My Account</a>
+          <a href="account.html#orders">Order History</a>
+          <a href="wishlist.html">Wishlist</a>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
 
+      <div class="cart-container">
+        <a href="cart.html">
+          <img src="hl3.svg" alt="Cart">
+        </a>
+        <span id="cart-count" class="cart-count">0</span>
       </div>
 
     </div>
+  </header>
 
-    <!-- Cart -->
-    <div class="cart-container">
-      <a href="cart.html">
-        <img src="hl3.svg" alt="Cart">
-      </a>
-
-      <span id="cart-count" class="cart-count">
-        0
-      </span>
-    </div>
-
-  </div>
-
-</header>
-
-<section class="catalog-hero">
-
+  <section class="catalog-hero">
     <div class="catalog-content">
-        <h1>Shop Catalog</h1>
-
-        <p>
-            Browse core hospitality and facility supplies by category.
-            Select what you need, add quantities, and submit your order request.
-        </p>
+      <h1>Shop Catalog</h1>
+      <p>Browse core hospitality and facility supplies by category.
+         Select what you need, add quantities, and submit your order request.</p>
     </div>
-
-</section>
-
-
-<section class="catalog-main">
-  <aside class="filter-sidebar">
-    <div class="filter-search">
-      <span>⌕</span>
-      <input type="text">
-    </div>
-
-    <h3>⌯ SEARCH FILTER</h3>
-
-    <div class="filter-list">
-      <label>A-Z <input type="checkbox"></label>
-      <label>Toilet Paper <input type="checkbox"></label>
-      <label>Paper Towels <input type="checkbox"></label>
-      <label>Trash Liners <input type="checkbox"></label>
-      <label>Cleaning Chemicals <input type="checkbox"></label>
-      <label>Hand Soap <input type="checkbox"></label>
-      <label>Laundry Supplies <input type="checkbox"></label>
-      <label>Dishwashing Supplies <input type="checkbox"></label>
-      <label>Guest Room Supplies <input type="checkbox"></label>
-      <label>Towels and Linens <input type="checkbox"></label>
-      <label>Food Service Supplies <input type="checkbox"></label>
-      <label>Facility Supplies <input type="checkbox"></label>
-    </div>
-  </aside>
-
-  <section class="catalog-products">
-        <div class="product-card" data-url="product.html">
-
-    <div class="product-image">
-        <img src="blanket.png" alt="Premium Hospitality Blanket">
-    </div>
-
-    <div class="product-content">
-
-        <h3>Premium Hospitality Blanket</h3>
-
-        <p class="product-description">
-            Commercial Grade Comfort
-        </p>
-
-        <div class="product-details">
-
-            <div class="detail-item">
-                <img src="box.svg" alt="">
-                <span>Case Qty: 6</span>
-            </div>
-
-            <div class="detail-item">
-                <img src="pack.svg" alt="">
-                <span>Pack Size: 1</span>
-            </div>
-
-        </div>
-
-        <div class="product-footer">
-
-            <span class="price">$34.99</span>
-
-            <button
-                class="add-btn"
-                data-name="Premium Hospitality Blanket"
-                data-price="34.99"
-                data-image="blanket.png">
-
-                Add to Order
-
-            </button>
-
-        </div>
-
-    </div>
-
-</div>
-
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-    <div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div><div class="product-card">
-        <div class="product-image"></div>
-
-        <h3 class="product-name"></h3>
-
-        <p class="product-description"></p>
-
-        <div class="product-meta">
-
-            <div class="meta-item">
-                <img src="box.svg" alt="">
-                <span></span>
-            </div>
-
-            <div class="meta-item">
-                <img src="pack.svg" alt="">
-                <span></span>
-            </div>
-
-        </div>
-
-        <div class="stock-status">
-            <span class="dot"></span>
-            <span></span>
-        </div>
-
-        <div class="price-row">
-            <span class="price"></span>
-            <span class="price-unit"></span>
-        </div>
-
-        <button class="add-btn">
-            <img src="Cart.png" alt="">
-            ADD TO ORDER
-        </button>
-    </div>
-
-    
   </section>
-</section>
 
+  <section class="catalog-main">
 
-<script src="script.js"></script>
+    <aside class="filter-sidebar">
+      <div class="filter-search">
+        <span>⌕</span>
+        <input type="text" id="catalogSearch" placeholder="Search products…">
+      </div>
+
+      <h3>⌯ SEARCH FILTER</h3>
+
+      <div class="filter-list" id="categoryFilters">
+        <label>Toilet Paper          <input type="checkbox" data-cat="Toilet Paper"></label>
+        <label>Paper Towels          <input type="checkbox" data-cat="Paper Towels"></label>
+        <label>Trash Liners          <input type="checkbox" data-cat="Trash Liners"></label>
+        <label>Cleaning Chemicals    <input type="checkbox" data-cat="Cleaning Chemicals"></label>
+        <label>Hand Soap             <input type="checkbox" data-cat="Hand Soap"></label>
+        <label>Laundry Supplies      <input type="checkbox" data-cat="Laundry Supplies"></label>
+        <label>Dishwashing Supplies  <input type="checkbox" data-cat="Dishwashing Supplies"></label>
+        <label>Guest Room Supplies   <input type="checkbox" data-cat="Guest Room Supplies"></label>
+        <label>Towels and Linens     <input type="checkbox" data-cat="Towels and Linens"></label>
+        <label>Food Service Supplies <input type="checkbox" data-cat="Food Service Supplies"></label>
+        <label>Facility Supplies     <input type="checkbox" data-cat="Facility Supplies"></label>
+      </div>
+    </aside>
+
+    <section class="catalog-products">
+      <div id="catalog-grid">
+        <div class="catalog-loading">Loading products…</div>
+      </div>
+    </section>
+
+  </section>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      loadCatalogProducts();
+
+      let searchTimer;
+      document.getElementById("catalogSearch")?.addEventListener("input", () => {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 350);
+      });
+
+      document.querySelectorAll("#categoryFilters input[type=checkbox]").forEach(cb => {
+        cb.addEventListener("change", applyFilters);
+      });
+    });
+
+    function applyFilters() {
+      const checked = [...document.querySelectorAll("#categoryFilters input:checked")]
+        .map(cb => cb.dataset.cat);
+      const search = document.getElementById("catalogSearch")?.value.trim() || "";
+      loadCatalogProducts(checked, search);
+    }
+  </script>
 
 </body>
 </html>
