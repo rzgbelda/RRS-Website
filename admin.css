@@ -574,6 +574,43 @@ body.admin-body {
 .a-action-btn.edit:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-faint); }
 .a-action-btn.delete:hover { border-color: var(--danger); color: var(--danger); background: #fef2f2; }
 
+/* ── Small action buttons (rendered by admin.js) ── */
+.a-btn-sm {
+  display: inline-flex; align-items: center; justify-content: center;
+  height: 30px; padding: 0 14px;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.01em;
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer; font-family: inherit;
+  transition: color .18s, border-color .18s, background .18s,
+              box-shadow .18s, transform .15s;
+  white-space: nowrap; margin-right: 6px;
+}
+.a-btn-sm:hover {
+  border-color: var(--orange);
+  color: var(--orange);
+  background: var(--orange-faint);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(245,130,32,0.18);
+}
+.a-btn-sm:active { transform: translateY(0); box-shadow: none; }
+
+.a-btn-sm.a-btn-danger {
+  border-color: #fecaca;
+  color: var(--danger);
+  background: #fff8f8;
+}
+.a-btn-sm.a-btn-danger:hover {
+  border-color: var(--danger);
+  background: #fef2f2;
+  color: #b91c1c;
+  box-shadow: 0 3px 10px rgba(239,68,68,0.18);
+  transform: translateY(-1px);
+}
+.a-btn-sm.a-btn-danger:active { transform: translateY(0); box-shadow: none; }
+
 /* ─────────────────────────────────────────
    MODALS
 ───────────────────────────────────────── */
