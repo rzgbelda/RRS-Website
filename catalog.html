@@ -6,16 +6,431 @@
   <title>Shop Catalog — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
   <style>
+    /* ── Catalog grid / badge helpers ─────────────────────── */
     .catalog-loading { text-align:center; padding:60px 0; color:#888; font-size:15px; width:100%; }
     .catalog-empty   { text-align:center; padding:60px 0; color:#888; font-size:15px; width:100%; }
     #catalog-grid    { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:20px; }
-    .badge-sale      { position:absolute; top:10px; left:10px; background:#ED7226; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; z-index:1; }
+    .badge-sale      { position:absolute; top:10px; left:10px; background:#f97316; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; z-index:1; }
     .badge-featured  { position:absolute; top:10px; right:10px; background:#0b2d52; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:4px; z-index:1; }
     .product-card    { position:relative; }
     .price-group     { display:flex; align-items:baseline; gap:6px; }
     .price-original  { text-decoration:line-through; color:#aaa; font-size:13px; }
-    .price.sale      { color:#ED7226; }
+    .price.sale      { color:#f97316; }
     .product-sku     { font-size:11px; color:#aaa; margin-bottom:4px; }
+
+    /* ── Catalog layout ────────────────────────────────────── */
+    .cf-layout {
+      display: grid;
+      grid-template-columns: 272px 1fr;
+      gap: 28px;
+      padding: 32px 28px 80px;
+      background: #f8f9fb;
+      align-items: start;
+    }
+
+    /* ── Sidebar card ──────────────────────────────────────── */
+    .cf-sidebar {
+      position: sticky;
+      top: 100px;
+    }
+    .cf-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      overflow: hidden;
+    }
+
+    /* search bar */
+    .cf-search-wrap {
+      padding: 16px 16px 0;
+    }
+    .cf-search-box {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 44px;
+      padding: 0 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8f9fb;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .cf-search-box:focus-within {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.10);
+      background: #fff;
+    }
+    .cf-search-box svg { flex-shrink: 0; color: #94a3b8; }
+    .cf-search-box input {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 13px;
+      color: #0f172a;
+      font-family: inherit;
+    }
+    .cf-search-box input::placeholder { color: #c0cad8; }
+    .cf-clear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #c0cad8;
+      padding: 0;
+      display: none;
+      line-height: 1;
+      font-size: 16px;
+    }
+    .cf-clear-btn.visible { display: block; }
+    .cf-clear-btn:hover { color: #64748b; }
+
+    /* active filters row */
+    .cf-active-wrap {
+      padding: 10px 16px 0;
+      display: none;
+    }
+    .cf-active-wrap.has-filters { display: block; }
+    .cf-active-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 7px;
+    }
+    .cf-active-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+    .cf-active-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #ea6c0a;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 99px;
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .cf-active-chip:hover { background: #ffedd5; }
+    .cf-active-chip svg { width: 10px; height: 10px; }
+    .cf-clear-all {
+      background: none;
+      border: none;
+      font-size: 11px;
+      font-weight: 600;
+      color: #f97316;
+      cursor: pointer;
+      padding: 0;
+      font-family: inherit;
+    }
+    .cf-clear-all:hover { text-decoration: underline; }
+
+    /* divider */
+    .cf-divider {
+      height: 1px;
+      background: #f1f5f9;
+      margin: 12px 0;
+    }
+
+    /* filter group accordion */
+    .cf-group { border-top: 1px solid #f1f5f9; }
+    .cf-group:first-child { border-top: none; }
+    .cf-group-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.12s;
+    }
+    .cf-group-hd:hover { background: #f8f9fb; }
+    .cf-group-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .cf-group-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .cf-group-count {
+      background: #f97316;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+      display: none;
+    }
+    .cf-group-count.has-sel { display: inline-block; }
+    .cf-chevron {
+      width: 14px;
+      height: 14px;
+      color: #94a3b8;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .cf-group.open .cf-chevron { transform: rotate(180deg); }
+
+    .cf-group-body {
+      display: none;
+      padding: 4px 16px 14px;
+    }
+    .cf-group.open .cf-group-body { display: block; }
+
+    /* filter chips */
+    .cf-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+    }
+    .cf-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #374151;
+      cursor: pointer;
+      transition: border-color 0.12s, background 0.12s, color 0.12s;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .cf-chip:hover { border-color: #f97316; color: #f97316; background: #fff7ed; }
+    .cf-chip.selected {
+      border-color: #f97316;
+      background: #fff7ed;
+      color: #ea6c0a;
+      font-weight: 600;
+    }
+    .cf-chip-check {
+      width: 12px;
+      height: 12px;
+      display: none;
+    }
+    .cf-chip.selected .cf-chip-check { display: block; }
+    /* hidden real checkboxes (still drive applyFilters) */
+    .cf-chip-input { display: none; }
+
+    /* ── Product area header ───────────────────────────────── */
+    .cf-products-col {}
+    .cf-products-hd {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .cf-products-count {
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .cf-products-count span {
+      color: #f97316;
+      font-weight: 800;
+    }
+
+    /* ── Mobile filter button + drawer ─────────────────────── */
+    .cf-mob-bar {
+      display: none;
+      padding: 12px 16px;
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .cf-mob-filter-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 9px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      cursor: pointer;
+      font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    .cf-mob-filter-btn:hover { border-color: #f97316; color: #f97316; }
+    .cf-mob-filter-btn svg { width: 15px; height: 15px; }
+    .cf-mob-count-badge {
+      background: #f97316;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 99px;
+      display: none;
+    }
+    .cf-mob-count-badge.visible { display: inline-block; }
+
+    /* Drawer overlay */
+    .cf-drawer-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 300;
+    }
+    .cf-drawer-overlay.open { display: block; }
+
+    /* Drawer panel */
+    .cf-drawer {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      max-height: 88vh;
+      background: #fff;
+      border-radius: 20px 20px 0 0;
+      z-index: 301;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+    }
+    .cf-drawer.open { transform: translateY(0); }
+
+    .cf-drawer-hd {
+      padding: 16px 20px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+    .cf-drawer-hd h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .cf-drawer-close {
+      background: #f1f5f9;
+      border: none;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #64748b;
+      font-family: inherit;
+    }
+    .cf-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 20px;
+    }
+
+    /* Drawer search */
+    .cf-drawer-search {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 46px;
+      padding: 0 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8f9fb;
+      margin-bottom: 20px;
+    }
+    .cf-drawer-search:focus-within {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.10);
+      background: #fff;
+    }
+    .cf-drawer-search input {
+      flex: 1; min-width: 0;
+      border: none; outline: none;
+      background: transparent;
+      font-size: 14px; color: #0f172a;
+      font-family: inherit;
+    }
+    .cf-drawer-search input::placeholder { color: #c0cad8; }
+
+    /* Drawer category chips */
+    .cf-drawer-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #94a3b8;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+    .cf-drawer-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    /* Drawer footer */
+    .cf-drawer-ft {
+      padding: 14px 20px;
+      border-top: 1px solid #f1f5f9;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+    .cf-drawer-apply {
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      height: 48px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s;
+    }
+    .cf-drawer-apply:hover { background: #ea6c0a; }
+    .cf-drawer-reset {
+      background: #f1f5f9;
+      color: #374151;
+      border: none;
+      border-radius: 10px;
+      height: 48px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .cf-drawer-reset:hover { background: #e2e8f0; }
+
+    /* ── Responsive ────────────────────────────────────────── */
+    @media (max-width: 860px) {
+      .cf-layout {
+        grid-template-columns: 1fr;
+        padding: 0 16px 60px;
+      }
+      .cf-sidebar { display: none; }
+      .cf-mob-bar { display: flex; }
+      .cf-products-hd { margin-top: 16px; }
+    }
+    @media (max-width: 480px) {
+      .cf-layout { padding: 0 12px 60px; }
+    }
   </style>
 </head>
 <body>
@@ -32,7 +447,6 @@
     <a href="index.html" class="logo">
       <img src="RR logo.png" alt="Room Ready Supply Logo" />
     </a>
-
     <nav class="nav-links">
       <a href="index.html">Home</a>
       <a href="catalog.html">Catalog</a>
@@ -42,19 +456,11 @@
       <a href="index.html#about-us">About Us</a>
       <a href="index.html#about-us">Contact</a>
     </nav>
-
     <div class="nav-icons">
-
-      <a href="catalog.html">
-        <img src="hl1.svg" alt="Search">
-      </a>
-
+      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
       <a href="login.html" class="guest-only login-nav-btn">Login</a>
-
       <div class="logged-in-only account-dropdown">
-        <button class="account-btn">
-          <img src="hl2.svg" alt="Account">
-        </button>
+        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
         <div class="dropdown-menu">
           <a href="account.html">My Account</a>
           <a href="account.html#orders">Order History</a>
@@ -63,14 +469,10 @@
           <button id="logout-btn">Logout</button>
         </div>
       </div>
-
       <div class="cart-container">
-        <a href="cart.html">
-          <img src="hl3.svg" alt="Cart">
-        </a>
+        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
-
     </div>
   </header>
 
@@ -82,63 +484,368 @@
     </div>
   </section>
 
-  <section class="catalog-main">
+  <!-- Mobile filter bar (visible < 860px) -->
+  <div class="cf-mob-bar">
+    <button class="cf-mob-filter-btn" id="mobFilterBtn">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M3 5h14M6 10h8M9 15h2"/>
+      </svg>
+      Filters
+      <span class="cf-mob-count-badge" id="mobCountBadge">0</span>
+    </button>
+  </div>
 
-    <aside class="filter-sidebar">
-      <div class="filter-search">
-        <span>⌕</span>
-        <input type="text" id="catalogSearch" placeholder="Search products…">
-      </div>
+  <!-- Main layout -->
+  <div class="cf-layout">
 
-      <h3>⌯ SEARCH FILTER</h3>
+    <!-- ── SIDEBAR ─────────────────────────────────────────── -->
+    <aside class="cf-sidebar">
+      <div class="cf-card">
 
-      <div class="filter-list" id="categoryFilters">
-        <label>Toilet Paper          <input type="checkbox" data-cat="Toilet Paper"></label>
-        <label>Paper Towels          <input type="checkbox" data-cat="Paper Towels"></label>
-        <label>Trash Liners          <input type="checkbox" data-cat="Trash Liners"></label>
-        <label>Cleaning Chemicals    <input type="checkbox" data-cat="Cleaning Chemicals"></label>
-        <label>Hand Soap             <input type="checkbox" data-cat="Hand Soap"></label>
-        <label>Laundry Supplies      <input type="checkbox" data-cat="Laundry Supplies"></label>
-        <label>Dishwashing Supplies  <input type="checkbox" data-cat="Dishwashing Supplies"></label>
-        <label>Guest Room Supplies   <input type="checkbox" data-cat="Guest Room Supplies"></label>
-        <label>Towels and Linens     <input type="checkbox" data-cat="Towels and Linens"></label>
-        <label>Food Service Supplies <input type="checkbox" data-cat="Food Service Supplies"></label>
-        <label>Facility Supplies     <input type="checkbox" data-cat="Facility Supplies"></label>
-      </div>
+        <!-- Search -->
+        <div class="cf-search-wrap">
+          <div class="cf-search-box">
+            <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="9" cy="9" r="6"/><path d="M15 15l-3.5-3.5"/>
+            </svg>
+            <input type="text" id="catalogSearch" placeholder="Search products, categories…">
+            <button class="cf-clear-btn" id="searchClearBtn" title="Clear search">✕</button>
+          </div>
+        </div>
+
+        <!-- Active filters -->
+        <div class="cf-active-wrap" id="activeFiltersWrap">
+          <div class="cf-divider"></div>
+          <div class="cf-active-label">Active Filters</div>
+          <div class="cf-active-chips" id="activeChips"></div>
+          <button class="cf-clear-all" id="clearAllBtn">Clear all filters</button>
+        </div>
+
+        <div class="cf-divider" style="margin:12px 0 0"></div>
+
+        <!-- Categories group -->
+        <div class="cf-group open" id="cfGroupCat">
+          <div class="cf-group-hd" data-group="cfGroupCat">
+            <span class="cf-group-title">Categories</span>
+            <div class="cf-group-meta">
+              <span class="cf-group-count" id="catGroupCount"></span>
+              <svg class="cf-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 6l4 4 4-4"/>
+              </svg>
+            </div>
+          </div>
+          <div class="cf-group-body">
+            <div class="cf-chips" id="categoryFilters">
+              <!-- hidden real checkboxes for script.js compatibility -->
+              <input type="checkbox" class="cf-chip-input" data-cat="Toilet Paper">
+              <input type="checkbox" class="cf-chip-input" data-cat="Paper Towels">
+              <input type="checkbox" class="cf-chip-input" data-cat="Trash Liners">
+              <input type="checkbox" class="cf-chip-input" data-cat="Cleaning Chemicals">
+              <input type="checkbox" class="cf-chip-input" data-cat="Hand Soap">
+              <input type="checkbox" class="cf-chip-input" data-cat="Laundry Supplies">
+              <input type="checkbox" class="cf-chip-input" data-cat="Dishwashing Supplies">
+              <input type="checkbox" class="cf-chip-input" data-cat="Guest Room Supplies">
+              <input type="checkbox" class="cf-chip-input" data-cat="Towels and Linens">
+              <input type="checkbox" class="cf-chip-input" data-cat="Food Service Supplies">
+              <input type="checkbox" class="cf-chip-input" data-cat="Facility Supplies">
+
+              <!-- visible chips -->
+              <span class="cf-chip" data-cat="Toilet Paper">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Toilet Paper
+              </span>
+              <span class="cf-chip" data-cat="Paper Towels">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Paper Towels
+              </span>
+              <span class="cf-chip" data-cat="Trash Liners">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Trash Liners
+              </span>
+              <span class="cf-chip" data-cat="Cleaning Chemicals">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Cleaning Chemicals
+              </span>
+              <span class="cf-chip" data-cat="Hand Soap">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Hand Soap
+              </span>
+              <span class="cf-chip" data-cat="Laundry Supplies">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Laundry Supplies
+              </span>
+              <span class="cf-chip" data-cat="Dishwashing Supplies">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Dishwashing Supplies
+              </span>
+              <span class="cf-chip" data-cat="Guest Room Supplies">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Guest Room Supplies
+              </span>
+              <span class="cf-chip" data-cat="Towels and Linens">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Towels &amp; Linens
+              </span>
+              <span class="cf-chip" data-cat="Food Service Supplies">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Food Service
+              </span>
+              <span class="cf-chip" data-cat="Facility Supplies">
+                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+                Facility Supplies
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /.cf-card -->
     </aside>
 
-    <section class="catalog-products">
+    <!-- ── PRODUCTS COLUMN ────────────────────────────────── -->
+    <div class="cf-products-col">
+      <div class="cf-products-hd">
+        <div class="cf-products-count">Showing <span id="productCount">—</span> products</div>
+      </div>
       <div id="catalog-grid">
         <div class="catalog-loading">Loading products…</div>
       </div>
-    </section>
+    </div>
 
-  </section>
+  </div><!-- /.cf-layout -->
+
+  <!-- ── MOBILE DRAWER ──────────────────────────────────────── -->
+  <div class="cf-drawer-overlay" id="drawerOverlay"></div>
+  <div class="cf-drawer" id="filterDrawer">
+    <div class="cf-drawer-hd">
+      <h3>Filter Products</h3>
+      <button class="cf-drawer-close" id="drawerClose">✕</button>
+    </div>
+    <div class="cf-drawer-body">
+      <!-- Drawer search -->
+      <div class="cf-drawer-search">
+        <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="9" cy="9" r="6"/><path d="M15 15l-3.5-3.5"/>
+        </svg>
+        <input type="text" id="drawerSearch" placeholder="Search products, categories…">
+      </div>
+
+      <div class="cf-drawer-group-title">Categories</div>
+      <div class="cf-drawer-chips" id="drawerChips">
+        <!-- populated by JS to mirror desktop chips -->
+      </div>
+    </div>
+    <div class="cf-drawer-ft">
+      <button class="cf-drawer-reset" id="drawerReset">Clear All</button>
+      <button class="cf-drawer-apply" id="drawerApply">Apply Filters</button>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="script.js"></script>
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      loadCatalogProducts();
+  document.addEventListener("DOMContentLoaded", () => {
+    loadCatalogProducts();
+    buildDrawerChips();
+    hookEvents();
+  });
 
-      let searchTimer;
-      document.getElementById("catalogSearch")?.addEventListener("input", () => {
+  /* ── Categories ──────────────────────────────────────── */
+  const CATS = [
+    "Toilet Paper","Paper Towels","Trash Liners","Cleaning Chemicals",
+    "Hand Soap","Laundry Supplies","Dishwashing Supplies","Guest Room Supplies",
+    "Towels and Linens","Food Service Supplies","Facility Supplies"
+  ];
+
+  /* ── Core filter logic ───────────────────────────────── */
+  function getSelected() {
+    return [...document.querySelectorAll("#categoryFilters .cf-chip.selected")]
+      .map(c => c.dataset.cat);
+  }
+
+  function applyFilters() {
+    const checked = getSelected();
+    const search  = document.getElementById("catalogSearch")?.value.trim() || "";
+    loadCatalogProducts(checked, search);
+    updateActiveFilters(checked);
+    updateCountBadges(checked.length);
+  }
+
+  /* ── Active filter pills (sidebar) ──────────────────── */
+  function updateActiveFilters(selected) {
+    const wrap  = document.getElementById("activeFiltersWrap");
+    const chips = document.getElementById("activeChips");
+    if (!wrap || !chips) return;
+
+    if (selected.length === 0) {
+      wrap.classList.remove("has-filters");
+      return;
+    }
+    wrap.classList.add("has-filters");
+    chips.innerHTML = selected.map(cat => `
+      <button class="cf-active-chip" data-cat="${cat}" title="Remove ${cat}">
+        ${cat}
+        <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M2 2l6 6M8 2L2 8"/>
+        </svg>
+      </button>`).join("");
+
+    chips.querySelectorAll(".cf-active-chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        toggleChip(btn.dataset.cat, false);
+        applyFilters();
+      });
+    });
+  }
+
+  /* ── Count badges ────────────────────────────────────── */
+  function updateCountBadges(count) {
+    const catCount  = document.getElementById("catGroupCount");
+    const mobBadge  = document.getElementById("mobCountBadge");
+    if (catCount) {
+      catCount.textContent = count;
+      catCount.classList.toggle("has-sel", count > 0);
+    }
+    if (mobBadge) {
+      mobBadge.textContent = count;
+      mobBadge.classList.toggle("visible", count > 0);
+    }
+  }
+
+  /* ── Chip toggle ─────────────────────────────────────── */
+  function toggleChip(cat, force) {
+    /* desktop sidebar chip */
+    const chip = document.querySelector(`#categoryFilters .cf-chip[data-cat="${cat}"]`);
+    if (chip) {
+      const nowSelected = force !== undefined ? force : !chip.classList.contains("selected");
+      chip.classList.toggle("selected", nowSelected);
+    }
+    /* hidden checkbox for script.js compat */
+    const cb = document.querySelector(`#categoryFilters .cf-chip-input[data-cat="${cat}"]`);
+    if (cb) cb.checked = chip ? chip.classList.contains("selected") : false;
+
+    /* drawer chip */
+    const dchip = document.querySelector(`#drawerChips .cf-chip[data-cat="${cat}"]`);
+    if (dchip) dchip.classList.toggle("selected", chip ? chip.classList.contains("selected") : false);
+  }
+
+  /* ── Build drawer chips from CATS ────────────────────── */
+  function buildDrawerChips() {
+    const wrap = document.getElementById("drawerChips");
+    if (!wrap) return;
+    wrap.innerHTML = CATS.map(cat => `
+      <span class="cf-chip" data-cat="${cat}">
+        <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M2 6l3 3 5-5"/>
+        </svg>
+        ${cat}
+      </span>`).join("");
+
+    wrap.querySelectorAll(".cf-chip").forEach(chip => {
+      chip.addEventListener("click", () => chip.classList.toggle("selected"));
+    });
+  }
+
+  /* ── Product count mirror ────────────────────────────── */
+  const gridObserver = new MutationObserver(() => {
+    const count = document.querySelectorAll("#catalog-grid .product-card").length;
+    const el    = document.getElementById("productCount");
+    if (el && count > 0) el.textContent = count;
+  });
+  const grid = document.getElementById("catalog-grid");
+  if (grid) gridObserver.observe(grid, { childList: true });
+
+  /* ── Wire all events ─────────────────────────────────── */
+  function hookEvents() {
+    let searchTimer;
+
+    /* desktop search */
+    const searchInput = document.getElementById("catalogSearch");
+    const clearBtn    = document.getElementById("searchClearBtn");
+    if (searchInput) {
+      searchInput.addEventListener("input", () => {
+        clearBtn?.classList.toggle("visible", searchInput.value.length > 0);
         clearTimeout(searchTimer);
         searchTimer = setTimeout(applyFilters, 350);
       });
+    }
+    clearBtn?.addEventListener("click", () => {
+      if (searchInput) { searchInput.value = ""; clearBtn.classList.remove("visible"); }
+      applyFilters();
+    });
 
-      document.querySelectorAll("#categoryFilters input[type=checkbox]").forEach(cb => {
-        cb.addEventListener("change", applyFilters);
+    /* desktop chips */
+    document.querySelectorAll("#categoryFilters .cf-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        chip.classList.toggle("selected");
+        const cb = document.querySelector(`#categoryFilters .cf-chip-input[data-cat="${chip.dataset.cat}"]`);
+        if (cb) cb.checked = chip.classList.contains("selected");
+        applyFilters();
       });
     });
 
-    function applyFilters() {
-      const checked = [...document.querySelectorAll("#categoryFilters input:checked")]
-        .map(cb => cb.dataset.cat);
-      const search = document.getElementById("catalogSearch")?.value.trim() || "";
-      loadCatalogProducts(checked, search);
+    /* clear all */
+    document.getElementById("clearAllBtn")?.addEventListener("click", () => {
+      CATS.forEach(c => toggleChip(c, false));
+      applyFilters();
+    });
+
+    /* accordion groups */
+    document.querySelectorAll(".cf-group-hd").forEach(hd => {
+      hd.addEventListener("click", () => {
+        const group = document.getElementById(hd.dataset.group);
+        if (group) group.classList.toggle("open");
+      });
+    });
+
+    /* mobile drawer open/close */
+    document.getElementById("mobFilterBtn")?.addEventListener("click", openDrawer);
+    document.getElementById("drawerClose")?.addEventListener("click", closeDrawer);
+    document.getElementById("drawerOverlay")?.addEventListener("click", closeDrawer);
+
+    /* drawer apply */
+    document.getElementById("drawerApply")?.addEventListener("click", () => {
+      /* sync drawer selections → desktop chips */
+      document.querySelectorAll("#drawerChips .cf-chip").forEach(dchip => {
+        toggleChip(dchip.dataset.cat, dchip.classList.contains("selected"));
+      });
+      applyFilters();
+      closeDrawer();
+    });
+
+    /* drawer reset */
+    document.getElementById("drawerReset")?.addEventListener("click", () => {
+      document.querySelectorAll("#drawerChips .cf-chip").forEach(c => c.classList.remove("selected"));
+      CATS.forEach(c => toggleChip(c, false));
+      applyFilters();
+    });
+
+    /* drawer search mirrors desktop search */
+    const drawerSearch = document.getElementById("drawerSearch");
+    if (drawerSearch && searchInput) {
+      drawerSearch.addEventListener("input", () => {
+        searchInput.value = drawerSearch.value;
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilters, 350);
+      });
     }
+  }
+
+  function openDrawer() {
+    document.getElementById("drawerOverlay")?.classList.add("open");
+    document.getElementById("filterDrawer")?.classList.add("open");
+    document.body.style.overflow = "hidden";
+    /* sync current selections into drawer */
+    const selected = getSelected();
+    document.querySelectorAll("#drawerChips .cf-chip").forEach(c => {
+      c.classList.toggle("selected", selected.includes(c.dataset.cat));
+    });
+  }
+  function closeDrawer() {
+    document.getElementById("drawerOverlay")?.classList.remove("open");
+    document.getElementById("filterDrawer")?.classList.remove("open");
+    document.body.style.overflow = "";
+  }
   </script>
 
 </body>
