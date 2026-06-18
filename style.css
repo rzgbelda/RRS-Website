@@ -3075,10 +3075,9 @@ textarea:focus {
         display: flex;
         flex-direction: row;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         gap: 14px;
-        width: 100%;
-        max-width: 260px;
+        width: 210px;
     }
 
     .pricing-benefit img {
