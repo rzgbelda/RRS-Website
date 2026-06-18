@@ -3,8 +3,602 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Room Ready Supply</title>
+  <title>Order Request — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
+  <style>
+    /* ============================================================
+       CHECKOUT V2 — Modern B2B Checkout Experience
+       ============================================================ */
+
+    body { background: #f8f9fb; }
+
+    .co-page {
+      min-height: calc(100vh - 80px);
+      padding-bottom: 60px;
+    }
+
+    /* ── Hero ──────────────────────────────────────────────────── */
+    .co-hero {
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+      padding: 24px 0 0;
+    }
+    .co-hero-inner {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+    .co-back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      margin-bottom: 18px;
+      transition: color 0.15s;
+    }
+    .co-back:hover { color: #f97316; }
+    .co-hero-text h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 5px;
+      letter-spacing: -0.3px;
+    }
+    .co-hero-text p {
+      font-size: 14px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    /* Step indicators */
+    .co-steps {
+      display: flex;
+      align-items: center;
+      margin-top: 24px;
+      overflow-x: auto;
+      scrollbar-width: none;
+      gap: 0;
+    }
+    .co-steps::-webkit-scrollbar { display: none; }
+    .co-step {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 14px 0;
+      flex-shrink: 0;
+    }
+    .co-step-num {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #f1f5f9;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .co-step.active .co-step-num  { background: #f97316; color: #fff; }
+    .co-step.done   .co-step-num  { background: #dcfce7; color: #16a34a; }
+    .co-step-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+    .co-step.active .co-step-label { color: #0f172a; }
+    .co-step.done   .co-step-label { color: #94a3b8; }
+    .co-step-line {
+      height: 1px;
+      width: 40px;
+      background: #e2e8f0;
+      flex-shrink: 0;
+      margin: 0 4px;
+    }
+    .co-step.done + .co-step-line { background: #86efac; }
+
+    /* ── Page body layout ──────────────────────────────────────── */
+    .co-body {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 28px 40px 0;
+      display: grid;
+      grid-template-columns: 1fr 368px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    /* ── Cards ─────────────────────────────────────────────────── */
+    .co-card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
+      padding: 28px 28px 24px;
+      margin-bottom: 16px;
+    }
+    .co-card:last-child { margin-bottom: 0; }
+
+    .co-card-hd {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+    }
+    .co-card-badge {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      background: #fff7ed;
+      color: #f97316;
+      font-size: 13px;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .co-card-hd-text h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .co-card-hd-text p {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 2px 0 0;
+    }
+
+    /* ── Form inputs ───────────────────────────────────────────── */
+    .co-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .co-field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .co-field.full { grid-column: 1 / -1; }
+
+    .co-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      letter-spacing: 0.01em;
+    }
+    .co-req { color: #f97316; margin-left: 1px; }
+
+    .co-input {
+      height: 50px;
+      padding: 0 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 14px;
+      color: #0f172a;
+      background: #fff;
+      outline: none;
+      width: 100%;
+      box-sizing: border-box;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+    }
+    .co-input::placeholder { color: #c8d3df; }
+    .co-input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 4px rgba(249,115,22,0.10);
+    }
+
+    .co-addr-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .co-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 14px;
+      color: #64748b;
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .co-checkbox-row input[type=checkbox] {
+      width: 16px;
+      height: 16px;
+      accent-color: #f97316;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    /* ── Order type radio cards ────────────────────────────────── */
+    .co-order-opts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .co-order-opt { position: relative; }
+    .co-order-opt input[type=radio] { display: none; }
+    .co-order-card {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 18px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      height: 100%;
+      box-sizing: border-box;
+    }
+    .co-order-opt input:checked + .co-order-card {
+      border-color: #f97316;
+      background: #fff7ed;
+      box-shadow: 0 0 0 3px rgba(249,115,22,0.10);
+    }
+    .co-order-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 2px solid #cbd5e1;
+      margin-bottom: 11px;
+      position: relative;
+      transition: border-color 0.15s;
+    }
+    .co-order-opt input:checked + .co-order-card .co-order-dot {
+      border-color: #f97316;
+      background: #f97316;
+    }
+    .co-order-dot::after {
+      content: '';
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .co-order-opt input:checked + .co-order-card .co-order-dot::after { opacity: 1; }
+    .co-order-card h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 4px;
+    }
+    .co-order-card p {
+      font-size: 12px;
+      color: #64748b;
+      margin: 0;
+      line-height: 1.5;
+    }
+    .co-popular-tag {
+      display: inline-block;
+      background: #f97316;
+      color: #fff;
+      font-size: 9px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 99px;
+      margin-left: 6px;
+      vertical-align: middle;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+
+    /* ── Product items (JS-rendered into #checkout-products) ───── */
+    .co-items-empty {
+      text-align: center;
+      padding: 32px 0;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+    .co-items-empty a { color: #f97316; }
+
+    /* Override checkout-product class from script.js */
+    .checkout-product {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 0;
+      border-bottom: 1px solid #f8f9fb;
+    }
+    .checkout-product:last-child { border-bottom: none; }
+    .checkout-product img {
+      width: 52px;
+      height: 52px;
+      border-radius: 10px;
+      object-fit: cover;
+      background: #f1f5f9;
+      border: 1px solid #f1f5f9;
+      flex-shrink: 0;
+    }
+    .checkout-product > div {
+      flex: 1;
+      min-width: 0;
+    }
+    .checkout-product h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #0f172a;
+      margin: 0 0 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .checkout-product p {
+      font-size: 11px;
+      color: #94a3b8;
+      margin: 0 0 2px;
+    }
+    .checkout-product small {
+      font-size: 11px;
+      color: #16a34a;
+      font-weight: 500;
+    }
+    .product-price {
+      font-size: 12px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+    .qty-box {
+      background: #f1f5f9;
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #374151;
+      flex-shrink: 0;
+    }
+    .qty-value::before { content: "× "; }
+    .product-total {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0f172a;
+      flex-shrink: 0;
+    }
+
+    /* ── Summary sidebar ───────────────────────────────────────── */
+    .co-sidebar {
+      position: sticky;
+      top: 24px;
+    }
+    .co-summary {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.08);
+      overflow: hidden;
+    }
+
+    .co-sum-head {
+      padding: 20px 22px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .co-sum-head h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0;
+    }
+    .co-sum-badge {
+      background: #f1f5f9;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 99px;
+    }
+
+    /* JS renders <p><span>…</span><strong>…</strong></p> into #summary-items */
+    #summary-items {
+      padding: 6px 22px;
+      max-height: 220px;
+      overflow-y: auto;
+    }
+    #summary-items p {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #f8f9fb;
+      margin: 0;
+      font-size: 13px;
+    }
+    #summary-items p:last-child { border-bottom: none; }
+    #summary-items p span {
+      color: #374151;
+      font-weight: 500;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    #summary-items p strong {
+      color: #0f172a;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .co-sum-totals {
+      padding: 14px 22px;
+      background: #f8f9fb;
+      border-top: 1px solid #f1f5f9;
+    }
+    .co-sum-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .co-sum-row:last-child { margin-bottom: 0; }
+    .co-sum-row strong { color: #0f172a; font-weight: 600; }
+
+    .co-sum-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 22px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .co-sum-total-label { font-size: 14px; font-weight: 700; color: #0f172a; }
+    .co-sum-total-amt   { font-size: 22px; font-weight: 800; color: #f97316; }
+
+    .co-sum-cta {
+      padding: 16px 22px 20px;
+      border-top: 1px solid #f1f5f9;
+    }
+    .co-submit-btn {
+      width: 100%;
+      height: 52px;
+      background: #f97316;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+    }
+    .co-submit-btn:hover {
+      background: #ea6c0a;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(249,115,22,0.28);
+    }
+    .co-submit-btn:active { transform: none; box-shadow: none; }
+    .co-submit-btn:disabled { background: #fed7aa; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .co-trust {
+      margin-top: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .co-trust-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.45;
+    }
+    .co-trust-icon {
+      width: 14px;
+      height: 14px;
+      color: #16a34a;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .co-sum-note {
+      padding: 0 22px 16px;
+      font-size: 11px;
+      color: #c0cad8;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* ── Alert messages ────────────────────────────────────────── */
+    .co-alert {
+      border-radius: 10px;
+      padding: 13px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 16px;
+      display: none;
+    }
+    .co-alert-err { background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; }
+    .co-alert-ok  { background: #f0fdf4; border: 1px solid #86efac; color: #16a34a; }
+
+    /* ── Mobile summary accordion ──────────────────────────────── */
+    .co-mob-sum-wrap { display: none; }
+    .co-mob-sum-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: 12px;
+      padding: 14px 18px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 600;
+      color: #ea6c0a;
+      margin-bottom: 4px;
+    }
+    .co-mob-sum-toggle span { display: flex; align-items: center; gap: 8px; }
+    .co-mob-chevron {
+      width: 16px; height: 16px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .co-mob-sum-toggle.open .co-mob-chevron { transform: rotate(180deg); }
+    .co-mob-sum-panel {
+      display: none;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #f1f5f9;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .co-mob-sum-panel.open { display: block; }
+
+    /* ── Sticky mobile CTA ─────────────────────────────────────── */
+    .co-sticky-cta {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      padding: 14px 20px;
+      background: #fff;
+      border-top: 1px solid #f1f5f9;
+      box-shadow: 0 -6px 24px rgba(0,0,0,0.08);
+      z-index: 200;
+    }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 960px) {
+      .co-body {
+        grid-template-columns: 1fr;
+        padding: 20px 24px 0;
+      }
+      .co-sidebar { display: none; }
+      .co-mob-sum-wrap { display: block; padding: 16px 24px 0; }
+      .co-sticky-cta { display: block; }
+      .co-page { padding-bottom: 90px; }
+    }
+
+    @media (max-width: 640px) {
+      .co-hero-inner { padding: 0 16px; }
+      .co-body { padding: 16px 16px 0; }
+      .co-mob-sum-wrap { padding: 12px 16px 0; }
+      .co-card { padding: 20px 16px 18px; border-radius: 14px; }
+      .co-hero-text h1 { font-size: 21px; }
+      .co-step-label { display: none; }
+      .co-step-line { width: 20px; }
+      .co-grid-2 { grid-template-columns: 1fr; }
+      .co-addr-grid { grid-template-columns: 1fr 1fr; }
+      .co-order-opts { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 420px) {
+      .co-addr-grid { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
 <body>
 
@@ -17,201 +611,331 @@
   </div>
 
   <header class="navbar">
-  <a href="index.html" class="logo">
-    <img src="RR logo.png" alt="Room Ready Supply Logo" />
-  </a>
-
-  <nav class="nav-links">
-    <a href="index.html">Home</a>
-    <a href="catalog.html">Catalog</a>
-    <a href="index.html#how-it-works">How it Works</a>
-    <a href="index.html#reorder-header">Reorder Program</a>
-    <a href="index.html#business-pricing">Business Pricing</a>
-    <a href="index.html#about-us">About Us</a>
-    <a href="index.html#about-us">Contact</a>
-  </nav>
-
-  <div class="nav-icons">
-
-    <!-- Search -->
-    <a href="catalog.html">
-      <img src="hl1.svg" alt="Search">
+    <a href="index.html" class="logo">
+      <img src="RR logo.png" alt="Room Ready Supply Logo" />
     </a>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
+    <div class="nav-icons">
+      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
+        <div class="dropdown-menu">
+          <a href="account.html">My Account</a>
+          <a href="account.html#orders">Order History</a>
+          <a href="wishlist.html">Wishlist</a>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div class="cart-container">
+        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+  </header>
 
-    <!-- Guest Only -->
-    <a href="login.html" class="guest-only login-nav-btn">
-      Login
-    </a>
+  <div class="co-page">
 
-    <!-- Logged In -->
-    <div class="logged-in-only account-dropdown">
+    <!-- ── Hero / Progress ──────────────────────────────────── -->
+    <div class="co-hero">
+      <div class="co-hero-inner">
 
-      <button class="account-btn">
-        <img src="hl2.svg" alt="Account">
+        <a href="cart.html" class="co-back">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10 12L6 8l4-4"/>
+          </svg>
+          Back to Cart
+        </a>
+
+        <div class="co-hero-text">
+          <h1>Submit Your Order Request</h1>
+          <p>Tell us what you need and we'll prepare a custom quote and delivery plan.</p>
+        </div>
+
+        <div class="co-steps">
+          <div class="co-step active">
+            <div class="co-step-num">1</div>
+            <span class="co-step-label">Customer Info</span>
+          </div>
+          <div class="co-step-line"></div>
+          <div class="co-step active">
+            <div class="co-step-num">2</div>
+            <span class="co-step-label">Delivery Address</span>
+          </div>
+          <div class="co-step-line"></div>
+          <div class="co-step active">
+            <div class="co-step-num">3</div>
+            <span class="co-step-label">Order Preferences</span>
+          </div>
+          <div class="co-step-line"></div>
+          <div class="co-step active">
+            <div class="co-step-num">4</div>
+            <span class="co-step-label">Review &amp; Submit</span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── Mobile: collapsible summary ──────────────────────── -->
+    <div class="co-mob-sum-wrap">
+      <button type="button" class="co-mob-sum-toggle" id="mobSumToggle">
+        <span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+          </svg>
+          Order Summary — <span id="summary-count-mob">0 Items</span>
+        </span>
+        <svg class="co-mob-chevron" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M4 6l4 4 4-4"/>
+        </svg>
       </button>
-
-      <div class="dropdown-menu">
-
-        <a href="account.html">
-          My Account
-        </a>
-
-        <a href="account.html#orders">
-          Order History
-        </a>
-
-        <a href="wishlist.html">
-          Wishlist
-        </a>
-
-        <div class="dropdown-divider"></div>
-
-        <button id="logout-btn">
-          Logout
-        </button>
-
+      <div class="co-mob-sum-panel" id="mobSumPanel">
+        <div id="summary-items-mob" style="padding:8px 18px;font-size:13px;color:#374151"></div>
+        <div style="padding:12px 18px;background:#f8f9fb;border-top:1px solid #f1f5f9;font-size:13px">
+          <div style="display:flex;justify-content:space-between;color:#64748b;margin-bottom:6px">
+            <span>Subtotal</span><strong style="color:#0f172a" id="summary-subtotal-mob">$0.00</strong>
+          </div>
+          <div style="display:flex;justify-content:space-between;color:#64748b">
+            <span>Shipping</span><strong style="color:#0f172a">TBD</strong>
+          </div>
+        </div>
+        <div style="padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid #f1f5f9">
+          <span style="font-weight:700;color:#0f172a;font-size:14px">Estimated Total</span>
+          <strong style="font-size:18px;font-weight:800;color:#f97316" id="summary-total-mob">$0.00</strong>
+        </div>
       </div>
-
     </div>
 
-    <!-- Cart -->
-    <div class="cart-container">
-      <a href="cart.html">
-        <img src="hl3.svg" alt="Cart">
-      </a>
+    <!-- ── Main form + sidebar ───────────────────────────────── -->
+    <form id="checkoutForm">
+    <div class="co-body">
 
-      <span id="cart-count" class="cart-count">
-        0
-      </span>
-    </div>
+      <!-- LEFT: form sections -->
+      <div>
 
-  </div>
+        <div id="checkoutError"   class="co-alert co-alert-err"></div>
+        <div id="checkoutSuccess" class="co-alert co-alert-ok"></div>
 
-</header>
+        <!-- STEP 1: Customer Info -->
+        <div class="co-card">
+          <div class="co-card-hd">
+            <div class="co-card-badge">1</div>
+            <div class="co-card-hd-text">
+              <h2>Customer Information</h2>
+              <p>Your business contact details</p>
+            </div>
+          </div>
 
-  <main class="checkout-page">
-
-  <a href="cart.html" class="back-link">← Back</a>
-
-  <h1>Submit Your Order Request</h1>
-  <p class="checkout-intro">
-    Tell us what you need and when. We’ll review your request and confirm pricing, availability, and delivery details.
-  </p>
-
-  <div id="checkoutError"   style="background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px;color:#dc2626;font-size:14px;margin-bottom:16px;display:none;max-width:640px"></div>
-  <div id="checkoutSuccess" style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px 16px;color:#16a34a;font-size:14px;margin-bottom:16px;display:none;max-width:640px"></div>
-
-  <form id="checkoutForm">
-  <div class="checkout-layout">
-
-    <section class="checkout-left">
-
-      <div class="checkout-card">
-        <h2>1. Customer details</h2>
-
-        <div class="form-grid">
-          <label>Business Name* <input type="text" id="checkoutBusiness" placeholder="Enter business name" required></label>
-          <label>Contact Name: <input type="text" id="checkoutContact" placeholder="Enter contact name"></label>
-          <label>Phone Number* <input type="text" id="checkoutPhone" placeholder="(123) 456-7890" required></label>
-          <label>Email Address: <input type="email" id="checkoutEmail" placeholder="email@business.com"></label>
+          <div class="co-grid-2">
+            <div class="co-field">
+              <label class="co-label">Business Name <span class="co-req">*</span></label>
+              <input class="co-input" type="text" id="checkoutBusiness" placeholder="Hotel or Business Name" required>
+            </div>
+            <div class="co-field">
+              <label class="co-label">Contact Name</label>
+              <input class="co-input" type="text" id="checkoutContact" placeholder="Your Full Name">
+            </div>
+            <div class="co-field">
+              <label class="co-label">Phone Number <span class="co-req">*</span></label>
+              <input class="co-input" type="tel" id="checkoutPhone" placeholder="(123) 456-7890" required>
+            </div>
+            <div class="co-field">
+              <label class="co-label">Email Address</label>
+              <input class="co-input" type="email" id="checkoutEmail" placeholder="email@business.com">
+            </div>
+          </div>
         </div>
 
-        <label class="full-field">Delivery Address* <input type="text" id="checkoutStreet" placeholder="Street address" required></label>
+        <!-- STEP 2: Delivery Address -->
+        <div class="co-card">
+          <div class="co-card-hd">
+            <div class="co-card-badge">2</div>
+            <div class="co-card-hd-text">
+              <h2>Delivery Address</h2>
+              <p>Where should we deliver your order?</p>
+            </div>
+          </div>
 
-        <div class="address-grid">
-          <input type="text" id="checkoutCity"  placeholder="City">
-          <input type="text" id="checkoutState" placeholder="State">
-          <input type="text" id="checkoutZip"   placeholder="ZIP Code">
+          <div class="co-field">
+            <label class="co-label">Street Address <span class="co-req">*</span></label>
+            <input class="co-input" type="text" id="checkoutStreet" placeholder="123 Main Street" required>
+          </div>
+
+          <div class="co-addr-grid">
+            <input class="co-input" type="text" id="checkoutCity"  placeholder="City">
+            <input class="co-input" type="text" id="checkoutState" placeholder="State">
+            <input class="co-input" type="text" id="checkoutZip"   placeholder="ZIP Code">
+          </div>
+
+          <label class="co-checkbox-row">
+            <input type="checkbox">
+            Billing address is the same as delivery address
+          </label>
         </div>
 
-        <label class="checkbox-line">
-          <input type="checkbox">
-          Billing address is the same as delivery address.
-        </label>
-      </div>
+        <!-- STEP 3: Order Preferences -->
+        <div class="co-card">
+          <div class="co-card-hd">
+            <div class="co-card-badge">3</div>
+            <div class="co-card-hd-text">
+              <h2>Order Preferences</h2>
+              <p>How would you like to place this order?</p>
+            </div>
+          </div>
 
-      <div class="checkout-card">
-        <h2>2. Order details</h2>
+          <div class="co-order-opts">
 
-        <p class="field-title">How would you like to order*</p>
+            <label class="co-order-opt">
+              <input type="radio" name="orderType" value="one_time" checked>
+              <div class="co-order-card">
+                <div class="co-order-dot"></div>
+                <h4>One-Time Order <span class="co-popular-tag">Popular</span></h4>
+                <p>Place a single order with no ongoing commitment.</p>
+              </div>
+            </label>
 
-        <div class="order-options">
-
-    <label class="order-option">
-        <input type="radio" name="orderType" value="reorder">
-        <div class="option-card">
-
-            <span class="radio-circle"></span>
-
-            <div class="option-content">
+            <label class="co-order-opt">
+              <input type="radio" name="orderType" value="reorder">
+              <div class="co-order-card">
+                <div class="co-order-dot"></div>
                 <h4>Set Up Reorder</h4>
-                <p>Schedule automatic reorders with approval before proceeding.</p>
+                <p>Schedule automatic reorders with your approval before each delivery.</p>
+              </div>
+            </label>
+
+          </div>
+        </div>
+
+        <!-- STEP 4: Items in Your Order -->
+        <div class="co-card">
+          <div class="co-card-hd">
+            <div class="co-card-badge">4</div>
+            <div class="co-card-hd-text">
+              <h2>Items in Your Order</h2>
+              <p>Review what's in your cart before submitting</p>
             </div>
+          </div>
+          <div id="checkout-products"></div>
+        </div>
+
+      </div>
+
+      <!-- RIGHT: sticky summary sidebar -->
+      <div class="co-sidebar">
+        <div class="co-summary">
+
+          <div class="co-sum-head">
+            <h2>Order Summary</h2>
+            <span class="co-sum-badge" id="summary-count">0 Items</span>
+          </div>
+
+          <div id="summary-items"></div>
+
+          <div class="co-sum-totals">
+            <div class="co-sum-row">
+              <span>Subtotal</span>
+              <strong id="summary-subtotal">$0.00</strong>
+            </div>
+            <div class="co-sum-row">
+              <span>Estimated Shipping</span>
+              <strong>TBD</strong>
+            </div>
+          </div>
+
+          <div class="co-sum-total">
+            <span class="co-sum-total-label">Estimated Total</span>
+            <span class="co-sum-total-amt" id="summary-total">$0.00</span>
+          </div>
+
+          <div class="co-sum-cta">
+            <button type="submit" class="co-submit-btn">Submit Order Request</button>
+            <div class="co-trust">
+              <div class="co-trust-item">
+                <svg class="co-trust-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                We review every request within 1 business day
+              </div>
+              <div class="co-trust-item">
+                <svg class="co-trust-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                Delivery availability confirmed before fulfillment
+              </div>
+              <div class="co-trust-item">
+                <svg class="co-trust-icon" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                No charge until order is approved
+              </div>
+            </div>
+          </div>
+
+          <p class="co-sum-note">
+            Final pricing and availability confirmed in your order confirmation email.
+          </p>
 
         </div>
-    </label>
-
-    <label class="order-option">
-        <input type="radio" name="orderType" value="one_time" checked>
-        <div class="option-card">
-
-            <span class="radio-circle"></span>
-
-            <div class="option-content">
-                <h4>One-Time Order</h4>
-                <p>Place a one-time order with no future commitment.</p>
-            </div>
-
-        </div>
-    </label>
-
-</div>
-
-        <h3 class="product-list-title">Product List</h3>
-
-<div id="checkout-products"></div>
-
       </div>
 
-    </section>
+    </div>
+    </form>
 
-    <aside class="checkout-summary">
-      <div class="summary-head">
-        <h2>Order Summary</h2>
-        <span id="summary-count">0 Items</span>
-      </div>
+    <!-- Mobile sticky CTA (outside form — uses form= attribute) -->
+    <div class="co-sticky-cta">
+      <button type="submit" form="checkoutForm" class="co-submit-btn">Submit Order Request</button>
+    </div>
 
-      <div id="summary-items"></div>
+  </div><!-- /.co-page -->
 
-      <div class="summary-price">
-        <p>
-  <span>Subtotal</span>
-  <strong id="summary-subtotal">$1,049.70</strong>
-</p>
-        <p><span>Estimated Shipping</span><strong>TBD</strong></p>
-      </div>
+  <script>
+    /* Mobile summary accordion */
+    const toggle = document.getElementById("mobSumToggle");
+    const panel  = document.getElementById("mobSumPanel");
+    if (toggle && panel) {
+      toggle.addEventListener("click", () => {
+        const open = panel.classList.toggle("open");
+        toggle.classList.toggle("open", open);
+      });
+    }
 
-      <div class="summary-total">
-  <span>Estimated Total</span>
-  <strong id="summary-total">$0.00</strong>
-</div>
+    /* Mirror summary values to mobile panel after JS populates them */
+    const observer = new MutationObserver(() => {
+      const mobItems    = document.getElementById("summary-items-mob");
+      const mobSubtotal = document.getElementById("summary-subtotal-mob");
+      const mobTotal    = document.getElementById("summary-total-mob");
+      const mobCount    = document.getElementById("summary-count-mob");
+      const srcItems    = document.getElementById("summary-items");
+      const srcSubtotal = document.getElementById("summary-subtotal");
+      const srcTotal    = document.getElementById("summary-total");
+      const srcCount    = document.getElementById("summary-count");
+      if (mobItems    && srcItems)    mobItems.innerHTML        = srcItems.innerHTML;
+      if (mobSubtotal && srcSubtotal) mobSubtotal.textContent   = srcSubtotal.textContent;
+      if (mobTotal    && srcTotal)    mobTotal.textContent      = srcTotal.textContent;
+      if (mobCount    && srcCount)    mobCount.textContent      = srcCount.textContent;
+    });
+    const srcItems = document.getElementById("summary-items");
+    if (srcItems) observer.observe(srcItems, { childList: true, subtree: true, characterData: true });
 
-      <p class="summary-note">
-        You'll receive final pricing, availability, and delivery details in your confirmation.
-      </p>
+    /* Sync submit button text state from form's main button to mobile CTA */
+    document.getElementById("checkoutForm")?.addEventListener("submit", () => {
+      const mobileCta = document.querySelector(".co-sticky-cta .co-submit-btn");
+      if (mobileCta) { mobileCta.disabled = true; mobileCta.textContent = "Placing order…"; }
+    });
+  </script>
 
-      <button type="submit" class="checkout-btn" style="width:100%;margin-top:16px;border:none;cursor:pointer">
-        Place Order Request
-      </button>
-    </aside>
-
-  </div>
-  </form>
-</main>
-
-
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="supabase.js"></script>
-<script src="script.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
