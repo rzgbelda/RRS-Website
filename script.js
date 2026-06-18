@@ -173,7 +173,7 @@ function setupRegister() {
     btn.disabled = true;
     btn.textContent = "Creating account…";
 
-    const { error } = await window.sb.auth.signUp({
+    const { data: signUpData, error } = await window.sb.auth.signUp({
       email,
       password,
       options: {
@@ -184,7 +184,10 @@ function setupRegister() {
     btn.disabled = false;
     btn.textContent = "Create Account";
 
-    if (error) return showErr(errEl, error.message);
+    if (error) return showErr(errEl, error.message || error.msg || "Signup failed. Please try again.");
+
+    /* Supabase returns user=null when email already exists but confirmation is pending */
+    if (!signUpData?.user) return showErr(errEl, "An account with this email may already exist. Check your inbox for a confirmation email.");
 
     errEl.style.display = "none";
     registerForm.reset();
