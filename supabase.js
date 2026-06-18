@@ -4,8 +4,8 @@
    Supabase Dashboard → Project Settings → API
    ============================================================ */
 
-const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co';
+const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
 
 /* Initialise once, expose as window.sb everywhere */
 const { createClient } = window.supabase;
