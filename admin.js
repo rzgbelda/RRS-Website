@@ -226,8 +226,11 @@ async function saveProduct() {
   if (!name) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
   errEl.style.display = "none";
 
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
   const payload = {
     name,
+    slug,
     sku           : (document.getElementById("prodSku")?.value || "").trim() || null,
     category_name : (document.getElementById("prodCategory")?.value || "").trim(),
     description   : (document.getElementById("prodDescription")?.value || "").trim(),
