@@ -17,7 +17,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupCheckoutPage();
   setupLoginPage();
   setupResetPasswordPage();
+  setupHamburger();
 });
+
+/* ============================================================
+   HAMBURGER MENU — Mobile navigation toggle (≤600px)
+   ============================================================ */
+
+function setupHamburger() {
+  const btn = document.getElementById("hamburgerBtn");
+  const nav = document.querySelector(".nav-links");
+  if (!btn || !nav) return;
+
+  btn.addEventListener("click", () => {
+    const isOpen = nav.classList.toggle("mobile-open");
+    btn.classList.toggle("is-open", isOpen);
+    btn.setAttribute("aria-label", isOpen ? "Close navigation menu" : "Open navigation menu");
+    document.body.style.overflow = isOpen ? "hidden" : "";
+  });
+
+  /* Close menu when a nav link is clicked */
+  nav.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("mobile-open");
+      btn.classList.remove("is-open");
+      document.body.style.overflow = "";
+    });
+  });
+
+  /* Close menu on outside click */
+  document.addEventListener("click", (e) => {
+    if (nav.classList.contains("mobile-open") && !btn.contains(e.target) && !nav.contains(e.target)) {
+      nav.classList.remove("mobile-open");
+      btn.classList.remove("is-open");
+      document.body.style.overflow = "";
+    }
+  });
+}
 
 /* ============================================================
    AUTH — Supabase

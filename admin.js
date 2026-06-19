@@ -469,7 +469,7 @@ async function renderReportsTab() {
       <div class="a-stat-card"><div><p class="a-stat-label">Customers</p><p class="a-stat-value">${customerCount ?? 0}</p></div></div>
       <div class="a-stat-card"><div><p class="a-stat-label">Active Products</p><p class="a-stat-value">${productCount ?? 0}</p></div></div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+    <div class="a-reports-grid">
       <div class="a-card">
         <div class="a-card-header"><h3>Orders by Status</h3></div>
         <div style="padding:16px">
