@@ -3532,7 +3532,7 @@ textarea:focus {
 
 /* =====================================================
    HAMBURGER MOBILE MENU
-   Shows at ≤600px where nav-links are hidden
+   Shows at ≤768px (iPad portrait and below)
 ===================================================== */
 
 .hamburger-btn {
@@ -3559,8 +3559,19 @@ textarea:focus {
 /* When hamburger is a direct child of .navbar (pages without nav-icons, e.g. login) */
 .navbar > .hamburger-btn { margin-left: auto; }
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
   .hamburger-btn { display: flex; }
+
+  /* Hide nav-links — accessible via hamburger overlay */
+  .nav-links { display: none !important; }
+
+  /* Single-row navbar (no wrapping needed since links are hidden) */
+  .navbar {
+    flex-wrap: nowrap !important;
+    padding: 10px 16px !important;
+    height: 64px !important;
+  }
+  .logo img { width: 130px !important; }
 
   /* Full-screen mobile menu overlay */
   .nav-links.mobile-open {
@@ -3919,4 +3930,124 @@ textarea:focus {
 @media (max-width: 320px) {
   .nav-icons { gap: 8px; }
   .nav-icons .login-nav-btn { padding: 7px 10px; font-size: 11px; }
+}
+
+/* =====================================================
+   RESPONSIVE POLISH — ROUND 2
+   Comprehensive fixes for all remaining issues
+   across desktop (1920/1440/1366), laptop (1280/1024),
+   tablet (1024/768), and mobile (430→320)
+===================================================== */
+
+/* ── Hero buttons: 60px gap is huge when stacked vertically ── */
+@media (max-width: 768px) {
+  .hero-buttons { gap: 14px; }
+}
+@media (max-width: 480px) {
+  .hero-buttons { gap: 12px; }
+  .hero-content { padding: 24px 16px; }
+}
+
+/* ── Supply section: prevent 4-col crowding at 1366px/1280px ── */
+@media (max-width: 1366px) {
+  .supply-section .product-grid { grid-template-columns: repeat(3, 1fr); }
+}
+/* Already handled at 1024px with 3-col in existing CSS */
+
+/* ── Ordering section: reduce gap in 1-col collapsed layout ── */
+@media (max-width: 1100px) {
+  .ordering-section { gap: 40px; }
+}
+
+/* ── Catalog hero h1: still 48px at 480px — needs reduction ── */
+@media (max-width: 480px) {
+  .catalog-hero { padding: 32px 16px; min-height: 160px; }
+  .catalog-content h1 { font-size: 34px; }
+  .catalog-content p  { font-size: 14px; }
+}
+@media (max-width: 360px) {
+  .catalog-content h1 { font-size: 28px; }
+}
+
+/* ── About section: body text too large on small screens ── */
+@media (max-width: 480px) {
+  .about-feature p  { font-size: 13px; line-height: 1.55; }
+  .about-feature h3 { font-size: 14px; }
+  .about-feature    { padding: 10px 14px; gap: 14px; }
+}
+
+/* ── Upload box: 245px height is too tall on mobile ── */
+@media (max-width: 768px) {
+  .upload-box { height: 180px; }
+}
+@media (max-width: 480px) {
+  .upload-box { height: 150px; }
+  .upload-box img   { width: 34px; height: 34px; }
+  .upload-box h4    { font-size: 14px; margin-bottom: 5px; }
+  .upload-box p     { font-size: 12px; }
+  .upload-box small { font-size: 11px; margin-top: 8px; }
+  .quote-btn { width: 100%; font-size: 14px; height: 50px; }
+}
+
+/* ── Pricing image: min-height:750px becomes huge when 1-col ── */
+@media (max-width: 480px) {
+  .pricing-image img { min-height: 200px; }
+  .pricing-section   { padding: 36px 12px; }
+}
+
+/* ── Product gallery thumbnails overflow at narrow widths ── */
+@media (max-width: 480px) {
+  .thumb { width: 60px; height: 60px; }
+}
+@media (max-width: 360px) {
+  .thumb { width: 52px; height: 52px; }
+}
+
+/* ── nav-icons: tighter gap at all ≤768px (hamburger + icons) ── */
+@media (max-width: 768px) {
+  .nav-icons { gap: 14px; }
+}
+@media (max-width: 480px) {
+  .nav-icons { gap: 10px; }
+  .logo img  { width: 108px !important; }
+}
+@media (max-width: 360px) {
+  .nav-icons { gap: 8px; }
+  .logo img  { width: 96px !important; }
+  .navbar    { padding: 8px 10px !important; height: 56px !important; }
+}
+@media (max-width: 320px) {
+  .logo img  { width: 84px !important; }
+  .nav-icons .login-nav-btn { padding: 6px 10px; font-size: 11px; }
+}
+
+/* ── Bottom bar: font too large in single-line 28px container ── */
+@media (max-width: 600px) {
+  .bottom-bar { font-size: 12px; }
+}
+@media (max-width: 480px) {
+  .bottom-bar { font-size: 11px; }
+}
+
+/* ── Serve grid: items have 17px text — too large at 768px ── */
+@media (max-width: 768px) {
+  .serve-item span { font-size: 12px; }
+}
+
+/* ── Ordering steps: reduce horizontal gap at 1024px ── */
+@media (max-width: 1024px) {
+  .ordering-steps { gap: 16px; }
+  .step-item      { width: 110px; }
+}
+
+/* ── Product page: also-grid single col on smallest screens ── */
+@media (max-width: 360px) {
+  .also-grid { grid-template-columns: 1fr; }
+  .mini-card { grid-template-columns: 60px 1fr; }
+}
+
+/* ── Tablet (768–1024px): nav-icons alignment + spacing ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .nav-links a { font-size: 12px; padding: 7px 8px; }
+  .logo img    { width: 140px; }
 }

@@ -27,6 +27,25 @@
     .wishlist-empty a { background:#ED7226; color:#fff; padding:12px 28px; border-radius:8px; text-decoration:none; font-weight:600; }
     .wishlist-loading { text-align:center; padding:60px 0; color:#888; font-size:15px; }
     .wishlist-toast { position:fixed; bottom:24px; right:24px; background:#0b2d52; color:#fff; padding:12px 20px; border-radius:8px; font-size:14px; font-weight:600; display:none; z-index:999; }
+    @media (max-width:768px) {
+      .wishlist-page { margin:30px auto; padding:0 16px; }
+      .wishlist-page h1 { font-size:26px; }
+      .wishlist-grid { gap:16px; }
+    }
+    @media (max-width:480px) {
+      .wishlist-page { margin:20px auto; padding:0 12px; }
+      .wishlist-page h1 { font-size:22px; }
+      .wishlist-page .subtitle { font-size:13px; margin-bottom:20px; }
+      .wishlist-grid { gap:12px; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); }
+      .wishlist-card-img { height:150px; }
+      .wishlist-card-body { padding:12px; }
+      .wishlist-card-body h3 { font-size:13px; }
+      .wl-add-btn, .wl-remove-btn { padding:8px; font-size:12px; }
+    }
+    @media (max-width:360px) {
+      .wishlist-grid { grid-template-columns:1fr; }
+      .wishlist-card-img { height:180px; }
+    }
   </style>
 </head>
 <body>
