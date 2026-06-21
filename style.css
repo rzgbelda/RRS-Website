@@ -3948,11 +3948,36 @@ textarea:focus {
   .hero-content { padding: 24px 16px; }
 }
 
-/* ── Supply section: prevent 4-col crowding at 1366px/1280px ── */
-@media (max-width: 1366px) {
-  .supply-section .product-grid { grid-template-columns: repeat(3, 1fr); }
+/* ── Supply section: responsive grid + hide decorative arrows on mobile ── */
+/* 4-col is fine at desktop (1280px+). Reduce on smaller screens. */
+@media (max-width: 768px) {
+  .supply-section .product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 14px !important;
+  }
+  .supply-section .supply-slider { gap: 0; padding: 0 16px; }
+  .supply-section .slider-arrow  { display: none; }
+  .supply-section                 { padding: 50px 0; }
+  .supply-section .product-card h3   { font-size: 14px; }
+  .supply-section .product-card .add-btn { font-size: 12px; padding: 10px 8px; }
+  .supply-section .product-card > img:first-child { height: 140px; }
 }
-/* Already handled at 1024px with 3-col in existing CSS */
+@media (max-width: 480px) {
+  .supply-section .product-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+  .supply-section .supply-slider { padding: 0 12px; }
+  .supply-section .product-card h3   { font-size: 13px; }
+  .supply-section .product-card .price { font-size: 14px; }
+  .supply-section .product-card > img:first-child { height: 120px; }
+}
+@media (max-width: 360px) {
+  .supply-section .product-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .supply-section .supply-slider { padding: 0 10px; }
+}
 
 /* ── Ordering section: reduce gap in 1-col collapsed layout ── */
 @media (max-width: 1100px) {
