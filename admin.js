@@ -277,6 +277,280 @@ async function openDeleteProduct(id) {
   renderProductsTable();
 }
 
+/* ── CSV Bulk Import ─────────────────────────────────────────── */
+
+/* Internal state */
+let _csvRows   = [];   // parsed data rows (objects)
+let _csvRunning = false;
+
+/* Open / close */
+function openCsvImport() {
+  csvReset();
+  openModal("csvImportModal");
+  /* Wire drag-and-drop */
+  const zone = document.getElementById("csvDropZone");
+  zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
+  zone.ondragleave = ()  => zone.classList.remove("dragover");
+  zone.ondrop      = e  => {
+    e.preventDefault();
+    zone.classList.remove("dragover");
+    const file = e.dataTransfer.files[0];
+    if (file) handleCsvFile(file);
+  };
+  /* Wire file input */
+  const inp = document.getElementById("csvFileInput");
+  inp.value = "";
+  inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+}
+
+function closeCsvImport() {
+  if (_csvRunning) return;
+  closeModal("csvImportModal");
+  csvReset();
+}
+
+function csvReset() {
+  _csvRows   = [];
+  _csvRunning = false;
+  showCsvStep(1);
+  document.getElementById("csvImportBtn").style.display = "none";
+  document.getElementById("csvFileInput").value = "";
+  document.getElementById("csvProgressBar").style.width = "0%";
+}
+
+function showCsvStep(n) {
+  [1, 2, 3, 4].forEach(i => {
+    const el = document.getElementById("csvStep" + i);
+    if (el) el.style.display = (i === n) ? "" : "none";
+  });
+  const footer = document.getElementById("csvModalFooter");
+  if (footer) footer.style.display = n === 3 ? "none" : "";
+}
+
+/* Parse a CSV file */
+function handleCsvFile(file) {
+  if (!file.name.toLowerCase().endsWith(".csv")) {
+    showToast("Please select a .csv file."); return;
+  }
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      _csvRows = parseCsv(e.target.result);
+      if (!_csvRows.length) { showToast("No data rows found in CSV."); return; }
+      renderCsvPreview(_csvRows);
+      showCsvStep(2);
+      document.getElementById("csvImportBtn").style.display = "";
+    } catch (err) {
+      showToast("CSV parse error: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* RFC 4180-compatible CSV parser */
+function parseCsv(text) {
+  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+
+  const headers = csvSplitLine(lines[0]).map(h => h.trim().toLowerCase());
+  const nameIdx = headers.indexOf("name");
+  if (nameIdx === -1) throw new Error('CSV must have a "name" column.');
+
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const vals = csvSplitLine(line);
+    const obj  = {};
+    headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
+    if (!obj.name) continue;   // skip blank name rows
+    rows.push(obj);
+  }
+  return rows;
+}
+
+function csvSplitLine(line) {
+  const result = [];
+  let cur = "", inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === "," && !inQ) {
+      result.push(cur); cur = "";
+    } else {
+      cur += ch;
+    }
+  }
+  result.push(cur);
+  return result;
+}
+
+/* Preview — show first 5 rows */
+function renderCsvPreview(rows) {
+  const PREVIEW_COLS = ["name", "sku", "category_name", "price", "unit", "is_featured", "is_active"];
+  const head = document.getElementById("csvPreviewHead");
+  const body = document.getElementById("csvPreviewBody");
+  if (!head || !body) return;
+
+  head.innerHTML = "<tr>" + PREVIEW_COLS.map(c => `<th>${c}</th>`).join("") + "</tr>";
+  body.innerHTML = rows.slice(0, 5).map(r =>
+    "<tr>" + PREVIEW_COLS.map(c => `<td>${escHtml(r[c] || "—")}</td>`).join("") + "</tr>"
+  ).join("");
+
+  document.getElementById("csvRowCount").textContent    = `${rows.length.toLocaleString()} products ready to import`;
+  document.getElementById("csvTotalPreview").textContent = rows.length.toLocaleString();
+
+  /* Count rows with SKU (can detect duplicates) vs without */
+  const withSku = rows.filter(r => r.sku).length;
+  const dupNote = document.getElementById("csvDupNote");
+  if (dupNote) dupNote.textContent = withSku
+    ? `${withSku} have SKU — existing products with matching SKU will be updated.`
+    : "No SKU column — all rows will be inserted as new products.";
+}
+
+/* Run the actual import in batches of 100 */
+async function runCsvImport() {
+  if (!_csvRows.length || _csvRunning) return;
+  _csvRunning = true;
+  document.getElementById("csvImportBtn").disabled = true;
+
+  showCsvStep(3);
+
+  const BATCH   = 100;
+  const total   = _csvRows.length;
+  let inserted  = 0;
+  let updated   = 0;
+  const errLines = [];
+
+  const setProgress = (done) => {
+    const pct = Math.round((done / total) * 100);
+    document.getElementById("csvProgressBar").style.width = pct + "%";
+    document.getElementById("csvProgressSub").textContent = `${done.toLocaleString()} / ${total.toLocaleString()} processed`;
+  };
+  setProgress(0);
+
+  /* Process in chunks */
+  for (let start = 0; start < total; start += BATCH) {
+    const chunk  = _csvRows.slice(start, start + BATCH);
+    const hasSku = chunk.some(r => r.sku);
+    const now    = new Date().toISOString();
+
+    const payloads = chunk.map(r => ({
+      name         : r.name,
+      sku          : r.sku  || null,
+      slug         : r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+      description  : r.description  || null,
+      price        : parseFloat(r.price)      || 0,
+      sale_price   : parseFloat(r.sale_price) || null,
+      is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
+      category_name: r.category_name || null,
+      case_qty     : parseInt(r.case_qty)  || 1,
+      pack_size    : parseInt(r.pack_size) || 1,
+      unit         : r.unit         || "Case",
+      is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
+      is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
+      image_url    : r.image_url   || null,
+      updated_at   : now,
+    }));
+
+    /* Upsert on SKU if present, otherwise plain insert */
+    let result;
+    if (hasSku) {
+      result = await window.sb
+        .from("products")
+        .upsert(payloads, { onConflict: "sku", ignoreDuplicates: false })
+        .select("id, sku");
+    } else {
+      result = await window.sb.from("products").insert(payloads).select("id");
+    }
+
+    if (result.error) {
+      errLines.push(`Rows ${start + 1}–${start + chunk.length}: ${result.error.message}`);
+      setProgress(start + chunk.length);
+      continue;
+    }
+
+    /* Upsert inventory for each inserted/updated product */
+    if (result.data?.length) {
+      const invPayloads = result.data.map((p, i) => ({
+        product_id : p.id,
+        stock_qty  : parseInt(chunk[i]?.stock_qty)  || 0,
+        status     : chunk[i]?.stock_status || "in_stock",
+        updated_at : now,
+      }));
+      await window.sb.from("inventory")
+        .upsert(invPayloads, { onConflict: "product_id" });
+    }
+
+    /* Count inserts vs updates (rough heuristic: upsert returns all) */
+    if (hasSku) {
+      updated   += result.data?.length || chunk.length;
+    } else {
+      inserted  += result.data?.length || chunk.length;
+    }
+
+    setProgress(start + chunk.length);
+    await new Promise(r => setTimeout(r, 30)); // tiny yield to keep UI responsive
+  }
+
+  /* Show results */
+  _csvRunning = false;
+  document.getElementById("csvImportBtn").disabled = false;
+
+  document.getElementById("csvResInserted").textContent = inserted.toLocaleString();
+  document.getElementById("csvResUpdated").textContent  = updated.toLocaleString();
+  document.getElementById("csvResErrors").textContent   = errLines.length;
+  document.getElementById("csvProgressLabel").textContent = "Import complete!";
+
+  if (errLines.length) {
+    const log = document.getElementById("csvErrorLog");
+    log.innerHTML = errLines.map(e => `<div>• ${escHtml(e)}</div>`).join("");
+    log.style.display = "block";
+  }
+
+  showCsvStep(4);
+
+  /* Swap footer to a Close + Refresh */
+  const footer = document.getElementById("csvModalFooter");
+  if (footer) {
+    footer.innerHTML = `
+      <button class="a-btn-outline" style="width:auto" onclick="closeCsvImport()">Close</button>
+      <button class="a-btn-primary" onclick="closeCsvImport();renderProductsTable()">View Products</button>`;
+  }
+
+  renderProductsTable();  // refresh in background
+}
+
+/* Download a blank template */
+function downloadCsvTemplate() {
+  const headers = [
+    "name","sku","description","price","sale_price","is_on_sale",
+    "category_name","case_qty","pack_size","unit",
+    "is_featured","is_active","image_url","stock_qty","stock_status"
+  ];
+  const example1 = [
+    "Premium Bath Towels","SKU-001","Soft commercial-grade bath towels",
+    "24.99","","false","Towels and Linens","12","1","Case","false","true","","100","in_stock"
+  ];
+  const example2 = [
+    "Hand Soap Refill 1L","SKU-002","Antibacterial foam hand soap",
+    "18.50","15.99","true","Hand Soap","6","1","Case","true","true","","50","in_stock"
+  ];
+  const csv = [headers, example1, example2]
+    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    .join("\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "rrs_products_template.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 /* ── Image Upload ───────────────────────────────────────────── */
 
 document.getElementById("prodImageFile")?.addEventListener("change", async e => {
