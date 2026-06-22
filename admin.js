@@ -285,37 +285,50 @@ let _csvRunning = false;
 
 /* Open / close */
 function openCsvImport() {
-  csvReset();
   openModal("csvImportModal");
+  _csvRows    = [];
+  _csvRunning = false;
+  showCsvStep(1);
+
+  const btn = document.getElementById("csvImportBtn");
+  if (btn) btn.style.display = "none";
+
   /* Wire drag-and-drop */
   const zone = document.getElementById("csvDropZone");
-  zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
-  zone.ondragleave = ()  => zone.classList.remove("dragover");
-  zone.ondrop      = e  => {
-    e.preventDefault();
-    zone.classList.remove("dragover");
-    const file = e.dataTransfer.files[0];
-    if (file) handleCsvFile(file);
-  };
+  if (zone) {
+    zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
+    zone.ondragleave = ()  => zone.classList.remove("dragover");
+    zone.ondrop      = e  => {
+      e.preventDefault();
+      zone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) handleCsvFile(file);
+    };
+  }
+
   /* Wire file input */
   const inp = document.getElementById("csvFileInput");
-  inp.value = "";
-  inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+  if (inp) {
+    try { inp.value = ""; } catch (_) {}
+    inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+  }
 }
 
 function closeCsvImport() {
   if (_csvRunning) return;
   closeModal("csvImportModal");
-  csvReset();
+  _csvRows    = [];
+  _csvRunning = false;
 }
 
 function csvReset() {
-  _csvRows   = [];
+  _csvRows    = [];
   _csvRunning = false;
   showCsvStep(1);
-  document.getElementById("csvImportBtn").style.display = "none";
-  document.getElementById("csvFileInput").value = "";
-  document.getElementById("csvProgressBar").style.width = "0%";
+  const btn = document.getElementById("csvImportBtn");
+  if (btn) btn.style.display = "none";
+  const bar = document.getElementById("csvProgressBar");
+  if (bar) bar.style.width = "0%";
 }
 
 function showCsvStep(n) {
