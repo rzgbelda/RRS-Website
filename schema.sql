@@ -359,5 +359,5 @@ create policy "insert_activity" on public.customer_activity for insert with chec
 -- STORAGE POLICY (run after creating the bucket)
 -- ============================================================
 -- create policy "public_read_images"  on storage.objects for select using (bucket_id = 'product-images');
--- create policy "admin_upload_images" on storage.objects for insert using (bucket_id = 'product-images' and public.is_admin());
+-- create policy "admin_upload_images" on storage.objects for insert with check (bucket_id = 'product-images' and public.is_admin());
 -- create policy "admin_delete_images" on storage.objects for delete using (bucket_id = 'product-images' and public.is_admin());

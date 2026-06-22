@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "powershell",
+            "command": "$repo = 'C:\\Users\\rguti\\OneDrive\\Documents\\RRS-Website'; $status = git -C $repo status --porcelain; if ($status) { git -C $repo add -A; $msg = \"Auto-deploy: $(Get-Date -Format 'yyyy-MM-dd HH:mm')\"; git -C $repo commit -m $msg; git -C $repo push origin main } ",
+            "statusMessage": "Pushing to GitHub for Vercel deploy...",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
