@@ -598,24 +598,73 @@ async function runCsvImport() {
   renderProductsTable();  // refresh table in background
 }
 
-/* Download a blank template */
+/* Download a blank template — Excel & Google Sheets compatible */
 function downloadCsvTemplate() {
-  const headers = [
-    "name","sku","description","price","sale_price","is_on_sale",
-    "category_name","case_qty","pack_size","unit",
-    "is_featured","is_active","image_url","stock_qty","stock_status"
+  /* Text fields: wrap in quotes. Number/boolean fields: no quotes so
+     Excel/Sheets treat them as real numbers and checkboxes, not text. */
+  function q(v)  { return '"' + String(v).replace(/"/g, '""') + '"'; } // quoted string
+  function n(v)  { return v === "" ? "" : String(v); }                  // number (unquoted)
+  function b(v)  { return v ? "TRUE" : "FALSE"; }                       // Excel boolean
+
+  const rows = [
+    /* ── Header row ── */
+    [
+      "name","sku","description",
+      "price","sale_price","is_on_sale",
+      "category_name","case_qty","pack_size","unit",
+      "is_featured","is_active","image_url",
+      "stock_qty","stock_status"
+    ].map(q),
+
+    /* ── Example 1: basic product ── */
+    [
+      q("Premium Bath Towels"), q("SKU-001"), q("Soft commercial-grade bath towels, white"),
+      n(24.99), n(""), b(false),
+      q("Towels and Linens"), n(12), n(1), q("Case"),
+      b(false), b(true), q(""),
+      n(100), q("in_stock")
+    ],
+
+    /* ── Example 2: sale product, featured ── */
+    [
+      q("Antibacterial Hand Soap 1L"), q("SKU-002"), q("Foam hand soap refill, fresh scent"),
+      n(18.50), n(15.99), b(true),
+      q("Hand Soap"), n(6), n(1), q("Case"),
+      b(true), b(true), q(""),
+      n(50), q("in_stock")
+    ],
+
+    /* ── Example 3: low stock ── */
+    [
+      q("C-Fold Paper Towels"), q("SKU-003"), q("2-ply C-fold paper towels, 12 packs per case"),
+      n(32.00), n(""), b(false),
+      q("Paper Towels"), n(12), n(150), q("Case"),
+      b(false), b(true), q(""),
+      n(8), q("low_stock")
+    ],
+
+    /* ── Example 4: out of stock, inactive ── */
+    [
+      q("Trash Liner 55 Gallon"), q("SKU-004"), q("Heavy-duty black trash liners, 1.5 mil"),
+      n(45.99), n(""), b(false),
+      q("Trash Liners"), n(100), n(1), q("Case"),
+      b(false), b(false), q(""),
+      n(0), q("out_of_stock")
+    ],
+
+    /* ── Example 5: pack unit ── */
+    [
+      q("Toilet Seat Cover Dispenser"), q("SKU-005"), q("Wall-mount dispenser for seat covers"),
+      n(12.75), n(""), b(false),
+      q("Facility Supplies"), n(1), n(1), q("EA"),
+      b(false), b(true), q(""),
+      n(25), q("in_stock")
+    ],
   ];
-  const example1 = [
-    "Premium Bath Towels","SKU-001","Soft commercial-grade bath towels",
-    "24.99","","false","Towels and Linens","12","1","Case","false","true","","100","in_stock"
-  ];
-  const example2 = [
-    "Hand Soap Refill 1L","SKU-002","Antibacterial foam hand soap",
-    "18.50","15.99","true","Hand Soap","6","1","Case","true","true","","50","in_stock"
-  ];
-  const csv = [headers, example1, example2]
-    .map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
-    .join("\n");
+
+  /* RFC 4180: CRLF line endings + UTF-8 BOM so Excel auto-detects encoding */
+  const BOM = "﻿";
+  const csv = BOM + rows.map(row => row.join(",")).join("\r\n");
 
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
