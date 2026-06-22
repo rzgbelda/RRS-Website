@@ -127,198 +127,39 @@
       <img src="banner1.png" alt="Hotel supply cart in room" />
     </section>
   </main>
+  <!-- ── CATEGORY GRID (from Supabase categories table) ── -->
+  <section class="category-section" id="category-section">
+    <div class="container">
+      <div class="section-heading">
+        <h2>Browse by Category</h2>
+        <div class="heading-line"></div>
+        <p>Find exactly what your business needs.</p>
+      </div>
+      <div class="category-grid" id="category-grid">
+        <!-- Populated by loadCategoryGrid() in script.js -->
+      </div>
+    </div>
+  </section>
+
+  <!-- ── FEATURED PRODUCTS (from Supabase is_featured = true) ── -->
   <section class="supply-section">
     <div class="container">
-
-        <div class="section-heading">
-            <h2>What We Supply</h2>
-            <div class="heading-line"></div>
-            <p>Everyday hospitality and facility essentials.</p>
+      <div class="section-heading">
+        <h2>What We Supply</h2>
+        <div class="heading-line"></div>
+        <p>Everyday hospitality and facility essentials.</p>
+      </div>
+      <div class="supply-slider">
+        <div class="product-grid" id="featured-product-grid">
+          <!-- Populated by loadFeaturedProducts() in script.js -->
+          <div class="catalog-loading" style="grid-column:1/-1">Loading products…</div>
         </div>
-
-        <div class="supply-slider">
-
-            <button class="slider-arrow left">
-                &#8249;
-            </button>
-
-            <div class="product-grid">
-
-                <div class="product-card">
-                    <img src="blanket.png" alt="Premium Hospitality Blanket">
-
-                    <h3>Premium Hospitality Blanket</h3>
-
-                    <p class="description">
-                        Commercial Grade Comfort
-                    </p>
-
-                    <div class="product-meta">
-
-    <div class="meta-item">
-        <img src="box.svg" alt="Case Quantity">
-        <span>Case Qty: 6</span>
+      </div>
+      <div class="view-more-wrapper">
+        <a href="catalog.html" class="view-more-btn">View All Products →</a>
+      </div>
     </div>
-
-    <div class="meta-item">
-        <img src="pack.svg" alt="Pack Size">
-        <span>Pack Size: 1</span>
-    </div>
-
-</div>
-
-                    <div class="stock-status">
-                        <span class="dot"></span>
-                        In Stock
-                    </div>
-
-                    <div class="price">
-                        $34.99 <span>/Case</span>
-                    </div>
-
-                    <button class="add-btn">
-                        <img src="Cart.png" alt="">
-                        ADD TO CART
-                    </button>
-                </div>
-
-                <div class="product-card">
-                    <img src="blanket.png" alt="Premium Hospitality Blanket">
-
-                    <h3>Premium Hospitality Blanket</h3>
-
-                    <p class="description">
-                        Commercial Grade Comfort
-                    </p>
-
-                    <div class="product-meta">
-
-    <div class="meta-item">
-        <img src="box.svg" alt="Case Quantity">
-        <span>Case Qty: 6</span>
-    </div>
-
-    <div class="meta-item">
-        <img src="pack.svg" alt="Pack Size">
-        <span>Pack Size: 1</span>
-    </div>
-
-</div>
-
-                    <div class="stock-status">
-                        <span class="dot"></span>
-                        In Stock
-                    </div>
-
-                    <div class="price">
-                        $34.99 <span>/Case</span>
-                    </div>
-
-                    <button class="add-btn">
-                        <img src="Cart.png" alt="">
-                        ADD TO CART
-                    </button>
-                </div>
-
-                <div class="product-card">
-                    <img src="blanket.png" alt="Premium Hospitality Blanket">
-
-                    <h3>Premium Hospitality Blanket</h3>
-
-                    <p class="description">
-                        Commercial Grade Comfort
-                    </p>
-
-                    <div class="product-meta">
-
-    <div class="meta-item">
-        <img src="box.svg" alt="Case Quantity">
-        <span>Case Qty: 6</span>
-    </div>
-
-    <div class="meta-item">
-        <img src="pack.svg" alt="Pack Size">
-        <span>Pack Size: 1</span>
-    </div>
-
-</div>
-
-                    <div class="stock-status">
-                        <span class="dot"></span>
-                        In Stock
-                    </div>
-
-                    <div class="price">
-                        $34.99 <span>/Case</span>
-                    </div>
-
-                    <button class="add-btn">
-                        <img src="Cart.png" alt="">
-                        ADD TO CART
-                    </button>
-                </div>
-
-                <div class="product-card">
-                    <img src="blanket.png" alt="Premium Hospitality Blanket">
-
-                    <h3>Premium Hospitality Blanket</h3>
-
-                    <p class="description">
-                        Commercial Grade Comfort
-                    </p>
-
-                    <div class="product-meta">
-
-    <div class="meta-item">
-        <img src="box.svg" alt="Case Quantity">
-        <span>Case Qty: 6</span>
-    </div>
-
-    <div class="meta-item">
-        <img src="pack.svg" alt="Pack Size">
-        <span>Pack Size: 1</span>
-    </div>
-
-</div>
-
-                    <div class="stock-status">
-                        <span class="dot"></span>
-                        In Stock
-                    </div>
-
-                    <div class="price">
-                        $34.99 <span>/Case</span>
-                    </div>
-
-                    <button
-                      class="add-btn"
-                      data-name="Premium Hospitality Blanket"
-                      data-price="34.99"
-                      data-image="blanket.png">
-
-                      <img src="Cart.png" alt="">
-                      ADD TO CART
-
-                    </button>
-
-                </div>
-
-            </div>
-
-            <button class="slider-arrow right">
-                &#8250;
-            </button>
-
-        </div>
-
-        <div class="view-more-wrapper">
-            <a href="catalog.html" class="view-more-btn">
-                View More >>
-            </a>
-        </div>
-
-    </div>
-</section>
+  </section>
 
 <section class="serve-section">
 

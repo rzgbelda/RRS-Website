@@ -542,64 +542,7 @@
           </div>
           <div class="cf-group-body">
             <div class="cf-chips" id="categoryFilters">
-              <!-- hidden real checkboxes for script.js compatibility -->
-              <input type="checkbox" class="cf-chip-input" data-cat="Toilet Paper">
-              <input type="checkbox" class="cf-chip-input" data-cat="Paper Towels">
-              <input type="checkbox" class="cf-chip-input" data-cat="Trash Liners">
-              <input type="checkbox" class="cf-chip-input" data-cat="Cleaning Chemicals">
-              <input type="checkbox" class="cf-chip-input" data-cat="Hand Soap">
-              <input type="checkbox" class="cf-chip-input" data-cat="Laundry Supplies">
-              <input type="checkbox" class="cf-chip-input" data-cat="Dishwashing Supplies">
-              <input type="checkbox" class="cf-chip-input" data-cat="Guest Room Supplies">
-              <input type="checkbox" class="cf-chip-input" data-cat="Towels and Linens">
-              <input type="checkbox" class="cf-chip-input" data-cat="Food Service Supplies">
-              <input type="checkbox" class="cf-chip-input" data-cat="Facility Supplies">
-
-              <!-- visible chips -->
-              <span class="cf-chip" data-cat="Toilet Paper">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Toilet Paper
-              </span>
-              <span class="cf-chip" data-cat="Paper Towels">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Paper Towels
-              </span>
-              <span class="cf-chip" data-cat="Trash Liners">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Trash Liners
-              </span>
-              <span class="cf-chip" data-cat="Cleaning Chemicals">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Cleaning Chemicals
-              </span>
-              <span class="cf-chip" data-cat="Hand Soap">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Hand Soap
-              </span>
-              <span class="cf-chip" data-cat="Laundry Supplies">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Laundry Supplies
-              </span>
-              <span class="cf-chip" data-cat="Dishwashing Supplies">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Dishwashing Supplies
-              </span>
-              <span class="cf-chip" data-cat="Guest Room Supplies">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Guest Room Supplies
-              </span>
-              <span class="cf-chip" data-cat="Towels and Linens">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Towels &amp; Linens
-              </span>
-              <span class="cf-chip" data-cat="Food Service Supplies">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Food Service
-              </span>
-              <span class="cf-chip" data-cat="Facility Supplies">
-                <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
-                Facility Supplies
-              </span>
+              <!-- Chips populated dynamically by initCatalogFilters() -->
             </div>
           </div>
         </div>
@@ -650,18 +593,48 @@
   <script src="supabase.js"></script>
   <script src="script.js"></script>
   <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    loadCatalogProducts();
+  document.addEventListener("DOMContentLoaded", async () => {
+    await initCatalogFilters();   // load categories from DB, pre-select from URL
     buildDrawerChips();
     hookEvents();
+    loadCatalogProducts();        // run after filters are wired
   });
 
-  /* ── Categories ──────────────────────────────────────── */
-  const CATS = [
+  /* ── Categories (loaded from Supabase, falls back to hardcoded) ── */
+  let CATS = [
     "Toilet Paper","Paper Towels","Trash Liners","Cleaning Chemicals",
     "Hand Soap","Laundry Supplies","Dishwashing Supplies","Guest Room Supplies",
     "Towels and Linens","Food Service Supplies","Facility Supplies"
   ];
+
+  async function initCatalogFilters() {
+    /* Fetch from DB */
+    if (typeof window.sb !== "undefined") {
+      const { data: cats } = await window.sb
+        .from("categories")
+        .select("name")
+        .order("sort_order");
+      if (cats?.length) CATS = cats.map(c => c.name);
+    }
+
+    /* Build sidebar chips from CATS */
+    const filterWrap = document.getElementById("categoryFilters");
+    if (filterWrap) {
+      filterWrap.innerHTML = CATS.map(cat => `
+        <input type="checkbox" class="cf-chip-input" data-cat="${cat}" style="display:none">
+        <span class="cf-chip" data-cat="${cat}">
+          <svg class="cf-chip-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M2 6l3 3 5-5"/></svg>
+          ${cat}
+        </span>`).join("");
+    }
+
+    /* Pre-select category from URL ?category=NAME */
+    const urlCat = new URLSearchParams(window.location.search).get("category");
+    if (urlCat) {
+      const match = CATS.find(c => c.toLowerCase() === urlCat.toLowerCase()) || urlCat;
+      toggleChip(match, true);
+    }
+  }
 
   /* ── Core filter logic ───────────────────────────────── */
   function getSelected() {
