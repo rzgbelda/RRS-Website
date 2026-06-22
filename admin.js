@@ -325,8 +325,10 @@ function closeCsvImport() { hideCsvSection(); }
 
 function showCsvStep(n) {
   [1, 2, 3, 4].forEach(i => {
-    const el = document.getElementById("csvStep" + i);
-    if (el) el.style.display = (i === n) ? "" : "none";
+    const el  = document.getElementById("csvStep" + i);
+    const dot = document.getElementById("csvDot"  + i);
+    if (el)  el.style.display = (i === n) ? "" : "none";
+    if (dot) dot.className = "csv-step-dot" + (i <= n ? " active" : "") + (i === n ? " current" : "");
   });
 }
 

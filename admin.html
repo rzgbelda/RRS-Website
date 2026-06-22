@@ -263,82 +263,165 @@
 
       <!-- ── CSV Import inline section ── -->
       <div id="csvSection" style="display:none">
-        <div class="a-toolbar">
-          <button class="a-btn-outline" onclick="hideCsvSection()" style="width:auto">← Back to Products</button>
-          <h3 style="font-size:16px;font-weight:700;color:#0d2c50;margin:0">Bulk Import Products (CSV)</h3>
+
+        <!-- Page header -->
+        <div class="csv-page-header">
+          <button class="csv-back-btn" onclick="hideCsvSection()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+            Back to Products
+          </button>
+          <div class="csv-page-title">
+            <h2>Bulk Import Products</h2>
+            <p>Upload a CSV file to add or update thousands of products at once</p>
+          </div>
+          <div class="csv-step-indicator">
+            <div class="csv-step-dot active" id="csvDot1">1</div>
+            <div class="csv-step-line"></div>
+            <div class="csv-step-dot" id="csvDot2">2</div>
+            <div class="csv-step-line"></div>
+            <div class="csv-step-dot" id="csvDot3">3</div>
+            <div class="csv-step-line"></div>
+            <div class="csv-step-dot" id="csvDot4">4</div>
+          </div>
         </div>
 
         <!-- Step 1: Upload -->
-        <div id="csvStep1" class="a-card" style="padding:28px">
-          <div id="csvDropZone" class="csv-drop-zone" onclick="document.getElementById('csvFileInput').click()">
-            <div class="csv-drop-icon">📂</div>
-            <p class="csv-drop-title">Drop your CSV file here or <span>click to browse</span></p>
-            <p class="csv-drop-hint">Supports .csv files · Up to 16,000+ rows</p>
-          </div>
-          <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none">
-          <div style="display:flex;align-items:center;gap:10px;margin-top:16px;flex-wrap:wrap">
-            <span style="font-size:13px;color:#666">Don't have a template?</span>
-            <button class="a-btn-outline" style="width:auto;font-size:12px;padding:6px 14px" onclick="downloadCsvTemplate()">⬇ Download Template</button>
-            <span style="font-size:12px;color:#94a3b8">Required columns: name, price, category_name</span>
-          </div>
-          <div class="csv-format-box" style="margin-top:16px">
-            <p style="font-size:12px;font-weight:700;color:#0d2c50;margin-bottom:8px">CSV Column Reference</p>
-            <div class="csv-cols-grid">
-              <div><code>name</code> <span class="csv-req">required</span></div>
-              <div><code>sku</code></div><div><code>description</code></div>
-              <div><code>price</code></div><div><code>sale_price</code></div>
-              <div><code>is_on_sale</code> <span class="csv-hint">true/false</span></div>
-              <div><code>category_name</code></div><div><code>case_qty</code></div>
-              <div><code>pack_size</code></div>
-              <div><code>unit</code> <span class="csv-hint">Case/Pack/EA</span></div>
-              <div><code>is_featured</code> <span class="csv-hint">true/false</span></div>
-              <div><code>is_active</code> <span class="csv-hint">true/false</span></div>
-              <div><code>image_url</code></div><div><code>stock_qty</code></div>
-              <div><code>stock_status</code> <span class="csv-hint">in_stock / low_stock / out_of_stock</span></div>
+        <div id="csvStep1" class="csv-step-panel">
+          <div class="csv-upload-layout">
+
+            <!-- Drop zone -->
+            <div class="csv-upload-main">
+              <div id="csvDropZone" class="csv-drop-zone" onclick="document.getElementById('csvFileInput').click()">
+                <div class="csv-drop-icon-wrap">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#F58220" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                  </svg>
+                </div>
+                <h3 class="csv-drop-headline">Drop your CSV file here</h3>
+                <p class="csv-drop-sub">or <span class="csv-browse-link">click to browse files</span></p>
+                <p class="csv-drop-hint">Supports .csv · UTF-8 · Up to 16,000+ rows</p>
+              </div>
+              <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none">
+            </div>
+
+            <!-- Sidebar: template + column reference -->
+            <div class="csv-upload-side">
+
+              <!-- Template download -->
+              <div class="csv-template-card">
+                <div class="csv-template-icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#0B2F63" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="12" y1="18" x2="12" y2="12"/>
+                    <polyline points="9 15 12 18 15 15"/>
+                  </svg>
+                </div>
+                <div class="csv-template-info">
+                  <p class="csv-template-title">Download Template</p>
+                  <p class="csv-template-desc">Pre-filled with example rows & all 15 columns</p>
+                </div>
+                <button class="csv-template-btn" onclick="downloadCsvTemplate()">Download</button>
+              </div>
+
+              <!-- Column reference -->
+              <div class="csv-cols-card">
+                <div class="csv-cols-header">
+                  <span class="csv-cols-title">Column Reference</span>
+                  <span class="csv-cols-req-note"><span class="csv-req-dot"></span> Required</span>
+                </div>
+                <div class="csv-cols-pills">
+                  <span class="csv-pill csv-pill-req">name</span>
+                  <span class="csv-pill">sku</span>
+                  <span class="csv-pill">description</span>
+                  <span class="csv-pill">price</span>
+                  <span class="csv-pill">sale_price</span>
+                  <span class="csv-pill">is_on_sale</span>
+                  <span class="csv-pill csv-pill-req">category_name</span>
+                  <span class="csv-pill">case_qty</span>
+                  <span class="csv-pill">pack_size</span>
+                  <span class="csv-pill">unit</span>
+                  <span class="csv-pill">is_featured</span>
+                  <span class="csv-pill">is_active</span>
+                  <span class="csv-pill">image_url</span>
+                  <span class="csv-pill">stock_qty</span>
+                  <span class="csv-pill">stock_status</span>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
 
         <!-- Step 2: Preview -->
-        <div id="csvStep2" class="a-card" style="display:none;padding:24px">
-          <div class="csv-preview-header">
-            <div>
-              <strong id="csvRowCount" style="font-size:15px;color:#0d2c50"></strong>
-              <span style="font-size:13px;color:#666;margin-left:8px" id="csvDupNote"></span>
+        <div id="csvStep2" class="csv-step-panel" style="display:none">
+          <div class="csv-preview-bar">
+            <div class="csv-preview-info">
+              <span class="csv-preview-badge">CSV</span>
+              <strong id="csvRowCount"></strong>
+              <span id="csvDupNote" class="csv-dup-note"></span>
             </div>
-            <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="showCsvSection()">✕ Change File</button>
+            <button class="csv-change-file-btn" onclick="showCsvSection()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              Change File
+            </button>
           </div>
-          <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:12px;max-height:300px;overflow-y:auto">
+          <div class="csv-preview-table-wrap">
             <table class="a-table" id="csvPreviewTable" style="font-size:12px;min-width:600px">
               <thead id="csvPreviewHead"></thead>
               <tbody id="csvPreviewBody"></tbody>
             </table>
           </div>
-          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;flex-wrap:wrap;gap:10px">
-            <p style="font-size:12px;color:#94a3b8;margin:0">Showing first 5 rows · All <span id="csvTotalPreview"></span> rows will be imported.</p>
-            <button class="a-btn-primary" id="csvImportBtn" onclick="runCsvImport()" style="width:auto">Import All</button>
+          <div class="csv-preview-footer">
+            <p class="csv-preview-note">Showing first 5 rows · <span id="csvTotalPreview"></span> total rows will be imported</p>
+            <button class="a-btn-primary" id="csvImportBtn" onclick="runCsvImport()" style="width:auto;padding:10px 28px">
+              Import All Rows
+            </button>
           </div>
         </div>
 
         <!-- Step 3: Progress -->
-        <div id="csvStep3" class="a-card" style="display:none;padding:32px;text-align:center">
-          <p id="csvProgressLabel" style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:16px">Importing products…</p>
-          <div class="csv-progress-track" style="max-width:480px;margin:0 auto">
+        <div id="csvStep3" class="csv-step-panel csv-progress-panel" style="display:none">
+          <div class="csv-progress-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#F58220" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+          </div>
+          <p id="csvProgressLabel" class="csv-progress-label">Importing products…</p>
+          <div class="csv-progress-track">
             <div class="csv-progress-bar" id="csvProgressBar" style="width:0%"></div>
           </div>
-          <p id="csvProgressSub" style="font-size:13px;color:#666;margin-top:10px">0 / 0 processed</p>
+          <p id="csvProgressSub" class="csv-progress-sub">0 / 0 processed</p>
         </div>
 
         <!-- Step 4: Results -->
-        <div id="csvStep4" class="a-card" style="display:none;padding:28px">
-          <div class="csv-result-grid">
-            <div class="csv-result-card csv-result-green"><div class="csv-result-num" id="csvResInserted">0</div><div class="csv-result-lbl">Inserted</div></div>
-            <div class="csv-result-card csv-result-blue"><div class="csv-result-num" id="csvResUpdated">0</div><div class="csv-result-lbl">Updated</div></div>
-            <div class="csv-result-card csv-result-red"><div class="csv-result-num" id="csvResErrors">0</div><div class="csv-result-lbl">Errors</div></div>
+        <div id="csvStep4" class="csv-step-panel" style="display:none">
+          <div class="csv-results-header">
+            <div class="csv-results-check">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <h3 class="csv-results-title">Import Complete</h3>
           </div>
-          <div id="csvErrorLog" style="display:none;margin-top:16px;max-height:140px;overflow-y:auto;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;background:#fef2f2;font-size:12px;color:#dc2626"></div>
-          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px">
-            <button class="a-btn-outline" onclick="hideCsvSection()" style="width:auto">Close</button>
+          <div class="csv-result-grid">
+            <div class="csv-result-card csv-result-green">
+              <div class="csv-result-num" id="csvResInserted">0</div>
+              <div class="csv-result-lbl">Products Inserted</div>
+            </div>
+            <div class="csv-result-card csv-result-blue">
+              <div class="csv-result-num" id="csvResUpdated">0</div>
+              <div class="csv-result-lbl">Products Updated</div>
+            </div>
+            <div class="csv-result-card csv-result-red">
+              <div class="csv-result-num" id="csvResErrors">0</div>
+              <div class="csv-result-lbl">Errors</div>
+            </div>
+          </div>
+          <div id="csvErrorLog" style="display:none;margin-top:16px;max-height:140px;overflow-y:auto;border:1px solid #fecaca;border-radius:10px;padding:14px 16px;background:#fef2f2;font-size:12px;color:#dc2626;line-height:1.7"></div>
+          <div class="csv-results-actions">
+            <button class="a-btn-outline" onclick="showCsvSection()" style="width:auto">Import Another File</button>
             <button class="a-btn-primary" onclick="hideCsvSection();renderProductsTable()" style="width:auto">View Products</button>
           </div>
         </div>
@@ -783,7 +866,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="admin.js?v=7"></script>
+<script src="admin.js?v=8"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
