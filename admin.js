@@ -286,32 +286,37 @@ let _csvRunning = false;
 
 /* Open / close */
 function openCsvImport() {
-  openModal("csvImportModal");
-  _csvRows    = [];
-  _csvRunning = false;
-  showCsvStep(1);
+  try {
+    openModal("csvImportModal");
+    _csvRows    = [];
+    _csvRunning = false;
+    showCsvStep(1);
 
-  const btn = document.getElementById("csvImportBtn");
-  if (btn) btn.style.display = "none";
+    const btn = document.getElementById("csvImportBtn");
+    if (btn) btn.style.display = "none";
 
-  /* Wire drag-and-drop */
-  const zone = document.getElementById("csvDropZone");
-  if (zone) {
-    zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
-    zone.ondragleave = ()  => zone.classList.remove("dragover");
-    zone.ondrop      = e  => {
-      e.preventDefault();
-      zone.classList.remove("dragover");
-      const file = e.dataTransfer.files[0];
-      if (file) handleCsvFile(file);
-    };
-  }
+    /* Wire drag-and-drop */
+    const zone = document.getElementById("csvDropZone");
+    if (zone) {
+      zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
+      zone.ondragleave = ()  => zone.classList.remove("dragover");
+      zone.ondrop      = e  => {
+        e.preventDefault();
+        zone.classList.remove("dragover");
+        const file = e.dataTransfer.files[0];
+        if (file) handleCsvFile(file);
+      };
+    }
 
-  /* Wire file input */
-  const inp = document.getElementById("csvFileInput");
-  if (inp) {
-    try { inp.value = ""; } catch (_) {}
-    inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+    /* Wire file input */
+    const inp = document.getElementById("csvFileInput");
+    if (inp) {
+      try { inp.value = ""; } catch (_) {}
+      inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+    }
+  } catch(e) {
+    showToast("Could not open CSV import: " + e.message);
+    console.error("[CSV] openCsvImport error:", e);
   }
 }
 
@@ -853,3 +858,15 @@ function badgeClass(status) {
   };
   return m[status] || "a-badge-gray";
 }
+
+/* ── CSV button — standalone wiring (independent of auth flow) ── */
+document.addEventListener("DOMContentLoaded", function() {
+  var csvBtn = document.getElementById("openCsvImport");
+  if (csvBtn) {
+    csvBtn.onclick = null;  // clear any duplicate
+    csvBtn.addEventListener("click", function() {
+      try { openCsvImport(); }
+      catch(e) { showToast("Error: " + e.message); console.error("[CSV] openCsvImport threw:", e); }
+    });
+  }
+});
