@@ -232,7 +232,7 @@
           <option>Food Service Supplies</option>
           <option>Facility Supplies</option>
         </select>
-        <button class="a-btn-primary" id="openCsvImport" onclick="var m=document.getElementById('csvImportModal');if(!m){showToast('modal missing');return;}m.style.cssText='display:flex!important;position:fixed!important;inset:0!important;z-index:99999!important;background:rgba(0,0,0,.5)!important;align-items:center!important;justify-content:center!important;'" style="margin-right:8px;background:#1a4a8a">⬆ Import CSV</button>
+        <button class="a-btn-primary" id="openCsvImport" onclick="openCsvImport()" style="margin-right:8px;background:#1a4a8a">⬆ Import CSV</button>
         <button class="a-btn-primary" id="openAddProduct" onclick="openAddProduct()">+ Add Product</button>
       </div>
 
@@ -696,7 +696,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="admin.js?v=5"></script>
+<script src="admin.js?v=6"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');

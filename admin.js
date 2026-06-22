@@ -284,16 +284,102 @@ async function openDeleteProduct(id) {
 let _csvRows   = [];   // parsed data rows (objects)
 let _csvRunning = false;
 
+/* Inject modal HTML into body if it isn't already present */
+function _ensureCsvModal() {
+  if (document.getElementById("csvImportModal")) return;
+  const div = document.createElement("div");
+  div.innerHTML = `
+<div id="csvImportModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal" style="max-width:780px;width:95vw">
+    <div class="a-modal-header">
+      <h3>Bulk Import Products (CSV)</h3>
+      <button class="a-modal-close" onclick="closeCsvImport()">✕</button>
+    </div>
+    <div class="a-modal-body" style="padding:20px 24px">
+      <div id="csvStep1">
+        <div id="csvDropZone" class="csv-drop-zone" onclick="document.getElementById('csvFileInput').click()">
+          <div class="csv-drop-icon">📂</div>
+          <p class="csv-drop-title">Drop your CSV file here or <span>click to browse</span></p>
+          <p class="csv-drop-hint">Supports .csv files · Up to 16,000+ rows</p>
+        </div>
+        <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none">
+        <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <span style="font-size:13px;color:#666">No template?</span>
+          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:6px 14px" onclick="downloadCsvTemplate()">⬇ Download Template</button>
+          <span style="font-size:12px;color:#94a3b8;margin-left:4px">Required: name, price, category_name</span>
+        </div>
+        <div class="csv-format-box">
+          <p style="font-size:12px;font-weight:700;color:#0d2c50;margin-bottom:6px">CSV Column Reference</p>
+          <div class="csv-cols-grid">
+            <div><code>name</code> <span class="csv-req">required</span></div>
+            <div><code>sku</code></div><div><code>description</code></div>
+            <div><code>price</code></div><div><code>sale_price</code></div>
+            <div><code>is_on_sale</code> <span class="csv-hint">true/false</span></div>
+            <div><code>category_name</code></div><div><code>case_qty</code></div>
+            <div><code>pack_size</code></div>
+            <div><code>unit</code> <span class="csv-hint">Case/Pack/EA</span></div>
+            <div><code>is_featured</code> <span class="csv-hint">true/false</span></div>
+            <div><code>is_active</code> <span class="csv-hint">true/false</span></div>
+            <div><code>image_url</code></div><div><code>stock_qty</code></div>
+            <div><code>stock_status</code> <span class="csv-hint">in_stock/low_stock/out_of_stock</span></div>
+          </div>
+        </div>
+      </div>
+      <div id="csvStep2" style="display:none">
+        <div class="csv-preview-header">
+          <div><strong id="csvRowCount" style="font-size:15px;color:#0d2c50"></strong>
+          <span style="font-size:13px;color:#666;margin-left:6px" id="csvDupNote"></span></div>
+          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="openCsvImport()">✕ Change File</button>
+        </div>
+        <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:10px;max-height:260px;overflow-y:auto">
+          <table class="a-table" id="csvPreviewTable" style="font-size:12px;min-width:600px">
+            <thead id="csvPreviewHead"></thead><tbody id="csvPreviewBody"></tbody>
+          </table>
+        </div>
+        <p style="font-size:12px;color:#94a3b8;margin-top:8px">Showing first 5 rows. All <span id="csvTotalPreview"></span> rows will be imported.</p>
+      </div>
+      <div id="csvStep3" style="display:none">
+        <div style="text-align:center;padding:10px 0 6px">
+          <p id="csvProgressLabel" style="font-size:14px;font-weight:600;color:#0d2c50;margin-bottom:14px">Importing products…</p>
+          <div class="csv-progress-track"><div class="csv-progress-bar" id="csvProgressBar" style="width:0%"></div></div>
+          <p id="csvProgressSub" style="font-size:12px;color:#666;margin-top:8px">0 / 0 processed</p>
+        </div>
+      </div>
+      <div id="csvStep4" style="display:none">
+        <div class="csv-result-grid">
+          <div class="csv-result-card csv-result-green"><div class="csv-result-num" id="csvResInserted">0</div><div class="csv-result-lbl">Inserted</div></div>
+          <div class="csv-result-card csv-result-blue"><div class="csv-result-num" id="csvResUpdated">0</div><div class="csv-result-lbl">Updated</div></div>
+          <div class="csv-result-card csv-result-red"><div class="csv-result-num" id="csvResErrors">0</div><div class="csv-result-lbl">Errors</div></div>
+        </div>
+        <div id="csvErrorLog" style="display:none;margin-top:14px;max-height:140px;overflow-y:auto;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;background:#fef2f2;font-size:12px;color:#dc2626"></div>
+      </div>
+    </div>
+    <div class="a-modal-footer" id="csvModalFooter">
+      <button class="a-btn-outline" style="width:auto" onclick="closeCsvImport()">Cancel</button>
+      <button class="a-btn-primary" id="csvImportBtn" style="display:none" onclick="runCsvImport()">Import All</button>
+    </div>
+  </div>
+</div>`;
+  document.body.appendChild(div.firstElementChild);
+}
+
 /* Open / close */
 function openCsvImport() {
   try {
-    openModal("csvImportModal");
+    _ensureCsvModal();
     _csvRows    = [];
     _csvRunning = false;
+    openModal("csvImportModal");
     showCsvStep(1);
 
     const btn = document.getElementById("csvImportBtn");
     if (btn) btn.style.display = "none";
+
+    /* Reset footer buttons in case a previous import swapped them */
+    const footer = document.getElementById("csvModalFooter");
+    if (footer) footer.innerHTML = `
+      <button class="a-btn-outline" style="width:auto" onclick="closeCsvImport()">Cancel</button>
+      <button class="a-btn-primary" id="csvImportBtn" style="display:none" onclick="runCsvImport()">Import All</button>`;
 
     /* Wire drag-and-drop */
     const zone = document.getElementById("csvDropZone");
