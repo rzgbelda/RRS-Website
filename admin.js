@@ -22,6 +22,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   switchTab("dashboard");
 
   /* Wire buttons */
+  document.getElementById("openCsvImport")?.addEventListener("click", openCsvImport);
   document.getElementById("openAddProduct")?.addEventListener("click", openAddProduct);
   document.getElementById("saveProduct")?.addEventListener("click", saveProduct);
   document.querySelectorAll("[data-goto]").forEach(btn => {
