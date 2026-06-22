@@ -280,11 +280,57 @@ async function openDeleteProduct(id) {
 
 /* ── CSV Bulk Import ─────────────────────────────────────────── */
 
-/* Internal state */
-let _csvRows   = [];   // parsed data rows (objects)
+let _csvRows    = [];
 let _csvRunning = false;
 
-/* Inject modal HTML into body if it isn't already present */
+/* Show/hide the inline CSV section inside the Products tab */
+function showCsvSection() {
+  _csvRows    = [];
+  _csvRunning = false;
+  const listView  = document.getElementById("productsListView");
+  const csvSection = document.getElementById("csvSection");
+  if (listView)   listView.style.display  = "none";
+  if (csvSection) csvSection.style.display = "";
+  showCsvStep(1);
+
+  const inp = document.getElementById("csvFileInput");
+  if (inp) {
+    try { inp.value = ""; } catch (_) {}
+    inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
+  }
+  const zone = document.getElementById("csvDropZone");
+  if (zone) {
+    zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
+    zone.ondragleave = ()  => zone.classList.remove("dragover");
+    zone.ondrop      = e  => {
+      e.preventDefault();
+      zone.classList.remove("dragover");
+      const file = e.dataTransfer.files[0];
+      if (file) handleCsvFile(file);
+    };
+  }
+}
+
+function hideCsvSection() {
+  if (_csvRunning) return;
+  const listView  = document.getElementById("productsListView");
+  const csvSection = document.getElementById("csvSection");
+  if (listView)   listView.style.display  = "";
+  if (csvSection) csvSection.style.display = "none";
+}
+
+/* Keep openCsvImport as alias in case anything still references it */
+function openCsvImport()  { showCsvSection(); }
+function closeCsvImport() { hideCsvSection(); }
+
+function showCsvStep(n) {
+  [1, 2, 3, 4].forEach(i => {
+    const el = document.getElementById("csvStep" + i);
+    if (el) el.style.display = (i === n) ? "" : "none";
+  });
+}
+
+/* Placeholder for old modal function — no-op now */
 function _ensureCsvModal() {
   if (document.getElementById("csvImportModal")) return;
   const div = document.createElement("div");
@@ -361,75 +407,6 @@ function _ensureCsvModal() {
   </div>
 </div>`;
   document.body.appendChild(div.firstElementChild);
-}
-
-/* Open / close */
-function openCsvImport() {
-  try {
-    _ensureCsvModal();
-    _csvRows    = [];
-    _csvRunning = false;
-    openModal("csvImportModal");
-    showCsvStep(1);
-
-    const btn = document.getElementById("csvImportBtn");
-    if (btn) btn.style.display = "none";
-
-    /* Reset footer buttons in case a previous import swapped them */
-    const footer = document.getElementById("csvModalFooter");
-    if (footer) footer.innerHTML = `
-      <button class="a-btn-outline" style="width:auto" onclick="closeCsvImport()">Cancel</button>
-      <button class="a-btn-primary" id="csvImportBtn" style="display:none" onclick="runCsvImport()">Import All</button>`;
-
-    /* Wire drag-and-drop */
-    const zone = document.getElementById("csvDropZone");
-    if (zone) {
-      zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
-      zone.ondragleave = ()  => zone.classList.remove("dragover");
-      zone.ondrop      = e  => {
-        e.preventDefault();
-        zone.classList.remove("dragover");
-        const file = e.dataTransfer.files[0];
-        if (file) handleCsvFile(file);
-      };
-    }
-
-    /* Wire file input */
-    const inp = document.getElementById("csvFileInput");
-    if (inp) {
-      try { inp.value = ""; } catch (_) {}
-      inp.onchange = e => { if (e.target.files[0]) handleCsvFile(e.target.files[0]); };
-    }
-  } catch(e) {
-    showToast("Could not open CSV import: " + e.message);
-    console.error("[CSV] openCsvImport error:", e);
-  }
-}
-
-function closeCsvImport() {
-  if (_csvRunning) return;
-  closeModal("csvImportModal");
-  _csvRows    = [];
-  _csvRunning = false;
-}
-
-function csvReset() {
-  _csvRows    = [];
-  _csvRunning = false;
-  showCsvStep(1);
-  const btn = document.getElementById("csvImportBtn");
-  if (btn) btn.style.display = "none";
-  const bar = document.getElementById("csvProgressBar");
-  if (bar) bar.style.width = "0%";
-}
-
-function showCsvStep(n) {
-  [1, 2, 3, 4].forEach(i => {
-    const el = document.getElementById("csvStep" + i);
-    if (el) el.style.display = (i === n) ? "" : "none";
-  });
-  const footer = document.getElementById("csvModalFooter");
-  if (footer) footer.style.display = n === 3 ? "none" : "";
 }
 
 /* Parse a CSV file */
@@ -616,16 +593,7 @@ async function runCsvImport() {
   }
 
   showCsvStep(4);
-
-  /* Swap footer to a Close + Refresh */
-  const footer = document.getElementById("csvModalFooter");
-  if (footer) {
-    footer.innerHTML = `
-      <button class="a-btn-outline" style="width:auto" onclick="closeCsvImport()">Close</button>
-      <button class="a-btn-primary" onclick="closeCsvImport();renderProductsTable()">View Products</button>`;
-  }
-
-  renderProductsTable();  // refresh in background
+  renderProductsTable();  // refresh table in background
 }
 
 /* Download a blank template */
@@ -945,14 +913,3 @@ function badgeClass(status) {
   return m[status] || "a-badge-gray";
 }
 
-/* ── CSV button — standalone wiring (independent of auth flow) ── */
-document.addEventListener("DOMContentLoaded", function() {
-  var csvBtn = document.getElementById("openCsvImport");
-  if (csvBtn) {
-    csvBtn.onclick = null;  // clear any duplicate
-    csvBtn.addEventListener("click", function() {
-      try { openCsvImport(); }
-      catch(e) { showToast("Error: " + e.message); console.error("[CSV] openCsvImport threw:", e); }
-    });
-  }
-});
