@@ -283,6 +283,193 @@ async function openDeleteProduct(id) {
 let _csvRows    = [];
 let _csvRunning = false;
 
+/* ============================================================
+   CONVERTER  (xlsx / csv → mapped → download RRS CSV)
+============================================================ */
+const CVT_COLS = [
+  { key:"name",          label:"Name",         required:true },
+  { key:"sku",           label:"SKU" },
+  { key:"description",   label:"Description" },
+  { key:"price",         label:"Price",        required:true },
+  { key:"sale_price",    label:"Sale Price" },
+  { key:"is_on_sale",    label:"Is On Sale" },
+  { key:"category_name", label:"Category",     required:true },
+  { key:"case_qty",      label:"Case Qty" },
+  { key:"pack_size",     label:"Pack Size" },
+  { key:"unit",          label:"Unit" },
+  { key:"is_featured",   label:"Is Featured" },
+  { key:"is_active",     label:"Is Active" },
+  { key:"image_url",     label:"Image URL" },
+  { key:"stock_qty",     label:"Stock Qty" },
+  { key:"stock_status",  label:"Stock Status" },
+];
+
+let _cvtSourceCols = [];
+let _cvtSourceRows = [];
+let _cvtMapping    = {};
+
+function showCvtPanel() {
+  const csvSection = document.getElementById("csvSection");
+  const cvtPanel   = document.getElementById("cvtPanel");
+  if (!cvtPanel) return;
+  /* hide all child sections of csvSection except cvtPanel */
+  Array.from(csvSection.children).forEach(el => {
+    if (el.id !== "cvtPanel") el.style.display = "none";
+  });
+  cvtPanel.style.display = "";
+  showCvtStep(1);
+
+  const inp  = document.getElementById("cvtFileInput");
+  const zone = document.getElementById("cvtDropZone");
+  if (inp)  inp.onchange = e => { if (e.target.files[0]) cvtHandleFile(e.target.files[0]); };
+  if (zone) {
+    zone.ondragover  = e => { e.preventDefault(); zone.classList.add("dragover"); };
+    zone.ondragleave = ()  => zone.classList.remove("dragover");
+    zone.ondrop      = e  => { e.preventDefault(); zone.classList.remove("dragover"); const f = e.dataTransfer.files[0]; if (f) cvtHandleFile(f); };
+  }
+}
+
+function hideCvtPanel() {
+  const csvSection = document.getElementById("csvSection");
+  const cvtPanel   = document.getElementById("cvtPanel");
+  if (!cvtPanel) return;
+  cvtPanel.style.display = "none";
+  /* restore csvSection children */
+  const header = csvSection.querySelector(".csv-page-header");
+  const step1  = document.getElementById("csvStep1");
+  if (header) header.style.display = "";
+  if (step1)  step1.style.display  = "";
+  showCsvStep(1);
+}
+
+function showCvtStep(n) {
+  [1,2,3].forEach(i => {
+    const el  = document.getElementById("cvtStep" + i);
+    const dot = document.getElementById("cvtDot"  + i);
+    if (el)  el.style.display = (i === n) ? "" : "none";
+    if (dot) dot.className = "csv-step-dot" + (i <= n ? " active" : "") + (i === n ? " current" : "");
+  });
+}
+
+function cvtHandleFile(file) {
+  const name = file.name.toLowerCase();
+  const isXlsx = name.endsWith(".xlsx") || name.endsWith(".xls");
+  const isCsv  = name.endsWith(".csv");
+  if (!isXlsx && !isCsv) { showToast("Please select a .xlsx, .xls, or .csv file."); return; }
+
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      let rows;
+      if (isXlsx) {
+        const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array" });
+        rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:"" });
+      } else {
+        /* CSV — re-use existing parseCsv but without requiring "name" col */
+        const text = e.target.result;
+        const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
+        const headers = csvSplitLine(lines[0]).map(h => h.trim());
+        rows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim(); if (!line) continue;
+          const vals = csvSplitLine(line);
+          const obj  = {};
+          headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
+          rows.push(obj);
+        }
+      }
+      if (!rows.length) { showToast("No data rows found."); return; }
+      _cvtSourceCols = Object.keys(rows[0]);
+      _cvtSourceRows = rows;
+      _cvtMapping    = cvtAutoMap(_cvtSourceCols);
+      document.getElementById("cvtFileName").textContent      = file.name;
+      document.getElementById("cvtRowCountLabel").textContent = rows.length.toLocaleString();
+      cvtRenderMappingGrid();
+      showCvtStep(2);
+    } catch(err) { showToast("Parse error: " + err.message); }
+  };
+  isXlsx ? reader.readAsArrayBuffer(file) : reader.readAsText(file);
+}
+
+function cvtAutoMap(cols) {
+  const mapping = {};
+  const norm = s => s.toLowerCase().replace(/[\s_\-\/]+/g,"");
+  const aliases = {
+    name:          ["name","productname","title","item","itemname"],
+    sku:           ["sku","skucode","itemcode","code","partnumber","id","productid"],
+    description:   ["description","desc","details","info","notes"],
+    price:         ["price","cost","caseprice","unitprice","msrp","listprice"],
+    sale_price:    ["saleprice","discountprice","specialprice","promoprice"],
+    is_on_sale:    ["isonsale","onsale","sale","discount","promo"],
+    category_name: ["category","categoryname","dept","department","type","producttype","productcategory"],
+    case_qty:      ["caseqty","casecount","quantitypercase","casesize","qtypercase"],
+    pack_size:     ["packsize","pack","packs","packcount","packqty"],
+    unit:          ["unit","uom","unitofmeasure","unittype"],
+    is_featured:   ["isfeatured","featured","highlight","top","bestseller"],
+    is_active:     ["isactive","active","status","enabled","available"],
+    image_url:     ["imageurl","image","img","photo","picture","url","photourl"],
+    stock_qty:     ["stockqty","stock","quantity","qty","inventory","onhand","stockcount"],
+    stock_status:  ["stockstatus","availability","instock","availabilitystatus"],
+  };
+  for (const col of cols) {
+    const n = norm(col);
+    for (const [tk, al] of Object.entries(aliases)) {
+      if (al.some(a => n === a || n.includes(a)) && !mapping[tk]) { mapping[tk] = col; break; }
+    }
+  }
+  return mapping;
+}
+
+function cvtRenderMappingGrid() {
+  const grid = document.getElementById("cvtMappingGrid");
+  if (!grid) return;
+  grid.innerHTML = CVT_COLS.map(col => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f8f9fa;border-radius:8px;border:1px solid #e5e7eb">
+      <div style="flex:1;min-width:0">
+        <span style="font-size:13px;font-weight:600;color:#0f2b50">${col.label}${col.required ? ' <span style="color:#f26f21">*</span>' : ''}</span>
+        <div style="font-size:11px;color:#aaa;font-family:monospace">${col.key}</div>
+      </div>
+      <select onchange="cvtUpdateMapping('${col.key}',this.value)" style="font-size:13px;border:1px solid #d1d5db;border-radius:6px;padding:6px 8px;background:white;min-width:150px;color:${_cvtMapping[col.key]?'#0f2b50':'#aaa'}">
+        <option value="">— skip —</option>
+        ${_cvtSourceCols.map(c => `<option value="${escHtml(c)}" ${_cvtMapping[col.key]===c?"selected":""}>${escHtml(c)}</option>`).join("")}
+      </select>
+    </div>
+  `).join("");
+  cvtUpdateMappedCount();
+}
+
+function cvtUpdateMapping(key, val) {
+  _cvtMapping[key] = val;
+  cvtUpdateMappedCount();
+}
+
+function cvtUpdateMappedCount() {
+  const count = CVT_COLS.filter(c => _cvtMapping[c.key]).length;
+  const el = document.getElementById("cvtMappedCount");
+  if (el) el.textContent = count;
+}
+
+function cvtBuildAndDownload() {
+  const BOM = "﻿";
+  const headers = CVT_COLS.map(c => c.key);
+  const lines = [headers.map(h => `"${h}"`).join(",")];
+  for (const srcRow of _cvtSourceRows) {
+    const vals = headers.map(h => {
+      const srcCol = _cvtMapping[h] || "";
+      const v = srcCol ? String(srcRow[srcCol] ?? "") : "";
+      return `"${v.replace(/"/g,'""')}"`;
+    });
+    lines.push(vals.join(","));
+  }
+  const csv  = BOM + lines.join("\r\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = "rrs_products_import.csv"; a.click();
+  URL.revokeObjectURL(url);
+  showCvtStep(3);
+}
+
 /* Show/hide the inline CSV section inside the Products tab */
 function showCsvSection() {
   _csvRows    = [];
