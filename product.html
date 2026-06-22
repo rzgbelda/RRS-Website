@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product — Room Ready Supply</title>
+  <title>Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -17,200 +17,323 @@
   </div>
 
   <header class="navbar">
-    <a href="index.html" class="logo">
-      <img src="RR logo.png" alt="Room Ready Supply Logo" />
+  <a href="index.html" class="logo">
+    <img src="RR logo.png" alt="Room Ready Supply Logo" />
+  </a>
+
+  <nav class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="catalog.html">Catalog</a>
+    <a href="index.html#how-it-works">How it Works</a>
+    <a href="index.html#reorder-header">Reorder Program</a>
+    <a href="index.html#business-pricing">Business Pricing</a>
+    <a href="index.html#about-us">About Us</a>
+    <a href="index.html#about-us">Contact</a>
+  </nav>
+
+  <div class="nav-icons">
+
+    <!-- Search -->
+    <a href="catalog.html">
+      <img src="hl1.svg" alt="Search">
     </a>
-    <nav class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="catalog.html">Catalog</a>
-      <a href="index.html#how-it-works">How it Works</a>
-      <a href="index.html#reorder-header">Reorder Program</a>
-      <a href="index.html#business-pricing">Business Pricing</a>
-      <a href="index.html#about-us">About Us</a>
-      <a href="index.html#about-us">Contact</a>
-    </nav>
-    <div class="nav-icons">
-      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
-      <a href="login.html" class="guest-only login-nav-btn">Login</a>
-      <div class="logged-in-only account-dropdown">
-        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
-        <div class="dropdown-menu">
-          <a href="account.html">My Account</a>
-          <a href="account.html#orders">Order History</a>
-          <a href="wishlist.html">Wishlist</a>
-          <div class="dropdown-divider"></div>
-          <button id="logout-btn">Logout</button>
-        </div>
-      </div>
-      <div class="cart-container">
-        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
-        <span id="cart-count" class="cart-count">0</span>
-      </div>
-      <!-- Mobile Nav Toggle -->
-      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open navigation menu">
-        <span></span><span></span><span></span>
+
+    <!-- Guest Only -->
+    <a href="login.html" class="guest-only login-nav-btn">
+      Login
+    </a>
+
+    <!-- Logged In -->
+    <div class="logged-in-only account-dropdown">
+
+      <button class="account-btn">
+        <img src="hl2.svg" alt="Account">
       </button>
-    </div>
-  </header>
 
-  <!-- ── LOADING STATE ── -->
-  <section class="product-page" id="product-loading">
-    <div class="product-skeleton">
-      <div class="skeleton-bc skeleton-line" style="width:240px;height:16px;margin-bottom:32px"></div>
-      <div class="product-layout">
-        <div class="product-gallery">
-          <div class="skeleton-line" style="width:100%;height:380px;border-radius:12px"></div>
-          <div style="display:flex;gap:10px;margin-top:14px">
-            <div class="skeleton-line" style="width:80px;height:80px;border-radius:8px"></div>
-            <div class="skeleton-line" style="width:80px;height:80px;border-radius:8px"></div>
-            <div class="skeleton-line" style="width:80px;height:80px;border-radius:8px"></div>
-          </div>
-        </div>
-        <div class="product-info">
-          <div class="skeleton-line" style="width:80px;height:14px;margin-bottom:10px"></div>
-          <div class="skeleton-line" style="width:100%;height:32px;margin-bottom:8px"></div>
-          <div class="skeleton-line" style="width:70%;height:32px;margin-bottom:20px"></div>
-          <div class="skeleton-line" style="width:100%;height:100px"></div>
-        </div>
-        <div class="buy-box">
-          <div class="skeleton-line" style="width:100%;height:120px;border-radius:12px;margin-bottom:16px"></div>
-          <div class="skeleton-line" style="width:100%;height:52px;border-radius:10px"></div>
-        </div>
+      <div class="dropdown-menu">
+
+        <a href="account.html">
+          My Account
+        </a>
+
+        <a href="account.html#orders">
+          Order History
+        </a>
+
+        <a href="wishlist.html">
+          Wishlist
+        </a>
+
+        <div class="dropdown-divider"></div>
+
+        <button id="logout-btn">
+          Logout
+        </button>
+
       </div>
-    </div>
-  </section>
 
-  <!-- ── ERROR STATE ── -->
-  <div class="product-error" id="product-error" style="display:none">
-    <p style="font-size:48px;margin-bottom:16px">🔍</p>
-    <h2 style="color:#0d2c50;margin-bottom:8px">Product Not Found</h2>
+    </div>
+
+    <!-- Cart -->
+    <div class="cart-container">
+      <a href="cart.html">
+        <img src="hl3.svg" alt="Cart">
+      </a>
+
+      <span id="cart-count" class="cart-count">
+        0
+      </span>
+    </div>
+
+    <!-- Mobile Nav Toggle -->
+    <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open navigation menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
   </div>
 
-  <!-- ── PRODUCT CONTENT (shown after load) ── -->
-  <section class="product-page" id="product-content" style="display:none">
+</header>
 
-    <div class="breadcrumbs" id="product-breadcrumb">
-      <a href="index.html">Home</a> › <a href="catalog.html">Catalog</a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>G4 Stainless Stand Dispenser</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<section class="product-page">
+
+  <div class="breadcrumbs">
+    Home › Catalog › Janitorial Supplies › Dispensers › <strong>G4 Stainless Stand Dispenser For Wipes and Trash</strong>
+  </div>
+
+  <div class="product-layout">
+
+    <!-- LEFT IMAGE -->
+    <div class="product-gallery">
+      <span class="badge">Best Seller</span>
+
+      <button class="gallery-arrow left">‹</button>
+      <img id="mainProductImage" src="75902.jpg" class="main-product-img">
+
+<button class="gallery-arrow left" id="prevBtn">‹</button>
+<button class="gallery-arrow right" id="nextBtn">›</button>
+
+<div class="thumb-row">
+    <img src="75902.jpg" class="thumb active">
+    <img src="75902-2.jpg" class="thumb">
+    <img src="75902-3.jpg" class="thumb">
+    <img src="75902-4.jpg" class="thumb">
+</div>
     </div>
 
-    <div class="product-layout">
+    <!-- CENTER INFO -->
+    <div class="product-info">
+      <p class="brand">2XL</p>
 
-      <!-- LEFT: GALLERY -->
-      <div class="product-gallery">
-        <span class="badge" id="product-badge" style="display:none">Featured</span>
+      <h1>G4 Stainless Stand Dispenser<br>For Wipes and Trash</h1>
 
-        <button class="gallery-arrow left" id="prevBtn">‹</button>
-        <img id="mainProductImage" src="blanket.png" class="main-product-img" alt="Product image">
-        <button class="gallery-arrow right" id="nextBtn">›</button>
-
-        <div class="thumb-row" id="thumb-row"></div>
+      <div class="meta-line">
+        <span>Solar Item #: 75902</span>
+        <span>Mfg Part #: 2XL73-EA</span>
+        <span>UPC: 897979001783</span>
       </div>
 
-      <!-- CENTER: INFO -->
-      <div class="product-info">
-        <p class="brand" id="product-brand"></p>
-
-        <h1 id="product-name">Loading…</h1>
-
-        <div class="meta-line" id="product-meta-line"></div>
-
-        <p class="product-desc" id="product-description"></p>
-
-        <button class="read-more" id="read-more-btn" style="display:none">Read More ⌄</button>
+      <div class="stars">
+        ★★★★★ <span>(12)</span>
       </div>
 
-      <!-- RIGHT: BUY BOX -->
-      <aside class="buy-box">
+      <p class="product-desc">
+        The G4 Stainless Stand is an ADA compliant, sleek unit that prioritizes cleanliness by displaying
+        towelettes and storing towelette waste in an 8.5-gallon trash bin. It is composed of ANSI 304
+        stainless steel which makes it highly resistant to rust, corrosion, dents, scratches, and extreme
+        temperature changes.
+      </p>
 
-        <div id="product-price" class="product-page-price"></div>
+      <button class="read-more">Read More⌄</button>
 
-        <div class="qty-section">
-          <label>Quantity</label>
-          <div class="qty-control">
-            <button id="minusQty">−</button>
-            <span id="qtyValue">1</span>
-            <button id="plusQty">+</button>
-            <span id="product-unit-label">EA</span>
-          </div>
-
-          <button class="add-btn" id="product-add-btn">
-            <img src="Cart.png" alt=""> ADD TO CART
-          </button>
-
-          <button class="reorder-program-btn">
-            ↻ Add to Reorder Program
-          </button>
+      <div class="feature-icons">
+        <div>
+          <span>♿</span>
+          <p>ADA<br>Compliant</p>
         </div>
-
-        <div class="delivery-info">
-          <div>
-            <strong id="product-stock" class="stock-badge stock-in_stock">● In Stock</strong>
-            <p>Ships from our local warehouse</p>
-          </div>
-          <div>
-            <strong>Estimated Delivery</strong>
-            <p>3–5 Business Days</p>
-          </div>
+        <div>
+          <span>▧</span>
+          <p>Stainless Steel<br>ANSI 304</p>
         </div>
-
-        <div class="pricing-box" style="margin-top:16px">
-          <h2>Request Business Pricing</h2>
-          <p>Exclusive pricing available for your business.</p>
-          <a href="index.html#business-pricing" class="pricing-btn">Request Pricing</a>
+        <div>
+          <span>🗑</span>
+          <p>8.5 Gallon<br>Trash Bin</p>
         </div>
-
-      </aside>
+        <div>
+          <span>▭</span>
+          <p>For 2XL<br>Towelettes</p>
+        </div>
+      </div>
     </div>
 
-    <!-- DETAILS AREA -->
-    <div class="details-grid">
+    <!-- RIGHT BUY BOX -->
+    <aside class="buy-box">
+      <div class="pricing-box">
+    <h2>Request Business Pricing</h2>
+    <p>Pricing available for your business.</p>
 
-      <div class="detail-card description-card">
-        <div class="tabs">
-          <button class="active">Description</button>
-          <button>Specifications</button>
-          <button>Shipping &amp; Returns</button>
+    <a href="index.html#business-pricing" class="pricing-btn">
+        Request Pricing
+    </a>
+</div>
+
+      <div class="qty-section">
+        <label>Quantity</label>
+
+        <div class="qty-control">
+          <button id="minusQty">−</button>
+          <span id="qtyValue">1</span>
+          <button id="plusQty">+</button>
+          <span>EA</span>
         </div>
-        <h3>Overview</h3>
-        <p id="product-desc-full"></p>
-        <h3 style="margin-top:20px">Ideal For</h3>
-        <div class="ideal-list">
-          <span>⊙ Hotels</span>
-          <span>⊙ Motels</span>
-          <span>⊙ Short-Term Rentals</span>
-          <span>⊙ Cleaning Companies</span>
-          <span>⊙ Commercial Facilities</span>
+
+        <button class="add-btn">
+                        <img src="Cart.png" alt="">
+                        ADD TO CART
+                    </button>
+
+        <button class="reorder-program-btn">
+          ↻ Add to Reorder Program
+        </button>
+      </div>
+
+      <div class="delivery-info">
+        <div>
+          <strong>Estimated Delivery</strong>
+          <p>3–5 Business Days</p>
+        </div>
+
+        <div>
+          <strong class="stock">● In Stock</strong>
+          <p>Ships from our local warehouse</p>
         </div>
       </div>
+    </aside>
 
-      <div class="detail-card specs-card">
-        <h3>Specifications</h3>
-        <table id="product-specs-table"></table>
-        <button style="margin-top:14px;padding:8px 16px;border:1px solid #ddd;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">View Full Specifications</button>
+  </div>
+
+  <!-- DETAILS AREA -->
+  <div class="details-grid">
+
+    <div class="detail-card description-card">
+      <div class="tabs">
+        <button class="active">Description</button>
+        <button>Specifications</button>
+        <button>Shipping & Returns</button>
       </div>
 
-      <div class="detail-card features-card">
-        <h3>Key Features</h3>
-        <ul>
-          <li>Commercial grade quality built for hospitality</li>
-          <li>Bulk packaging optimised for facilities</li>
-          <li>Consistent supply for reorder programs</li>
-        </ul>
-      </div>
+      <h3>Overview</h3>
+      <p>
+        The G4 Stainless Stand is an ADA compliant, sleek unit that prioritizes cleanliness by displaying
+        towelettes and storing towelette waste in an 8.5-gallon trash bin. It is composed of ANSI 304
+        stainless steel which makes it highly resistant to rust, corrosion, dents, scratches, and extreme
+        temperature changes.
+      </p>
 
+      <h3>Ideal For</h3>
+      <div class="ideal-list">
+        <span>⊙ Hotels</span>
+        <span>⊙ Fitness Centers</span>
+        <span>⊙ Rec Centers</span>
+        <span>⊙ Offices</span>
+        <span>⊙ Commercial Facilities</span>
+      </div>
     </div>
 
-    <!-- RELATED PRODUCTS -->
-    <section class="also-need" id="also-need-section">
-      <h2>You May Also Need</h2>
-      <div class="also-grid" id="also-need-grid"></div>
-    </section>
+    <div class="detail-card specs-card">
+      <h3>Specifications</h3>
 
+      <table>
+        <tr><td>Manufacturer</td><td>2XL</td></tr>
+        <tr><td>Mfg Part Number</td><td>2XL73-EA</td></tr>
+        <tr><td>Solar Item #</td><td>75902</td></tr>
+        <tr><td>Brand</td><td>2XL</td></tr>
+        <tr><td>Items In Package</td><td>1 / ea</td></tr>
+        <tr><td>Type of Item</td><td>Stand Dispenser</td></tr>
+        <tr><td>UPC Code</td><td>897979001783</td></tr>
+      </table>
+
+      <button>View Full Specifications</button>
+    </div>
+
+    <div class="detail-card features-card">
+      <h3>Key Features</h3>
+
+      <ul>
+        <li>Securely holds any of 2XL's towelettes to maintain an airtight seal</li>
+        <li>Smudge-resistant glazed finish and weighted lower body ring</li>
+        <li>Full 360 degree towelette support shelf, not brackets</li>
+        <li>Hermetically sealed canister keeps towelette moist</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <!-- ALSO NEED -->
+  <section class="also-need">
+    <h2>You May Also Need</h2>
+
+    <div class="also-grid">
+      <div class="mini-card">
+        <img src="75902.jpg" alt="">
+        <div>
+          <small>2XL</small>
+          <h4>Premium Disinfecting Wipes Refill Pack</h4>
+          <strong>$42.99 <span>/Case</span></strong>
+          <button>Add To Order</button>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <img src="75902.jpg" alt="">
+        <div>
+          <small>Rubbermaid</small>
+          <h4>8.5 Gallon Trash Liner</h4>
+          <strong>$25.50 <span>/Case</span></strong>
+          <button>Add To Order</button>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <img src="75902.jpg" alt="">
+        <div>
+          <small>2XL</small>
+          <h4>Stainless Dispenser Canister</h4>
+          <strong>$89.99 <span>/EA</span></strong>
+          <button>Add To Order</button>
+        </div>
+      </div>
+
+      <div class="mini-card">
+        <img src="75902.jpg" alt="">
+        <div>
+          <small>Microfiber</small>
+          <h4>Cleaning Cloth - Blue</h4>
+          <strong>$18.75 <span>/Pack</span></strong>
+          <button>Add To Order</button>
+        </div>
+      </div>
+    </div>
   </section>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="supabase.js"></script>
-  <script src="script.js"></script>
+</section>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
+
+  </body>
+  </html>
