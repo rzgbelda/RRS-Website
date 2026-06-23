@@ -10,6 +10,7 @@ let isSliding = false;
 ========================= */
 
 document.addEventListener("DOMContentLoaded", () => {
+  setupMobileNav();
   updateCartBadge();
   setupReorderDropdowns();
   setupLogin();
@@ -857,6 +858,40 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCheckoutOrderTypeToggle();
 });
 
+
+/* =========================
+   MOBILE NAV
+========================= */
+
+function setupMobileNav() {
+  const btn = document.getElementById("navHamburger");
+  const nav = document.getElementById("mobileNav");
+  if (!btn || !nav) return;
+
+  btn.addEventListener("click", () => {
+    const isOpen = nav.classList.toggle("open");
+    btn.classList.toggle("open", isOpen);
+    btn.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  // Close when a link is tapped
+  nav.querySelectorAll("a").forEach(link => {
+    link.addEventListener("click", () => {
+      nav.classList.remove("open");
+      btn.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    });
+  });
+
+  // Close on outside click
+  document.addEventListener("click", (e) => {
+    if (!btn.contains(e.target) && !nav.contains(e.target)) {
+      nav.classList.remove("open");
+      btn.classList.remove("open");
+      btn.setAttribute("aria-expanded", "false");
+    }
+  });
+}
 
 /* =========================
    LOGIN
