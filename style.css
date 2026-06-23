@@ -4944,7 +4944,8 @@ img, video, svg { max-width: 100%; height: auto; }
 
 /* ── Featured product grid: truly adaptive columns ── */
 .product-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr));
+  justify-content: center;
   gap: clamp(14px, 2vw, 40px);
 }
 
@@ -5028,7 +5029,8 @@ img, video, svg { max-width: 100%; height: auto; }
 
 /* ── Catalog product cards grid ── */
 .catalog-products {
-  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+  justify-content: center;
   gap: clamp(14px, 2vw, 28px);
 }
 
