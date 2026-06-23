@@ -903,19 +903,47 @@ function setupLogin() {
   const loginForm = document.getElementById("loginForm");
 
   if (loginForm) {
-    loginForm.addEventListener("submit", e => {
+    loginForm.addEventListener("submit", async e => {
       e.preventDefault();
 
-      const email = document.getElementById("emailInput")?.value.trim();
+      const email    = document.getElementById("emailInput")?.value.trim();
       const password = document.getElementById("passwordInput")?.value.trim();
+      const errEl    = document.getElementById("loginError");
 
-      if (email === "test@test.com" && password === "test") {
-        localStorage.setItem("loggedIn", "true");
-        updateLoginUI();
-        updateCartBadge();
-        window.location.href = "index.html";
+      if (errEl) { errEl.textContent = ""; errEl.style.display = "none"; }
+
+      // Try Supabase auth if available, otherwise fallback
+      if (window.sb) {
+        const submitBtn = loginForm.querySelector("button[type=submit], .signin-btn");
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing in…"; }
+
+        const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = "Sign In"; }
+
+        if (error) {
+          if (errEl) {
+            errEl.textContent = "Incorrect email or password. Please try again.";
+            errEl.style.display = "block";
+          } else {
+            alert("Incorrect email or password. Please try again.");
+          }
+        } else {
+          localStorage.setItem("loggedIn", "true");
+          updateLoginUI();
+          updateCartBadge();
+          window.location.href = "index.html";
+        }
       } else {
-        alert("Invalid email or password");
+        // Fallback (no Supabase loaded)
+        if (email === "test@test.com" && password === "test") {
+          localStorage.setItem("loggedIn", "true");
+          updateLoginUI();
+          updateCartBadge();
+          window.location.href = "index.html";
+        } else {
+          alert("Invalid email or password");
+        }
       }
     });
   }
