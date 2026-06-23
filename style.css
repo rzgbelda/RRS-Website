@@ -1472,12 +1472,27 @@ textarea:focus {
   font-size: 16px;
   font-weight: 700;
   margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2.4em;
 }
 
 .product-description {
   color: #666;
   font-size: 13px;
   margin-bottom: 12px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 2em;
+}
+
+.product-bottom {
+  margin-top: auto;
+  padding-top: 12px;
 }
 
 .product-meta,
