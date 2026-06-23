@@ -179,6 +179,25 @@
 <script src="supabase.js"></script>
 <script src="script.js"></script>
 
+<!-- Set New Password Modal (shown after clicking email reset link) -->
+<div id="setPasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.25);position:relative;">
+    <h2 style="font-size:22px;font-weight:800;color:#0d2c50;margin-bottom:6px;">Set New Password</h2>
+    <p style="font-size:14px;color:#666;margin-bottom:24px;">Choose a new password for your account.</p>
+
+    <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:6px;">New Password</label>
+    <input id="newPassword" type="password" placeholder="At least 6 characters"
+      style="width:100%;padding:12px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:14px;">
+
+    <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:6px;">Confirm New Password</label>
+    <input id="confirmPassword" type="password" placeholder="Repeat your password"
+      style="width:100%;padding:12px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+
+    <p id="setPasswordMsg" style="font-size:13px;margin-top:10px;min-height:18px;"></p>
+    <button onclick="setNewPassword()" style="width:100%;padding:13px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">Update Password</button>
+  </div>
+</div>
+
 <!-- Forgot Password Modal -->
 <div id="forgotModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
   <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
@@ -193,6 +212,21 @@
 </div>
 
 <script>
+  // ── Detect password recovery token in URL hash ──────────────
+  // Supabase puts #access_token=...&type=recovery in the URL after
+  // the user clicks the reset link in their email.
+  window.addEventListener("load", async () => {
+    const hash   = window.location.hash;
+    const params = new URLSearchParams(hash.replace("#", "?").slice(1));
+    if (params.get("type") === "recovery") {
+      // Supabase JS auto-loads the session from the hash; show new-password modal
+      document.getElementById("setPasswordModal").style.display = "flex";
+      // Clean up the hash so it doesn't linger
+      history.replaceState(null, "", window.location.pathname);
+    }
+  });
+
+  // ── Forgot password link ──────────────────────────────────────
   document.getElementById("forgotPasswordLink").addEventListener("click", function(e) {
     e.preventDefault();
     document.getElementById("forgotModal").style.display = "flex";
@@ -216,7 +250,7 @@
     msg.style.color = "#888"; msg.textContent = "Sending…";
 
     const { error } = await window.sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/login.html?reset=true"
+      redirectTo: window.location.origin + "/login.html"
     });
 
     if (error) {
@@ -226,6 +260,30 @@
       msg.style.color = "#22c55e";
       msg.textContent = "✓ Reset link sent! Check your email inbox.";
       setTimeout(closeForgotModal, 3000);
+    }
+  }
+
+  // ── Set new password form ─────────────────────────────────────
+  async function setNewPassword() {
+    const pw1 = document.getElementById("newPassword").value;
+    const pw2 = document.getElementById("confirmPassword").value;
+    const msg = document.getElementById("setPasswordMsg");
+
+    if (pw1.length < 6) { msg.style.color="#ef4444"; msg.textContent="Password must be at least 6 characters."; return; }
+    if (pw1 !== pw2)    { msg.style.color="#ef4444"; msg.textContent="Passwords do not match."; return; }
+
+    msg.style.color="#888"; msg.textContent="Updating…";
+
+    const { error } = await window.sb.auth.updateUser({ password: pw1 });
+
+    if (error) {
+      msg.style.color="#ef4444";
+      msg.textContent = error.message;
+    } else {
+      msg.style.color="#22c55e";
+      msg.textContent="✓ Password updated! Redirecting to login…";
+      await window.sb.auth.signOut();
+      setTimeout(() => window.location.href = "login.html", 2000);
     }
   }
 </script>
