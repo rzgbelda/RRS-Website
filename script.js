@@ -859,28 +859,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 /* =========================
-   REORDER DROPDOWN
-========================= */
-
-function setupReorderDropdowns() {
-  document.querySelectorAll(".reorder-dropdown").forEach(dropdown => {
-    dropdown.addEventListener("change", function () {
-      const cart = getCart();
-      const index = Number(this.dataset.index);
-
-      if (!cart[index]) return;
-
-      cart[index].reorder = this.value;
-
-      saveCart(cart);
-
-      console.log("Saved reorder:", this.value);
-      console.log(cart);
-    });
-  });
-}
-
-/* =========================
    LOGIN
 ========================= */
 
