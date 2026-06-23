@@ -2090,7 +2090,8 @@ textarea:focus {
   display: flex;
   justify-content: space-between;
   align-items: center;
-
+  flex-wrap: wrap;
+  gap: 12px;
   padding: 24px 0;
   border-top: 1px solid #d7dde3;
 }
@@ -2122,7 +2123,7 @@ textarea:focus {
 .estimated-subtotal {
   display: flex;
   align-items: center;
-  gap: 60px;
+  gap: clamp(16px, 5vw, 60px);
 }
 
 .estimated-subtotal span {
