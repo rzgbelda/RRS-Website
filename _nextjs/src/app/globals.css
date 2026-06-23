@@ -3017,3 +3017,29 @@ body {
     font-size: 30px;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FLUID ADAPTIVE — Next.js pages
+   All font sizes and spacing scale with clamp() so every
+   device size looks correct without specific breakpoints.
+   ═══════════════════════════════════════════════════════════ */
+
+html { overflow-x: clip; }
+img, video, svg { max-width: 100%; }
+
+/* Navbar */
+.navbar { padding: 0 clamp(14px, 3vw, 40px); height: clamp(64px, 9vh, 120px); }
+.logo-rr { font-size: clamp(32px, 5vw, 68px); }
+.logo-text h2 { font-size: clamp(14px, 2vw, 26px); }
+.logo-text p { font-size: clamp(9px, 1vw, 13px); letter-spacing: clamp(2px, 0.5vw, 6px); }
+
+/* Supply & serve headings */
+.supply-section h2 { font-size: clamp(20px, 3vw + 0.8rem, 52px); }
+.serve-section h2  { font-size: clamp(20px, 3vw + 0.8rem, 52px); }
+.how-left-headline { font-size: clamp(22px, 3.5vw + 0.6rem, 60px); }
+
+/* Cart button in navbar */
+.cart-btn { padding: clamp(8px, 1.5vw, 18px) clamp(10px, 2vw, 28px); font-size: clamp(12px, 1.2vw, 16px); }
+
+/* Touch targets */
+.cart-btn, nav a, .hamburger { min-height: 44px; }

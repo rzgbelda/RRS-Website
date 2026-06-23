@@ -4860,3 +4860,242 @@ html, body { max-width: 100%; overflow-x: hidden; }
   .nav-icons a, .nav-icons button { min-height: 40px; min-width: 40px; }
   .nav-hamburger { min-height: 44px; min-width: 44px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FLUID ADAPTIVE DESIGN — replaces all brittle px breakpoints
+   Every value scales continuously with viewport width using
+   clamp(min, preferred, max) and auto-fill grids.
+   No device-specific px required.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ── Global overflow guard ── */
+html { overflow-x: clip; }
+*, *::before, *::after { max-width: 100%; }
+img, video, svg { max-width: 100%; height: auto; }
+
+/* ── Navbar: fluid padding + logo ── */
+.navbar {
+  padding: 0 clamp(12px, 3vw, 32px);
+  min-height: clamp(56px, 8vh, 88px);
+}
+.logo img { width: clamp(120px, 14vw, 180px); }
+
+/* ── Top-bar: scale font, hide contact below ~420px ── */
+.top-bar { font-size: clamp(10px, 1.5vw, 12px); padding: 0 clamp(8px, 2vw, 12px); }
+@media (max-width: 420px) { .top-contact { display: none; } }
+
+/* ── Hero: fluid typography & spacing ── */
+.hero-content {
+  padding:
+    clamp(24px, 5vw, 60px)
+    clamp(16px, 4vw, 40px)
+    clamp(24px, 5vw, 60px)
+    clamp(16px, 6vw, 80px);
+}
+.hero-content h1 {
+  font-size: clamp(26px, 4.5vw + 1rem, 84px);
+  letter-spacing: clamp(-1px, -0.25vw, -3px);
+  line-height: 1.05;
+  margin-bottom: clamp(16px, 2.5vw, 24px);
+}
+.hero-content p {
+  font-size: clamp(14px, 1.2vw + 0.5rem, 20px);
+  margin-bottom: clamp(20px, 3vw, 32px);
+  line-height: 1.65;
+}
+.hero-buttons {
+  gap: clamp(10px, 2.5vw, 60px);
+  flex-wrap: wrap;
+}
+.btn {
+  min-width: clamp(120px, 16vw, 200px);
+  min-height: 44px;
+}
+
+/* ── Section headings: fluid everywhere ── */
+.section-heading h2 { font-size: clamp(20px, 3vw + 0.8rem, 56px); }
+.section-heading p  { font-size: clamp(13px, 1.2vw + 0.3rem, 24px); }
+
+/* ── Supply / featured slider section ── */
+.supply-section { padding: clamp(32px, 5vw, 90px) 0; }
+.supply-slider { gap: clamp(6px, 1.5vw, 30px); }
+.slider-arrow { font-size: clamp(32px, 5vw, 90px); }
+
+/* ── Featured product grid: truly adaptive columns ── */
+.product-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(220px, 100%), 1fr));
+  gap: clamp(14px, 2vw, 40px);
+}
+
+/* ── Serve section ── */
+.serve-section { padding: clamp(36px, 5vw, 90px) clamp(12px, 3vw, 60px); }
+.serve-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(130px, 42%), 1fr));
+  gap: clamp(16px, 3vw, 60px) clamp(8px, 1.5vw, 20px);
+  margin-top: clamp(24px, 4vw, 60px);
+}
+.serve-item img { width: clamp(80px, 10vw, 150px); height: auto; }
+.serve-item span { font-size: clamp(12px, 1.2vw + 0.2rem, 17px); margin-top: clamp(8px, 1.5vw, 18px); }
+
+/* ── Ordering / How it Works section ── */
+.ordering-section {
+  padding: clamp(36px, 6vw, 90px) clamp(14px, 5vw, 70px);
+  gap: clamp(24px, 5vw, 80px);
+}
+.ordering-left h4 { font-size: clamp(15px, 2.2vw + 0.3rem, 40px); margin-bottom: clamp(10px, 1.5vw, 18px); }
+.ordering-left h2 { font-size: clamp(20px, 2.8vw + 0.6rem, 50px); line-height: 1.3; margin-bottom: clamp(20px, 3.5vw, 55px); }
+
+/* Steps: auto-wrap instead of fixed width */
+.ordering-steps { flex-wrap: wrap; justify-content: center; gap: clamp(12px, 2.5vw, 28px); }
+.step-item { flex: 1 1 clamp(90px, 15vw, 140px); max-width: 160px; min-width: 0; width: auto; }
+.step-icon { width: clamp(70px, 10vw, 130px); height: clamp(70px, 10vw, 130px); }
+.step-icon img { width: clamp(40px, 6vw, 85px); height: clamp(40px, 6vw, 85px); }
+.step-item h3 { font-size: clamp(12px, 1.1vw + 0.2rem, 16px); }
+.step-dots { margin-top: clamp(24px, 4vw, 47px); font-size: clamp(14px, 2vw, 21px); flex-shrink: 0; }
+.ordering-line { width: min(360px, 100%); }
+
+/* Schedule card */
+.reorder-header h2 { font-size: clamp(16px, 1.8vw + 0.4rem, 28px); }
+.schedule-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
+  gap: clamp(8px, 1.5vw, 11px);
+}
+.schedule-grid button { height: clamp(48px, 6vw, 63px); font-size: clamp(12px, 1.2vw + 0.2rem, 15px); gap: clamp(8px, 1.5vw, 22px); }
+.choose-schedule-btn { width: min(380px, 100%); font-size: clamp(14px, 1.5vw + 0.3rem, 21px); height: clamp(48px, 6vw, 58px); }
+.schedule-line { width: min(270px, 80%); }
+
+/* ── Pricing / quote section ── */
+.pricing-section { padding: clamp(36px, 6vw, 100px) clamp(12px, 4vw, 60px); }
+.pricing-left { padding: clamp(20px, 4vw, 50px); }
+.pricing-left h2 { font-size: clamp(20px, 2.8vw + 0.5rem, 48px); }
+.pricing-benefits { flex-wrap: wrap; gap: clamp(10px, 2vw, 20px); }
+.upload-box { padding: clamp(16px, 3vw, 40px) clamp(12px, 2vw, 24px); }
+.quote-btn { width: 100%; max-width: min(320px, 100%); font-size: clamp(13px, 1.2vw + 0.2rem, 16px); }
+
+/* ── About section ── */
+.about-section { padding: clamp(28px, 4vw, 38px) clamp(14px, 3vw, 30px) clamp(16px, 3vw, 26px); }
+.about-wrapper { gap: clamp(20px, 3vw, 36px); }
+.about-left h4 { font-size: clamp(14px, 1.5vw + 0.2rem, 24px); }
+.about-left h2 { font-size: clamp(24px, 3vw + 0.5rem, 50px); }
+.about-left p { font-size: clamp(13px, 1.1vw + 0.3rem, 16px); }
+.about-features {
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  margin-top: clamp(16px, 2.5vw, 32px);
+}
+.about-feature { grid-template-columns: clamp(50px, 7vw, 95px) 1fr; gap: clamp(12px, 2vw, 40px); padding: clamp(8px, 1.5vw, 8px) clamp(10px, 2vw, 22px); }
+.about-feature img { width: clamp(40px, 5vw, 80px); height: clamp(40px, 5vw, 80px); }
+.about-feature h3 { font-size: clamp(13px, 1.1vw + 0.2rem, 16px); }
+.about-feature p { font-size: clamp(12px, 1vw + 0.2rem, 16px); }
+
+/* ── Catalog hero ── */
+.catalog-content h1 { font-size: clamp(26px, 4.5vw + 0.8rem, 80px); }
+.catalog-content p  { font-size: clamp(13px, 1.2vw + 0.3rem, 20px); }
+.catalog-hero { padding: clamp(28px, 5vw, 80px) clamp(14px, 4vw, 40px); }
+
+/* ── Catalog layout: fluid sidebar that auto-collapses ── */
+.catalog-main {
+  grid-template-columns: clamp(180px, 19vw, 245px) minmax(0, 1fr);
+  padding: clamp(20px, 4vw, 45px) clamp(12px, 3vw, 20px) clamp(40px, 7vw, 80px);
+  gap: clamp(14px, 2.5vw, 28px);
+}
+/* Collapse sidebar when screen is narrower than ~640px */
+@media (max-width: 640px) {
+  .catalog-main { grid-template-columns: 1fr; }
+  .filter-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(140px, 48%), 1fr)); gap: 8px; }
+}
+
+/* ── Catalog product cards grid ── */
+.catalog-products {
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: clamp(14px, 2vw, 28px);
+}
+
+/* ── Product card internals ── */
+.product-image { height: clamp(130px, 18vw, 210px); }
+.product-name, .product-content h3 { font-size: clamp(13px, 1.2vw + 0.2rem, 16px); }
+.product-description { font-size: clamp(11px, 1vw + 0.15rem, 13px); }
+.price { font-size: clamp(18px, 2vw + 0.5rem, 24px); }
+
+/* ── Login page banner ── */
+.banner-overlay { padding: clamp(20px, 5vw, 60px); }
+.banner-overlay h2 { font-size: clamp(20px, 3vw + 0.5rem, 52px); }
+.banner-overlay > p { font-size: clamp(13px, 1.2vw + 0.3rem, 20px); margin-bottom: clamp(20px, 4vw, 50px); }
+.banner-feature img { width: clamp(60px, 8vw, 110px); height: clamp(60px, 8vw, 110px); }
+.banner-feature h3 { font-size: clamp(14px, 1.5vw + 0.3rem, 25px); }
+
+/* ── Cart/checkout ── */
+.cart-page { padding: clamp(24px, 4vw, 60px) clamp(14px, 3vw, 40px); }
+.cart-left h1 { font-size: clamp(24px, 3vw + 0.8rem, 42px); }
+.checkout-page { padding: clamp(20px, 4vw, 50px) clamp(14px, 3vw, 40px); }
+
+/* ── Product detail page ── */
+.product-page { padding: clamp(16px, 3vw, 40px) clamp(12px, 3vw, 30px) clamp(40px, 6vw, 60px); }
+.main-product-img { height: clamp(200px, 25vw, 330px); }
+
+/* ── Profile page ── */
+.profile-hero { padding: clamp(28px, 5vw, 60px) clamp(14px, 4vw, 40px); }
+.profile-hero h1 { font-size: clamp(28px, 4vw + 0.5rem, 64px); }
+
+/* ── Payment page ── */
+.payment-page { padding: clamp(28px, 5vw, 60px) clamp(14px, 4vw, 40px); }
+
+/* ── All touch targets: universally accessible ── */
+button, a, [role="button"] { touch-action: manipulation; }
+.add-btn, .btn, .choose-schedule-btn, .quote-btn, .view-more-btn { min-height: 44px; }
+.nav-hamburger, .account-btn { min-height: 44px; min-width: 44px; }
+
+/* ── Hero layout collapse: only 1 structural breakpoint needed ── */
+@media (max-width: 900px) {
+  .hero { grid-template-columns: 1fr; }
+  .hero-content { text-align: center; max-width: 100%; }
+  .hero-content p { max-width: 100%; }
+  .hero-buttons { justify-content: center; }
+  .hero-image { padding: 0 clamp(16px, 5vw, 40px) clamp(20px, 4vw, 50px); justify-content: center; }
+  .hero-image img { max-width: min(600px, 100%); height: auto; }
+}
+
+/* ── Ordering section: collapse side-by-side when narrow ── */
+@media (max-width: 860px) {
+  .ordering-section { grid-template-columns: 1fr; }
+  .reorder-card { max-width: min(560px, 100%); margin: 0 auto; }
+  .ordering-left { text-align: center; }
+  .ordering-steps { justify-content: center; }
+  .ordering-line { margin: 26px auto 0; }
+}
+
+/* ── About section: collapse at narrow widths ── */
+@media (max-width: 720px) {
+  .about-wrapper { grid-template-columns: 1fr; }
+  .about-image img { height: clamp(180px, 35vw, 300px); }
+}
+
+/* ── Login container: collapse banner at narrow widths ── */
+@media (max-width: 820px) {
+  .login-container { grid-template-columns: 1fr; }
+  .login-banner { min-height: clamp(200px, 35vw, 500px); }
+}
+
+/* ── Cart/Checkout: collapse at narrow widths ── */
+@media (max-width: 860px) {
+  .cart-page { grid-template-columns: 1fr; }
+  .cart-header, .cart-items { min-width: 700px; }
+  .checkout-layout { grid-template-columns: 1fr; }
+  .checkout-product { min-width: 640px; overflow-x: auto; }
+}
+
+/* ── Product detail: collapse 3-col at narrow ── */
+@media (max-width: 960px) {
+  .product-layout { grid-template-columns: 1fr; }
+  .buy-box { max-width: min(480px, 100%); }
+  .details-grid { grid-template-columns: 1fr; }
+}
+
+/* ── Pricing card: collapse image at narrow ── */
+@media (max-width: 900px) {
+  .pricing-card { grid-template-columns: 1fr; }
+  .pricing-image { order: -1; }
+  .pricing-image img { max-height: clamp(180px, 30vw, 300px); width: 100%; object-fit: cover; }
+}
+
+/* ── Bottom bar ── */
+.bottom-bar { flex-wrap: wrap; gap: 4px; padding: clamp(6px, 1.5vw, 8px) clamp(12px, 2vw, 13px); height: auto; font-size: clamp(11px, 1.2vw, 14px); }

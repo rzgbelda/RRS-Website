@@ -1146,3 +1146,33 @@ body.admin-body {
   .csv-results-actions button { width: 100% !important; justify-content: center; }
   .csv-progress-panel { padding: 36px 20px; }
 }
+
+/* ═══════════════════════════════════════════════════════════
+   FLUID ADAPTIVE — Admin panel
+   Key values scale with clamp() for any screen size.
+   ═══════════════════════════════════════════════════════════ */
+
+/* Sidebar + main spacing */
+:root {
+  --sidebar-w: clamp(200px, 18vw, 256px);
+  --topbar-h:  clamp(52px, 7vh, 64px);
+}
+
+.a-content   { padding: clamp(14px, 2.5vw, 28px); }
+.a-tab       { padding: clamp(16px, 3vw, 28px); }
+.a-topbar    { height: var(--topbar-h); padding: 0 clamp(12px, 2.5vw, 24px); }
+
+/* Stat cards grid: auto-adaptive */
+.a-stats-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+}
+
+/* Tables */
+.a-table th, .a-table td { padding: clamp(8px, 1.5vw, 14px) clamp(10px, 2vw, 18px); font-size: clamp(12px, 1.1vw + 0.1rem, 14px); }
+
+/* Forms */
+.a-input, .a-select, .a-textarea { font-size: clamp(13px, 1.1vw + 0.1rem, 15px); padding: clamp(8px, 1.2vw, 12px) clamp(10px, 1.5vw, 14px); }
+.a-form-group label { font-size: clamp(11px, 1vw + 0.1rem, 13px); }
+
+/* Dashboard heading */
+.dashboard-title { font-size: clamp(18px, 2vw + 0.4rem, 28px); }
