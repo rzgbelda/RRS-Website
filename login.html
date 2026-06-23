@@ -214,18 +214,38 @@
 </div>
 
 <script>
-  // ── Detect password recovery via Supabase auth state change ──
-  // Supabase v2 processes the hash token automatically and fires
-  // PASSWORD_RECOVERY — this is the reliable way to detect it.
-  window.addEventListener("load", () => {
-    if (!window.sb) return;
+  // ── Detect password recovery ────────────────────────────────
+  // Strategy 1: read the raw hash NOW before Supabase clears it
+  (function() {
+    const h = window.location.hash;
+    if (h.includes("type=recovery")) {
+      // Hash is still there — show modal as soon as DOM is ready
+      function showResetModal() {
+        const modal = document.getElementById("setPasswordModal");
+        if (modal) {
+          modal.style.display = "flex";
+          history.replaceState(null, "", window.location.pathname);
+        } else {
+          // DOM not ready yet — try again shortly
+          setTimeout(showResetModal, 50);
+        }
+      }
+      showResetModal();
+    }
+  })();
+
+  // Strategy 2: onAuthStateChange as a backup (catches it if Strategy 1 missed)
+  if (window.sb) {
     window.sb.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        document.getElementById("setPasswordModal").style.display = "flex";
-        history.replaceState(null, "", window.location.pathname);
+        const modal = document.getElementById("setPasswordModal");
+        if (modal) {
+          modal.style.display = "flex";
+          history.replaceState(null, "", window.location.pathname);
+        }
       }
     });
-  });
+  }
 
   // ── Forgot password link ──────────────────────────────────────
   document.getElementById("forgotPasswordLink").addEventListener("click", function(e) {
