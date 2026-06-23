@@ -978,13 +978,37 @@ function updateLoginUI() {
 
 function setupAccountDropdown() {
   const accountDropdown = document.querySelector(".account-dropdown");
-  const accountBtn = document.querySelector(".account-btn");
+  const accountBtn      = document.querySelector(".account-btn");
+  const dropdownMenu    = document.querySelector(".dropdown-menu");
 
-  if (!accountDropdown || !accountBtn) return;
+  if (!accountDropdown || !accountBtn || !dropdownMenu) return;
+
+  function positionDropdown() {
+    const rect   = accountBtn.getBoundingClientRect();
+    const menuW  = dropdownMenu.offsetWidth || 220;
+    const gap    = 8;
+    let top      = rect.bottom + gap;
+    // Align right edge of menu with right edge of button, but clamp to viewport
+    let right    = window.innerWidth - rect.right;
+    // Prevent menu from going off left side
+    const leftEdge = rect.right - menuW;
+    if (leftEdge < 8) right = window.innerWidth - menuW - 8;
+    dropdownMenu.style.top   = top + "px";
+    dropdownMenu.style.right = right + "px";
+  }
 
   accountBtn.addEventListener("click", e => {
     e.stopPropagation();
-    accountDropdown.classList.toggle("active");
+    const isActive = accountDropdown.classList.toggle("active");
+    if (isActive) positionDropdown();
+  });
+
+  // Reposition on scroll/resize so it stays anchored to the button
+  window.addEventListener("scroll", () => {
+    if (accountDropdown.classList.contains("active")) positionDropdown();
+  }, { passive: true });
+  window.addEventListener("resize", () => {
+    if (accountDropdown.classList.contains("active")) positionDropdown();
   });
 
   document.addEventListener("click", () => {
