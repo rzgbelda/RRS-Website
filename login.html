@@ -214,18 +214,17 @@
 </div>
 
 <script>
-  // ── Detect password recovery token in URL hash ──────────────
-  // Supabase puts #access_token=...&type=recovery in the URL after
-  // the user clicks the reset link in their email.
-  window.addEventListener("load", async () => {
-    const hash   = window.location.hash;
-    const params = new URLSearchParams(hash.replace("#", "?").slice(1));
-    if (params.get("type") === "recovery") {
-      // Supabase JS auto-loads the session from the hash; show new-password modal
-      document.getElementById("setPasswordModal").style.display = "flex";
-      // Clean up the hash so it doesn't linger
-      history.replaceState(null, "", window.location.pathname);
-    }
+  // ── Detect password recovery via Supabase auth state change ──
+  // Supabase v2 processes the hash token automatically and fires
+  // PASSWORD_RECOVERY — this is the reliable way to detect it.
+  window.addEventListener("load", () => {
+    if (!window.sb) return;
+    window.sb.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        document.getElementById("setPasswordModal").style.display = "flex";
+        history.replaceState(null, "", window.location.pathname);
+      }
+    });
   });
 
   // ── Forgot password link ──────────────────────────────────────
