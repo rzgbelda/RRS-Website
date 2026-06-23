@@ -150,7 +150,12 @@ async function renderProductsTable(filter) {
 
   tbody.innerHTML = (products || []).map(p => {
     const inv = p.inventory?.[0];
-    return `<tr>
+    return `<tr data-id="${p.id}">
+      <td style="text-align:center">
+        <input type="checkbox" class="product-cb" data-id="${p.id}"
+          style="width:16px;height:16px;cursor:pointer;accent-color:#ED7226"
+          onchange="updateBulkBar()">
+      </td>
       <td><img src="${escHtml(p.image_url || "blanket.png")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='blanket.png'"></td>
       <td>
         <strong>${escHtml(p.name)}</strong>
@@ -169,7 +174,51 @@ async function renderProductsTable(filter) {
         <button class="a-btn-sm a-btn-danger" onclick="openDeleteProduct('${p.id}')">Delete</button>
       </td>
     </tr>`;
-  }).join("") || `<tr><td colspan="8" class="a-empty">No products found.</td></tr>`;
+  }).join("") || `<tr><td colspan="9" class="a-empty">No products found.</td></tr>`;
+
+  // Wire up Select All checkbox
+  const selectAll = document.getElementById("selectAllProducts");
+  if (selectAll) {
+    selectAll.checked = false;
+    selectAll.onchange = () => {
+      document.querySelectorAll(".product-cb").forEach(cb => cb.checked = selectAll.checked);
+      updateBulkBar();
+    };
+  }
+}
+
+function updateBulkBar() {
+  const checked = document.querySelectorAll(".product-cb:checked");
+  const bar   = document.getElementById("bulkBar");
+  const count = document.getElementById("bulkCount");
+  const selectAll = document.getElementById("selectAllProducts");
+  const total = document.querySelectorAll(".product-cb").length;
+  if (bar)   bar.style.display = checked.length > 0 ? "flex" : "none";
+  if (count) count.textContent  = `${checked.length} selected`;
+  if (selectAll) selectAll.indeterminate = checked.length > 0 && checked.length < total;
+  if (selectAll && checked.length === total && total > 0) selectAll.checked = true;
+  if (selectAll && checked.length === 0) selectAll.checked = false;
+}
+
+function clearSelection() {
+  document.querySelectorAll(".product-cb").forEach(cb => cb.checked = false);
+  const selectAll = document.getElementById("selectAllProducts");
+  if (selectAll) { selectAll.checked = false; selectAll.indeterminate = false; }
+  updateBulkBar();
+}
+
+async function bulkDelete() {
+  const ids = [...document.querySelectorAll(".product-cb:checked")].map(cb => cb.dataset.id);
+  if (!ids.length) return;
+  if (!confirm(`Delete ${ids.length} product${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+
+  // Delete inventory first (FK constraint), then products
+  await window.sb.from("inventory").delete().in("product_id", ids);
+  const { error } = await window.sb.from("products").delete().in("id", ids);
+
+  if (error) { alert("Error deleting: " + error.message); return; }
+  clearSelection();
+  renderProductsTable(document.getElementById("productSearch")?.value.trim() || "");
 }
 
 document.getElementById("productSearch")?.addEventListener("input", e => renderProductsTable(e.target.value.trim()));
