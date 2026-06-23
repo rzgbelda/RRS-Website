@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment | Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="index.html" class="logo">
+      <img src="RR logo.png" alt="Room Ready Supply Logo" />
+    </a>
+
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
+
+    <div class="nav-icons">
+      <a href="catalog.html">
+        <img src="hl1.svg" alt="Search">
+      </a>
+
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn">
+          <img src="hl2.svg" alt="Account">
+        </button>
+
+        <div class="dropdown-menu">
+  <a href="profile.html">My Account</a>
+  <a href="profile.html?tab=orders">Order History</a>
+  <a href="profile.html?tab=reorder">Reorder Program</a>
+
+  <div class="dropdown-divider"></div>
+
+  <button id="logout-btn">Logout</button>
+</div>
+      </div>
+
+      <div class="cart-container">
+        <a href="cart.html">
+          <img src="hl3.svg" alt="Cart">
+        </a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="profile-page">
+
+    <section class="profile-hero">
+      <div>
+        <p class="profile-label">My Account</p>
+        <h1>Welcome Back</h1>
+        <p>Manage your business details, order history, reorder program, and saved delivery information.</p>
+      </div>
+    </section>
+
+    <section class="profile-container">
+
+      <aside class="profile-sidebar">
+        <div class="profile-card user-card">
+          <div class="user-avatar">RR</div>
+          <h3 id="profile-business">Room Ready Customer</h3>
+          <p id="profile-email">customer@email.com</p>
+        </div>
+
+        <button class="profile-tab active" data-tab="account">Account Details</button>
+        <button class="profile-tab" data-tab="orders">Order History</button>
+        <button class="profile-tab" data-tab="reorder">Reorder Program</button>
+        <button class="profile-tab" data-tab="delivery">Delivery Info</button>
+        <button id="logoutProfileBtn" class="profile-logout">Logout</button>
+      </aside>
+
+      <section class="profile-content">
+
+        <div class="profile-panel active" id="account">
+  <div class="profile-panel-head">
+    <h2>Account Details</h2>
+    <button class="edit-profile-btn" data-edit="account">✎ Edit</button>
+  </div>
+
+  <div class="profile-grid editable-grid" id="accountGrid">
+    <div class="info-box">
+      <span>Business Name</span>
+      <strong id="businessName">Room Ready Customer</strong>
+      <input type="text" value="Room Ready Customer">
+    </div>
+
+    <div class="info-box">
+      <span>Contact Name</span>
+      <strong id="contactName">Not added yet</strong>
+      <input type="text" value="">
+    </div>
+
+    <div class="info-box">
+      <span>Email Address</span>
+      <strong id="emailAddress">customer@email.com</strong>
+      <input type="email" value="customer@email.com">
+    </div>
+
+    <div class="info-box">
+      <span>Phone Number</span>
+      <strong id="phoneNumber">Not added yet</strong>
+      <input type="text" value="">
+    </div>
+  </div>
+
+  <div class="profile-save-row" id="accountSaveRow">
+    <button class="save-profile-btn" data-save="account">Save Changes</button>
+    <button class="cancel-profile-btn" data-cancel="account">Cancel</button>
+  </div>
+</div>
+
+        <div class="profile-panel" id="orders">
+          <h2>Order History</h2>
+
+          <div id="orderHistoryList" class="order-list">
+            <p class="empty-profile-message">No previous orders yet.</p>
+          </div>
+        </div>
+
+        <div class="profile-panel" id="reorder">
+          <h2>Reorder Program</h2>
+
+          <div class="reorder-status-card">
+            <div>
+              <span>Status</span>
+              <strong id="reorderStatus">Not Active</strong>
+              <p>You can set up automatic recurring supply orders for weekly, bi-weekly, monthly, or custom schedules.</p>
+            </div>
+
+            <a href="reorder.html" class="profile-action-btn">Set Up Reorder</a>
+          </div>
+        </div>
+
+        <div class="profile-panel" id="delivery">
+  <div class="profile-panel-head">
+    <h2>Delivery Information</h2>
+    <button class="edit-profile-btn" data-edit="delivery">✎ Edit</button>
+  </div>
+
+  <div class="profile-grid editable-grid" id="deliveryGrid">
+    <div class="info-box wide">
+      <span>Delivery Address</span>
+      <strong id="deliveryAddress">No address saved yet</strong>
+      <input type="text" value="">
+    </div>
+
+    <div class="info-box">
+      <span>City</span>
+      <strong id="deliveryCity">Not added yet</strong>
+      <input type="text" value="">
+    </div>
+
+    <div class="info-box">
+      <span>State</span>
+      <strong id="deliveryState">Not added yet</strong>
+      <input type="text" value="">
+    </div>
+
+    <div class="info-box">
+      <span>ZIP Code</span>
+      <strong id="deliveryZip">Not added yet</strong>
+      <input type="text" value="">
+    </div>
+  </div>
+
+  <div class="profile-save-row" id="deliverySaveRow">
+    <button class="save-profile-btn" data-save="delivery">Save Changes</button>
+    <button class="cancel-profile-btn" data-cancel="delivery">Cancel</button>
+  </div>
+</div>
+
+      </section>
+
+    </section>
+
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>

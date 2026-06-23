@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment | Room Ready Supply</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (123)-456-789</span>
+      <span>✉ roomready@email.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="index.html" class="logo">
+      <img src="RR logo.png" alt="Room Ready Supply Logo" />
+    </a>
+
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="catalog.html">Catalog</a>
+      <a href="index.html#how-it-works">How it Works</a>
+      <a href="index.html#reorder-header">Reorder Program</a>
+      <a href="index.html#business-pricing">Business Pricing</a>
+      <a href="index.html#about-us">About Us</a>
+      <a href="index.html#about-us">Contact</a>
+    </nav>
+
+    <div class="nav-icons">
+      <a href="catalog.html">
+        <img src="hl1.svg" alt="Search">
+      </a>
+
+      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn">
+          <img src="hl2.svg" alt="Account">
+        </button>
+
+        <div class="dropdown-menu">
+          <a href="profile.html">My Account</a>
+          <a href="orders.html">Order History</a>
+          <a href="reorder.html">Reorder Program</a>
+
+          <div class="dropdown-divider"></div>
+
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+
+      <div class="cart-container">
+        <a href="cart.html">
+          <img src="hl3.svg" alt="Cart">
+        </a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="payment-page">
+
+    <div class="payment-container">
+
+  <div class="payment-main">
+
+    <div class="breadcrumb">
+      <a href="index.html">Home</a>
+      <span>›</span>
+      <a href="cart.html">Cart</a>
+      <span>›</span>
+      <a href="checkout.html">Customer Details</a>
+      <span>›</span>
+      <strong>Payment</strong>
+    </div>
+
+    <div class="progress-steps">
+
+      <div class="progress-step completed">
+        <div class="step-circle">✓</div>
+        <span>Cart</span>
+      </div>
+
+      <div class="step-line"></div>
+
+      <div class="progress-step completed">
+        <div class="step-circle">✓</div>
+        <span>Customer Details</span>
+      </div>
+
+      <div class="step-line"></div>
+
+      <div class="progress-step active">
+        <div class="step-circle">3</div>
+        <span>Payment</span>
+      </div>
+
+      <div class="step-line"></div>
+
+      <div class="progress-step">
+        <div class="step-circle">4</div>
+        <span>To Ship</span>
+      </div>
+
+    </div>
+
+        <h1>Payment</h1>
+
+        <p class="payment-subtitle">
+          Choose a payment method to complete your order request.
+        </p>
+
+        <div class="payment-card">
+
+          <h2>Payment Method</h2>
+
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="invoice" checked>
+
+            <div class="payment-icon">📄</div>
+
+            <div>
+              <h3>Invoice Me <span>Recommended</span></h3>
+              <p>Pay after approval. Available for approved business accounts.</p>
+            </div>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="card">
+
+            <div class="payment-icon">💳</div>
+
+            <div class="payment-option-content">
+              <h3>Credit / Debit Card</h3>
+              <p>Securely pay with your credit or debit card.</p>
+
+              <div class="card-fields">
+                <div class="full">
+                  <label>Card Number</label>
+                  <input type="text" placeholder="1234 5678 9012 3456">
+                </div>
+
+                <div>
+                  <label>Expiration Date</label>
+                  <input type="text" placeholder="MM / YY">
+                </div>
+
+                <div>
+                  <label>CVV</label>
+                  <input type="text" placeholder="123">
+                </div>
+
+                <div class="full">
+                  <label>Name on Card</label>
+                  <input type="text" placeholder="Full name as it appears on card">
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <label class="payment-option">
+            <input type="radio" name="paymentMethod" value="po">
+
+            <div class="payment-icon">🧾</div>
+
+            <div class="payment-option-content">
+              <h3>Purchase Order</h3>
+              <p>Pay using a purchase order from your organization.</p>
+
+              <div class="card-fields two">
+                <div>
+                  <label>PO Number</label>
+                  <input type="text" placeholder="Enter PO number">
+                </div>
+
+                <div>
+                  <label>Upload PO</label>
+                  <input type="file">
+                </div>
+              </div>
+            </div>
+          </label>
+
+          <p class="secure-note">🔒 Your payment information is secure and encrypted.</p>
+
+        </div>
+
+        <div class="payment-actions">
+          <a href="checkout.html" class="back-link">← Back to Customer Details</a>
+          <a href="#" id="submitOrderBtn" class="review-btn">
+  Submit Order →
+</a>
+        </div>
+
+      </div>
+
+      <aside class="payment-summary">
+
+        <div class="summary-card">
+          <div class="summary-head">
+            <h2>Order Summary</h2>
+            <a href="cart.html">Edit Cart</a>
+          </div>
+
+          <div id="payment-summary-items"></div>
+
+          <div class="payment-summary-line">
+            <span id="payment-subtotal-label">Subtotal</span>
+            <strong id="payment-subtotal">$0.00</strong>
+          </div>
+
+          <div class="payment-summary-line">
+            <span>Shipping</span>
+            <strong>TBD</strong>
+          </div>
+
+          <div class="payment-summary-line">
+            <span>Tax</span>
+            <strong>TBD</strong>
+          </div>
+
+          <div class="payment-summary-total">
+            <span>Estimated Total</span>
+            <strong id="payment-total">$0.00</strong>
+          </div>
+        </div>
+
+        <div class="secure-box">
+
+  <div class="secure-icon">
+    <img src="secure.svg" alt="">
+  </div>
+
+  <div class="secure-content">
+    <strong>Secure Checkout</strong>
+    <p>
+      Your information is safe and protected.
+    </p>
+  </div>
+
+</div>
+
+<div class="help-box">
+
+  <h3>Need Help?</h3>
+
+  <div class="help-grid">
+
+    <div class="help-item">
+  <img src="phone-line.svg" alt="">
+  <div>
+    <strong>Call Us</strong>
+    <span>(123) 456-789</span>
+  </div>
+</div>
+
+<div class="help-item">
+  <img src="email-line-1.svg" alt="">
+  <div>
+    <strong>Email</strong>
+    <span>roomready@email.com</span>
+  </div>
+</div>
+
+<div class="help-item">
+  <img src="time-line.svg" alt="">
+  <div>
+    <strong>Business Hours</strong>
+    <span>Mon - Fri • 8:00 AM - 5:00 PM (EST)</span>
+  </div>
+</div>
+
+</div>
+
+      </aside>
+
+    </div>
+
+  </section>
+
+  <script src="script.js"></script>
+
+  <div id="orderModal" class="order-modal">
+  <div class="order-modal-content">
+    <div class="success-icon">✓</div>
+
+    <h2>Order Request Submitted</h2>
+
+    <p>
+      Thank you for your request.
+      Our team will review your order and contact you shortly.
+    </p>
+
+    <div class="order-number">
+      Reference #: <strong id="orderRef"></strong>
+    </div>
+
+    <div class="modal-actions">
+      <a href="profile.html?tab=orders" class="modal-btn">
+        View Orders
+      </a>
+
+      <a href="index.html" class="modal-btn secondary">
+        Return Home
+      </a>
+    </div>
+  </div>
+</div>
+</body>
+</html>
