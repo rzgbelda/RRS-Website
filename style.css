@@ -5129,6 +5129,19 @@ button, a, [role="button"] { touch-action: manipulation; }
 .order-type-row { flex-wrap: wrap; }
 .order-type-label { flex: 1 1 clamp(180px, 40%, 300px); min-width: 0; }
 
+/* Order options (the actual class used in checkout.html) */
+.order-options { flex-wrap: wrap; }
+.order-option { flex: 1 1 clamp(160px, 40%, 260px); }
+.option-card { width: auto; min-width: 0; }
+
+/* Submit row: stack button + security note on mobile */
+@media (max-width: 700px) {
+  .submit-order-row { flex-direction: column; align-items: stretch; gap: 12px; }
+  .submit-order-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; width: 100%; }
+  .submit-order-btn { width: 100%; max-width: 100%; height: auto; padding: 14px 20px; font-size: 16px; }
+  .security-note { text-align: center; font-size: 12px; }
+}
+
 /* ── Cart: card-style rows on mobile (replaces overflowing table) ── */
 @media (max-width: 700px) {
   /* Nuke the fixed-width table layout */
