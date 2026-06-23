@@ -214,30 +214,14 @@
 </div>
 
 <script>
-  // ── Detect password recovery ────────────────────────────────
-  // Strategy 1: read the raw hash NOW before Supabase clears it
-  (function() {
-    const h = window.location.hash;
-    if (h.includes("type=recovery")) {
-      // Hash is still there — show modal as soon as DOM is ready
-      function showResetModal() {
-        const modal = document.getElementById("setPasswordModal");
-        if (modal) {
-          modal.style.display = "flex";
-          history.replaceState(null, "", window.location.pathname);
-        } else {
-          // DOM not ready yet — try again shortly
-          setTimeout(showResetModal, 50);
-        }
-      }
-      showResetModal();
-    }
-  })();
+  // Track whether Supabase has confirmed the recovery session is ready
+  let _recoverySessionReady = false;
 
-  // Strategy 2: onAuthStateChange as a backup (catches it if Strategy 1 missed)
+  // onAuthStateChange is the authoritative signal that the recovery session exists
   if (window.sb) {
-    window.sb.auth.onAuthStateChange((event) => {
+    window.sb.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY") {
+        _recoverySessionReady = true;
         const modal = document.getElementById("setPasswordModal");
         if (modal) {
           modal.style.display = "flex";
@@ -246,6 +230,19 @@
       }
     });
   }
+
+  // Also read the raw hash immediately — Supabase may fire onAuthStateChange
+  // slightly after this script runs, so show the modal early but flag not ready yet.
+  (function() {
+    const h = window.location.hash;
+    if (h.includes("type=recovery")) {
+      const modal = document.getElementById("setPasswordModal");
+      if (modal) {
+        modal.style.display = "flex";
+        history.replaceState(null, "", window.location.pathname);
+      }
+    }
+  })();
 
   // ── Forgot password link ──────────────────────────────────────
   document.getElementById("forgotPasswordLink").addEventListener("click", function(e) {
@@ -295,11 +292,28 @@
 
     msg.style.color="#888"; msg.textContent="Updating…";
 
+    // If the recovery session isn't confirmed yet, wait up to 5s for onAuthStateChange
+    if (!_recoverySessionReady) {
+      msg.textContent = "Verifying session…";
+      await new Promise((resolve) => {
+        const t = setTimeout(resolve, 5000); // timeout after 5s
+        const unsub = window.sb.auth.onAuthStateChange((event) => {
+          if (event === "PASSWORD_RECOVERY") {
+            _recoverySessionReady = true;
+            clearTimeout(t);
+            unsub.data.subscription.unsubscribe();
+            resolve();
+          }
+        });
+      });
+      msg.textContent = "Updating…";
+    }
+
     const { error } = await window.sb.auth.updateUser({ password: pw1 });
 
     if (error) {
       msg.style.color="#ef4444";
-      msg.textContent = error.message;
+      msg.textContent = "Error: " + error.message;
     } else {
       msg.style.color="#22c55e";
       msg.textContent="✓ Password updated! Redirecting to login…";
