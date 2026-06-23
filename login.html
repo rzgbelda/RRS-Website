@@ -92,7 +92,7 @@
                         Remember me
                     </label>
 
-                    <a href="#">Forgot password?</a>
+                    <a href="#" id="forgotPasswordLink">Forgot password?</a>
 
                 </div>
 
@@ -175,6 +175,59 @@
 </section>
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
 <script src="script.js"></script>
+
+<!-- Forgot Password Modal -->
+<div id="forgotModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;padding:36px 32px;max-width:400px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,.2);position:relative;">
+    <button onclick="closeForgotModal()" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
+    <h2 style="font-size:22px;font-weight:800;color:#0d2c50;margin-bottom:8px;">Reset Password</h2>
+    <p style="font-size:14px;color:#666;margin-bottom:22px;">Enter your email address and we'll send you a link to reset your password.</p>
+    <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:6px;">Email Address</label>
+    <input id="forgotEmail" type="email" placeholder="Enter your email" style="width:100%;padding:12px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;outline:none;">
+    <p id="forgotMsg" style="font-size:13px;margin-top:10px;min-height:18px;"></p>
+    <button onclick="sendResetEmail()" style="width:100%;padding:13px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;">Send Reset Link</button>
+  </div>
+</div>
+
+<script>
+  document.getElementById("forgotPasswordLink").addEventListener("click", function(e) {
+    e.preventDefault();
+    document.getElementById("forgotModal").style.display = "flex";
+    document.getElementById("forgotEmail").value = document.getElementById("email")?.value || "";
+    document.getElementById("forgotMsg").textContent = "";
+  });
+
+  function closeForgotModal() {
+    document.getElementById("forgotModal").style.display = "none";
+  }
+
+  document.getElementById("forgotModal").addEventListener("click", function(e) {
+    if (e.target === this) closeForgotModal();
+  });
+
+  async function sendResetEmail() {
+    const email = document.getElementById("forgotEmail").value.trim();
+    const msg   = document.getElementById("forgotMsg");
+    if (!email) { msg.style.color = "#ef4444"; msg.textContent = "Please enter your email address."; return; }
+
+    msg.style.color = "#888"; msg.textContent = "Sending…";
+
+    const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/login.html?reset=true"
+    });
+
+    if (error) {
+      msg.style.color = "#ef4444";
+      msg.textContent = error.message;
+    } else {
+      msg.style.color = "#22c55e";
+      msg.textContent = "✓ Reset link sent! Check your email inbox.";
+      setTimeout(closeForgotModal, 3000);
+    }
+  }
+</script>
 </body>
 </html>
