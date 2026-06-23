@@ -1393,11 +1393,13 @@ textarea:focus {
 
 .filter-list label {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  align-items: center;
   font-size: 13px;
   color: #294868;
-  gap: 5px;
+  gap: 8px;
+  cursor: pointer;
 }
 
 .filter-list input[type="checkbox"] {
@@ -1948,6 +1950,7 @@ textarea:focus {
   display: flex;
   gap: 16px;
   margin: 10px 0 18px;
+  flex-wrap: wrap;
 }
 
 .order-options {
@@ -5115,3 +5118,70 @@ button, a, [role="button"] { touch-action: manipulation; }
 
 /* ── Bottom bar ── */
 .bottom-bar { flex-wrap: wrap; gap: 4px; padding: clamp(6px, 1.5vw, 8px) clamp(12px, 2vw, 13px); height: auto; font-size: clamp(11px, 1.2vw, 14px); }
+
+/* ── Pricing benefits: left-align when stacked ── */
+@media (max-width: 768px) {
+  .pricing-benefits { align-items: flex-start; }
+  .pricing-benefit { width: 100%; }
+}
+
+/* ── Checkout order type: wrap so cards stack on narrow screens ── */
+.order-type-row { flex-wrap: wrap; }
+.order-type-label { flex: 1 1 clamp(180px, 40%, 300px); min-width: 0; }
+
+/* ── Cart: card-style rows on mobile (replaces overflowing table) ── */
+@media (max-width: 700px) {
+  /* Nuke the fixed-width table layout */
+  .cart-table { overflow-x: visible; border: none; background: transparent; box-shadow: none; }
+  .cart-header { display: none; }
+  .cart-items { min-width: 0 !important; width: 100%; }
+
+  /* Each cart row becomes a self-contained card */
+  .cart-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px 12px;
+    padding: 14px;
+    border: 1px solid #d6dce3;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    background: #fff;
+    min-width: 0;
+    /* clear the 6-col grid */
+    grid-template-columns: none !important;
+  }
+
+  /* Product image + info: fill top row */
+  .cart-product {
+    flex: 1 1 100%;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .cart-product img { width: 70px; height: 60px; object-fit: contain; flex-shrink: 0; }
+  .cart-product h3 { font-size: 14px; margin-bottom: 4px; }
+  .cart-product p, .cart-product small { font-size: 12px; }
+
+  /* Price, qty, reorder, total, trash all wrap into the bottom row */
+  .product-price { font-size: 15px; font-weight: 700; flex: 0 0 auto; align-self: center; }
+  .qty-box { flex: 0 0 auto; align-self: center; }
+  .reorder-wrapper { flex: 1 1 auto; min-width: 0; align-self: center; }
+  .reorder-dropdown { width: 100%; max-width: 160px; font-size: 13px; }
+  .item-total { font-size: 14px; font-weight: 700; flex: 0 0 auto; align-self: center; }
+  .trash-btn { flex: 0 0 auto; align-self: center; margin-left: auto; }
+}
+
+/* ── Checkout product rows: card on mobile ── */
+@media (max-width: 700px) {
+  .checkout-product {
+    display: flex !important;
+    flex-wrap: wrap;
+    min-width: 0 !important;
+    gap: 10px;
+    padding: 14px;
+  }
+  .checkout-product img { flex: 0 0 70px; width: 70px; height: 55px; object-fit: contain; }
+  .checkout-product h4 { font-size: 13px; }
+  .checkout-product > *:not(img) { flex: 1 1 auto; min-width: 0; }
+}
