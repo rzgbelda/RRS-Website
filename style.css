@@ -4649,14 +4649,80 @@ span.flatpickr-weekday {
   .product-image { height: 150px; }
 }
 
+/* ── Featured products grid: expand to fill slider flex container ── */
+.product-grid {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Featured products grid: responsive columns ── */
 @media (max-width: 900px) {
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
   }
 }
 @media (max-width: 480px) {
   .product-grid {
     grid-template-columns: 1fr;
+    gap: 0;
   }
+}
+
+/* ── Supply section: reduce excess padding on mobile ── */
+@media (max-width: 768px) {
+  .supply-section { padding: 50px 0; }
+  .supply-slider { gap: 10px; }
+  .slider-arrow { font-size: 52px; }
+  .section-heading h2 { font-size: 36px; }
+  .section-heading p { font-size: 16px; }
+  .heading-line { width: 80px; }
+}
+@media (max-width: 480px) {
+  .supply-section { padding: 36px 0; }
+  .slider-arrow { font-size: 36px; }
+  .section-heading h2 { font-size: 26px; }
+  .section-heading p { font-size: 14px; }
+}
+
+/* ── Ordering section: font sizes and step stacking ── */
+@media (max-width: 768px) {
+  .ordering-left h4 { font-size: 22px; }
+  .ordering-left h2 { font-size: 32px; margin-bottom: 32px; }
+  .ordering-line { width: 100%; max-width: 260px; }
+  .step-item { width: 120px; }
+  .step-icon { width: 100px; height: 100px; }
+  .step-icon img { width: 60px; height: 60px; }
+  .choose-schedule-btn { width: 100%; font-size: 16px; }
+  .schedule-grid { gap: 11px 30px; }
+}
+@media (max-width: 540px) {
+  .ordering-steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+  .step-dots { display: none; }
+  .step-item { width: 100%; max-width: 220px; }
+  .ordering-left h4 { font-size: 18px; }
+  .ordering-left h2 { font-size: 26px; margin-bottom: 24px; }
+  .schedule-grid { grid-template-columns: 1fr; gap: 10px; }
+  .schedule-grid button { justify-content: flex-start; }
+}
+
+/* ── Pricing section: reduce padding and font size on mobile ── */
+@media (max-width: 768px) {
+  .pricing-section { padding: 60px 16px; }
+  .pricing-left { padding: 28px 20px; }
+  .pricing-left h2 { font-size: 30px; }
+}
+
+/* ── About section ── */
+@media (max-width: 768px) {
+  .about-wrapper { padding: 0 16px; }
+}
+
+/* ── Bottom bar ── */
+@media (max-width: 480px) {
+  .bottom-bar { flex-direction: column; gap: 4px; padding: 10px 16px; font-size: 12px; }
 }

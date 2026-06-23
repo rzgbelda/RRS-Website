@@ -1126,10 +1126,18 @@ function showFeaturedProducts() {
   setupAddToCartButtons();
 }
 
+function getFeaturedPageSize() {
+  const w = window.innerWidth;
+  if (w <= 480) return 1;
+  if (w <= 900) return 2;
+  return 4;
+}
+
 function getVisibleFeaturedProducts() {
   const visible = [];
+  const count = getFeaturedPageSize();
 
-  for (let i = 0; i < 4; i++) {
+  for (let i = 0; i < count; i++) {
     const index = (currentFeaturedIndex + i) % featuredProducts.length;
     visible.push(featuredProducts[index]);
   }
@@ -1150,11 +1158,12 @@ function animateFeaturedSlide(direction) {
   );
 
   setTimeout(() => {
+    const count = getFeaturedPageSize();
     if (direction === "right") {
-      currentFeaturedIndex = (currentFeaturedIndex + 4) % featuredProducts.length;
+      currentFeaturedIndex = (currentFeaturedIndex + count) % featuredProducts.length;
     } else {
       currentFeaturedIndex =
-        (currentFeaturedIndex - 4 + featuredProducts.length) % featuredProducts.length;
+        (currentFeaturedIndex - count + featuredProducts.length) % featuredProducts.length;
     }
 
     showFeaturedProducts();
