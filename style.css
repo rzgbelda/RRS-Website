@@ -4632,12 +4632,28 @@ span.flatpickr-weekday {
     gap: 10px;
   }
   .logo { flex-shrink: 0; }
+  .login-nav-btn {
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
 }
 
 @media (max-width: 480px) {
   .navbar { padding: 0 12px; gap: 8px; }
   .logo img { width: 130px; }
-  .login-nav-btn { font-size: 12px; padding: 8px 10px; }
+  .login-nav-btn {
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
   .nav-icons { gap: 8px; }
 }
 
