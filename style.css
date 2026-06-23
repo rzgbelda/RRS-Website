@@ -4465,43 +4465,60 @@ span.flatpickr-weekday {
 
 @media (max-width: 768px) {
     .hero-content {
-        padding: 40px 24px;
+        padding: 36px 20px 24px;
     }
 
     .hero-content h1 {
-        font-size: 52px;
+        font-size: 48px;
         line-height: 1.05;
         letter-spacing: -2px;
     }
 
     .hero-content p {
-        font-size: 18px;
+        font-size: 17px;
     }
 
     .hero-buttons {
         flex-direction: column;
         align-items: stretch;
+        gap: 14px;
     }
 
     .btn {
         width: 100%;
+        min-width: unset;
     }
 }
 
 @media (max-width: 480px) {
+    .hero-content {
+        padding: 28px 16px 20px;
+    }
+
     .hero-content h1 {
-        font-size: 38px;
+        font-size: 36px;
         line-height: 1.1;
         letter-spacing: -1px;
     }
 
     .hero-content p {
-        font-size: 16px;
+        font-size: 15px;
         line-height: 1.6;
     }
 
     .hero-image {
-        padding: 0 20px 30px;
+        padding: 0 16px 28px;
+    }
+}
+
+@media (max-width: 360px) {
+    .hero-content h1 {
+        font-size: 30px;
+        letter-spacing: -0.5px;
+    }
+
+    .hero-content p {
+        font-size: 14px;
     }
 }
 
@@ -4566,19 +4583,16 @@ span.flatpickr-weekday {
 .nav-hamburger.open span:nth-child(2) { opacity: 0; }
 .nav-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-/* ── Mobile nav dropdown ── */
+/* ── Mobile nav dropdown (in normal flow, below header) ── */
 .mobile-nav {
   display: none;
   flex-direction: column;
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
+  width: 100%;
   background: #ffffff;
   border-top: 2px solid #ED7226;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
-  z-index: 9000;
-  padding: 12px 0 16px;
+  border-bottom: 1px solid #e8e8e8;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+  z-index: 8999;
 }
 .mobile-nav.open { display: flex; }
 .mobile-nav a {
@@ -4586,9 +4600,12 @@ span.flatpickr-weekday {
   color: #1f3b5b;
   font-size: 15px;
   font-weight: 600;
-  padding: 13px 24px;
+  padding: 14px 24px;
   border-bottom: 1px solid #f2f2f2;
   transition: background 0.15s;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
 }
 .mobile-nav a:last-child { border-bottom: none; }
 .mobile-nav a:hover,
@@ -4597,29 +4614,31 @@ span.flatpickr-weekday {
 /* ── Show hamburger & hide desktop nav at ≤768px ── */
 @media (max-width: 768px) {
   .navbar {
-    position: relative;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     height: auto;
     min-height: 64px;
-    padding: 0 20px;
-    gap: 0;
+    padding: 0 16px;
+    gap: 12px;
+    align-items: center;
   }
   .nav-links { display: none; }
-  .nav-hamburger { display: flex; }
-  /* push nav-icons to left of hamburger */
-  .nav-icons {
-    margin-left: 0;
-    gap: 14px;
-    order: 2;
+  .nav-hamburger {
+    display: flex;
+    margin-left: 4px;
+    flex-shrink: 0;
   }
-  .logo { order: 1; flex: 1; }
-  .nav-hamburger { order: 3; }
+  .nav-icons {
+    margin-left: auto;
+    gap: 10px;
+  }
+  .logo { flex-shrink: 0; }
 }
 
 @media (max-width: 480px) {
-  .navbar { padding: 0 14px; }
-  .logo img { width: 140px; }
-  .login-nav-btn { font-size: 12px; padding: 8px 12px; }
+  .navbar { padding: 0 12px; gap: 8px; }
+  .logo img { width: 130px; }
+  .login-nav-btn { font-size: 12px; padding: 8px 10px; }
+  .nav-icons { gap: 8px; }
 }
 
 /* ── Catalog: stack sidebar above product grid on mobile ── */
@@ -4725,4 +4744,119 @@ span.flatpickr-weekday {
 /* ── Bottom bar ── */
 @media (max-width: 480px) {
   .bottom-bar { flex-direction: column; gap: 4px; padding: 10px 16px; font-size: 12px; }
+}
+
+/* =========================================================
+   COMPREHENSIVE MOBILE FIX PASS — all pages
+   ========================================================= */
+
+/* ── Top bar: always center on small screens ── */
+@media (max-width: 360px) {
+  .top-bar { font-size: 10px; padding: 0 8px; }
+}
+
+/* ── Cart page ── */
+@media (max-width: 768px) {
+  .cart-page { padding: 30px 16px; gap: 30px; }
+  .cart-left h1 { font-size: 28px; }
+}
+@media (max-width: 480px) {
+  .cart-page { padding: 20px 12px; }
+  .cart-left h1 { font-size: 24px; }
+  .order-summary { padding: 20px 14px; }
+}
+
+/* ── Checkout page ── */
+@media (max-width: 768px) {
+  .checkout-page { padding: 30px 16px; }
+}
+@media (max-width: 480px) {
+  .checkout-page { padding: 20px 12px; }
+  .checkout-product { min-width: 600px; }
+}
+
+/* ── Login page ── */
+@media (max-width: 768px) {
+  .login-section { padding: 30px 16px; }
+  .login-form { padding: 30px 20px; }
+  .banner-overlay { padding: 30px 20px; }
+  .banner-overlay h2 { font-size: 32px; }
+  .banner-overlay > p { font-size: 16px; margin-bottom: 28px; }
+  .banner-feature img { width: 70px; height: 70px; }
+  .banner-feature h3 { font-size: 18px; }
+}
+@media (max-width: 480px) {
+  .login-form h1 { font-size: 28px; }
+  .login-section { padding: 20px 12px; }
+}
+
+/* ── Product detail page ── */
+@media (max-width: 768px) {
+  .product-page { padding: 20px 16px 40px; }
+  .pricing-tier-cards { flex-direction: column; gap: 12px; }
+}
+@media (max-width: 480px) {
+  .product-page { padding: 16px 12px 30px; }
+  .main-product-img { height: 220px; }
+  .buy-box { padding: 16px; }
+}
+
+/* ── Payment page ── */
+@media (max-width: 480px) {
+  .progress-steps { gap: 6px; }
+  .step-label { font-size: 11px; }
+}
+
+/* ── Profile page ── */
+@media (max-width: 480px) {
+  .profile-hero { padding: 36px 16px; }
+  .profile-hero h1 { font-size: 32px; }
+}
+
+/* ── Catalog hero ── */
+@media (max-width: 480px) {
+  .catalog-hero { min-height: 140px; padding: 30px 16px; }
+  .catalog-content h1 { font-size: 32px; }
+  .catalog-content p { font-size: 14px; }
+}
+
+/* ── Serve grid: 2-col on all mobiles ── */
+@media (max-width: 480px) {
+  .serve-section { padding: 40px 16px; }
+  .serve-grid { grid-template-columns: repeat(2, 1fr); gap: 24px 16px; }
+  .serve-item img { width: 90px; }
+}
+
+/* ── Pricing / quote form ── */
+@media (max-width: 480px) {
+  .pricing-section { padding: 40px 12px; }
+  .pricing-left { padding: 20px 14px; }
+  .pricing-left h2 { font-size: 24px; }
+  .pricing-benefits { gap: 16px; }
+  .pricing-benefit span { font-size: 12px; }
+  .upload-box { padding: 20px 12px; }
+  .quote-btn { width: 100%; font-size: 14px; padding: 14px; }
+  .pricing-image { display: none; }
+}
+
+/* ── About section ── */
+@media (max-width: 480px) {
+  .about-section { padding: 40px 16px; }
+  .about-left h4 { font-size: 13px; }
+  .about-left h2 { font-size: 28px; }
+  .about-features { flex-direction: column; gap: 20px; }
+  .about-feature img { width: 44px; height: 44px; }
+}
+
+/* ── Prevent any horizontal overflow globally ── */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* ── Touch-friendly minimum tap targets ── */
+@media (max-width: 768px) {
+  .add-btn, .btn, .choose-schedule-btn, .quote-btn,
+  .view-more-btn, .slider-arrow {
+    min-height: 44px;
+  }
+  .nav-icons a, .nav-icons button { min-height: 40px; min-width: 40px; }
+  .nav-hamburger { min-height: 44px; min-width: 44px; }
 }
