@@ -644,6 +644,7 @@ padding-top: 20px;
 .serve-grid {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
+    justify-content: center;
     align-items: start;
     margin-top: 60px;
 }
@@ -4950,7 +4951,8 @@ img, video, svg { max-width: 100%; height: auto; }
 /* ── Serve section ── */
 .serve-section { padding: clamp(36px, 5vw, 90px) clamp(12px, 3vw, 60px); }
 .serve-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(130px, 42%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(130px, 42%), 1fr));
+  justify-content: center;
   gap: clamp(16px, 3vw, 60px) clamp(8px, 1.5vw, 20px);
   margin-top: clamp(24px, 4vw, 60px);
 }
