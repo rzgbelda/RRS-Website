@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -314,3 +314,53 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </body>
 </html>
+<!-- ── Floating Catalog QR Widget ───────────────────────────── -->
+<div id="catalogQR" style="position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+  <div id="catalogQRPanel" style="display:none;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);border:1.5px solid #f0f0f0;text-align:center;width:180px;">
+    <div id="catalogQRCode"></div>
+    <p style="font-size:11px;color:#294868;font-weight:700;margin:10px 0 4px;letter-spacing:.3px;">SCAN TO DOWNLOAD</p>
+    <p style="font-size:10px;color:#888;margin:0;">Full Product Catalog</p>
+    <a href="/Room_Ready_Supply_Catalog.pdf" download style="display:inline-block;margin-top:10px;padding:7px 14px;background:#ED7226;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Download PDF</a>
+  </div>
+  <button id="catalogQRBtn" onclick="toggleCatalogQR()" title="Download Catalog" style="width:54px;height:54px;border-radius:50%;background:#ED7226;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 20px rgba(237,114,38,.4);transition:transform .2s,box-shadow .2s;" onmouseover="this.style.transform='scale(1.08)';this.style.boxShadow='0 8px 28px rgba(237,114,38,.55)'" onmouseout="this.style.transform='scale(1)';this.style.boxShadow='0 6px 20px rgba(237,114,38,.4)'">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="7" height="7" rx="1" stroke="white" stroke-width="2"/>
+      <rect x="14" y="3" width="7" height="7" rx="1" stroke="white" stroke-width="2"/>
+      <rect x="3" y="14" width="7" height="7" rx="1" stroke="white" stroke-width="2"/>
+      <rect x="5" y="5" width="3" height="3" fill="white"/>
+      <rect x="16" y="5" width="3" height="3" fill="white"/>
+      <rect x="5" y="16" width="3" height="3" fill="white"/>
+      <rect x="14" y="14" width="3" height="3" fill="white"/>
+      <rect x="18" y="14" width="3" height="3" fill="white"/>
+      <rect x="14" y="18" width="3" height="3" fill="white"/>
+      <rect x="18" y="18" width="3" height="3" fill="white"/>
+    </svg>
+  </button>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+  var _qrGenerated = false;
+  function toggleCatalogQR() {
+    var panel = document.getElementById("catalogQRPanel");
+    var isOpen = panel.style.display !== "none";
+    panel.style.display = isOpen ? "none" : "block";
+    if (!isOpen && !_qrGenerated) {
+      new QRCode(document.getElementById("catalogQRCode"), {
+        text: window.location.origin + "/Room_Ready_Supply_Catalog.pdf",
+        width: 144, height: 144,
+        colorDark: "#0d2c50", colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.M
+      });
+      _qrGenerated = true;
+    }
+  }
+  document.addEventListener("click", function(e) {
+    var widget = document.getElementById("catalogQR");
+    if (widget && !widget.contains(e.target)) {
+      document.getElementById("catalogQRPanel").style.display = "none";
+    }
+  });
+</script>
+<!-- ── End Floating Catalog QR Widget ───────────────────────── -->
+
+</body>
