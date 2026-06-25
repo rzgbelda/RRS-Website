@@ -714,19 +714,19 @@
               Heading & Copy
             </div>
 
-            <div class="a-form-group">
-              <label class="a-label">Main Heading <span class="a-label-hint">use | for line breaks</span></label>
-              <input id="heroHeading" class="a-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies">
+            <div class="cms-form-group">
+              <label class="cms-label">Main Heading <span class="cms-label-hint">use | for line breaks</span></label>
+              <input id="heroHeading" class="a-input cms-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies">
             </div>
 
-            <div class="a-form-group">
-              <label class="a-label">Highlight Text <span class="a-label-hint">the orange-coloured line</span></label>
-              <input id="heroHighlight" class="a-input" placeholder="Without Chasing Supplies">
+            <div class="cms-form-group">
+              <label class="cms-label">Highlight Text <span class="cms-label-hint">the orange-coloured line</span></label>
+              <input id="heroHighlight" class="a-input cms-input" placeholder="Without Chasing Supplies">
             </div>
 
-            <div class="a-form-group">
-              <label class="a-label">Description</label>
-              <textarea id="heroDescription" class="a-input" rows="4" placeholder="Room Ready Supply helps hotels, motels…" style="resize:vertical;"></textarea>
+            <div class="cms-form-group" style="margin-bottom:0">
+              <label class="cms-label">Description</label>
+              <textarea id="heroDescription" class="a-input cms-input" rows="5" placeholder="Room Ready Supply helps hotels, motels…" style="resize:vertical;"></textarea>
             </div>
           </div>
 
@@ -735,14 +735,14 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
               Call-to-Action Buttons
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-              <div class="a-form-group" style="margin:0">
-                <label class="a-label">Primary Button</label>
-                <input id="heroBtnPrimary" class="a-input" placeholder="Shop Catalog">
+            <div class="cms-btn-row">
+              <div class="cms-form-group" style="margin:0;flex:1">
+                <label class="cms-label">Primary Button</label>
+                <input id="heroBtnPrimary" class="a-input cms-input" placeholder="Shop Catalog">
               </div>
-              <div class="a-form-group" style="margin:0">
-                <label class="a-label">Secondary Button</label>
-                <input id="heroBtnSecondary" class="a-input" placeholder="Request Business Pricing">
+              <div class="cms-form-group" style="margin:0;flex:1">
+                <label class="cms-label">Secondary Button</label>
+                <input id="heroBtnSecondary" class="a-input cms-input" placeholder="Request Business Pricing">
               </div>
             </div>
           </div>
@@ -759,9 +759,9 @@
           <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:16/9;">
             <img id="heroBannerImg" src="banner1.png" alt="Hero Banner" style="width:100%;height:100%;object-fit:cover;display:block;">
           </div>
-          <div class="a-form-group">
-            <label class="a-label">Image URL</label>
-            <input id="heroBannerUrl" class="a-input" placeholder="banner1.png" oninput="document.getElementById('heroBannerImg').src=this.value||'banner1.png'">
+          <div class="cms-form-group">
+            <label class="cms-label">Image URL</label>
+            <input id="heroBannerUrl" class="a-input cms-input" placeholder="banner1.png" oninput="document.getElementById('heroBannerImg').src=this.value||'banner1.png'">
           </div>
           <input type="file" id="heroBannerFile" accept="image/*" style="display:none" onchange="previewHeroBanner(this)">
           <button class="a-btn-outline" onclick="document.getElementById('heroBannerFile').click()" style="width:100%;justify-content:center;">
@@ -797,28 +797,28 @@
               Text Content
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;">
-              <div class="a-form-group" style="margin:0">
-                <label class="a-label">Section Tag</label>
-                <input id="aboutTag" class="a-input" placeholder="ABOUT US">
+            <div class="cms-btn-row">
+              <div class="cms-form-group" style="margin:0;flex:0 0 160px">
+                <label class="cms-label">Section Tag</label>
+                <input id="aboutTag" class="a-input cms-input" placeholder="ABOUT US">
               </div>
-              <div class="a-form-group" style="margin:0">
-                <label class="a-label">Main Title</label>
-                <input id="aboutTitle" class="a-input" placeholder="We Help Operators Stay Ready">
+              <div class="cms-form-group" style="margin:0;flex:1">
+                <label class="cms-label">Main Title</label>
+                <input id="aboutTitle" class="a-input cms-input" placeholder="We Help Operators Stay Ready">
               </div>
             </div>
 
-            <div class="a-form-group">
-              <label class="a-label">Paragraph 1</label>
-              <textarea id="aboutP1" class="a-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens…"></textarea>
+            <div class="cms-form-group">
+              <label class="cms-label">Paragraph 1</label>
+              <textarea id="aboutP1" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens…"></textarea>
             </div>
-            <div class="a-form-group">
-              <label class="a-label">Paragraph 2</label>
-              <textarea id="aboutP2" class="a-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides…"></textarea>
+            <div class="cms-form-group">
+              <label class="cms-label">Paragraph 2</label>
+              <textarea id="aboutP2" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides…"></textarea>
             </div>
-            <div class="a-form-group" style="margin-bottom:0">
-              <label class="a-label">Paragraph 3</label>
-              <textarea id="aboutP3" class="a-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple…"></textarea>
+            <div class="cms-form-group" style="margin-bottom:0">
+              <label class="cms-label">Paragraph 3</label>
+              <textarea id="aboutP3" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple…"></textarea>
             </div>
           </div>
 
@@ -843,9 +843,9 @@
           <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:4/3;">
             <img id="aboutBannerImg" src="banner3.png" alt="About" style="width:100%;height:100%;object-fit:cover;display:block;">
           </div>
-          <div class="a-form-group">
-            <label class="a-label">Image URL</label>
-            <input id="aboutBannerUrl" class="a-input" placeholder="banner3.png" oninput="document.getElementById('aboutBannerImg').src=this.value||'banner3.png'">
+          <div class="cms-form-group">
+            <label class="cms-label">Image URL</label>
+            <input id="aboutBannerUrl" class="a-input cms-input" placeholder="banner3.png" oninput="document.getElementById('aboutBannerImg').src=this.value||'banner3.png'">
           </div>
           <input type="file" id="aboutBannerFile" accept="image/*" style="display:none" onchange="previewAboutBanner(this)">
           <button class="a-btn-outline" onclick="document.getElementById('aboutBannerFile').click()" style="width:100%;justify-content:center;">

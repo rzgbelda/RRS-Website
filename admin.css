@@ -1222,3 +1222,51 @@ body.admin-body {
     grid-template-columns: 1fr;
   }
 }
+
+/* ─────────────────────────────────────────
+   CMS FORM ELEMENTS
+───────────────────────────────────────── */
+.cms-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 18px;
+}
+.cms-form-group:last-child { margin-bottom: 0; }
+
+.cms-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cms-label-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.cms-input {
+  width: 100% !important;
+  display: block !important;
+}
+
+.cms-btn-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 640px) {
+  .cms-btn-row { flex-direction: column; }
+  .cms-btn-row > * { flex: 1 1 100% !important; }
+}
