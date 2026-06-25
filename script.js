@@ -1488,3 +1488,176 @@ function setupEditableProfile() {
 
 document.addEventListener("DOMContentLoaded", setupEditableProfile);
 
+
+/* ═══════════════════════════════════════════════════════
+   CONTACT INQUIRY MODAL
+═══════════════════════════════════════════════════════ */
+
+function openContactModal() {
+  const m = document.getElementById("contactModal");
+  if (!m) return;
+  m.style.display = "flex";
+  document.body.style.overflow = "hidden";
+  // reset form state
+  const form = document.getElementById("ciqForm");
+  if (form) form.reset();
+  document.getElementById("ciqSuccess").style.display = "none";
+  document.getElementById("ciqForm").style.display = "";
+  document.getElementById("ciqError").style.display = "none";
+  document.getElementById("ciqFileName").textContent = "Choose file…";
+  document.querySelectorAll(".ciq-error-field").forEach(el => el.classList.remove("ciq-error-field"));
+}
+
+function closeContactModal() {
+  const m = document.getElementById("contactModal");
+  if (m) m.style.display = "none";
+  document.body.style.overflow = "";
+}
+
+// Close on overlay click
+document.addEventListener("click", function(e) {
+  const m = document.getElementById("contactModal");
+  if (m && e.target === m) closeContactModal();
+});
+
+// Close on Escape
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") closeContactModal();
+});
+
+function updateFileName(input) {
+  const label = document.getElementById("ciqFileName");
+  if (label) label.textContent = input.files[0]?.name || "Choose file…";
+}
+
+// Throttle — prevent resubmission within 30s
+let _ciqLastSubmit = 0;
+
+async function submitContactForm(e) {
+  e.preventDefault();
+  if (!window.sb) return;
+
+  const now = Date.now();
+  if (now - _ciqLastSubmit < 30000) {
+    showCiqError("Please wait before submitting again.");
+    return;
+  }
+
+  // ── Gather values ──
+  const firstName  = val("ciqFirstName");
+  const lastName   = val("ciqLastName");
+  const company    = val("ciqCompany");
+  const bizType    = val("ciqBizType");
+  const locations  = val("ciqLocations");
+  const email      = val("ciqEmail");
+  const phone      = val("ciqPhone");
+  const city       = val("ciqCity");
+  const state      = val("ciqState");
+  const zip        = val("ciqZip");
+  const volume     = val("ciqVolume");
+  const contact    = val("ciqContactMethod");
+  const message    = val("ciqMessage");
+
+  const products = Array.from(
+    document.querySelectorAll("#ciqForm input[type='checkbox']:checked")
+  ).map(cb => cb.value);
+
+  // ── Validate ──
+  const errors = [];
+  clearCiqErrors();
+
+  if (!firstName) { markErr("ciqFirstName"); errors.push("First name"); }
+  if (!lastName)  { markErr("ciqLastName");  errors.push("Last name"); }
+  if (!company)   { markErr("ciqCompany");   errors.push("Company name"); }
+  if (!bizType)   { markErr("ciqBizType");   errors.push("Business type"); }
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    markErr("ciqEmail"); errors.push("Valid email address");
+  }
+  if (!phone || phone.replace(/\D/g, "").length < 10) {
+    markErr("ciqPhone"); errors.push("Valid phone number (10+ digits)");
+  }
+  if (!city)  { markErr("ciqCity");  errors.push("City"); }
+  if (!state) { markErr("ciqState"); errors.push("State"); }
+
+  if (errors.length) {
+    showCiqError("Please fill in the required fields: " + errors.join(", ") + ".");
+    return;
+  }
+
+  // ── Set loading state ──
+  const btn = document.getElementById("ciqSubmitBtn");
+  document.getElementById("ciqBtnText").textContent = "Sending…";
+  document.getElementById("ciqSpinner").style.display = "inline-block";
+  btn.disabled = true;
+  document.getElementById("ciqError").style.display = "none";
+
+  try {
+    // Optional file upload
+    let attachmentUrl = null;
+    const fileInput = document.getElementById("ciqFile");
+    if (fileInput?.files[0]) {
+      const file = fileInput.files[0];
+      const path = `inquiries/${Date.now()}_${file.name.replace(/\s/g, "_")}`;
+      const { error: uploadErr } = await window.sb.storage
+        .from("contact-attachments")
+        .upload(path, file, { upsert: false });
+      if (!uploadErr) {
+        const { data: urlData } = window.sb.storage
+          .from("contact-attachments")
+          .getPublicUrl(path);
+        attachmentUrl = urlData?.publicUrl || null;
+      }
+    }
+
+    const { error } = await window.sb.from("contact_inquiries").insert({
+      first_name:              firstName,
+      last_name:               lastName,
+      company_name:            company,
+      business_type:           bizType,
+      number_of_locations:     locations || null,
+      email,
+      phone,
+      city,
+      state,
+      zip_code:                zip || null,
+      products_interested:     products.length ? products : null,
+      monthly_purchase_volume: volume || null,
+      preferred_contact:       contact || null,
+      message:                 message || null,
+      attachment_url:          attachmentUrl,
+      status:                  "new",
+    });
+
+    if (error) throw error;
+
+    _ciqLastSubmit = Date.now();
+    document.getElementById("ciqForm").style.display = "none";
+    document.getElementById("ciqSuccess").style.display = "flex";
+
+  } catch (err) {
+    showCiqError("Submission failed: " + (err.message || "Please try again."));
+  } finally {
+    document.getElementById("ciqBtnText").textContent = "Send Inquiry";
+    document.getElementById("ciqSpinner").style.display = "none";
+    btn.disabled = false;
+  }
+}
+
+function val(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : "";
+}
+function markErr(id) {
+  const el = document.getElementById(id);
+  if (el) el.classList.add("ciq-error-field");
+}
+function clearCiqErrors() {
+  document.querySelectorAll(".ciq-error-field").forEach(el => el.classList.remove("ciq-error-field"));
+}
+function showCiqError(msg) {
+  const el = document.getElementById("ciqError");
+  if (!el) return;
+  el.textContent = msg;
+  el.style.display = "block";
+  el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+}
