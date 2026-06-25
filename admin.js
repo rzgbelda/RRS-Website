@@ -97,37 +97,53 @@ document.querySelectorAll(".a-nav-item").forEach(el => {
 /* ── Dashboard ─────────────────────────────────────────────── */
 
 async function renderDashboardTab() {
+  // Greeting
+  const hour = new Date().getHours();
+  const greet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const g = document.getElementById("dashGreeting");
+  if (g) g.textContent = greet + " 👋";
+
   const [
     { count: prodCount },
     { count: orderCount },
+    { count: pendingCount },
     { count: userCount },
     { data: lowStockItems },
     { data: recentOrders },
-    { data: recentUsers }
+    { data: allOrderTotals },
   ] = await Promise.all([
-    window.sb.from("products").select("*",  { count:"exact", head:true }).eq("is_active", true),
-    window.sb.from("orders").select("*",    { count:"exact", head:true }),
-    window.sb.from("profiles").select("*",  { count:"exact", head:true }).eq("role","customer"),
-    window.sb.from("inventory").select("*, products(name, category_name)").eq("status","out_of_stock"),
-    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(5),
-    window.sb.from("profiles").select("contact_name, business_name, created_at").eq("role","customer").order("created_at",{ascending:false}).limit(5),
+    window.sb.from("products").select("*",        { count:"exact", head:true }).eq("is_active", true),
+    window.sb.from("orders").select("*",          { count:"exact", head:true }),
+    window.sb.from("orders").select("*",          { count:"exact", head:true }).eq("status", "pending"),
+    window.sb.from("profiles").select("*",        { count:"exact", head:true }).eq("role","customer"),
+    window.sb.from("inventory").select("*, products(name, category_name)").in("status",["out_of_stock","low_stock"]),
+    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(6),
+    window.sb.from("orders").select("total"),
   ]);
 
-  setEl("statProducts",  prodCount  ?? 0);
-  setEl("statOrders",    orderCount ?? 0);
-  setEl("statUsers",     userCount  ?? 0);
-  setEl("statOutOfStock",(lowStockItems || []).length);
+  const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+  setEl("statRevenue",    "$" + revenue.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}));
+  setEl("statProducts",   prodCount  ?? 0);
+  setEl("statOrders",     orderCount ?? 0);
+  setEl("statUsers",      userCount  ?? 0);
+  setEl("statOutOfStock", (lowStockItems || []).filter(i => i.status === "out_of_stock").length);
+
+  const pendEl = document.getElementById("statPending");
+  if (pendEl) {
+    pendEl.textContent = pendingCount ? pendingCount + " pending" : "";
+    pendEl.style.color = pendingCount ? "#f59e0b" : "";
+  }
 
   const ro = document.getElementById("recentOrdersBody");
   if (ro) ro.innerHTML = (recentOrders || []).map(o => `
     <tr>
-      <td>${escHtml(o.order_number)}</td>
-      <td>${escHtml(o.customer_name || "—")}</td>
-      <td>${escHtml(o.business_name || "—")}</td>
+      <td><strong>${escHtml(o.order_number || "—")}</strong></td>
+      <td>${escHtml(o.customer_name || o.business_name || "—")}</td>
       <td>${fmt(o.created_at)}</td>
+      <td><strong>$${Number(o.total||0).toFixed(2)}</strong></td>
       <td><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></td>
-      <td>$${Number(o.total).toFixed(2)}</td>
-    </tr>`).join("") || "<tr><td colspan='6' class='a-empty'>No orders yet</td></tr>";
+    </tr>`).join("") || "<tr><td colspan='5' class='a-empty'>No orders yet.</td></tr>";
 
   const ls = document.getElementById("lowStockBody");
   if (ls) ls.innerHTML = (lowStockItems || []).map(i => `
@@ -135,7 +151,7 @@ async function renderDashboardTab() {
       <td>${escHtml(i.products?.name || "—")}</td>
       <td>${escHtml(i.products?.category_name || "—")}</td>
       <td>${i.stock_qty}</td>
-      <td><span class="a-badge a-badge-red">Out of Stock</span></td>
+      <td><span class="a-badge ${i.status === "out_of_stock" ? "a-badge-red" : "a-badge-yellow"}">${i.status === "out_of_stock" ? "Out of Stock" : "Low Stock"}</span></td>
     </tr>`).join("") || "<tr><td colspan='4' class='a-empty'>All products in stock.</td></tr>";
 }
 

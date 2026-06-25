@@ -137,16 +137,31 @@
     <!-- ============ DASHBOARD TAB ============ -->
     <div id="tab-dashboard" class="a-tab active">
 
+      <!-- Welcome bar -->
+      <div class="dash-welcome">
+        <div>
+          <h1 class="a-page-title" id="dashGreeting">Good morning 👋</h1>
+          <p class="a-page-sub">Here's what's happening with your store today.</p>
+        </div>
+        <button class="a-btn-outline" onclick="renderDashboardTab()" style="gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Stat cards -->
       <div class="a-stats-grid">
-        <div class="a-stat-card">
-          <div class="a-stat-icon" style="background:#e8f5e9">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+
+        <div class="a-stat-card dash-stat-revenue">
+          <div class="a-stat-icon" style="background:#fff8ee">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>
           </div>
           <div>
-            <p class="a-stat-label">Total Products</p>
-            <p class="a-stat-value" id="statProducts">—</p>
+            <p class="a-stat-label">Total Revenue</p>
+            <p class="a-stat-value" id="statRevenue">—</p>
           </div>
         </div>
+
         <div class="a-stat-card">
           <div class="a-stat-icon" style="background:#e3f2fd">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
@@ -154,8 +169,10 @@
           <div>
             <p class="a-stat-label">Total Orders</p>
             <p class="a-stat-value" id="statOrders">—</p>
+            <p class="a-stat-sub" id="statPending"></p>
           </div>
         </div>
+
         <div class="a-stat-card">
           <div class="a-stat-icon" style="background:#fff3e0">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e65100" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -165,6 +182,17 @@
             <p class="a-stat-value" id="statUsers">—</p>
           </div>
         </div>
+
+        <div class="a-stat-card">
+          <div class="a-stat-icon" style="background:#e8f5e9">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
+          </div>
+          <div>
+            <p class="a-stat-label">Active Products</p>
+            <p class="a-stat-value" id="statProducts">—</p>
+          </div>
+        </div>
+
         <div class="a-stat-card">
           <div class="a-stat-icon" style="background:#fce4ec">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b71c1c" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
@@ -174,31 +202,57 @@
             <p class="a-stat-value" id="statOutOfStock">—</p>
           </div>
         </div>
+
       </div>
 
-      <!-- Recent Orders -->
-      <div class="a-card">
-        <div class="a-card-header">
-          <h3>Recent Orders</h3>
-          <button class="a-link-btn" data-goto="orders">View All →</button>
+      <!-- Bottom two-col: Recent Orders + Low Stock -->
+      <div class="dash-bottom-grid">
+
+        <!-- Recent Orders -->
+        <div class="a-card">
+          <div class="a-card-header">
+            <h3>Recent Orders</h3>
+            <button class="a-link-btn" data-goto="orders">View All →</button>
+          </div>
+          <div class="a-table-wrap">
+            <table class="a-table">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Date</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="recentOrdersBody">
+                <tr><td colspan="5" class="a-empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div class="a-table-wrap">
-          <table class="a-table">
-            <thead>
-              <tr>
-                <th>Order ID</th>
-                <th>Customer</th>
-                <th>Business</th>
-                <th>Date</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="recentOrdersBody">
-              <tr><td colspan="6" class="a-empty">No orders yet.</td></tr>
-            </tbody>
-          </table>
+
+        <!-- Low Stock Alert -->
+        <div class="a-card" id="lowStockCard">
+          <div class="a-card-header">
+            <h3>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              Low / Out of Stock
+            </h3>
+            <button class="a-link-btn" data-goto="inventory">Manage →</button>
+          </div>
+          <div class="a-table-wrap">
+            <table class="a-table">
+              <thead>
+                <tr><th>Product</th><th>Category</th><th>Qty</th><th>Status</th></tr>
+              </thead>
+              <tbody id="lowStockBody">
+                <tr><td colspan="4" class="a-empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
+
       </div>
 
       <!-- Low Stock Alert -->
