@@ -697,10 +697,6 @@
           <h1 class="a-page-title">Hero Section</h1>
           <p class="a-page-sub">Edit the homepage hero heading, description, and banner image.</p>
         </div>
-        <button class="a-btn-primary" onclick="saveHeroSection()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Save Changes
-        </button>
       </div>
 
       <div class="cms-two-col">
@@ -747,7 +743,6 @@
             </div>
           </div>
 
-          <p id="heroSaveMsg" style="font-size:13px;min-height:18px;padding:0 2px;"></p>
         </div>
 
         <!-- RIGHT: Banner image -->
@@ -768,6 +763,13 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Upload New Image
           </button>
+          <div style="margin-top:16px;border-top:1px solid var(--border-soft);padding-top:16px;">
+            <button class="a-btn-primary" onclick="saveHeroSection()" style="width:100%;justify-content:center;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save Changes
+            </button>
+            <p id="heroSaveMsg" style="margin-top:10px;font-size:13px;min-height:18px;text-align:center;"></p>
+          </div>
         </div>
 
       </div>
