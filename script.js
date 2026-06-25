@@ -23,7 +23,7 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCalendar();
   setupFeaturedSliderButtons();
 
-  fetch("products.csv")
+  fetch("/products.csv")
     .then(response => response.text())
     .then(csvText => {
       allProducts = parseCSV(csvText);
@@ -174,9 +174,9 @@ function renderProducts(products) {
     const price = cleanPrice(product.price1) || cleanPrice(product.price);
 
     productsGrid.innerHTML += `
-      <div class="product-card" data-url="product.html?item=${encodeURIComponent(product.itemNumber)}">
+      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.itemNumber)}">
         <div class="product-image">
-          <img src="${product.image}" alt="${product.name}">
+          <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
         </div>
 
         <div class="product-content">
@@ -1124,10 +1124,10 @@ function showFeaturedProducts() {
     const price = cleanPrice(product.price);
 
     return `
-      <div class="product-card" data-url="product.html?item=${encodeURIComponent(product.itemNumber)}">
+      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.itemNumber)}">
 
         <div class="product-image">
-          <img src="${product.image}" alt="${product.name}">
+          <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
         </div>
 
         <h3>${product.name}</h3>
