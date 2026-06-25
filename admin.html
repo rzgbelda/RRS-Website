@@ -143,8 +143,8 @@
           <h1 class="a-page-title" id="dashGreeting">Good morning 👋</h1>
           <p class="a-page-sub">Here's what's happening with your store today.</p>
         </div>
-        <button class="a-btn-outline" onclick="renderDashboardTab()" style="gap:6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+        <button onclick="renderDashboardTab()" title="Refresh" class="dash-refresh-btn">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
           Refresh
         </button>
       </div>
@@ -205,6 +205,21 @@
 
       </div>
 
+      <!-- Trend Chart -->
+      <div class="a-card" style="margin-bottom:20px;">
+        <div class="a-card-header">
+          <h3>Sales Trend</h3>
+          <div class="dash-chart-tabs">
+            <button class="dash-chart-tab active" onclick="loadTrendChart('daily',this)">Daily</button>
+            <button class="dash-chart-tab" onclick="loadTrendChart('weekly',this)">Weekly</button>
+            <button class="dash-chart-tab" onclick="loadTrendChart('monthly',this)">Monthly</button>
+          </div>
+        </div>
+        <div style="position:relative;height:260px;padding:8px 0 0;">
+          <canvas id="trendChart"></canvas>
+        </div>
+      </div>
+
       <!-- Bottom two-col: Recent Orders + Low Stock -->
       <div class="dash-bottom-grid">
 
@@ -253,27 +268,6 @@
           </div>
         </div>
 
-      </div>
-
-      <!-- Low Stock Alert -->
-      <div class="a-card" id="lowStockCard">
-        <div class="a-card-header">
-          <h3>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            Low / Out of Stock
-          </h3>
-          <button class="a-link-btn" data-goto="inventory">Manage Inventory →</button>
-        </div>
-        <div class="a-table-wrap">
-          <table class="a-table">
-            <thead>
-              <tr><th>Product</th><th>Category</th><th>Stock Qty</th><th>Status</th></tr>
-            </thead>
-            <tbody id="lowStockBody">
-              <tr><td colspan="4" class="a-empty">All products in stock.</td></tr>
-            </tbody>
-          </table>
-        </div>
       </div>
 
     </div><!-- /dashboard tab -->
@@ -1191,7 +1185,8 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
-<script src="admin.js?v=9"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="admin.js?v=10"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');

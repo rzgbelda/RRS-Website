@@ -1336,3 +1336,52 @@ body.admin-body {
 @media (max-width: 600px) {
   .dash-welcome { flex-direction: column; align-items: flex-start; }
 }
+
+/* ─────────────────────────────────────────
+   DASHBOARD CHART & REFRESH
+───────────────────────────────────────── */
+.dash-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.dash-refresh-btn:hover {
+  background: var(--bg);
+  border-color: var(--navy);
+  color: var(--navy);
+}
+
+.dash-chart-tabs {
+  display: flex;
+  gap: 4px;
+}
+.dash-chart-tab {
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .15s;
+}
+.dash-chart-tab.active {
+  background: var(--navy);
+  color: #fff;
+  border-color: var(--navy);
+}
+.dash-chart-tab:not(.active):hover {
+  background: var(--bg);
+  border-color: #aaa;
+}

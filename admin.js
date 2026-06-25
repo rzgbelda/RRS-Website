@@ -153,6 +153,125 @@ async function renderDashboardTab() {
       <td>${i.stock_qty}</td>
       <td><span class="a-badge ${i.status === "out_of_stock" ? "a-badge-red" : "a-badge-yellow"}">${i.status === "out_of_stock" ? "Out of Stock" : "Low Stock"}</span></td>
     </tr>`).join("") || "<tr><td colspan='4' class='a-empty'>All products in stock.</td></tr>";
+
+  // Load trend chart defaulting to daily
+  loadTrendChart("daily");
+}
+
+/* ── Trend Chart ────────────────────────────────────────────── */
+let _trendChartInstance = null;
+
+async function loadTrendChart(mode, btnEl) {
+  // Update active tab button
+  document.querySelectorAll(".dash-chart-tab").forEach(b => b.classList.remove("active"));
+  if (btnEl) btnEl.classList.add("active");
+
+  const canvas = document.getElementById("trendChart");
+  if (!canvas) return;
+
+  const now = new Date();
+  let labels = [], revenueData = [], ordersData = [];
+
+  // Fetch all orders with created_at + total
+  const { data: orders } = await window.sb.from("orders").select("created_at, total");
+  const rows = orders || [];
+
+  if (mode === "daily") {
+    // Last 14 days
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      const key = d.toISOString().slice(0, 10);
+      labels.push(d.toLocaleDateString("en-US", { month:"short", day:"numeric" }));
+      const dayRows = rows.filter(o => o.created_at?.slice(0, 10) === key);
+      ordersData.push(dayRows.length);
+      revenueData.push(dayRows.reduce((s, o) => s + Number(o.total || 0), 0));
+    }
+  } else if (mode === "weekly") {
+    // Last 8 weeks
+    for (let i = 7; i >= 0; i--) {
+      const wStart = new Date(now); wStart.setDate(wStart.getDate() - i * 7 - wStart.getDay());
+      const wEnd   = new Date(wStart); wEnd.setDate(wEnd.getDate() + 6);
+      labels.push("Wk " + wStart.toLocaleDateString("en-US", { month:"short", day:"numeric" }));
+      const wRows = rows.filter(o => {
+        const d = new Date(o.created_at); return d >= wStart && d <= wEnd;
+      });
+      ordersData.push(wRows.length);
+      revenueData.push(wRows.reduce((s, o) => s + Number(o.total || 0), 0));
+    }
+  } else {
+    // Last 12 months
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = d.toISOString().slice(0, 7);
+      labels.push(d.toLocaleDateString("en-US", { month:"short", year:"2-digit" }));
+      const mRows = rows.filter(o => o.created_at?.slice(0, 7) === key);
+      ordersData.push(mRows.length);
+      revenueData.push(mRows.reduce((s, o) => s + Number(o.total || 0), 0));
+    }
+  }
+
+  if (_trendChartInstance) _trendChartInstance.destroy();
+
+  _trendChartInstance = new Chart(canvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Revenue ($)",
+          data: revenueData,
+          borderColor: "#ED7226",
+          backgroundColor: "rgba(237,114,38,0.08)",
+          borderWidth: 2.5,
+          pointRadius: 4,
+          pointBackgroundColor: "#ED7226",
+          tension: 0.4,
+          fill: true,
+          yAxisID: "yRevenue",
+        },
+        {
+          label: "Orders",
+          data: ordersData,
+          borderColor: "#1565c0",
+          backgroundColor: "rgba(21,101,192,0.07)",
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: "#1565c0",
+          tension: 0.4,
+          fill: true,
+          yAxisID: "yOrders",
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { position: "top", labels: { font: { size: 12 }, usePointStyle: true, padding: 20 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ctx.dataset.yAxisID === "yRevenue"
+              ? " $" + Number(ctx.parsed.y).toFixed(2)
+              : " " + ctx.parsed.y + " orders"
+          }
+        }
+      },
+      scales: {
+        x: { grid: { color: "rgba(0,0,0,0.04)" }, ticks: { font: { size: 11 }, color: "#8899aa" } },
+        yRevenue: {
+          position: "left",
+          grid: { color: "rgba(0,0,0,0.05)" },
+          ticks: { font: { size: 11 }, color: "#ED7226", callback: v => "$" + v },
+        },
+        yOrders: {
+          position: "right",
+          grid: { drawOnChartArea: false },
+          ticks: { font: { size: 11 }, color: "#1565c0", stepSize: 1 },
+        }
+      }
+    }
+  });
 }
 
 /* ── Products ──────────────────────────────────────────────── */
