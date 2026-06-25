@@ -72,31 +72,31 @@
   </div>
 
   <header class="navbar">
-    <a href="index.html" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
+    <a href="/" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
     <nav class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="catalog.html">Catalog</a>
-      <a href="index.html#how-it-works">How it Works</a>
-      <a href="index.html#reorder-header">Reorder Program</a>
-      <a href="index.html#business-pricing">Business Pricing</a>
-      <a href="index.html#about-us">About Us</a>
-      <a href="index.html#about-us">Contact</a>
+      <a href="/">Home</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/#how-it-works">How it Works</a>
+      <a href="/#reorder-header">Reorder Program</a>
+      <a href="/#business-pricing">Business Pricing</a>
+      <a href="/#about-us">About Us</a>
+      <a href="/#about-us">Contact</a>
     </nav>
     <div class="nav-icons">
-      <a href="catalog.html"><img src="hl1.svg" alt="Search"></a>
-      <a href="login.html" class="guest-only login-nav-btn">Login</a>
+      <a href="/catalog"><img src="hl1.svg" alt="Search"></a>
+      <a href="/login" class="guest-only login-nav-btn">Login</a>
       <div class="logged-in-only account-dropdown">
         <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
         <div class="dropdown-menu">
-          <a href="account.html">My Account</a>
-          <a href="account.html#orders">Order History</a>
-          <a href="wishlist.html">Wishlist</a>
+          <a href="/account">My Account</a>
+          <a href="/account#orders">Order History</a>
+          <a href="/wishlist">Wishlist</a>
           <div class="dropdown-divider"></div>
           <button id="logout-btn">Logout</button>
         </div>
       </div>
       <div class="cart-container">
-        <a href="cart.html"><img src="hl3.svg" alt="Cart"></a>
+        <a href="/cart"><img src="hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
       <!-- Mobile Nav Toggle -->
@@ -173,7 +173,7 @@
         <h2>My Wishlist</h2>
         <p style="color:#666;margin-bottom:16px">Items you've saved for later.</p>
         <div id="accountWishlist"><div class="loading-state">Loading wishlist…</div></div>
-        <p><a href="wishlist.html" style="color:#ED7226;font-weight:600">View full wishlist →</a></p>
+        <p><a href="/wishlist" style="color:#ED7226;font-weight:600">View full wishlist →</a></p>
       </div>
 
       <!-- SECURITY -->
@@ -203,7 +203,7 @@
   <div id="notLoggedIn" style="display:none;text-align:center;padding:80px 24px">
     <h2 style="color:#0b2d52">Please sign in to view your account</h2>
     <p style="color:#666;margin:12px 0 24px">You need to be logged in to access your account page.</p>
-    <a href="login.html" class="acc-btn" style="display:inline-block;text-decoration:none">Sign In</a>
+    <a href="/login" class="acc-btn" style="display:inline-block;text-decoration:none">Sign In</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -294,7 +294,7 @@
         .eq("user_id", userId)
         .order("created_at", { ascending: false });
       if (error || !orders?.length) {
-        list.innerHTML = `<div class="empty-state"><p>No orders yet. <a href="catalog.html" style="color:#ED7226">Start shopping!</a></p></div>`;
+        list.innerHTML = `<div class="empty-state"><p>No orders yet. <a href="/catalog" style="color:#ED7226">Start shopping!</a></p></div>`;
         return;
       }
       list.innerHTML = orders.map(o => `

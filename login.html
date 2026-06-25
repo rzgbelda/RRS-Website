@@ -17,17 +17,17 @@
   </div>
 
     <header class="navbar">
-    <a href="index.html" class="logo">
+    <a href="/" class="logo">
       <img src="RR logo.png" alt="Room Ready Supply Logo" />
     </a>
 
     <nav class="nav-links">
-      <a href="index.html">Home</a>
-      <a href="catalog.html">Catalog</a>
-      <a href="index.html#how-it-works">How it Works</a>
-      <a href="index.html#reorder-header">Reorder Program</a>
-      <a href="index.html#business-pricing">Business Pricing</a>
-      <a href="index.html#about-us">About Us</a>
+      <a href="/">Home</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/#how-it-works">How it Works</a>
+      <a href="/#reorder-header">Reorder Program</a>
+      <a href="/#business-pricing">Business Pricing</a>
+      <a href="/#about-us">About Us</a>
       <a href="#" onclick="openContactModal();return false;">Contact</a>
     </nav>
     <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
@@ -35,14 +35,14 @@
     </button>
     </header>
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-    <a href="index.html">Home</a>
-    <a href="catalog.html">Catalog</a>
-    <a href="index.html#how-it-works">How it Works</a>
-    <a href="index.html#reorder-header">Reorder Program</a>
-    <a href="index.html#business-pricing">Business Pricing</a>
-    <a href="index.html#about-us">About Us</a>
+    <a href="/">Home</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/#how-it-works">How it Works</a>
+    <a href="/#reorder-header">Reorder Program</a>
+    <a href="/#business-pricing">Business Pricing</a>
+    <a href="/#about-us">About Us</a>
     <a href="#" onclick="openContactModal();return false;">Contact</a>
-    <a href="cart.html">🛒 My Cart</a>
+    <a href="/cart">🛒 My Cart</a>
   </nav>
 
     <section class="login-section">
@@ -268,7 +268,7 @@
     msg.style.color = "#888"; msg.textContent = "Sending…";
 
     const { error } = await window.sb.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/login.html"
+      redirectTo: window.location.origin + "/login"
     });
 
     if (error) {
@@ -318,7 +318,7 @@
       msg.style.color="#22c55e";
       msg.textContent="✓ Password updated! Redirecting to login…";
       await window.sb.auth.signOut();
-      setTimeout(() => window.location.href = "login.html", 2000);
+      setTimeout(() => window.location.href = "/login", 2000);
     }
   }
 </script>

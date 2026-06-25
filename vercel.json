@@ -1,22 +1,17 @@
 {
-  "version": 2,
-  "builds": [
-    {
-      "src": "**/*",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    { "src": "/",               "dest": "/index.html" },
-    { "src": "/catalog",        "dest": "/catalog.html" },
-    { "src": "/cart",           "dest": "/cart.html" },
-    { "src": "/login",          "dest": "/login.html" },
-    { "src": "/checkout",       "dest": "/checkout.html" },
-    { "src": "/product",        "dest": "/product.html" },
-    { "src": "/admin",          "dest": "/admin.html" },
-    { "src": "/account",        "dest": "/account.html" },
-    { "src": "/wishlist",       "dest": "/wishlist.html" },
-    { "src": "/reset-password", "dest": "/reset-password.html" },
-    { "src": "/(.*)",           "dest": "/$1" }
+  "cleanUrls": true,
+  "rewrites": [
+    { "source": "/",               "destination": "/index.html" },
+    { "source": "/catalog",        "destination": "/catalog.html" },
+    { "source": "/product",        "destination": "/product.html" },
+    { "source": "/cart",           "destination": "/cart.html" },
+    { "source": "/checkout",       "destination": "/checkout.html" },
+    { "source": "/login",          "destination": "/login.html" },
+    { "source": "/profile",        "destination": "/profile.html" },
+    { "source": "/payment",        "destination": "/payment.html" },
+    { "source": "/admin",          "destination": "/admin.html" },
+    { "source": "/account",        "destination": "/account.html" },
+    { "source": "/wishlist",       "destination": "/wishlist.html" },
+    { "source": "/reset-password", "destination": "/reset-password.html" }
   ]
 }

@@ -932,7 +932,7 @@ function setupLogin() {
           localStorage.setItem("loggedIn", "true");
           updateLoginUI();
           updateCartBadge();
-          window.location.href = "index.html";
+          window.location.href = "/";
         }
       } else {
         // Fallback (no Supabase loaded)
@@ -940,7 +940,7 @@ function setupLogin() {
           localStorage.setItem("loggedIn", "true");
           updateLoginUI();
           updateCartBadge();
-          window.location.href = "index.html";
+          window.location.href = "/";
         } else {
           alert("Invalid email or password");
         }
@@ -955,7 +955,7 @@ function setupLogin() {
       localStorage.removeItem("loggedIn");
       updateLoginUI();
       updateCartBadge();
-      window.location.href = "login.html";
+      window.location.href = "/login";
     });
   }
 }
@@ -1430,7 +1430,7 @@ function setupProfilePage() {
   if (logoutProfileBtn) {
     logoutProfileBtn.addEventListener("click", () => {
       localStorage.removeItem("loggedIn");
-      window.location.href = "login.html";
+      window.location.href = "/login";
     });
   }
 }
