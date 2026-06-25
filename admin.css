@@ -1176,3 +1176,49 @@ body.admin-body {
 
 /* Dashboard heading */
 .dashboard-title { font-size: clamp(18px, 2vw + 0.4rem, 28px); }
+
+/* ─────────────────────────────────────────
+   CMS PAGES (Hero / About)
+───────────────────────────────────────── */
+.cms-two-col {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  align-items: start;
+}
+
+.a-card-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.a-card-section-title svg {
+  color: var(--orange);
+  flex-shrink: 0;
+}
+
+.a-label-hint {
+  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.a-form-group {
+  margin-bottom: 16px;
+}
+.a-form-group:last-child { margin-bottom: 0; }
+
+@media (max-width: 900px) {
+  .cms-two-col {
+    grid-template-columns: 1fr;
+  }
+}

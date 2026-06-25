@@ -697,38 +697,79 @@
           <h1 class="a-page-title">Hero Section</h1>
           <p class="a-page-sub">Edit the homepage hero heading, description, and banner image.</p>
         </div>
-        <button class="a-btn-primary" onclick="saveHeroSection()">💾 Save Changes</button>
+        <button class="a-btn-primary" onclick="saveHeroSection()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
       </div>
 
-      <div class="a-card" style="max-width:800px">
-        <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Hero Content</h3>
+      <div class="cms-two-col">
 
-        <label class="a-label">Main Heading (use | for line breaks)</label>
-        <input id="heroHeading" class="a-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies" style="margin-bottom:14px;">
+        <!-- LEFT: Text fields -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
 
-        <label class="a-label">Highlight Text (orange line)</label>
-        <input id="heroHighlight" class="a-input" placeholder="Without Chasing Supplies" style="margin-bottom:14px;">
+          <div class="a-card" style="padding:24px">
+            <div class="a-card-section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Heading & Copy
+            </div>
 
-        <label class="a-label">Description Paragraph</label>
-        <textarea id="heroDescription" class="a-input" rows="4" placeholder="Room Ready Supply helps hotels..." style="resize:vertical;margin-bottom:14px;"></textarea>
+            <div class="a-form-group">
+              <label class="a-label">Main Heading <span class="a-label-hint">use | for line breaks</span></label>
+              <input id="heroHeading" class="a-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies">
+            </div>
 
-        <label class="a-label">Primary Button Label</label>
-        <input id="heroBtnPrimary" class="a-input" placeholder="Shop Catalog" style="margin-bottom:14px;">
+            <div class="a-form-group">
+              <label class="a-label">Highlight Text <span class="a-label-hint">the orange-coloured line</span></label>
+              <input id="heroHighlight" class="a-input" placeholder="Without Chasing Supplies">
+            </div>
 
-        <label class="a-label">Secondary Button Label</label>
-        <input id="heroBtnSecondary" class="a-input" placeholder="Request Business Pricing" style="margin-bottom:24px;">
+            <div class="a-form-group">
+              <label class="a-label">Description</label>
+              <textarea id="heroDescription" class="a-input" rows="4" placeholder="Room Ready Supply helps hotels, motels…" style="resize:vertical;"></textarea>
+            </div>
+          </div>
 
-        <hr style="border:none;border-top:1px solid #eee;margin-bottom:24px;">
+          <div class="a-card" style="padding:24px">
+            <div class="a-card-section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Call-to-Action Buttons
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div class="a-form-group" style="margin:0">
+                <label class="a-label">Primary Button</label>
+                <input id="heroBtnPrimary" class="a-input" placeholder="Shop Catalog">
+              </div>
+              <div class="a-form-group" style="margin:0">
+                <label class="a-label">Secondary Button</label>
+                <input id="heroBtnSecondary" class="a-input" placeholder="Request Business Pricing">
+              </div>
+            </div>
+          </div>
 
-        <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Hero Banner Image</h3>
-        <div id="heroBannerPreview" style="margin-bottom:12px;border-radius:10px;overflow:hidden;max-height:220px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-          <img id="heroBannerImg" src="banner1.png" alt="Hero Banner" style="width:100%;object-fit:cover;max-height:220px;">
+          <p id="heroSaveMsg" style="font-size:13px;min-height:18px;padding:0 2px;"></p>
         </div>
-        <label class="a-label">Banner Image URL (or upload below)</label>
-        <input id="heroBannerUrl" class="a-input" placeholder="banner1.png" style="margin-bottom:10px;" oninput="document.getElementById('heroBannerImg').src=this.value">
-        <input type="file" id="heroBannerFile" accept="image/*" style="display:none" onchange="previewHeroBanner(this)">
-        <button class="a-btn-secondary" onclick="document.getElementById('heroBannerFile').click()">📁 Upload New Image</button>
-        <p id="heroSaveMsg" style="margin-top:14px;font-size:13px;min-height:18px;"></p>
+
+        <!-- RIGHT: Banner image -->
+        <div class="a-card" style="padding:24px;align-self:start;">
+          <div class="a-card-section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Hero Banner Image
+          </div>
+          <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:16/9;">
+            <img id="heroBannerImg" src="banner1.png" alt="Hero Banner" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </div>
+          <div class="a-form-group">
+            <label class="a-label">Image URL</label>
+            <input id="heroBannerUrl" class="a-input" placeholder="banner1.png" oninput="document.getElementById('heroBannerImg').src=this.value||'banner1.png'">
+          </div>
+          <input type="file" id="heroBannerFile" accept="image/*" style="display:none" onchange="previewHeroBanner(this)">
+          <button class="a-btn-outline" onclick="document.getElementById('heroBannerFile').click()" style="width:100%;justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload New Image
+          </button>
+        </div>
+
       </div>
     </div><!-- /hero tab -->
 
@@ -739,51 +780,80 @@
           <h1 class="a-page-title">About Section</h1>
           <p class="a-page-sub">Edit the About Us section displayed on the homepage.</p>
         </div>
-        <button class="a-btn-primary" onclick="saveAboutSection()">💾 Save Changes</button>
+        <button class="a-btn-primary" onclick="saveAboutSection()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Changes
+        </button>
       </div>
 
-      <div style="display:grid;gap:20px;max-width:900px;">
-        <!-- Text content -->
-        <div class="a-card">
-          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Text Content</h3>
+      <div class="cms-two-col">
 
-          <label class="a-label">Section Tag (small label above title)</label>
-          <input id="aboutTag" class="a-input" placeholder="ABOUT US" style="margin-bottom:14px;">
+        <!-- LEFT: Text fields -->
+        <div style="display:flex;flex-direction:column;gap:20px;">
 
-          <label class="a-label">Main Title</label>
-          <input id="aboutTitle" class="a-input" placeholder="We Help Operators Stay Ready" style="margin-bottom:14px;">
+          <div class="a-card" style="padding:24px">
+            <div class="a-card-section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Text Content
+            </div>
 
-          <label class="a-label">Paragraph 1</label>
-          <textarea id="aboutP1" class="a-input" rows="3" style="resize:vertical;margin-bottom:14px;" placeholder="Keeping rooms, rentals..."></textarea>
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:14px;">
+              <div class="a-form-group" style="margin:0">
+                <label class="a-label">Section Tag</label>
+                <input id="aboutTag" class="a-input" placeholder="ABOUT US">
+              </div>
+              <div class="a-form-group" style="margin:0">
+                <label class="a-label">Main Title</label>
+                <input id="aboutTitle" class="a-input" placeholder="We Help Operators Stay Ready">
+              </div>
+            </div>
 
-          <label class="a-label">Paragraph 2</label>
-          <textarea id="aboutP2" class="a-input" rows="4" style="resize:vertical;margin-bottom:14px;" placeholder="Room Ready Supply provides..."></textarea>
+            <div class="a-form-group">
+              <label class="a-label">Paragraph 1</label>
+              <textarea id="aboutP1" class="a-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens…"></textarea>
+            </div>
+            <div class="a-form-group">
+              <label class="a-label">Paragraph 2</label>
+              <textarea id="aboutP2" class="a-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides…"></textarea>
+            </div>
+            <div class="a-form-group" style="margin-bottom:0">
+              <label class="a-label">Paragraph 3</label>
+              <textarea id="aboutP3" class="a-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple…"></textarea>
+            </div>
+          </div>
 
-          <label class="a-label">Paragraph 3</label>
-          <textarea id="aboutP3" class="a-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple..."></textarea>
+          <!-- Feature cards -->
+          <div class="a-card" style="padding:24px">
+            <div class="a-card-section-title">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              Feature Cards
+            </div>
+            <div id="aboutFeatures" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+
+          <p id="aboutSaveMsg" style="font-size:13px;min-height:18px;padding:0 2px;"></p>
         </div>
 
-        <!-- Image -->
-        <div class="a-card">
-          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">About Image</h3>
-          <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;max-height:200px;background:#f5f5f5;">
-            <img id="aboutBannerImg" src="banner3.png" alt="About" style="width:100%;object-fit:cover;max-height:200px;">
+        <!-- RIGHT: Image -->
+        <div class="a-card" style="padding:24px;align-self:start;">
+          <div class="a-card-section-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            About Image
           </div>
-          <label class="a-label">Image URL</label>
-          <input id="aboutBannerUrl" class="a-input" placeholder="banner3.png" style="margin-bottom:10px;" oninput="document.getElementById('aboutBannerImg').src=this.value">
+          <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:4/3;">
+            <img id="aboutBannerImg" src="banner3.png" alt="About" style="width:100%;height:100%;object-fit:cover;display:block;">
+          </div>
+          <div class="a-form-group">
+            <label class="a-label">Image URL</label>
+            <input id="aboutBannerUrl" class="a-input" placeholder="banner3.png" oninput="document.getElementById('aboutBannerImg').src=this.value||'banner3.png'">
+          </div>
           <input type="file" id="aboutBannerFile" accept="image/*" style="display:none" onchange="previewAboutBanner(this)">
-          <button class="a-btn-secondary" onclick="document.getElementById('aboutBannerFile').click()">📁 Upload New Image</button>
+          <button class="a-btn-outline" onclick="document.getElementById('aboutBannerFile').click()" style="width:100%;justify-content:center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Upload New Image
+          </button>
         </div>
 
-        <!-- Feature cards -->
-        <div class="a-card">
-          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Feature Cards</h3>
-          <div id="aboutFeatures" style="display:grid;gap:14px;">
-            <!-- rendered by JS -->
-          </div>
-        </div>
-
-        <p id="aboutSaveMsg" style="font-size:13px;min-height:18px;padding:0 4px;"></p>
       </div>
     </div><!-- /about tab -->
 
