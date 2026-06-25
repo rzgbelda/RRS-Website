@@ -830,10 +830,6 @@
           <h1 class="a-page-title">About Section</h1>
           <p class="a-page-sub">Edit the About Us section displayed on the homepage.</p>
         </div>
-        <button class="a-btn-primary" onclick="saveAboutSection()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-          Save Changes
-        </button>
       </div>
 
       <div class="cms-two-col">
@@ -841,7 +837,7 @@
         <!-- LEFT: Text fields -->
         <div style="display:flex;flex-direction:column;gap:20px;">
 
-          <div class="a-card" style="padding:24px">
+          <div class="a-card" style="padding:32px">
             <div class="a-card-section-title">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
               Text Content
@@ -873,7 +869,7 @@
           </div>
 
           <!-- Feature cards -->
-          <div class="a-card" style="padding:24px">
+          <div class="a-card" style="padding:32px">
             <div class="a-card-section-title">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               Feature Cards
@@ -881,11 +877,10 @@
             <div id="aboutFeatures" style="display:flex;flex-direction:column;gap:10px;"></div>
           </div>
 
-          <p id="aboutSaveMsg" style="font-size:13px;min-height:18px;padding:0 2px;"></p>
         </div>
 
-        <!-- RIGHT: Image -->
-        <div class="a-card" style="padding:24px;align-self:start;">
+        <!-- RIGHT: Image + Save -->
+        <div class="a-card" style="padding:32px;align-self:start;">
           <div class="a-card-section-title">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             About Image
@@ -902,6 +897,13 @@
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
             Upload New Image
           </button>
+          <div style="margin-top:16px;border-top:1px solid var(--border-soft);padding-top:16px;">
+            <button class="a-btn-primary" onclick="saveAboutSection()" style="width:100%;justify-content:center;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save Changes
+            </button>
+            <p id="aboutSaveMsg" style="margin-top:10px;font-size:13px;min-height:18px;text-align:center;"></p>
+          </div>
         </div>
 
       </div>
