@@ -172,41 +172,43 @@ async function loadTrendChart(mode, btnEl) {
   const now = new Date();
   let labels = [], revenueData = [], ordersData = [];
 
-  // Fetch all orders with created_at + total
-  const { data: orders } = await window.sb.from("orders").select("created_at, total");
+  // Fetch all orders with created_at, total, and status
+  const { data: orders } = await window.sb.from("orders").select("created_at, total, status");
   const rows = orders || [];
+  let cancelledData = [];
 
   if (mode === "daily") {
-    // Last 14 days
     for (let i = 13; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
       const key = d.toISOString().slice(0, 10);
       labels.push(d.toLocaleDateString("en-US", { month:"short", day:"numeric" }));
       const dayRows = rows.filter(o => o.created_at?.slice(0, 10) === key);
-      ordersData.push(dayRows.length);
-      revenueData.push(dayRows.reduce((s, o) => s + Number(o.total || 0), 0));
+      const active  = dayRows.filter(o => o.status !== "cancelled");
+      ordersData.push(active.length);
+      revenueData.push(active.reduce((s, o) => s + Number(o.total || 0), 0));
+      cancelledData.push(dayRows.filter(o => o.status === "cancelled").length);
     }
   } else if (mode === "weekly") {
-    // Last 8 weeks
     for (let i = 7; i >= 0; i--) {
       const wStart = new Date(now); wStart.setDate(wStart.getDate() - i * 7 - wStart.getDay());
       const wEnd   = new Date(wStart); wEnd.setDate(wEnd.getDate() + 6);
       labels.push("Wk " + wStart.toLocaleDateString("en-US", { month:"short", day:"numeric" }));
-      const wRows = rows.filter(o => {
-        const d = new Date(o.created_at); return d >= wStart && d <= wEnd;
-      });
-      ordersData.push(wRows.length);
-      revenueData.push(wRows.reduce((s, o) => s + Number(o.total || 0), 0));
+      const wRows  = rows.filter(o => { const d = new Date(o.created_at); return d >= wStart && d <= wEnd; });
+      const active = wRows.filter(o => o.status !== "cancelled");
+      ordersData.push(active.length);
+      revenueData.push(active.reduce((s, o) => s + Number(o.total || 0), 0));
+      cancelledData.push(wRows.filter(o => o.status === "cancelled").length);
     }
   } else {
-    // Last 12 months
     for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const d   = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const key = d.toISOString().slice(0, 7);
       labels.push(d.toLocaleDateString("en-US", { month:"short", year:"2-digit" }));
-      const mRows = rows.filter(o => o.created_at?.slice(0, 7) === key);
-      ordersData.push(mRows.length);
-      revenueData.push(mRows.reduce((s, o) => s + Number(o.total || 0), 0));
+      const mRows  = rows.filter(o => o.created_at?.slice(0, 7) === key);
+      const active = mRows.filter(o => o.status !== "cancelled");
+      ordersData.push(active.length);
+      revenueData.push(active.reduce((s, o) => s + Number(o.total || 0), 0));
+      cancelledData.push(mRows.filter(o => o.status === "cancelled").length);
     }
   }
 
@@ -233,10 +235,23 @@ async function loadTrendChart(mode, btnEl) {
           label: "Orders",
           data: ordersData,
           borderColor: "#1565c0",
-          backgroundColor: "rgba(21,101,192,0.07)",
+          backgroundColor: "rgba(21,101,192,0.06)",
           borderWidth: 2,
           pointRadius: 4,
           pointBackgroundColor: "#1565c0",
+          tension: 0.4,
+          fill: true,
+          yAxisID: "yOrders",
+        },
+        {
+          label: "Cancelled",
+          data: cancelledData,
+          borderColor: "#ef4444",
+          backgroundColor: "rgba(239,68,68,0.07)",
+          borderWidth: 2,
+          borderDash: [5, 4],
+          pointRadius: 4,
+          pointBackgroundColor: "#ef4444",
           tension: 0.4,
           fill: true,
           yAxisID: "yOrders",
@@ -252,8 +267,10 @@ async function loadTrendChart(mode, btnEl) {
         tooltip: {
           callbacks: {
             label: ctx => ctx.dataset.yAxisID === "yRevenue"
-              ? " $" + Number(ctx.parsed.y).toFixed(2)
-              : " " + ctx.parsed.y + " orders"
+              ? " Revenue: $" + Number(ctx.parsed.y).toFixed(2)
+              : ctx.dataset.label === "Cancelled"
+                ? " Cancelled: " + ctx.parsed.y
+                : " Orders: " + ctx.parsed.y
           }
         }
       },
@@ -267,7 +284,7 @@ async function loadTrendChart(mode, btnEl) {
         yOrders: {
           position: "right",
           grid: { drawOnChartArea: false },
-          ticks: { font: { size: 11 }, color: "#1565c0", stepSize: 1 },
+          ticks: { font: { size: 11 }, color: "#64748b", stepSize: 1 },
         }
       }
     }
