@@ -1270,3 +1270,26 @@ body.admin-body {
   .cms-btn-row { flex-direction: column; }
   .cms-btn-row > * { flex: 1 1 100% !important; }
 }
+
+/* CMS card breathing room */
+#tab-manage-hero .a-card,
+#tab-manage-about .a-card {
+  padding: 32px !important;
+}
+#tab-manage-hero .a-card-section-title,
+#tab-manage-about .a-card-section-title {
+  margin-bottom: 28px;
+  padding-bottom: 16px;
+}
+#tab-manage-hero .cms-form-group,
+#tab-manage-about .cms-form-group {
+  margin-bottom: 22px;
+}
+#tab-manage-hero .cms-btn-row,
+#tab-manage-about .cms-btn-row {
+  margin-bottom: 22px;
+}
+#tab-manage-hero .cms-two-col,
+#tab-manage-about .cms-two-col {
+  gap: 24px;
+}
