@@ -77,14 +77,17 @@ function switchTab(tab) {
   });
   document.getElementById("adminPageTitle").textContent =
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
-      orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings" }[tab] || tab;
+      orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
+      "manage-hero":"Hero Section", "manage-about":"About Section" }[tab] || tab;
 
-  if (tab === "dashboard")  renderDashboardTab();
-  if (tab === "products")   renderProductsTable();
-  if (tab === "inventory")  renderInventoryTable();
-  if (tab === "orders")     renderOrdersTable();
-  if (tab === "users")      renderUsersTable();
-  if (tab === "reports")    renderReportsTab();
+  if (tab === "dashboard")     renderDashboardTab();
+  if (tab === "products")      renderProductsTable();
+  if (tab === "inventory")     renderInventoryTable();
+  if (tab === "orders")        renderOrdersTable();
+  if (tab === "users")         renderUsersTable();
+  if (tab === "reports")       renderReportsTab();
+  if (tab === "manage-hero")   loadHeroSection();
+  if (tab === "manage-about")  loadAboutSection();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -1200,3 +1203,147 @@ function badgeClass(status) {
   return m[status] || "a-badge-gray";
 }
 
+
+/* ═══════════════════════════════════════════════════════════
+   HERO SECTION MANAGEMENT
+═══════════════════════════════════════════════════════════ */
+
+async function loadHeroSection() {
+  const { data } = await window.sb.from("site_content").select("*").eq("section", "hero").single();
+  if (!data) return;
+  const c = data.content || {};
+  setVal("heroHeading",      c.heading      || "Keep Your|Rooms Ready|Without Chasing Supplies");
+  setVal("heroHighlight",    c.highlight    || "Without Chasing Supplies");
+  setVal("heroDescription",  c.description  || "");
+  setVal("heroBtnPrimary",   c.btnPrimary   || "Shop Catalog");
+  setVal("heroBtnSecondary", c.btnSecondary || "Request Business Pricing");
+  setVal("heroBannerUrl",    c.bannerUrl    || "banner1.png");
+  const img = document.getElementById("heroBannerImg");
+  if (img && c.bannerUrl) img.src = c.bannerUrl;
+}
+
+async function saveHeroSection() {
+  const msg = document.getElementById("heroSaveMsg");
+  msg.style.color = "#888"; msg.textContent = "Saving…";
+
+  const content = {
+    heading:      document.getElementById("heroHeading").value.trim(),
+    highlight:    document.getElementById("heroHighlight").value.trim(),
+    description:  document.getElementById("heroDescription").value.trim(),
+    btnPrimary:   document.getElementById("heroBtnPrimary").value.trim(),
+    btnSecondary: document.getElementById("heroBtnSecondary").value.trim(),
+    bannerUrl:    document.getElementById("heroBannerUrl").value.trim(),
+  };
+
+  const { error } = await window.sb.from("site_content").upsert(
+    { section: "hero", content },
+    { onConflict: "section" }
+  );
+
+  if (error) {
+    msg.style.color = "#ef4444"; msg.textContent = "Error: " + error.message;
+  } else {
+    msg.style.color = "#22c55e"; msg.textContent = "✓ Hero section saved!";
+    showToast("Hero section updated");
+    setTimeout(() => { msg.textContent = ""; }, 3000);
+  }
+}
+
+function previewHeroBanner(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById("heroBannerImg").src = e.target.result;
+    document.getElementById("heroBannerUrl").value = file.name;
+    showToast("Image previewed — save to apply");
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   ABOUT SECTION MANAGEMENT
+═══════════════════════════════════════════════════════════ */
+
+const _defaultAboutFeatures = [
+  { icon: "au1.svg", title: "Everyday Essentials",      desc: "Quality products for hospitality, rentals, cleaning teams, restaurants, and facilities." },
+  { icon: "au2.svg", title: "Simple Business Ordering", desc: "Everyday essentials and simple ordering support for repeat buyers." },
+  { icon: "au3.svg", title: "Reorder Made Easy",        desc: "Set reorder reminders or recurring schedules with approval before processing." },
+];
+
+let _aboutFeatures = JSON.parse(JSON.stringify(_defaultAboutFeatures));
+
+async function loadAboutSection() {
+  const { data } = await window.sb.from("site_content").select("*").eq("section", "about").single();
+  if (data) {
+    const c = data.content || {};
+    setVal("aboutTag",       c.tag       || "ABOUT US");
+    setVal("aboutTitle",     c.title     || "We Help Operators Stay Ready");
+    setVal("aboutP1",        c.p1        || "");
+    setVal("aboutP2",        c.p2        || "");
+    setVal("aboutP3",        c.p3        || "");
+    setVal("aboutBannerUrl", c.bannerUrl || "banner3.png");
+    const img = document.getElementById("aboutBannerImg");
+    if (img && c.bannerUrl) img.src = c.bannerUrl;
+    if (c.features) _aboutFeatures = c.features;
+  }
+  renderAboutFeatures();
+}
+
+function renderAboutFeatures() {
+  const container = document.getElementById("aboutFeatures");
+  if (!container) return;
+  container.innerHTML = _aboutFeatures.map((f, i) => `
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;background:#f9fafb;border-radius:8px;padding:12px 14px;">
+      <input class="a-input" placeholder="Feature title" value="${escHtml(f.title)}"
+        oninput="_aboutFeatures[${i}].title=this.value" style="margin:0">
+      <input class="a-input" placeholder="Short description" value="${escHtml(f.desc)}"
+        oninput="_aboutFeatures[${i}].desc=this.value" style="margin:0">
+      <button onclick="_aboutFeatures.splice(${i},1);renderAboutFeatures()"
+        style="background:#fee2e2;color:#ef4444;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;">✕</button>
+    </div>
+  `).join("") + `
+    <button onclick="_aboutFeatures.push({icon:'au1.svg',title:'',desc:''});renderAboutFeatures()"
+      style="margin-top:4px;padding:8px 16px;background:#f0f7ff;color:#1a4a8a;border:1.5px dashed #1a4a8a;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">+ Add Feature</button>
+  `;
+}
+
+async function saveAboutSection() {
+  const msg = document.getElementById("aboutSaveMsg");
+  msg.style.color = "#888"; msg.textContent = "Saving…";
+
+  const content = {
+    tag:       document.getElementById("aboutTag").value.trim(),
+    title:     document.getElementById("aboutTitle").value.trim(),
+    p1:        document.getElementById("aboutP1").value.trim(),
+    p2:        document.getElementById("aboutP2").value.trim(),
+    p3:        document.getElementById("aboutP3").value.trim(),
+    bannerUrl: document.getElementById("aboutBannerUrl").value.trim(),
+    features:  _aboutFeatures,
+  };
+
+  const { error } = await window.sb.from("site_content").upsert(
+    { section: "about", content },
+    { onConflict: "section" }
+  );
+
+  if (error) {
+    msg.style.color = "#ef4444"; msg.textContent = "Error: " + error.message;
+  } else {
+    msg.style.color = "#22c55e"; msg.textContent = "✓ About section saved!";
+    showToast("About section updated");
+    setTimeout(() => { msg.textContent = ""; }, 3000);
+  }
+}
+
+function previewAboutBanner(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById("aboutBannerImg").src = e.target.result;
+    document.getElementById("aboutBannerUrl").value = file.name;
+    showToast("Image previewed — save to apply");
+  };
+  reader.readAsDataURL(file);
+}

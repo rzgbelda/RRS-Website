@@ -79,25 +79,25 @@
 
   <main class="hero">
     <section class="hero-content">
-      <h1>
+      <h1 id="heroHeadingEl">
         Keep Your<br />
         Rooms Ready<br />
         <span>Without Chasing Supplies</span>
       </h1>
 
-      <p>
+      <p id="heroDescEl">
         Room Ready Supply helps hotels, motels, short-term rentals,
         cleaning companies, and facilities order the everyday supplies
         they need with simple pricing, easy reordering, and local support.
       </p>
 
       <div class="hero-buttons">
-        <a href="catalog.html" class="btn btn-primary">
+        <a href="catalog.html" class="btn btn-primary" id="heroBtnPrimaryEl">
           <img src="Cart.png" alt="" />
           Shop Catalog
         </a>
 
-        <a href="#business-pricing" class="btn btn-outline">
+        <a href="#business-pricing" class="btn btn-outline" id="heroBtnSecondaryEl">
           <img src="file-list-3-line.svg" alt="" />
           Request Business Pricing
         </a>
@@ -105,7 +105,7 @@
     </section>
 
     <section class="hero-image">
-      <img src="banner1.png" alt="Hotel supply cart in room" />
+      <img src="banner1.png" alt="Hero banner" id="heroBannerEl" />
     </section>
   </main>
   <section class="supply-section">
@@ -382,63 +382,54 @@
 <section class="about-section" id="about-us">
   <div class="about-wrapper">
     <div class="about-left">
-      <h4>ABOUT US</h4>
+      <h4 id="aboutTagEl">ABOUT US</h4>
       <div class="about-small-line"></div>
 
-      <h2>We Help Operators<br>Stay Ready</h2>
+      <h2 id="aboutTitleEl">We Help Operators<br>Stay Ready</h2>
       <div class="about-title-line"></div>
 
-      <p>
+      <p id="aboutP1El">
         Keeping rooms, rentals, kitchens, and facilities ready takes more than just products —
         it takes a supply partner that understands repeat ordering.
       </p>
 
-      <p>
+      <p id="aboutP2El">
         Room Ready Supply provides hospitality and facility essentials such as paper products,
         trash liners, cleaning supplies, soaps, laundry items, dishwashing products, guest room
         supplies, linens, food service supplies, and facility essentials.
       </p>
 
-      <p>
+      <p id="aboutP3El">
         Our goal is simple: help businesses stop chasing supplies and start using a clear,
         organized reorder system.
       </p>
     </div>
 
     <div class="about-image">
-      <img src="banner3.png" alt="Room Ready Supply warehouse">
+      <img id="aboutBannerEl" src="banner3.png" alt="Room Ready Supply warehouse">
     </div>
   </div>
 
-  <div class="about-features">
+  <div class="about-features" id="aboutFeaturesEl">
     <div class="about-feature">
       <img src="au1.svg" alt="">
       <div>
         <h3>Everyday Essentials</h3>
-        <p>
-          Quality products for hospitality, rentals, cleaning teams,
-          restaurants, and facilities.
-        </p>
+        <p>Quality products for hospitality, rentals, cleaning teams, restaurants, and facilities.</p>
       </div>
     </div>
-
     <div class="about-feature">
       <img src="au2.svg" alt="">
       <div>
         <h3>Simple Business Ordering</h3>
-        <p>
-          Everyday essentials and simple ordering support for repeat buyers.
-        </p>
+        <p>Everyday essentials and simple ordering support for repeat buyers.</p>
       </div>
     </div>
-
     <div class="about-feature">
       <img src="au3.svg" alt="">
       <div>
         <h3>Reorder Made Easy</h3>
-        <p>
-          Set reorder reminders or recurring schedules with approval before processing.
-        </p>
+        <p>Set reorder reminders or recurring schedules with approval before processing.</p>
       </div>
     </div>
   </div>
@@ -460,6 +451,48 @@
 
 </body>
 </html>
+<!-- ── CMS: Load Hero & About content from Supabase ── -->
+<script>
+(async function() {
+  if (!window.sb) return;
+  try {
+    const { data: rows } = await window.sb.from("site_content").select("*").in("section", ["hero","about"]);
+    if (!rows) return;
+
+    const hero  = rows.find(r => r.section === "hero")?.content  || {};
+    const about = rows.find(r => r.section === "about")?.content || {};
+
+    // Hero
+    if (hero.heading) {
+      const lines = hero.heading.split("|");
+      const h = hero.highlight || "";
+      document.getElementById("heroHeadingEl").innerHTML =
+        lines.map(l => l === h ? `<span>${l}</span>` : l).join("<br />");
+    }
+    if (hero.description)  document.getElementById("heroDescEl").textContent  = hero.description;
+    if (hero.btnPrimary)   document.getElementById("heroBtnPrimaryEl").childNodes[document.getElementById("heroBtnPrimaryEl").childNodes.length-1].textContent = " " + hero.btnPrimary;
+    if (hero.btnSecondary) document.getElementById("heroBtnSecondaryEl").childNodes[document.getElementById("heroBtnSecondaryEl").childNodes.length-1].textContent = " " + hero.btnSecondary;
+    if (hero.bannerUrl)    document.getElementById("heroBannerEl").src = hero.bannerUrl;
+
+    // About
+    if (about.tag)       document.getElementById("aboutTagEl").textContent   = about.tag;
+    if (about.title)     document.getElementById("aboutTitleEl").innerHTML   = about.title.replace(/\n/g,"<br>");
+    if (about.p1)        document.getElementById("aboutP1El").textContent    = about.p1;
+    if (about.p2)        document.getElementById("aboutP2El").textContent    = about.p2;
+    if (about.p3)        document.getElementById("aboutP3El").textContent    = about.p3;
+    if (about.bannerUrl) document.getElementById("aboutBannerEl").src        = about.bannerUrl;
+    if (about.features && about.features.length) {
+      const icons = ["au1.svg","au2.svg","au3.svg"];
+      document.getElementById("aboutFeaturesEl").innerHTML = about.features.map((f,i) => `
+        <div class="about-feature">
+          <img src="${f.icon || icons[i] || 'au1.svg'}" alt="">
+          <div><h3>${f.title}</h3><p>${f.desc}</p></div>
+        </div>`).join("");
+    }
+  } catch(e) { /* fail silently — static defaults remain */ }
+})();
+</script>
+
 <!-- ── Floating Catalog QR Widget ───────────────────────────── -->
 <div id="catalogQR" style="position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
   <div id="catalogQRPanel" style="display:none;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);border:1.5px solid #f0f0f0;text-align:center;width:180px;">

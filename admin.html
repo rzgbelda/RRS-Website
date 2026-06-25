@@ -72,6 +72,16 @@
         Users
       </a>
 
+      <span class="a-nav-section">Content</span>
+      <a href="#" class="a-nav-item" data-tab="manage-hero">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+        Hero Section
+      </a>
+      <a href="#" class="a-nav-item" data-tab="manage-about">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        About Section
+      </a>
+
       <span class="a-nav-section">System</span>
       <a href="#" class="a-nav-item" data-tab="reports">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -679,6 +689,103 @@
     <div id="tab-reports" class="a-tab" style="display:none">
       <!-- Populated dynamically by renderReportsTab() in admin.js -->
     </div><!-- /reports tab -->
+
+    <!-- ============ HERO SECTION TAB ============ -->
+    <div id="tab-manage-hero" class="a-tab" style="display:none">
+      <div class="a-page-header">
+        <div>
+          <h1 class="a-page-title">Hero Section</h1>
+          <p class="a-page-sub">Edit the homepage hero heading, description, and banner image.</p>
+        </div>
+        <button class="a-btn-primary" onclick="saveHeroSection()">💾 Save Changes</button>
+      </div>
+
+      <div class="a-card" style="max-width:800px">
+        <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Hero Content</h3>
+
+        <label class="a-label">Main Heading (use | for line breaks)</label>
+        <input id="heroHeading" class="a-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies" style="margin-bottom:14px;">
+
+        <label class="a-label">Highlight Text (orange line)</label>
+        <input id="heroHighlight" class="a-input" placeholder="Without Chasing Supplies" style="margin-bottom:14px;">
+
+        <label class="a-label">Description Paragraph</label>
+        <textarea id="heroDescription" class="a-input" rows="4" placeholder="Room Ready Supply helps hotels..." style="resize:vertical;margin-bottom:14px;"></textarea>
+
+        <label class="a-label">Primary Button Label</label>
+        <input id="heroBtnPrimary" class="a-input" placeholder="Shop Catalog" style="margin-bottom:14px;">
+
+        <label class="a-label">Secondary Button Label</label>
+        <input id="heroBtnSecondary" class="a-input" placeholder="Request Business Pricing" style="margin-bottom:24px;">
+
+        <hr style="border:none;border-top:1px solid #eee;margin-bottom:24px;">
+
+        <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Hero Banner Image</h3>
+        <div id="heroBannerPreview" style="margin-bottom:12px;border-radius:10px;overflow:hidden;max-height:220px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+          <img id="heroBannerImg" src="banner1.png" alt="Hero Banner" style="width:100%;object-fit:cover;max-height:220px;">
+        </div>
+        <label class="a-label">Banner Image URL (or upload below)</label>
+        <input id="heroBannerUrl" class="a-input" placeholder="banner1.png" style="margin-bottom:10px;" oninput="document.getElementById('heroBannerImg').src=this.value">
+        <input type="file" id="heroBannerFile" accept="image/*" style="display:none" onchange="previewHeroBanner(this)">
+        <button class="a-btn-secondary" onclick="document.getElementById('heroBannerFile').click()">📁 Upload New Image</button>
+        <p id="heroSaveMsg" style="margin-top:14px;font-size:13px;min-height:18px;"></p>
+      </div>
+    </div><!-- /hero tab -->
+
+    <!-- ============ ABOUT SECTION TAB ============ -->
+    <div id="tab-manage-about" class="a-tab" style="display:none">
+      <div class="a-page-header">
+        <div>
+          <h1 class="a-page-title">About Section</h1>
+          <p class="a-page-sub">Edit the About Us section displayed on the homepage.</p>
+        </div>
+        <button class="a-btn-primary" onclick="saveAboutSection()">💾 Save Changes</button>
+      </div>
+
+      <div style="display:grid;gap:20px;max-width:900px;">
+        <!-- Text content -->
+        <div class="a-card">
+          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Text Content</h3>
+
+          <label class="a-label">Section Tag (small label above title)</label>
+          <input id="aboutTag" class="a-input" placeholder="ABOUT US" style="margin-bottom:14px;">
+
+          <label class="a-label">Main Title</label>
+          <input id="aboutTitle" class="a-input" placeholder="We Help Operators Stay Ready" style="margin-bottom:14px;">
+
+          <label class="a-label">Paragraph 1</label>
+          <textarea id="aboutP1" class="a-input" rows="3" style="resize:vertical;margin-bottom:14px;" placeholder="Keeping rooms, rentals..."></textarea>
+
+          <label class="a-label">Paragraph 2</label>
+          <textarea id="aboutP2" class="a-input" rows="4" style="resize:vertical;margin-bottom:14px;" placeholder="Room Ready Supply provides..."></textarea>
+
+          <label class="a-label">Paragraph 3</label>
+          <textarea id="aboutP3" class="a-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple..."></textarea>
+        </div>
+
+        <!-- Image -->
+        <div class="a-card">
+          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">About Image</h3>
+          <div style="margin-bottom:12px;border-radius:10px;overflow:hidden;max-height:200px;background:#f5f5f5;">
+            <img id="aboutBannerImg" src="banner3.png" alt="About" style="width:100%;object-fit:cover;max-height:200px;">
+          </div>
+          <label class="a-label">Image URL</label>
+          <input id="aboutBannerUrl" class="a-input" placeholder="banner3.png" style="margin-bottom:10px;" oninput="document.getElementById('aboutBannerImg').src=this.value">
+          <input type="file" id="aboutBannerFile" accept="image/*" style="display:none" onchange="previewAboutBanner(this)">
+          <button class="a-btn-secondary" onclick="document.getElementById('aboutBannerFile').click()">📁 Upload New Image</button>
+        </div>
+
+        <!-- Feature cards -->
+        <div class="a-card">
+          <h3 style="font-size:15px;font-weight:700;color:#0d2c50;margin-bottom:18px;">Feature Cards</h3>
+          <div id="aboutFeatures" style="display:grid;gap:14px;">
+            <!-- rendered by JS -->
+          </div>
+        </div>
+
+        <p id="aboutSaveMsg" style="font-size:13px;min-height:18px;padding:0 4px;"></p>
+      </div>
+    </div><!-- /about tab -->
 
   </div><!-- /a-main -->
 
