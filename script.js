@@ -932,7 +932,14 @@ function setupLogin() {
           localStorage.setItem("loggedIn", "true");
           updateLoginUI();
           updateCartBadge();
-          window.location.href = "/";
+          // Check if user is admin and redirect accordingly
+          const { data: profile } = await window.sb
+            .from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+          if (profile?.role === "admin") {
+            window.location.href = "/admin";
+          } else {
+            window.location.href = "/";
+          }
         }
       } else {
         // Fallback (no Supabase loaded)
