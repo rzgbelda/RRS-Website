@@ -1749,19 +1749,26 @@ function filterSdTable(q) {
 
 function openSdModal(sd) {
   console.log('[RRS] openSdModal called', sd);
-  document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
-  document.getElementById('sdEditId').value   = sd ? sd.id : '';
-  document.getElementById('sdName').value     = sd ? sd.name : '';
-  document.getElementById('sdContact').value  = sd ? (sd.contact_person||'') : '';
-  document.getElementById('sdEmail').value      = sd ? (sd.email||'') : '';
-  document.getElementById('sdPhone').value      = sd ? (sd.phone||'') : '';
-  document.getElementById('sdCode').value       = sd ? sd.referral_code : '';
-  document.getElementById('sdCommission').value = sd ? sd.commission_pct : '0';
-  document.getElementById('sdStatus').value     = sd ? sd.status : 'active';
-  document.getElementById('sdNotes').value      = sd ? (sd.notes||'') : '';
-  var errEl = document.getElementById('sdModalError');
-  if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
-  document.getElementById('sdModal').style.display = 'flex';
+  try {
+    document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
+    document.getElementById('sdEditId').value     = sd ? sd.id : '';
+    document.getElementById('sdName').value       = sd ? sd.name : '';
+    document.getElementById('sdContact').value    = sd ? (sd.contact_person||'') : '';
+    document.getElementById('sdEmail').value      = sd ? (sd.email||'') : '';
+    document.getElementById('sdPhone').value      = sd ? (sd.phone||'') : '';
+    document.getElementById('sdCode').value       = sd ? sd.referral_code : '';
+    document.getElementById('sdCommission').value = sd ? sd.commission_pct : '0';
+    document.getElementById('sdStatus').value     = sd ? sd.status : 'active';
+    document.getElementById('sdNotes').value      = sd ? (sd.notes||'') : '';
+    var errEl = document.getElementById('sdModalError');
+    if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
+    var modal = document.getElementById('sdModal');
+    console.log('[RRS] sdModal found:', !!modal);
+    if (modal) { modal.style.display = 'flex'; console.log('[RRS] modal opened'); }
+    else { console.error('[RRS] sdModal element NOT found in DOM'); }
+  } catch(err) {
+    console.error('[RRS] openSdModal error:', err.message);
+  }
 }
 
 function closeSdModal() { document.getElementById('sdModal').style.display = 'none'; }
