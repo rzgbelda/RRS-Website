@@ -3,6 +3,8 @@
    ============================================================ */
 
 /* ── Bootstrap ─────────────────────────────────────────────── */
+window._adminRole = "admin"; // default; overwritten below
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (typeof window.sb === "undefined") {
     showLoginError("Supabase not configured. Set your credentials in supabase.js.");
@@ -12,12 +14,18 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!session) { showLogin(); return; }
 
   const { data: profile } = await window.sb.from("profiles").select("role").eq("id", session.user.id).single();
-  if (profile?.role !== "admin") {
+  const role = profile?.role;
+
+  // Allow "admin" full access and "sub_distributor" limited access
+  if (role !== "admin" && role !== "sub_distributor") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
   }
+
+  window._adminRole = role;
   document.getElementById("adminNameDisplay").textContent = session.user.email;
+  applyRoleRestrictions(role);
   showDashboard();
   switchTab("dashboard");
 
@@ -28,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelectorAll("[data-goto]").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.goto));
   });
-  setupSettings(session.user.id);
+  if (role === "admin") setupSettings(session.user.id);
 });
 
 /* ── Auth ──────────────────────────────────────────────────── */
@@ -50,15 +58,18 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
   if (error) { showLoginError(error.message); return; }
 
   const { data: profile } = await window.sb.from("profiles").select("role").eq("id", data.user.id).single();
-  if (profile?.role !== "admin") {
+  const role = profile?.role;
+  if (role !== "admin" && role !== "sub_distributor") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
   }
+  window._adminRole = role;
   document.getElementById("adminNameDisplay").textContent = data.user.email;
+  applyRoleRestrictions(role);
   showDashboard();
   switchTab("dashboard");
-  setupSettings(data.user.id);
+  if (role === "admin") setupSettings(data.user.id);
 });
 
 document.getElementById("adminLogout")?.addEventListener("click", async () => {
@@ -66,9 +77,57 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
   showLogin();
 });
 
+/* ── Role-based access control ─────────────────────────────── */
+
+const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings"];
+
+function applyRoleRestrictions(role) {
+  if (role === "admin") return; // full access — nothing to hide
+
+  // Hide admin-only nav items and sections
+  document.querySelectorAll(".admin-only-nav").forEach(el => {
+    el.style.display = "none";
+  });
+
+  // Add a role badge below the logo
+  const logoEl = document.querySelector(".a-sidebar-logo");
+  if (logoEl) {
+    const badge = document.createElement("div");
+    badge.style.cssText = "text-align:center;padding:8px 16px 0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(245,130,32,.85);";
+    badge.textContent = "Partner Portal";
+    logoEl.parentNode.insertBefore(badge, logoEl.nextSibling);
+  }
+}
+
+function isTabAllowed(tab) {
+  if (window._adminRole === "admin") return true;
+  return !ADMIN_ONLY_TABS.includes(tab);
+}
+
+function showAccessDeniedOverlay() {
+  var existing = document.getElementById("accessDeniedOverlay");
+  if (existing) { existing.style.display = "flex"; return; }
+  var div = document.createElement("div");
+  div.id = "accessDeniedOverlay";
+  div.style.cssText = "position:fixed;inset:0;background:rgba(10,22,40,.65);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:8000;";
+  div.innerHTML = '<div style="background:#fff;border-radius:20px;padding:48px 40px;max-width:380px;text-align:center;box-shadow:0 24px 80px rgba(0,0,0,.25);">' +
+    '<div style="width:56px;height:56px;border-radius:14px;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">' +
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
+    '<h3 style="font-size:18px;font-weight:800;color:#0d1f38;margin:0 0 8px;letter-spacing:-.3px;">Access Restricted</h3>' +
+    '<p style="font-size:13px;color:#8a9bb5;margin:0 0 24px;line-height:1.6;">This section is only available to administrators. Your partner account has access to Dashboard, Sub-Distributors, and Reports.</p>' +
+    '<button onclick="document.getElementById(\'accessDeniedOverlay\').style.display=\'none\'" style="background:linear-gradient(135deg,#f58220,#e0711a);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>' +
+    '</div>';
+  document.body.appendChild(div);
+}
+
 /* ── Tab navigation ────────────────────────────────────────── */
 
 function switchTab(tab) {
+  // Block restricted tabs for non-admins
+  if (!isTabAllowed(tab)) {
+    showAccessDeniedOverlay();
+    return;
+  }
   document.querySelectorAll(".a-nav-item").forEach(el => {
     el.classList.toggle("active", el.dataset.tab === tab);
   });
