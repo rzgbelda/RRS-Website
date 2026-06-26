@@ -1767,3 +1767,11 @@ body.admin-body {
   .a-page-title { font-size: 18px; }
   .a-modal-body, .a-modal-footer, .a-modal-header { padding-left: 18px; padding-right: 18px; }
 }
+
+/* Fix: a-btn-outline inside modal footer must not be full-width */
+.a-modal-footer .a-btn-outline {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}

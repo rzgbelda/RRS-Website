@@ -1511,22 +1511,25 @@ async function renderSubDistributorsTab() {
 
 async function loadSdStats() {
   if (!window.sb) return;
-  const [{ count: total }, { data: referrals }] = await Promise.all([
-    window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }),
-    window.sb.from('order_referrals').select('commission_amount, sub_distributors(status)'),
-  ]);
+  try {
+    const [totalRes, activeRes, referralsRes] = await Promise.all([
+      window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }),
+      window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }).eq('status', 'active'),
+      window.sb.from('order_referrals').select('commission_amount'),
+    ]);
 
-  const activeRes = await window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }).eq('status', 'active');
-  const active = activeRes.count || 0;
-  const revenue = (referrals || []).reduce((s, r) => {
-    const amt = parseFloat(r.commission_amount) || 0;
-    return s + amt;
-  }, 0);
+    const total    = totalRes.count   || 0;
+    const active   = activeRes.count  || 0;
+    const referrals = referralsRes.data || [];
+    const revenue   = referrals.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
 
-  setText('sd-stat-total',   total   || 0);
-  setText('sd-stat-active',  active);
-  setText('sd-stat-orders',  (referrals || []).length);
-  setText('sd-stat-revenue', '$' + revenue.toFixed(2));
+    setText('sd-stat-total',   total);
+    setText('sd-stat-active',  active);
+    setText('sd-stat-orders',  referrals.length);
+    setText('sd-stat-revenue', '$' + revenue.toFixed(2));
+  } catch(e) {
+    console.error('loadSdStats error:', e);
+  }
 }
 
 async function loadSdTable() {
