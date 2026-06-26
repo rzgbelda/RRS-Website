@@ -197,13 +197,24 @@
 
               <option value="DC">District of Columbia</option>
             </select>
-          <input type="text" placeholder="ZIP Code">
+          <input type="text" id="checkout-zip" placeholder="ZIP Code" maxlength="5" inputmode="numeric">
         </div>
 
         <label class="checkbox-line">
           <input type="checkbox">
           Billing address is the same as delivery address.
         </label>
+
+        <!-- Live freight quote panel -->
+        <div class="fq-section">
+          <div class="fq-section-label">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            Live Freight Rates
+          </div>
+          <div id="freight-quote-panel">
+            <p class="fq-hint">Enter your ZIP code above to see live freight rates.</p>
+          </div>
+        </div>
       </div>
 
       <div class="checkout-card">
@@ -271,7 +282,7 @@
   <span>Subtotal</span>
   <strong id="summary-subtotal">$1,049.70</strong>
 </p>
-        <p><span>Estimated Shipping</span><strong>TBD</strong></p>
+        <p><span>Estimated Shipping</span><strong id="summary-shipping">TBD</strong></p>
       </div>
 
       <div class="summary-total">
@@ -312,6 +323,8 @@
 
 <script src="script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="warp-freight.js"></script>
+<script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
 </body>
 </html>
 <!-- ── Floating Catalog QR Widget ───────────────────────────── -->

@@ -5367,3 +5367,84 @@ button, a, [role="button"] { touch-action: manipulation; }
   .ciq-footer { flex-direction: column-reverse; }
   .ciq-btn-primary, .ciq-btn-secondary { width: 100%; justify-content: center; }
 }
+
+/* ── Warp Freight Quote Panel ───────────────────────────────── */
+.fq-section {
+  margin-top: 20px;
+  border-top: 1px solid #e8edf3;
+  padding-top: 16px;
+}
+.fq-section-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: #294868;
+  margin-bottom: 12px;
+}
+.fq-hint {
+  font-size: 13px;
+  color: #8a9ab0;
+  font-style: italic;
+}
+.fq-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #8a9ab0;
+}
+.fq-spinner {
+  width: 20px;
+  height: 20px;
+  animation: fq-spin .8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes fq-spin { to { transform: rotate(360deg); } }
+.fq-error {
+  background: #fff5f5;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #b91c1c;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fq-error span { color: #6b7280; font-size: 12px; }
+.fq-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #294868;
+  margin-bottom: 8px;
+}
+.fq-list { display: flex; flex-direction: column; gap: 8px; }
+.fq-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  background: #fff;
+}
+.fq-option input[type="radio"] { accent-color: #ED7226; flex-shrink: 0; }
+.fq-option:hover { border-color: #ED7226; background: #fff8f3; }
+.fq-option--selected { border-color: #ED7226 !important; background: #fff8f3 !important; }
+.fq-option-body {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+.fq-carrier { font-size: 13px; font-weight: 600; color: #1f3b5b; flex: 1; }
+.fq-transit { font-size: 12px; color: #8a9ab0; }
+.fq-price   { font-size: 14px; font-weight: 700; color: #ED7226; }
+.fq-note    { font-size: 11px; color: #b0bac6; margin-top: 8px; font-style: italic; }
