@@ -918,37 +918,85 @@
 
     <!-- ============ SUB-DISTRIBUTORS TAB ============ -->
     <div id="tab-sub-distributors" class="a-tab" style="display:none">
-      <div class="a-page-header" style="margin-bottom:24px;">
-        <div>
-          <h1 class="a-page-title">Sub-Distributors</h1>
-          <p class="a-page-sub">Manage partners, referral codes, and commission tracking.</p>
+
+      <!-- Hero Banner -->
+      <div class="sd-hero">
+        <div class="sd-hero-left">
+          <div class="sd-hero-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <h1 class="sd-hero-title">Sub-Distributors</h1>
+            <p class="sd-hero-sub">Manage partners, referral codes &amp; commissions</p>
+          </div>
         </div>
-        <button class="a-btn-primary" onclick="openSdModal()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <button class="a-btn-primary sd-hero-btn" onclick="openSdModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Sub-Distributor
         </button>
       </div>
 
       <!-- Stats row -->
-      <div class="a-stats-grid" style="margin-bottom:24px;" id="sd-stats-row">
-        <div class="a-stat-card"><div class="a-stat-label">Total Partners</div><div class="a-stat-value" id="sd-stat-total">—</div></div>
-        <div class="a-stat-card"><div class="a-stat-label">Active</div><div class="a-stat-value" id="sd-stat-active">—</div></div>
-        <div class="a-stat-card"><div class="a-stat-label">Total Referred Orders</div><div class="a-stat-value" id="sd-stat-orders">—</div></div>
-        <div class="a-stat-card"><div class="a-stat-label">Total Referred Revenue</div><div class="a-stat-value" id="sd-stat-revenue">—</div></div>
+      <div class="sd-stats-row">
+        <div class="sd-stat-card">
+          <div class="sd-stat-icon" style="background:#eff6ff;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <div class="sd-stat-label">Total Partners</div>
+            <div class="sd-stat-value" id="sd-stat-total">—</div>
+          </div>
+        </div>
+        <div class="sd-stat-card">
+          <div class="sd-stat-icon" style="background:#f0fdf4;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          </div>
+          <div>
+            <div class="sd-stat-label">Active</div>
+            <div class="sd-stat-value" id="sd-stat-active">—</div>
+          </div>
+        </div>
+        <div class="sd-stat-card">
+          <div class="sd-stat-icon" style="background:#fff7ed;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+          </div>
+          <div>
+            <div class="sd-stat-label">Referred Orders</div>
+            <div class="sd-stat-value" id="sd-stat-orders">—</div>
+          </div>
+        </div>
+        <div class="sd-stat-card sd-stat-revenue">
+          <div class="sd-stat-icon" style="background:#fdf4ff;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <div>
+            <div class="sd-stat-label">Referred Revenue</div>
+            <div class="sd-stat-value" id="sd-stat-revenue">—</div>
+          </div>
+        </div>
       </div>
 
-      <!-- Sub-distributors table -->
-      <div class="a-card" style="margin-bottom:24px;">
-        <div class="a-card-header">
-          <span class="a-card-title">Partners</span>
-          <input type="text" class="a-search-input" placeholder="Search by name or code…" oninput="filterSdTable(this.value)" style="width:220px;">
+      <!-- Partners table -->
+      <div class="a-card sd-card">
+        <div class="sd-card-header">
+          <div class="sd-card-title-group">
+            <span class="sd-card-dot" style="background:#3b82f6;"></span>
+            <span class="sd-card-title">Partners</span>
+            <span class="sd-card-count" id="sd-partner-count"></span>
+          </div>
+          <div class="sd-card-actions">
+            <div class="sd-search-wrap">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" placeholder="Search by name or code…" oninput="filterSdTable(this.value)" class="sd-search">
+            </div>
+          </div>
         </div>
         <div class="a-table-wrap">
           <table class="a-table" id="sd-table">
             <thead><tr>
-              <th>Name</th><th>Contact</th><th>Referral Code</th>
+              <th>Partner</th><th>Contact</th><th>Referral Code</th>
               <th>Commission</th><th>Customers</th><th>Orders</th><th>Revenue</th>
-              <th>Status</th><th>Actions</th>
+              <th>Status</th><th style="text-align:center">Actions</th>
             </tr></thead>
             <tbody id="sd-table-body"><tr><td colspan="9" class="a-empty">Loading…</td></tr></tbody>
           </table>
@@ -956,11 +1004,14 @@
       </div>
 
       <!-- Employees table -->
-      <div class="a-card">
-        <div class="a-card-header">
-          <span class="a-card-title">Employees / Referrers</span>
-          <button class="a-btn-outline" onclick="openEmpModal()" style="font-size:13px;padding:7px 14px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <div class="a-card sd-card">
+        <div class="sd-card-header">
+          <div class="sd-card-title-group">
+            <span class="sd-card-dot" style="background:#f97316;"></span>
+            <span class="sd-card-title">Employees / Referrers</span>
+          </div>
+          <button class="sd-add-emp-btn" onclick="openEmpModal()">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Employee
           </button>
         </div>
@@ -968,12 +1019,13 @@
           <table class="a-table" id="emp-table">
             <thead><tr>
               <th>Name</th><th>Sub-Distributor</th><th>Referral Code</th>
-              <th>Orders</th><th>Revenue</th><th>Status</th><th>Actions</th>
+              <th>Orders</th><th>Revenue</th><th>Status</th><th style="text-align:center">Actions</th>
             </tr></thead>
             <tbody id="emp-table-body"><tr><td colspan="7" class="a-empty">Loading…</td></tr></tbody>
           </table>
         </div>
       </div>
+
     </div><!-- /sub-distributors tab -->
 
   </div><!-- /a-main -->
@@ -1344,7 +1396,7 @@
 
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="admin.js?v=11"></script>
+<script src="admin.js?v=12"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
