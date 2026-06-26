@@ -37,6 +37,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     btn.addEventListener("click", () => switchTab(btn.dataset.goto));
   });
   if (role === "admin") setupSettings(session.user.id);
+
+  // Wire sub-distributor modal buttons via addEventListener (avoids inline onclick issues)
+  bindSdButtons();
 });
 
 /* ── Auth ──────────────────────────────────────────────────── */
@@ -70,6 +73,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
   showDashboard();
   switchTab("dashboard");
   if (role === "admin") setupSettings(data.user.id);
+  bindSdButtons();
 });
 
 document.getElementById("adminLogout")?.addEventListener("click", async () => {
@@ -118,6 +122,25 @@ function showAccessDeniedOverlay() {
     '<button onclick="document.getElementById(\'accessDeniedOverlay\').style.display=\'none\'" style="background:linear-gradient(135deg,#f58220,#e0711a);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>' +
     '</div>';
   document.body.appendChild(div);
+}
+
+function bindSdButtons() {
+  var map = {
+    btnOpenSdModal:  function() { openSdModal(); },
+    btnOpenEmpModal: function() { openEmpModal(); },
+    btnCloseSdModal: function() { closeSdModal(); },
+    btnCloseSdX:     function() { closeSdModal(); },
+    btnSaveSd:       function() { saveSdDistributor(); },
+    btnCloseEmpModal:function() { closeEmpModal(); },
+    btnCloseEmpX:    function() { closeEmpModal(); },
+    btnSaveEmp:      function() { saveEmployee(); },
+    btnGenSdCode:    function() { generateSdCode(); },
+    btnGenEmpCode:   function() { generateEmpCode(); },
+  };
+  Object.keys(map).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.addEventListener('click', map[id]);
+  });
 }
 
 /* ── Tab navigation ────────────────────────────────────────── */
