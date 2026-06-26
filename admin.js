@@ -87,6 +87,7 @@ const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","
 
 function applyRoleRestrictions(role) {
   if (role === "admin") return; // full access — nothing to hide
+  if (document.querySelector(".sd-partner-badge")) return; // already applied
 
   // Hide admin-only nav items and sections
   document.querySelectorAll(".admin-only-nav").forEach(el => {
@@ -97,6 +98,7 @@ function applyRoleRestrictions(role) {
   const logoEl = document.querySelector(".a-sidebar-logo");
   if (logoEl) {
     const badge = document.createElement("div");
+    badge.className = "sd-partner-badge";
     badge.style.cssText = "text-align:center;padding:8px 16px 0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(245,130,32,.85);";
     badge.textContent = "Partner Portal";
     logoEl.parentNode.insertBefore(badge, logoEl.nextSibling);
