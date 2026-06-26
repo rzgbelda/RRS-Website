@@ -135,21 +135,22 @@ function showAccessDeniedOverlay() {
 }
 
 function bindSdButtons() {
-  var map = {
-    btnOpenSdModal:  function() { openSdModal(); },
-    btnOpenEmpModal: function() { openEmpModal(); },
-    btnCloseSdModal: function() { closeSdModal(); },
-    btnCloseSdX:     function() { closeSdModal(); },
-    btnSaveSd:       function() { saveSdDistributor(); },
-    btnCloseEmpModal:function() { closeEmpModal(); },
-    btnCloseEmpX:    function() { closeEmpModal(); },
-    btnSaveEmp:      function() { saveEmployee(); },
-    btnGenSdCode:    function() { generateSdCode(); },
-    btnGenEmpCode:   function() { generateEmpCode(); },
-  };
-  Object.keys(map).forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.addEventListener('click', map[id]);
+  // Use event delegation on document so dynamic buttons always work
+  document.addEventListener('click', function(e) {
+    var id = e.target.closest('[id]') && e.target.closest('[id]').id;
+    if (!id) return;
+    switch(id) {
+      case 'btnOpenSdModal':  e.stopPropagation(); openSdModal(); break;
+      case 'btnOpenEmpModal': e.stopPropagation(); openEmpModal(); break;
+      case 'btnCloseSdModal': closeSdModal(); break;
+      case 'btnCloseSdX':     closeSdModal(); break;
+      case 'btnSaveSd':       saveSdDistributor(); break;
+      case 'btnCloseEmpModal':closeEmpModal(); break;
+      case 'btnCloseEmpX':    closeEmpModal(); break;
+      case 'btnSaveEmp':      saveEmployee(); break;
+      case 'btnGenSdCode':    generateSdCode(); break;
+      case 'btnGenEmpCode':   generateEmpCode(); break;
+    }
   });
 }
 
