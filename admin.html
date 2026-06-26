@@ -83,6 +83,12 @@
         About Section
       </a>
 
+      <span class="a-nav-section">Partners</span>
+      <a href="#" class="a-nav-item" data-tab="sub-distributors">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="2"/><circle cx="15" cy="19" r="2"/><circle cx="19" cy="9" r="2"/><path d="M9 7v3l3 2"/><path d="M13 14l3-2v-3"/></svg>
+        Sub-Distributors
+      </a>
+
       <span class="a-nav-section">System</span>
       <a href="#" class="a-nav-item" data-tab="reports">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
@@ -910,6 +916,66 @@
       </div>
     </div><!-- /about tab -->
 
+    <!-- ============ SUB-DISTRIBUTORS TAB ============ -->
+    <div id="tab-sub-distributors" class="a-tab" style="display:none">
+      <div class="a-page-header" style="margin-bottom:24px;">
+        <div>
+          <h1 class="a-page-title">Sub-Distributors</h1>
+          <p class="a-page-sub">Manage partners, referral codes, and commission tracking.</p>
+        </div>
+        <button class="a-btn-primary" onclick="openSdModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:6px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Sub-Distributor
+        </button>
+      </div>
+
+      <!-- Stats row -->
+      <div class="a-stats-grid" style="margin-bottom:24px;" id="sd-stats-row">
+        <div class="a-stat-card"><div class="a-stat-label">Total Partners</div><div class="a-stat-value" id="sd-stat-total">—</div></div>
+        <div class="a-stat-card"><div class="a-stat-label">Active</div><div class="a-stat-value" id="sd-stat-active">—</div></div>
+        <div class="a-stat-card"><div class="a-stat-label">Total Referred Orders</div><div class="a-stat-value" id="sd-stat-orders">—</div></div>
+        <div class="a-stat-card"><div class="a-stat-label">Total Referred Revenue</div><div class="a-stat-value" id="sd-stat-revenue">—</div></div>
+      </div>
+
+      <!-- Sub-distributors table -->
+      <div class="a-card" style="margin-bottom:24px;">
+        <div class="a-card-header">
+          <span class="a-card-title">Partners</span>
+          <input type="text" class="a-search-input" placeholder="Search by name or code…" oninput="filterSdTable(this.value)" style="width:220px;">
+        </div>
+        <div class="a-table-wrap">
+          <table class="a-table" id="sd-table">
+            <thead><tr>
+              <th>Name</th><th>Contact</th><th>Referral Code</th>
+              <th>Commission</th><th>Customers</th><th>Orders</th><th>Revenue</th>
+              <th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="sd-table-body"><tr><td colspan="9" class="a-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Employees table -->
+      <div class="a-card">
+        <div class="a-card-header">
+          <span class="a-card-title">Employees / Referrers</span>
+          <button class="a-btn-outline" onclick="openEmpModal()" style="font-size:13px;padding:7px 14px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Add Employee
+          </button>
+        </div>
+        <div class="a-table-wrap">
+          <table class="a-table" id="emp-table">
+            <thead><tr>
+              <th>Name</th><th>Sub-Distributor</th><th>Referral Code</th>
+              <th>Orders</th><th>Revenue</th><th>Status</th><th>Actions</th>
+            </tr></thead>
+            <tbody id="emp-table-body"><tr><td colspan="7" class="a-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /sub-distributors tab -->
+
   </div><!-- /a-main -->
 
 </div><!-- /adminDashboard -->
@@ -1187,9 +1253,98 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- ── Sub-Distributor Add/Edit Modal ──────────────────────── -->
+<div id="sdModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal" style="max-width:600px">
+    <div class="a-modal-header">
+      <h3 id="sdModalTitle">Add Sub-Distributor</h3>
+      <button class="a-modal-close" onclick="closeSdModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <input type="hidden" id="sdEditId">
+      <div class="a-form-grid">
+        <div class="a-form-col-2">
+          <div class="a-field"><label>Name <span class="req">*</span></label><input type="text" id="sdName" placeholder="ABC Distribution Inc."></div>
+          <div class="a-field"><label>Contact Person</label><input type="text" id="sdContact" placeholder="John Smith"></div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field"><label>Email</label><input type="email" id="sdEmail" placeholder="john@abc.com"></div>
+          <div class="a-field"><label>Phone</label><input type="text" id="sdPhone" placeholder="(555) 000-0000"></div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field">
+            <label>Referral Code <span class="req">*</span></label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="sdCode" placeholder="e.g. ABC2024" style="flex:1;text-transform:uppercase">
+              <button type="button" class="a-btn-outline" onclick="generateSdCode()" style="padding:9px 12px;white-space:nowrap;font-size:12px">Auto-Generate</button>
+            </div>
+          </div>
+          <div class="a-field"><label>Commission %</label><input type="number" id="sdCommission" placeholder="0" min="0" max="100" step="0.01"></div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field">
+            <label>Status</label>
+            <select id="sdStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          </div>
+          <div class="a-field"><label>Notes</label><input type="text" id="sdNotes" placeholder="Optional notes"></div>
+        </div>
+      </div>
+      <div id="sdModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:8px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" onclick="closeSdModal()">Cancel</button>
+      <button class="a-btn-primary" onclick="saveSdDistributor()">Save Sub-Distributor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Employee Add/Edit Modal ──────────────────────────────── -->
+<div id="empModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal" style="max-width:560px">
+    <div class="a-modal-header">
+      <h3 id="empModalTitle">Add Employee / Referrer</h3>
+      <button class="a-modal-close" onclick="closeEmpModal()">✕</button>
+    </div>
+    <div class="a-modal-body">
+      <input type="hidden" id="empEditId">
+      <div class="a-form-grid">
+        <div class="a-form-col-2">
+          <div class="a-field"><label>Name <span class="req">*</span></label><input type="text" id="empName" placeholder="Jane Doe"></div>
+          <div class="a-field">
+            <label>Sub-Distributor <span class="req">*</span></label>
+            <select id="empParent"><option value="">Select…</option></select>
+          </div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field"><label>Email</label><input type="email" id="empEmail" placeholder="jane@abc.com"></div>
+          <div class="a-field"><label>Phone</label><input type="text" id="empPhone" placeholder="(555) 000-0000"></div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field">
+            <label>Referral Code <span class="req">*</span></label>
+            <div style="display:flex;gap:8px">
+              <input type="text" id="empCode" placeholder="e.g. JANE24" style="flex:1;text-transform:uppercase">
+              <button type="button" class="a-btn-outline" onclick="generateEmpCode()" style="padding:9px 12px;white-space:nowrap;font-size:12px">Auto-Generate</button>
+            </div>
+          </div>
+          <div class="a-field">
+            <label>Status</label>
+            <select id="empStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+          </div>
+        </div>
+      </div>
+      <div id="empModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:8px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" onclick="closeEmpModal()">Cancel</button>
+      <button class="a-btn-primary" onclick="saveEmployee()">Save Employee</button>
+    </div>
+  </div>
+</div>
+
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="admin.js?v=10"></script>
+<script src="admin.js?v=11"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');

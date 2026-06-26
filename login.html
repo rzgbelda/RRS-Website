@@ -109,7 +109,7 @@
                 <span>or</span>
             </div>
 
-            <button class="create-account-btn">
+            <button class="create-account-btn" onclick="openRegisterModal()">
                 Create an Account
             </button>
 
@@ -181,6 +181,93 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="script.js"></script>
+
+<!-- ── Create Account Modal ───────────────────────────────── -->
+<div id="registerModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;overflow-y:auto;padding:20px;">
+  <div style="background:#fff;border-radius:16px;padding:36px 32px;max-width:520px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.22);position:relative;margin:auto;">
+    <button onclick="closeRegisterModal()" style="position:absolute;top:14px;right:18px;background:none;border:none;font-size:22px;cursor:pointer;color:#888;">✕</button>
+    <h2 style="font-size:22px;font-weight:800;color:#0d2c50;margin-bottom:4px;">Create Your Account</h2>
+    <p style="font-size:14px;color:#666;margin-bottom:24px;">Join Room Ready Supply to place orders and manage your business.</p>
+
+    <!-- Step 1: Basic info -->
+    <div id="reg-step-1">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">First Name <span style="color:#ED7226">*</span></label>
+          <input id="regFirstName" type="text" placeholder="John" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Last Name <span style="color:#ED7226">*</span></label>
+          <input id="regLastName" type="text" placeholder="Smith" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Business Name <span style="color:#ED7226">*</span></label>
+        <input id="regBusiness" type="text" placeholder="Hotel ABC LLC" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Email Address <span style="color:#ED7226">*</span></label>
+        <input id="regEmail" type="email" placeholder="john@hotel.com" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Phone Number</label>
+        <input id="regPhone" type="tel" placeholder="(555) 000-0000" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div>
+          <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Password <span style="color:#ED7226">*</span></label>
+          <input id="regPassword" type="password" placeholder="Min. 6 characters" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+        <div>
+          <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Confirm Password <span style="color:#ED7226">*</span></label>
+          <input id="regConfirm" type="password" placeholder="Repeat password" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+        </div>
+      </div>
+
+      <!-- Sub-distributor question -->
+      <div style="background:#f8f9fb;border:1.5px solid #e2e8f0;border-radius:10px;padding:16px 18px;margin-bottom:14px;">
+        <p style="font-size:13.5px;font-weight:700;color:#1f3b5b;margin-bottom:12px;">Are you under a sub-distributor?</p>
+        <div style="display:flex;gap:16px;">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600;">
+            <input type="radio" name="regSubDist" id="regSubDistNo" value="no" checked onchange="toggleSubDistFields(false)" style="accent-color:#ED7226;width:16px;height:16px;">
+            No
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;font-weight:600;">
+            <input type="radio" name="regSubDist" id="regSubDistYes" value="yes" onchange="toggleSubDistFields(true)" style="accent-color:#ED7226;width:16px;height:16px;">
+            Yes
+          </label>
+        </div>
+
+        <!-- Sub-distributor fields (hidden by default) -->
+        <div id="regSubDistFields" style="display:none;margin-top:14px;border-top:1px solid #e2e8f0;padding-top:14px;">
+          <div style="margin-bottom:12px;">
+            <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Sub-Distributor Referral Code <span style="color:#ED7226">*</span></label>
+            <input id="regSubDistCode" type="text" placeholder="Enter code (e.g. ABC2024)" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+            <div id="regCodeStatus" style="font-size:12px;margin-top:6px;min-height:18px;"></div>
+          </div>
+          <div id="regSubDistNameRow" style="display:none;">
+            <label style="font-size:13px;font-weight:600;color:#294868;display:block;margin-bottom:5px;">Sub-Distributor</label>
+            <input id="regSubDistName" type="text" readonly style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;background:#f0f3f9;color:#294868;">
+          </div>
+        </div>
+      </div>
+
+      <p id="regError" style="display:none;color:#ef4444;font-size:13px;margin-bottom:12px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></p>
+      <button onclick="submitRegistration()" style="width:100%;padding:13px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">
+        Create Account
+      </button>
+      <p style="text-align:center;font-size:13px;color:#888;margin-top:14px;">Already have an account? <a href="#" onclick="closeRegisterModal()" style="color:#ED7226;font-weight:600;">Sign in</a></p>
+    </div>
+
+    <!-- Success state -->
+    <div id="reg-step-success" style="display:none;text-align:center;padding:20px 0;">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" style="margin-bottom:16px"><circle cx="12" cy="12" r="10"/><polyline points="9 12 11 14 15 10"/></svg>
+      <h3 style="font-size:20px;font-weight:800;color:#0d2c50;margin-bottom:8px;">Account Created!</h3>
+      <p style="font-size:14px;color:#666;margin-bottom:20px;">Check your email to verify your account, then sign in.</p>
+      <button onclick="closeRegisterModal()" style="padding:12px 28px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Go to Sign In</button>
+    </div>
+  </div>
+</div>
 
 <!-- Set New Password Modal (shown after clicking email reset link) -->
 <div id="setPasswordModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center;">

@@ -1661,3 +1661,268 @@ function showCiqError(msg) {
   el.style.display = "block";
   el.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
+
+/* =========================
+   REGISTRATION MODAL
+========================= */
+
+function openRegisterModal() {
+  const modal = document.getElementById('registerModal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  // Reset form
+  ['regFirstName','regLastName','regBusiness','regEmail','regPhone','regPassword','regConfirm','regSubDistCode'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  document.getElementById('regSubDistNo').checked = true;
+  toggleSubDistFields(false);
+  const err = document.getElementById('regError');
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  document.getElementById('reg-step-1').style.display = 'block';
+  document.getElementById('reg-step-success').style.display = 'none';
+}
+
+function closeRegisterModal() {
+  const modal = document.getElementById('registerModal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function toggleSubDistFields(show) {
+  const fields = document.getElementById('regSubDistFields');
+  if (fields) fields.style.display = show ? 'block' : 'none';
+  if (!show) {
+    const status = document.getElementById('regCodeStatus');
+    if (status) status.textContent = '';
+    const nameRow = document.getElementById('regSubDistNameRow');
+    if (nameRow) nameRow.style.display = 'none';
+  }
+}
+
+let _regValidatedDistributor = null; // { id, name, employee_id, commission_pct }
+
+async function validateRegCode() {
+  const code = (document.getElementById('regSubDistCode')?.value || '').trim().toUpperCase();
+  const statusEl = document.getElementById('regCodeStatus');
+  const nameRow  = document.getElementById('regSubDistNameRow');
+  const nameEl   = document.getElementById('regSubDistName');
+  _regValidatedDistributor = null;
+
+  if (!code || !statusEl) return;
+  if (!window.sb) { statusEl.style.color = '#888'; statusEl.textContent = 'Validation unavailable.'; return; }
+
+  statusEl.style.color = '#888'; statusEl.textContent = 'Checking code…';
+
+  // Check sub-distributor codes first
+  const { data: sd } = await window.sb
+    .from('sub_distributors')
+    .select('id,name,commission_pct')
+    .eq('referral_code', code)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (sd) {
+    _regValidatedDistributor = { id: sd.id, name: sd.name, commission_pct: sd.commission_pct, employee_id: null };
+    statusEl.style.color = '#22c55e';
+    statusEl.textContent = '✓ Valid code — ' + sd.name;
+    if (nameEl) nameEl.value = sd.name;
+    if (nameRow) nameRow.style.display = 'block';
+    return;
+  }
+
+  // Check employee codes
+  const { data: emp } = await window.sb
+    .from('sub_distributor_employees')
+    .select('id,name,sub_distributor_id,sub_distributors(name,commission_pct)')
+    .eq('referral_code', code)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (emp) {
+    const sdName = emp.sub_distributors?.name || 'Sub-Distributor';
+    _regValidatedDistributor = {
+      id: emp.sub_distributor_id,
+      name: sdName,
+      commission_pct: emp.sub_distributors?.commission_pct || 0,
+      employee_id: emp.id,
+    };
+    statusEl.style.color = '#22c55e';
+    statusEl.textContent = '✓ Valid code — ' + emp.name + ' (' + sdName + ')';
+    if (nameEl) nameEl.value = sdName;
+    if (nameRow) nameRow.style.display = 'block';
+    return;
+  }
+
+  statusEl.style.color = '#ef4444';
+  statusEl.textContent = '✗ Invalid or inactive referral code.';
+  if (nameRow) nameRow.style.display = 'none';
+}
+
+// Debounced code check on input
+let _regCodeTimer = null;
+document.addEventListener('input', e => {
+  if (e.target.id === 'regSubDistCode') {
+    clearTimeout(_regCodeTimer);
+    _regCodeTimer = setTimeout(validateRegCode, 700);
+  }
+});
+
+async function submitRegistration() {
+  const firstName = document.getElementById('regFirstName')?.value.trim();
+  const lastName  = document.getElementById('regLastName')?.value.trim();
+  const business  = document.getElementById('regBusiness')?.value.trim();
+  const email     = document.getElementById('regEmail')?.value.trim();
+  const phone     = document.getElementById('regPhone')?.value.trim();
+  const password  = document.getElementById('regPassword')?.value;
+  const confirm   = document.getElementById('regConfirm')?.value;
+  const hasSubDist = document.getElementById('regSubDistYes')?.checked;
+  const code      = document.getElementById('regSubDistCode')?.value.trim().toUpperCase();
+  const errEl     = document.getElementById('regError');
+
+  function showErr(msg) {
+    if (errEl) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  }
+
+  if (!firstName || !lastName) return showErr('Please enter your first and last name.');
+  if (!business)  return showErr('Please enter your business name.');
+  if (!email)     return showErr('Please enter your email address.');
+  if (password.length < 6) return showErr('Password must be at least 6 characters.');
+  if (password !== confirm) return showErr('Passwords do not match.');
+
+  if (hasSubDist) {
+    if (!code) return showErr('Please enter a sub-distributor referral code.');
+    if (!_regValidatedDistributor) {
+      await validateRegCode();
+      if (!_regValidatedDistributor) return showErr('Invalid referral code. Please check and try again.');
+    }
+  }
+
+  if (!window.sb) return showErr('Registration service unavailable. Please try again.');
+
+  const btn = document.querySelector('#reg-step-1 button[onclick="submitRegistration()"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
+
+  const { data: authData, error: authErr } = await window.sb.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        first_name: firstName,
+        last_name:  lastName,
+        business_name: business,
+        phone,
+      }
+    }
+  });
+
+  if (authErr) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+    return showErr(authErr.message);
+  }
+
+  const userId = authData?.user?.id;
+
+  // Upsert profile
+  if (userId && window.sb) {
+    await window.sb.from('profiles').upsert({
+      id: userId,
+      email,
+      contact_name: firstName + ' ' + lastName,
+      business_name: business,
+      phone,
+      role: 'customer',
+    }, { onConflict: 'id' });
+
+    // Link to sub-distributor if applicable
+    if (hasSubDist && _regValidatedDistributor) {
+      await window.sb.from('customer_sub_distributor_links').insert({
+        user_id:           userId,
+        sub_distributor_id: _regValidatedDistributor.id,
+        employee_id:        _regValidatedDistributor.employee_id,
+        referral_code_used: code,
+      });
+    }
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
+  document.getElementById('reg-step-1').style.display = 'none';
+  document.getElementById('reg-step-success').style.display = 'block';
+}
+
+/* =========================
+   REFERRAL CODE — CHECKOUT
+========================= */
+
+let _checkoutReferral = null; // { sub_distributor_id, employee_id, commission_pct, name }
+
+function clearReferralStatus() {
+  const el = document.getElementById('referral-code-status');
+  if (el) { el.textContent = ''; el.style.color = '#888'; }
+  _checkoutReferral = null;
+}
+
+async function validateReferralCode(code) {
+  code = (code || '').trim().toUpperCase();
+  const statusEl = document.getElementById('referral-code-status');
+  _checkoutReferral = null;
+
+  if (!code) { if (statusEl) statusEl.textContent = ''; return; }
+  if (!window.sb) { if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Validation unavailable.'; } return; }
+
+  if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Checking…'; }
+
+  const { data: sd } = await window.sb
+    .from('sub_distributors')
+    .select('id,name,commission_pct')
+    .eq('referral_code', code)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (sd) {
+    _checkoutReferral = { sub_distributor_id: sd.id, employee_id: null, commission_pct: sd.commission_pct, name: sd.name };
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '✓ Applied — ' + sd.name; }
+    return;
+  }
+
+  const { data: emp } = await window.sb
+    .from('sub_distributor_employees')
+    .select('id,name,sub_distributor_id,sub_distributors(name,commission_pct)')
+    .eq('referral_code', code)
+    .eq('status', 'active')
+    .maybeSingle();
+
+  if (emp) {
+    _checkoutReferral = {
+      sub_distributor_id: emp.sub_distributor_id,
+      employee_id: emp.id,
+      commission_pct: emp.sub_distributors ? emp.sub_distributors.commission_pct : 0,
+      name: emp.name + ' (' + (emp.sub_distributors ? emp.sub_distributors.name : '') + ')',
+    };
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '✓ Applied — ' + _checkoutReferral.name; }
+    return;
+  }
+
+  if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = '✗ Invalid or inactive referral code.'; }
+}
+
+async function autoFillReferralCode() {
+  const codeInput = document.getElementById('checkout-referral-code');
+  if (!codeInput || !window.sb) return;
+  const { data: { user } } = await window.sb.auth.getUser().catch(function() { return { data: { user: null } }; });
+  if (!user) return;
+  const { data: link } = await window.sb
+    .from('customer_sub_distributor_links')
+    .select('referral_code_used')
+    .eq('user_id', user.id)
+    .maybeSingle();
+  if (link && link.referral_code_used) {
+    codeInput.value = link.referral_code_used;
+    validateReferralCode(link.referral_code_used);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  if (document.getElementById('checkout-referral-code')) autoFillReferralCode();
+});

@@ -86,8 +86,9 @@ function switchTab(tab) {
   if (tab === "orders")        renderOrdersTable();
   if (tab === "users")         renderUsersTable();
   if (tab === "reports")       renderReportsTab();
-  if (tab === "manage-hero")   loadHeroSection();
-  if (tab === "manage-about")  loadAboutSection();
+  if (tab === "manage-hero")        loadHeroSection();
+  if (tab === "manage-about")       loadAboutSection();
+  if (tab === "sub-distributors")   renderSubDistributorsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -1498,4 +1499,317 @@ function previewAboutBanner(input) {
     showToast("Image previewed — save to apply");
   };
   reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   SUB-DISTRIBUTORS TAB
+============================================================ */
+
+async function renderSubDistributorsTab() {
+  await Promise.all([loadSdStats(), loadSdTable(), loadEmpTable()]);
+}
+
+async function loadSdStats() {
+  if (!window.sb) return;
+  const [{ count: total }, { data: referrals }] = await Promise.all([
+    window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }),
+    window.sb.from('order_referrals').select('commission_amount, sub_distributors(status)'),
+  ]);
+
+  const activeRes = await window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }).eq('status', 'active');
+  const active = activeRes.count || 0;
+  const revenue = (referrals || []).reduce((s, r) => {
+    const amt = parseFloat(r.commission_amount) || 0;
+    return s + amt;
+  }, 0);
+
+  setText('sd-stat-total',   total   || 0);
+  setText('sd-stat-active',  active);
+  setText('sd-stat-orders',  (referrals || []).length);
+  setText('sd-stat-revenue', '$' + revenue.toFixed(2));
+}
+
+async function loadSdTable() {
+  const tbody = document.getElementById('sd-table-body');
+  if (!tbody || !window.sb) return;
+  tbody.innerHTML = '<tr><td colspan="9" class="a-empty">Loading…</td></tr>';
+
+  const { data: sds, error } = await window.sb
+    .from('sub_distributors')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error || !sds || !sds.length) {
+    tbody.innerHTML = '<tr><td colspan="9" class="a-empty">No sub-distributors yet.</td></tr>';
+    return;
+  }
+
+  // Fetch stats per sub-distributor
+  const ids = sds.map(s => s.id);
+  const [{ data: links }, { data: referrals }] = await Promise.all([
+    window.sb.from('customer_sub_distributor_links').select('sub_distributor_id').in('sub_distributor_id', ids),
+    window.sb.from('order_referrals').select('sub_distributor_id,commission_amount,orders(total)').in('sub_distributor_id', ids),
+  ]);
+
+  const customerCount = {};
+  (links || []).forEach(l => { customerCount[l.sub_distributor_id] = (customerCount[l.sub_distributor_id] || 0) + 1; });
+  const orderCount = {};
+  const revenueMap = {};
+  (referrals || []).forEach(r => {
+    orderCount[r.sub_distributor_id] = (orderCount[r.sub_distributor_id] || 0) + 1;
+    revenueMap[r.sub_distributor_id] = (revenueMap[r.sub_distributor_id] || 0) + (parseFloat(r.orders && r.orders.total) || 0);
+  });
+
+  tbody.innerHTML = sds.map(sd => {
+    const orders  = orderCount[sd.id] || 0;
+    const rev     = revenueMap[sd.id] || 0;
+    const custCnt = customerCount[sd.id] || 0;
+    const badge   = sd.status === 'active'
+      ? '<span class="a-badge a-badge-green">Active</span>'
+      : '<span class="a-badge a-badge-gray">Inactive</span>';
+    return `<tr>
+      <td><strong>${esc(sd.name)}</strong><br><span style="font-size:11px;color:#8a9ab0">${esc(sd.email||'')}</span></td>
+      <td>${esc(sd.contact_person||'—')}</td>
+      <td><code style="background:#f0f3f9;padding:2px 7px;border-radius:5px;font-size:12px;">${esc(sd.referral_code)}</code></td>
+      <td>${sd.commission_pct}%</td>
+      <td>${custCnt}</td>
+      <td>${orders}</td>
+      <td>$${rev.toFixed(2)}</td>
+      <td>${badge}</td>
+      <td>
+        <button class="a-icon-btn" title="Edit" onclick='editSd(${JSON.stringify(JSON.stringify(sd))})'>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="a-icon-btn" title="Delete" onclick="deleteSd('${sd.id}','${esc(sd.name)}')" style="color:#ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  window._sdTableData = sds;
+}
+
+async function loadEmpTable() {
+  const tbody = document.getElementById('emp-table-body');
+  if (!tbody || !window.sb) return;
+  tbody.innerHTML = '<tr><td colspan="7" class="a-empty">Loading…</td></tr>';
+
+  const { data: emps } = await window.sb
+    .from('sub_distributor_employees')
+    .select('*, sub_distributors(name)')
+    .order('created_at', { ascending: false });
+
+  if (!emps || !emps.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="a-empty">No employees yet.</td></tr>';
+    return;
+  }
+
+  const empIds = emps.map(e => e.id);
+  const { data: referrals } = await window.sb
+    .from('order_referrals')
+    .select('employee_id,orders(total)')
+    .in('employee_id', empIds);
+
+  const orderCount = {};
+  const revenueMap = {};
+  (referrals || []).forEach(r => {
+    if (!r.employee_id) return;
+    orderCount[r.employee_id] = (orderCount[r.employee_id] || 0) + 1;
+    revenueMap[r.employee_id] = (revenueMap[r.employee_id] || 0) + (parseFloat(r.orders && r.orders.total) || 0);
+  });
+
+  tbody.innerHTML = emps.map(emp => {
+    const badge = emp.status === 'active'
+      ? '<span class="a-badge a-badge-green">Active</span>'
+      : '<span class="a-badge a-badge-gray">Inactive</span>';
+    return `<tr>
+      <td><strong>${esc(emp.name)}</strong><br><span style="font-size:11px;color:#8a9ab0">${esc(emp.email||'')}</span></td>
+      <td>${esc(emp.sub_distributors ? emp.sub_distributors.name : '—')}</td>
+      <td><code style="background:#f0f3f9;padding:2px 7px;border-radius:5px;font-size:12px;">${esc(emp.referral_code)}</code></td>
+      <td>${orderCount[emp.id] || 0}</td>
+      <td>$${(revenueMap[emp.id] || 0).toFixed(2)}</td>
+      <td>${badge}</td>
+      <td>
+        <button class="a-icon-btn" title="Edit" onclick='editEmp(${JSON.stringify(JSON.stringify(emp))})'>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="a-icon-btn" title="Delete" onclick="deleteEmp('${emp.id}','${esc(emp.name)}')" style="color:#ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+        </button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterSdTable(q) {
+  const rows = document.querySelectorAll('#sd-table-body tr');
+  q = q.toLowerCase();
+  rows.forEach(r => {
+    r.style.display = r.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ── Sub-Distributor Modal ─────────────────────────────────────
+
+function openSdModal(sd) {
+  document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
+  document.getElementById('sdEditId').value   = sd ? sd.id : '';
+  document.getElementById('sdName').value     = sd ? sd.name : '';
+  document.getElementById('sdContact').value  = sd ? (sd.contact_person||'') : '';
+  document.getElementById('sdEmail').value      = sd ? (sd.email||'') : '';
+  document.getElementById('sdPhone').value      = sd ? (sd.phone||'') : '';
+  document.getElementById('sdCode').value       = sd ? sd.referral_code : '';
+  document.getElementById('sdCommission').value = sd ? sd.commission_pct : '0';
+  document.getElementById('sdStatus').value     = sd ? sd.status : 'active';
+  document.getElementById('sdNotes').value      = sd ? (sd.notes||'') : '';
+  var errEl = document.getElementById('sdModalError');
+  if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
+  document.getElementById('sdModal').style.display = 'flex';
+}
+
+function closeSdModal() { document.getElementById('sdModal').style.display = 'none'; }
+
+function editSd(jsonStr) {
+  try { openSdModal(JSON.parse(jsonStr)); } catch(e) { console.error(e); }
+}
+
+function generateSdCode() {
+  var name = document.getElementById('sdName').value.trim();
+  var prefix = name ? name.replace(/\s+/g,'').toUpperCase().slice(0,4) : 'SD';
+  document.getElementById('sdCode').value = prefix + Math.floor(1000 + Math.random() * 9000);
+}
+
+async function saveSdDistributor() {
+  var id         = document.getElementById('sdEditId').value;
+  var name       = document.getElementById('sdName').value.trim();
+  var code       = document.getElementById('sdCode').value.trim().toUpperCase();
+  var commission = parseFloat(document.getElementById('sdCommission').value) || 0;
+  var errEl      = document.getElementById('sdModalError');
+
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!name) return showErr('Name is required.');
+  if (!code) return showErr('Referral code is required.');
+
+  var payload = {
+    name: name,
+    contact_person: document.getElementById('sdContact').value.trim(),
+    email:          document.getElementById('sdEmail').value.trim(),
+    phone:          document.getElementById('sdPhone').value.trim(),
+    referral_code:  code,
+    commission_pct: commission,
+    status:         document.getElementById('sdStatus').value,
+    notes:          document.getElementById('sdNotes').value.trim(),
+  };
+
+  var result;
+  if (id) {
+    result = await window.sb.from('sub_distributors').update(payload).eq('id', id);
+  } else {
+    result = await window.sb.from('sub_distributors').insert(payload);
+  }
+  if (result.error) return showErr(result.error.code === '23505' ? 'Referral code already exists.' : result.error.message);
+
+  closeSdModal();
+  showToast(id ? 'Sub-distributor updated.' : 'Sub-distributor added.');
+  loadSdTable();
+  loadSdStats();
+}
+
+async function deleteSd(id, name) {
+  if (!confirm('Delete sub-distributor "' + name + '"?')) return;
+  var result = await window.sb.from('sub_distributors').delete().eq('id', id);
+  if (result.error) return showToast('Error: ' + result.error.message, 'error');
+  showToast('Sub-distributor deleted.');
+  loadSdTable();
+  loadSdStats();
+}
+
+// ── Employee Modal ────────────────────────────────────────────
+
+async function openEmpModal(emp) {
+  document.getElementById('empModalTitle').textContent = emp ? 'Edit Employee' : 'Add Employee / Referrer';
+  document.getElementById('empEditId').value = emp ? emp.id : '';
+  document.getElementById('empName').value   = emp ? emp.name : '';
+  document.getElementById('empEmail').value  = emp ? (emp.email||'') : '';
+  document.getElementById('empPhone').value  = emp ? (emp.phone||'') : '';
+  document.getElementById('empCode').value   = emp ? emp.referral_code : '';
+  document.getElementById('empStatus').value = emp ? emp.status : 'active';
+
+  var select = document.getElementById('empParent');
+  select.innerHTML = '<option value="">Select…</option>';
+  var sdsRes = await window.sb.from('sub_distributors').select('id,name').eq('status','active').order('name');
+  (sdsRes.data||[]).forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.id; opt.textContent = s.name;
+    if (emp && emp.sub_distributor_id === s.id) opt.selected = true;
+    select.appendChild(opt);
+  });
+
+  var errEl = document.getElementById('empModalError');
+  if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
+  document.getElementById('empModal').style.display = 'flex';
+}
+
+function closeEmpModal() { document.getElementById('empModal').style.display = 'none'; }
+
+function editEmp(jsonStr) {
+  try { openEmpModal(JSON.parse(jsonStr)); } catch(e) { console.error(e); }
+}
+
+function generateEmpCode() {
+  var name = document.getElementById('empName').value.trim();
+  var prefix = name ? name.replace(/\s+/g,'').toUpperCase().slice(0,4) : 'EMP';
+  document.getElementById('empCode').value = prefix + Math.floor(1000 + Math.random() * 9000);
+}
+
+async function saveEmployee() {
+  var id     = document.getElementById('empEditId').value;
+  var name   = document.getElementById('empName').value.trim();
+  var parent = document.getElementById('empParent').value;
+  var code   = document.getElementById('empCode').value.trim().toUpperCase();
+  var errEl  = document.getElementById('empModalError');
+
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!name)   return showErr('Name is required.');
+  if (!parent) return showErr('Please select a parent sub-distributor.');
+  if (!code)   return showErr('Referral code is required.');
+
+  var payload = {
+    name: name,
+    sub_distributor_id: parent,
+    email:  document.getElementById('empEmail').value.trim(),
+    phone:  document.getElementById('empPhone').value.trim(),
+    referral_code: code,
+    status: document.getElementById('empStatus').value,
+  };
+
+  var result;
+  if (id) {
+    result = await window.sb.from('sub_distributor_employees').update(payload).eq('id', id);
+  } else {
+    result = await window.sb.from('sub_distributor_employees').insert(payload);
+  }
+  if (result.error) return showErr(result.error.code === '23505' ? 'Referral code already exists.' : result.error.message);
+
+  closeEmpModal();
+  showToast(id ? 'Employee updated.' : 'Employee added.');
+  loadEmpTable();
+}
+
+async function deleteEmp(id, name) {
+  if (!confirm('Delete employee "' + name + '"?')) return;
+  var result = await window.sb.from('sub_distributor_employees').delete().eq('id', id);
+  if (result.error) return showToast('Error: ' + result.error.message, 'error');
+  showToast('Employee deleted.');
+  loadEmpTable();
+}
+
+function setText(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.textContent = val;
+}
+
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
