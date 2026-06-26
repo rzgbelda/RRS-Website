@@ -85,7 +85,15 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
 
 const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings"];
 
+function resetRoleRestrictions() {
+  // Restore all hidden nav items (needed when switching accounts without full page reload)
+  document.querySelectorAll(".admin-only-nav").forEach(el => { el.style.display = ""; });
+  var badge = document.querySelector(".sd-partner-badge");
+  if (badge) badge.remove();
+}
+
 function applyRoleRestrictions(role) {
+  resetRoleRestrictions(); // always reset first
   if (role === "admin") return; // full access — nothing to hide
   if (document.querySelector(".sd-partner-badge")) return; // already applied
 
