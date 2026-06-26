@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin — Room Ready Supply</title>
+  <title>Admin â€” Room Ready Supply</title>
   <link rel="stylesheet" href="admin.css" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
@@ -28,7 +28,7 @@
       <input type="password" id="adminPassword" placeholder="Password" required />
       <button type="submit" class="a-login-btn">Sign In to Dashboard</button>
     </form>
-    <a href="/" class="a-back-link">← Back to website</a>
+    <a href="/" class="a-back-link">â† Back to website</a>
   </div>
 </div>
 
@@ -129,7 +129,7 @@
       <div class="a-topbar-right">
         <div class="a-topbar-search">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" class="a-topbar-search-input" placeholder="Quick search…" />
+          <input type="text" class="a-topbar-search-input" placeholder="Quick searchâ€¦" />
         </div>
         <button class="a-notif-btn" title="Notifications">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
@@ -147,7 +147,7 @@
       <!-- Welcome bar -->
       <div class="dash-welcome">
         <div>
-          <h1 class="a-page-title" id="dashGreeting">Good morning 👋</h1>
+          <h1 class="a-page-title" id="dashGreeting">Good morning ðŸ‘‹</h1>
           <p class="a-page-sub">Here's what's happening with your store today.</p>
         </div>
         <button onclick="renderDashboardTab()" title="Refresh" class="dash-refresh-btn">
@@ -165,7 +165,7 @@
           </div>
           <div>
             <p class="a-stat-label">Total Revenue</p>
-            <p class="a-stat-value" id="statRevenue">—</p>
+            <p class="a-stat-value" id="statRevenue">â€”</p>
           </div>
         </div>
 
@@ -175,7 +175,7 @@
           </div>
           <div>
             <p class="a-stat-label">Total Orders</p>
-            <p class="a-stat-value" id="statOrders">—</p>
+            <p class="a-stat-value" id="statOrders">â€”</p>
             <p class="a-stat-sub" id="statPending"></p>
           </div>
         </div>
@@ -186,7 +186,7 @@
           </div>
           <div>
             <p class="a-stat-label">Registered Users</p>
-            <p class="a-stat-value" id="statUsers">—</p>
+            <p class="a-stat-value" id="statUsers">â€”</p>
           </div>
         </div>
 
@@ -196,7 +196,7 @@
           </div>
           <div>
             <p class="a-stat-label">Active Products</p>
-            <p class="a-stat-value" id="statProducts">—</p>
+            <p class="a-stat-value" id="statProducts">â€”</p>
           </div>
         </div>
 
@@ -206,7 +206,7 @@
           </div>
           <div>
             <p class="a-stat-label">Out of Stock</p>
-            <p class="a-stat-value" id="statOutOfStock">—</p>
+            <p class="a-stat-value" id="statOutOfStock">â€”</p>
           </div>
         </div>
 
@@ -234,7 +234,7 @@
         <div class="a-card">
           <div class="a-card-header">
             <h3>Recent Orders</h3>
-            <button class="a-link-btn" data-goto="orders">View All →</button>
+            <button class="a-link-btn" data-goto="orders">View All â†’</button>
           </div>
           <div class="a-table-wrap">
             <table class="a-table">
@@ -248,7 +248,7 @@
                 </tr>
               </thead>
               <tbody id="recentOrdersBody">
-                <tr><td colspan="5" class="a-empty">Loading…</td></tr>
+                <tr><td colspan="5" class="a-empty">Loadingâ€¦</td></tr>
               </tbody>
             </table>
           </div>
@@ -261,7 +261,7 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" style="vertical-align:-2px;margin-right:6px"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               Low / Out of Stock
             </h3>
-            <button class="a-link-btn" data-goto="inventory">Manage →</button>
+            <button class="a-link-btn" data-goto="inventory">Manage â†’</button>
           </div>
           <div class="a-table-wrap">
             <table class="a-table">
@@ -269,7 +269,7 @@
                 <tr><th>Product</th><th>Category</th><th>Qty</th><th>Status</th></tr>
               </thead>
               <tbody id="lowStockBody">
-                <tr><td colspan="4" class="a-empty">Loading…</td></tr>
+                <tr><td colspan="4" class="a-empty">Loadingâ€¦</td></tr>
               </tbody>
             </table>
           </div>
@@ -282,10 +282,10 @@
     <!-- ============ PRODUCTS TAB ============ -->
     <div id="tab-products" class="a-tab" style="display:none">
 
-      <!-- ── Products list view ── -->
+      <!-- â”€â”€ Products list view â”€â”€ -->
       <div id="productsListView">
         <div class="a-toolbar">
-          <input type="text" id="productSearch" class="a-search" placeholder="Search products…">
+          <input type="text" id="productSearch" class="a-search" placeholder="Search productsâ€¦">
           <select id="productCategoryFilter" class="a-select">
             <option value="">All Categories</option>
             <option>Toilet Paper</option>
@@ -300,14 +300,14 @@
             <option>Food Service Supplies</option>
             <option>Facility Supplies</option>
           </select>
-          <button class="a-btn-primary" id="openCsvImport" onclick="showCsvSection()" style="margin-right:8px;background:#1a4a8a">⬆ Import CSV</button>
+          <button class="a-btn-primary" id="openCsvImport" onclick="showCsvSection()" style="margin-right:8px;background:#1a4a8a">â¬† Import CSV</button>
           <button class="a-btn-primary" id="openAddProduct" onclick="openAddProduct()">+ Add Product</button>
         </div>
 
         <!-- Bulk action bar -->
         <div id="bulkBar" style="display:none;align-items:center;gap:12px;background:#fff3f0;border:1.5px solid #ED7226;border-radius:8px;padding:10px 16px;margin-bottom:12px;">
           <span id="bulkCount" style="font-weight:700;color:#ED7226;font-size:14px;">0 selected</span>
-          <button onclick="bulkDelete()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:7px 18px;font-weight:700;cursor:pointer;font-size:13px;">🗑 Delete Selected</button>
+          <button onclick="bulkDelete()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:7px 18px;font-weight:700;cursor:pointer;font-size:13px;">ðŸ—‘ Delete Selected</button>
           <button onclick="clearSelection()" style="background:transparent;border:1px solid #ccc;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:13px;">Cancel</button>
         </div>
 
@@ -335,7 +335,7 @@
         </div>
       </div><!-- /productsListView -->
 
-      <!-- ── CSV Import inline section ── -->
+      <!-- â”€â”€ CSV Import inline section â”€â”€ -->
       <div id="csvSection" style="display:none">
 
         <!-- Page header -->
@@ -375,7 +375,7 @@
                 </div>
                 <h3 class="csv-drop-headline">Drop your CSV file here</h3>
                 <p class="csv-drop-sub">or <span class="csv-browse-link">click to browse files</span></p>
-                <p class="csv-drop-hint">Supports .csv · UTF-8 · Up to 16,000+ rows</p>
+                <p class="csv-drop-hint">Supports .csv Â· UTF-8 Â· Up to 16,000+ rows</p>
               </div>
               <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none">
             </div>
@@ -463,7 +463,7 @@
             </table>
           </div>
           <div class="csv-preview-footer">
-            <p class="csv-preview-note">Showing first 5 rows · <span id="csvTotalPreview"></span> total rows will be imported</p>
+            <p class="csv-preview-note">Showing first 5 rows Â· <span id="csvTotalPreview"></span> total rows will be imported</p>
             <button class="a-btn-primary" id="csvImportBtn" onclick="runCsvImport()" style="width:auto;padding:10px 28px">
               Import All Rows
             </button>
@@ -478,7 +478,7 @@
               <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
           </div>
-          <p id="csvProgressLabel" class="csv-progress-label">Importing products…</p>
+          <p id="csvProgressLabel" class="csv-progress-label">Importing productsâ€¦</p>
           <div class="csv-progress-track">
             <div class="csv-progress-bar" id="csvProgressBar" style="width:0%"></div>
           </div>
@@ -514,7 +514,7 @@
           </div>
         </div>
 
-      <!-- ── Converter overlay (xlsx → mapped CSV download) ── -->
+      <!-- â”€â”€ Converter overlay (xlsx â†’ mapped CSV download) â”€â”€ -->
       <div id="cvtPanel" style="display:none">
         <div class="csv-page-header">
           <button class="csv-back-btn" onclick="hideCvtPanel()">
@@ -545,7 +545,7 @@
               </div>
               <h3 class="csv-drop-headline">Drop your .xlsx or .csv file here</h3>
               <p class="csv-drop-sub">or <span class="csv-browse-link">click to browse files</span></p>
-              <p class="csv-drop-hint">Supports .xlsx · .xls · .csv · Any column names</p>
+              <p class="csv-drop-hint">Supports .xlsx Â· .xls Â· .csv Â· Any column names</p>
             </div>
             <input type="file" id="cvtFileInput" accept=".xlsx,.xls,.csv" style="display:none">
           </div>
@@ -555,7 +555,7 @@
         <div id="cvtStep2" class="csv-step-panel" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
-              <p style="font-size:13px;color:#888">File: <strong id="cvtFileName"></strong> · <span id="cvtRowCountLabel"></span> rows · <span id="cvtMappedCount"></span> / 15 columns mapped</p>
+              <p style="font-size:13px;color:#888">File: <strong id="cvtFileName"></strong> Â· <span id="cvtRowCountLabel"></span> rows Â· <span id="cvtMappedCount"></span> / 15 columns mapped</p>
             </div>
             <button class="csv-change-file-btn" onclick="showCvtStep(1)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
@@ -564,9 +564,9 @@
           </div>
           <div id="cvtMappingGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px"></div>
           <button class="a-btn-primary" style="width:auto;padding:10px 28px" onclick="cvtBuildAndDownload()">
-            ⬇ Download Converted CSV
+            â¬‡ Download Converted CSV
           </button>
-          <p style="font-size:12px;color:#94a3b8;margin-top:10px">The downloaded file will match the RRS import template exactly — ready to drag into the importer above.</p>
+          <p style="font-size:12px;color:#94a3b8;margin-top:10px">The downloaded file will match the RRS import template exactly â€” ready to drag into the importer above.</p>
         </div>
 
         <!-- Cvt Step 3: Done -->
@@ -577,8 +577,8 @@
           <h3 style="font-size:20px;color:#0f2b50;margin-bottom:8px">File Downloaded!</h3>
           <p style="font-size:14px;color:#666;margin-bottom:28px">Your converted CSV is ready. Drag it into the importer to upload your products.</p>
           <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-            <button class="a-btn-outline" style="width:auto" onclick="showCvtStep(2)">← Edit Mapping</button>
-            <button class="a-btn-primary" style="width:auto" onclick="hideCvtPanel()">Go to Importer →</button>
+            <button class="a-btn-outline" style="width:auto" onclick="showCvtStep(2)">â† Edit Mapping</button>
+            <button class="a-btn-primary" style="width:auto" onclick="hideCvtPanel()">Go to Importer â†’</button>
           </div>
         </div>
       </div><!-- /cvtPanel -->
@@ -591,7 +591,7 @@
     <div id="tab-inventory" class="a-tab" style="display:none">
 
       <div class="a-toolbar">
-        <input type="text" id="inventorySearch" class="a-search" placeholder="Search inventory…">
+        <input type="text" id="inventorySearch" class="a-search" placeholder="Search inventoryâ€¦">
         <select id="inventoryStockFilter" class="a-select">
           <option value="">All Stock Levels</option>
           <option value="in_stock">In Stock</option>
@@ -626,7 +626,7 @@
     <div id="tab-orders" class="a-tab" style="display:none">
 
       <div class="a-toolbar">
-        <input type="text" id="orderSearch" class="a-search" placeholder="Search orders…">
+        <input type="text" id="orderSearch" class="a-search" placeholder="Search ordersâ€¦">
         <select id="orderStatusFilter" class="a-select">
           <option value="">All Statuses</option>
           <option value="pending">Pending</option>
@@ -666,7 +666,7 @@
     <div id="tab-users" class="a-tab" style="display:none">
 
       <div class="a-toolbar">
-        <input type="text" id="userSearch" class="a-search" placeholder="Search users…">
+        <input type="text" id="userSearch" class="a-search" placeholder="Search usersâ€¦">
       </div>
 
       <div class="a-card">
@@ -777,7 +777,7 @@
 
             <div class="cms-form-group" style="margin-bottom:0">
               <label class="cms-label">Description</label>
-              <textarea id="heroDescription" class="a-input cms-input" rows="5" placeholder="Room Ready Supply helps hotels, motels…" style="resize:vertical;"></textarea>
+              <textarea id="heroDescription" class="a-input cms-input" rows="5" placeholder="Room Ready Supply helps hotels, motelsâ€¦" style="resize:vertical;"></textarea>
             </div>
           </div>
 
@@ -863,15 +863,15 @@
 
             <div class="cms-form-group">
               <label class="cms-label">Paragraph 1</label>
-              <textarea id="aboutP1" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens…"></textarea>
+              <textarea id="aboutP1" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchensâ€¦"></textarea>
             </div>
             <div class="cms-form-group">
               <label class="cms-label">Paragraph 2</label>
-              <textarea id="aboutP2" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides…"></textarea>
+              <textarea id="aboutP2" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply providesâ€¦"></textarea>
             </div>
             <div class="cms-form-group" style="margin-bottom:0">
               <label class="cms-label">Paragraph 3</label>
-              <textarea id="aboutP3" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple…"></textarea>
+              <textarea id="aboutP3" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Our goal is simpleâ€¦"></textarea>
             </div>
           </div>
 
@@ -930,7 +930,7 @@
             <p class="sd-hero-sub">Manage partners, referral codes &amp; commissions</p>
           </div>
         </div>
-        <button type="button" id="btnOpenSdModal" class="a-btn-primary sd-hero-btn">
+        <button type="button" id="btnOpenSdModal" class="a-btn-primary sd-hero-btn" onclick="openSdModal()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Add Sub-Distributor
         </button>
@@ -944,7 +944,7 @@
           </div>
           <div>
             <div class="sd-stat-label">Total Partners</div>
-            <div class="sd-stat-value" id="sd-stat-total">—</div>
+            <div class="sd-stat-value" id="sd-stat-total">â€”</div>
           </div>
         </div>
         <div class="sd-stat-card">
@@ -953,7 +953,7 @@
           </div>
           <div>
             <div class="sd-stat-label">Active</div>
-            <div class="sd-stat-value" id="sd-stat-active">—</div>
+            <div class="sd-stat-value" id="sd-stat-active">â€”</div>
           </div>
         </div>
         <div class="sd-stat-card">
@@ -962,7 +962,7 @@
           </div>
           <div>
             <div class="sd-stat-label">Referred Orders</div>
-            <div class="sd-stat-value" id="sd-stat-orders">—</div>
+            <div class="sd-stat-value" id="sd-stat-orders">â€”</div>
           </div>
         </div>
         <div class="sd-stat-card sd-stat-revenue">
@@ -971,7 +971,7 @@
           </div>
           <div>
             <div class="sd-stat-label">Referred Revenue</div>
-            <div class="sd-stat-value" id="sd-stat-revenue">—</div>
+            <div class="sd-stat-value" id="sd-stat-revenue">â€”</div>
           </div>
         </div>
       </div>
@@ -987,7 +987,7 @@
           <div class="sd-card-actions">
             <div class="sd-search-wrap">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-              <input type="text" placeholder="Search by name or code…" oninput="filterSdTable(this.value)" class="sd-search">
+              <input type="text" placeholder="Search by name or codeâ€¦" oninput="filterSdTable(this.value)" class="sd-search">
             </div>
           </div>
         </div>
@@ -998,7 +998,7 @@
               <th>Commission</th><th>Customers</th><th>Orders</th><th>Revenue</th>
               <th>Status</th><th style="text-align:center">Actions</th>
             </tr></thead>
-            <tbody id="sd-table-body"><tr><td colspan="9" class="a-empty">Loading…</td></tr></tbody>
+            <tbody id="sd-table-body"><tr><td colspan="9" class="a-empty">Loadingâ€¦</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1010,7 +1010,7 @@
             <span class="sd-card-dot" style="background:#f97316;"></span>
             <span class="sd-card-title">Employees / Referrers</span>
           </div>
-          <button type="button" id="btnOpenEmpModal" class="sd-add-emp-btn">
+          <button type="button" id="btnOpenEmpModal" class="sd-add-emp-btn" onclick="openEmpModal()">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Employee
           </button>
@@ -1021,7 +1021,7 @@
               <th>Name</th><th>Sub-Distributor</th><th>Referral Code</th>
               <th>Orders</th><th>Revenue</th><th>Status</th><th style="text-align:center">Actions</th>
             </tr></thead>
-            <tbody id="emp-table-body"><tr><td colspan="7" class="a-empty">Loading…</td></tr></tbody>
+            <tbody id="emp-table-body"><tr><td colspan="7" class="a-empty">Loadingâ€¦</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -1039,7 +1039,7 @@
   <div class="a-modal">
     <div class="a-modal-header">
       <h3 id="modalTitle">Add Product</h3>
-      <button class="a-modal-close" id="closeProductModal">✕</button>
+      <button class="a-modal-close" id="closeProductModal">âœ•</button>
     </div>
     <div class="a-modal-body">
       <form id="productForm" onsubmit="return false">
@@ -1061,7 +1061,7 @@
           <div class="a-field">
             <label>Category <span class="req">*</span></label>
             <select id="prodCategory">
-              <option value="">Select category…</option>
+              <option value="">Select categoryâ€¦</option>
               <option>Toilet Paper</option>
               <option>Paper Towels</option>
               <option>Trash Liners</option>
@@ -1086,7 +1086,7 @@
 
         <div class="a-field full-width">
           <label>Description</label>
-          <textarea id="prodDescription" rows="2" placeholder="Short product description…"></textarea>
+          <textarea id="prodDescription" rows="2" placeholder="Short product descriptionâ€¦"></textarea>
         </div>
 
         <div class="a-form-col-3">
@@ -1139,7 +1139,7 @@
         <div class="a-form-col-2">
           <div class="a-field">
             <label>Image URL</label>
-            <input type="text" id="prodImage" placeholder="blanket.png or https://…" />
+            <input type="text" id="prodImage" placeholder="blanket.png or https://â€¦" />
             <label style="margin-top:8px;font-size:12px;color:var(--text-muted)">Or upload image:</label>
             <input type="file" id="prodImageFile" accept="image/*" style="margin-top:4px;font-size:13px" />
           </div>
@@ -1171,23 +1171,23 @@
   <div class="a-modal" style="max-width:780px;width:95vw">
     <div class="a-modal-header">
       <h3>Bulk Import Products (CSV)</h3>
-      <button class="a-modal-close" onclick="closeCsvImport()">✕</button>
+      <button class="a-modal-close" onclick="closeCsvImport()">âœ•</button>
     </div>
     <div class="a-modal-body" style="padding:20px 24px">
 
       <!-- Step 1: Drop zone -->
       <div id="csvStep1">
         <div id="csvDropZone" class="csv-drop-zone" onclick="document.getElementById('csvFileInput').click()">
-          <div class="csv-drop-icon">📂</div>
+          <div class="csv-drop-icon">ðŸ“‚</div>
           <p class="csv-drop-title">Drop your CSV file here or <span>click to browse</span></p>
-          <p class="csv-drop-hint">Supports .csv files up to 50 MB · Up to 16,000+ rows</p>
+          <p class="csv-drop-hint">Supports .csv files up to 50 MB Â· Up to 16,000+ rows</p>
         </div>
         <input type="file" id="csvFileInput" accept=".csv,text/csv" style="display:none">
 
         <div style="display:flex;align-items:center;gap:8px;margin-top:14px;flex-wrap:wrap">
           <span style="font-size:13px;color:#666">Don't have a template?</span>
           <button class="a-btn-outline" style="width:auto;font-size:12px;padding:6px 14px" onclick="downloadCsvTemplate()">
-            ⬇ Download Template
+            â¬‡ Download Template
           </button>
           <span style="font-size:12px;color:#94a3b8;margin-left:4px">Required columns: name, price, category_name</span>
         </div>
@@ -1221,7 +1221,7 @@
             <strong id="csvRowCount" style="font-size:15px;color:#0d2c50"></strong>
             <span style="font-size:13px;color:#666;margin-left:6px" id="csvDupNote"></span>
           </div>
-          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="csvReset()">✕ Change File</button>
+          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="csvReset()">âœ• Change File</button>
         </div>
         <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:10px;max-height:260px;overflow-y:auto">
           <table class="a-table" id="csvPreviewTable" style="font-size:12px;min-width:600px">
@@ -1235,7 +1235,7 @@
       <!-- Step 3: Progress -->
       <div id="csvStep3" style="display:none">
         <div style="text-align:center;padding:10px 0 6px">
-          <p id="csvProgressLabel" style="font-size:14px;font-weight:600;color:#0d2c50;margin-bottom:14px">Importing products…</p>
+          <p id="csvProgressLabel" style="font-size:14px;font-weight:600;color:#0d2c50;margin-bottom:14px">Importing productsâ€¦</p>
           <div class="csv-progress-track">
             <div class="csv-progress-bar" id="csvProgressBar" style="width:0%"></div>
           </div>
@@ -1277,7 +1277,7 @@
   <div class="a-modal a-modal-lg">
     <div class="a-modal-header">
       <h3>Order Details</h3>
-      <button class="a-modal-close" id="closeOrderModal">✕</button>
+      <button class="a-modal-close" id="closeOrderModal">âœ•</button>
     </div>
     <div class="a-modal-body" id="orderModalBody">
     </div>
@@ -1292,7 +1292,7 @@
   <div class="a-modal a-modal-sm">
     <div class="a-modal-header">
       <h3>Confirm Delete</h3>
-      <button class="a-modal-close" id="closeDeleteModal">✕</button>
+      <button class="a-modal-close" id="closeDeleteModal">âœ•</button>
     </div>
     <div class="a-modal-body">
       <p id="deleteModalMsg" style="font-size:14.5px;color:var(--text-secondary);line-height:1.6">Are you sure you want to delete this item? This cannot be undone.</p>
@@ -1305,12 +1305,12 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<!-- ── Sub-Distributor Add/Edit Modal ──────────────────────── -->
+<!-- â”€â”€ Sub-Distributor Add/Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div id="sdModal" class="a-modal-overlay" style="display:none">
   <div class="a-modal" style="max-width:600px">
     <div class="a-modal-header">
       <h3 id="sdModalTitle">Add Sub-Distributor</h3>
-      <button class="a-modal-close" id="btnCloseSdX">✕</button>
+      <button class="a-modal-close" id="btnCloseSdX">âœ•</button>
     </div>
     <div class="a-modal-body">
       <input type="hidden" id="sdEditId">
@@ -1350,12 +1350,12 @@
   </div>
 </div>
 
-<!-- ── Employee Add/Edit Modal ──────────────────────────────── -->
+<!-- â”€â”€ Employee Add/Edit Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
 <div id="empModal" class="a-modal-overlay" style="display:none">
   <div class="a-modal" style="max-width:560px">
     <div class="a-modal-header">
       <h3 id="empModalTitle">Add Employee / Referrer</h3>
-      <button class="a-modal-close" id="btnCloseEmpX">✕</button>
+      <button class="a-modal-close" id="btnCloseEmpX">âœ•</button>
     </div>
     <div class="a-modal-body">
       <input type="hidden" id="empEditId">
@@ -1364,7 +1364,7 @@
           <div class="a-field"><label>Name <span class="req">*</span></label><input type="text" id="empName" placeholder="Jane Doe"></div>
           <div class="a-field">
             <label>Sub-Distributor <span class="req">*</span></label>
-            <select id="empParent"><option value="">Select…</option></select>
+            <select id="empParent"><option value="">Selectâ€¦</option></select>
           </div>
         </div>
         <div class="a-form-col-2">
@@ -1396,7 +1396,7 @@
 
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="admin.js?v=18"></script>
+<script src="admin.js?v=19"></script>
 <script>
   function toggleSidebar() {
     document.getElementById('adminSidebar').classList.toggle('open');
@@ -1414,3 +1414,6 @@
 </script>
 </body>
 </html>
+
+
+

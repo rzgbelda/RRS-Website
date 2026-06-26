@@ -135,21 +135,20 @@ function showAccessDeniedOverlay() {
 }
 
 function bindSdButtons() {
-  // Use event delegation on document so dynamic buttons always work
   document.addEventListener('click', function(e) {
-    var id = e.target.closest('[id]') && e.target.closest('[id]').id;
-    if (!id) return;
-    switch(id) {
-      case 'btnOpenSdModal':  e.stopPropagation(); openSdModal(); break;
-      case 'btnOpenEmpModal': e.stopPropagation(); openEmpModal(); break;
-      case 'btnCloseSdModal': closeSdModal(); break;
-      case 'btnCloseSdX':     closeSdModal(); break;
-      case 'btnSaveSd':       saveSdDistributor(); break;
-      case 'btnCloseEmpModal':closeEmpModal(); break;
-      case 'btnCloseEmpX':    closeEmpModal(); break;
-      case 'btnSaveEmp':      saveEmployee(); break;
-      case 'btnGenSdCode':    generateSdCode(); break;
-      case 'btnGenEmpCode':   generateEmpCode(); break;
+    var btn = e.target.closest('button');
+    if (!btn || !btn.id) return;
+    switch(btn.id) {
+      case 'btnOpenSdModal':   openSdModal();        break;
+      case 'btnOpenEmpModal':  openEmpModal();       break;
+      case 'btnCloseSdModal':  closeSdModal();       break;
+      case 'btnCloseSdX':      closeSdModal();       break;
+      case 'btnSaveSd':        saveSdDistributor();  break;
+      case 'btnCloseEmpModal': closeEmpModal();      break;
+      case 'btnCloseEmpX':     closeEmpModal();      break;
+      case 'btnSaveEmp':       saveEmployee();       break;
+      case 'btnGenSdCode':     generateSdCode();     break;
+      case 'btnGenEmpCode':    generateEmpCode();    break;
     }
   });
 }
@@ -1749,6 +1748,7 @@ function filterSdTable(q) {
 // ── Sub-Distributor Modal ─────────────────────────────────────
 
 function openSdModal(sd) {
+  console.log('[RRS] openSdModal called', sd);
   document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
   document.getElementById('sdEditId').value   = sd ? sd.id : '';
   document.getElementById('sdName').value     = sd ? sd.name : '';
