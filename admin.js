@@ -1764,14 +1764,16 @@ function openSdModal(sd) {
     if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
     var modal = document.getElementById('sdModal');
     console.log('[RRS] sdModal found:', !!modal);
-    if (modal) { modal.style.display = 'flex'; console.log('[RRS] modal opened'); }
-    else { console.error('[RRS] sdModal element NOT found in DOM'); }
+    if (modal) {
+      modal.style.cssText = 'display:flex !important;position:fixed !important;inset:0 !important;z-index:999999 !important;background:rgba(0,0,0,0.6) !important;align-items:center !important;justify-content:center !important;padding:20px !important;';
+      console.log('[RRS] modal opened');
+    } else { console.error('[RRS] sdModal element NOT found in DOM'); }
   } catch(err) {
     console.error('[RRS] openSdModal error:', err.message);
   }
 }
 
-function closeSdModal() { document.getElementById('sdModal').style.display = 'none'; }
+function closeSdModal() { var m = document.getElementById('sdModal'); if(m) m.style.cssText = 'display:none !important;'; }
 
 function editSd(jsonStr) {
   try { openSdModal(JSON.parse(jsonStr)); } catch(e) { console.error(e); }
