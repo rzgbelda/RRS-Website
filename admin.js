@@ -1747,33 +1747,43 @@ function filterSdTable(q) {
 
 // ── Sub-Distributor Modal ─────────────────────────────────────
 
-function openSdModal(sd) {
-  console.log('[RRS] openSdModal called', sd);
-  try {
-    document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
-    document.getElementById('sdEditId').value     = sd ? sd.id : '';
-    document.getElementById('sdName').value       = sd ? sd.name : '';
-    document.getElementById('sdContact').value    = sd ? (sd.contact_person||'') : '';
-    document.getElementById('sdEmail').value      = sd ? (sd.email||'') : '';
-    document.getElementById('sdPhone').value      = sd ? (sd.phone||'') : '';
-    document.getElementById('sdCode').value       = sd ? sd.referral_code : '';
-    document.getElementById('sdCommission').value = sd ? sd.commission_pct : '0';
-    document.getElementById('sdStatus').value     = sd ? sd.status : 'active';
-    document.getElementById('sdNotes').value      = sd ? (sd.notes||'') : '';
-    var errEl = document.getElementById('sdModalError');
-    if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
-    var modal = document.getElementById('sdModal');
-    console.log('[RRS] sdModal found:', !!modal);
-    if (modal) {
-      modal.style.cssText = 'display:flex !important;position:fixed !important;inset:0 !important;z-index:999999 !important;background:rgba(0,0,0,0.6) !important;align-items:center !important;justify-content:center !important;padding:20px !important;';
-      console.log('[RRS] modal opened');
-    } else { console.error('[RRS] sdModal element NOT found in DOM'); }
-  } catch(err) {
-    console.error('[RRS] openSdModal error:', err.message);
-  }
+function closeSdModal() {
+  var m = document.getElementById('sdModalDynamic');
+  if (m) m.remove();
 }
 
-function closeSdModal() { var m = document.getElementById('sdModal'); if(m) m.style.cssText = 'display:none !important;'; }
+function openSdModal(sd) {
+  closeSdModal();
+  var overlay = document.createElement('div');
+  overlay.id = 'sdModalDynamic';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3);">' +
+    '<div style="padding:22px 28px 16px;border-bottom:1px solid #f0f4fa;display:flex;justify-content:space-between;align-items:center;">' +
+      '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0d1f38;">' + (sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor') + '</h3>' +
+      '<button onclick="closeSdModal()" style="border:none;background:#f3f6fb;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:#666;">✕</button>' +
+    '</div>' +
+    '<div style="padding:22px 28px;">' +
+      '<input type="hidden" id="sdEditId" value="' + (sd ? sd.id : '') + '">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Name *</label><input id="sdName" type="text" placeholder="ABC Distribution" value="' + (sd ? esc(sd.name) : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Contact Person</label><input id="sdContact" type="text" placeholder="John Smith" value="' + (sd ? esc(sd.contact_person||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Email</label><input id="sdEmail" type="email" placeholder="john@abc.com" value="' + (sd ? esc(sd.email||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Phone</label><input id="sdPhone" type="text" placeholder="(555) 000-0000" value="' + (sd ? esc(sd.phone||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Referral Code *</label><div style="display:flex;gap:8px;"><input id="sdCode" type="text" placeholder="ABC2024" value="' + (sd ? esc(sd.referral_code) : '') + '" style="flex:1;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;text-transform:uppercase;box-sizing:border-box;"><button type="button" onclick="generateSdCode()" style="padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f8fafd;cursor:pointer;font-size:12px;white-space:nowrap;">Auto-Gen</button></div></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Commission %</label><input id="sdCommission" type="number" placeholder="0" min="0" max="100" step="0.01" value="' + (sd ? sd.commission_pct : '0') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Status</label><select id="sdStatus" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"><option value="active"' + (sd && sd.status==='active'?' selected':'') + '>Active</option><option value="inactive"' + (sd && sd.status==='inactive'?' selected':'') + '>Inactive</option></select></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Notes</label><input id="sdNotes" type="text" placeholder="Optional notes" value="' + (sd ? esc(sd.notes||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+      '</div>' +
+      '<div id="sdModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:12px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>' +
+    '</div>' +
+    '<div style="padding:16px 28px;border-top:1px solid #f0f4fa;display:flex;justify-content:flex-end;gap:10px;">' +
+      '<button onclick="closeSdModal()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;">Cancel</button>' +
+      '<button onclick="saveSdDistributor()" style="padding:10px 20px;border:none;border-radius:9px;background:#f58220;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Save Sub-Distributor</button>' +
+    '</div>' +
+  '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSdModal(); });
+  document.body.appendChild(overlay);
+}
 
 function editSd(jsonStr) {
   try { openSdModal(JSON.parse(jsonStr)); } catch(e) { console.error(e); }
@@ -1832,31 +1842,46 @@ async function deleteSd(id, name) {
 
 // ── Employee Modal ────────────────────────────────────────────
 
-async function openEmpModal(emp) {
-  document.getElementById('empModalTitle').textContent = emp ? 'Edit Employee' : 'Add Employee / Referrer';
-  document.getElementById('empEditId').value = emp ? emp.id : '';
-  document.getElementById('empName').value   = emp ? emp.name : '';
-  document.getElementById('empEmail').value  = emp ? (emp.email||'') : '';
-  document.getElementById('empPhone').value  = emp ? (emp.phone||'') : '';
-  document.getElementById('empCode').value   = emp ? emp.referral_code : '';
-  document.getElementById('empStatus').value = emp ? emp.status : 'active';
-
-  var select = document.getElementById('empParent');
-  select.innerHTML = '<option value="">Select…</option>';
-  var sdsRes = await window.sb.from('sub_distributors').select('id,name').eq('status','active').order('name');
-  (sdsRes.data||[]).forEach(function(s) {
-    var opt = document.createElement('option');
-    opt.value = s.id; opt.textContent = s.name;
-    if (emp && emp.sub_distributor_id === s.id) opt.selected = true;
-    select.appendChild(opt);
-  });
-
-  var errEl = document.getElementById('empModalError');
-  if (errEl) { errEl.style.display='none'; errEl.textContent=''; }
-  document.getElementById('empModal').style.display = 'flex';
+function closeEmpModal() {
+  var m = document.getElementById('empModalDynamic');
+  if (m) m.remove();
 }
 
-function closeEmpModal() { document.getElementById('empModal').style.display = 'none'; }
+async function openEmpModal(emp) {
+  closeEmpModal();
+  var sdsRes = await window.sb.from('sub_distributors').select('id,name').eq('status','active').order('name');
+  var sdOptions = '<option value="">Select parent sub-distributor…</option>';
+  (sdsRes.data||[]).forEach(function(s) {
+    sdOptions += '<option value="' + s.id + '"' + (emp && emp.sub_distributor_id === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
+  });
+  var overlay = document.createElement('div');
+  overlay.id = 'empModalDynamic';
+  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3);">' +
+    '<div style="padding:22px 28px 16px;border-bottom:1px solid #f0f4fa;display:flex;justify-content:space-between;align-items:center;">' +
+      '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0d1f38;">' + (emp ? 'Edit Employee' : 'Add Employee / Referrer') + '</h3>' +
+      '<button onclick="closeEmpModal()" style="border:none;background:#f3f6fb;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:#666;">✕</button>' +
+    '</div>' +
+    '<div style="padding:22px 28px;">' +
+      '<input type="hidden" id="empEditId" value="' + (emp ? emp.id : '') + '">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Name *</label><input id="empName" type="text" placeholder="Jane Smith" value="' + (emp ? esc(emp.name) : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Email</label><input id="empEmail" type="email" placeholder="jane@abc.com" value="' + (emp ? esc(emp.email||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Phone</label><input id="empPhone" type="text" placeholder="(555) 000-0000" value="' + (emp ? esc(emp.phone||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Referral Code *</label><div style="display:flex;gap:8px;"><input id="empCode" type="text" placeholder="JANE2024" value="' + (emp ? esc(emp.referral_code) : '') + '" style="flex:1;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;text-transform:uppercase;box-sizing:border-box;"><button type="button" onclick="generateEmpCode()" style="padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f8fafd;cursor:pointer;font-size:12px;white-space:nowrap;">Auto-Gen</button></div></div>' +
+        '<div style="grid-column:span 2;"><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Parent Sub-Distributor *</label><select id="empParent" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;">' + sdOptions + '</select></div>' +
+        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Status</label><select id="empStatus" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"><option value="active"' + (emp && emp.status==='active'?' selected':'') + '>Active</option><option value="inactive"' + (emp && emp.status==='inactive'?' selected':'') + '>Inactive</option></select></div>' +
+      '</div>' +
+      '<div id="empModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:12px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>' +
+    '</div>' +
+    '<div style="padding:16px 28px;border-top:1px solid #f0f4fa;display:flex;justify-content:flex-end;gap:10px;">' +
+      '<button onclick="closeEmpModal()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;">Cancel</button>' +
+      '<button onclick="saveEmployee()" style="padding:10px 20px;border:none;border-radius:9px;background:#f58220;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Save Employee</button>' +
+    '</div>' +
+  '</div>';
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeEmpModal(); });
+  document.body.appendChild(overlay);
+}
 
 function editEmp(jsonStr) {
   try { openEmpModal(JSON.parse(jsonStr)); } catch(e) { console.error(e); }
