@@ -1413,8 +1413,8 @@ textarea:focus {
 }
 
 .filter-list label {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: 17px 1fr;
   align-items: center;
   font-size: 13.5px;
   font-weight: 500;
