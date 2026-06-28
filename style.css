@@ -1351,69 +1351,116 @@ textarea:focus {
 }
 
 .filter-sidebar {
-  border: 1px solid #cfcfcf;
-  border-radius: 3px;
-  padding: 12px 18px 18px;
+  background: #fff;
+  border: 1px solid #eaeff7;
+  border-radius: 18px;
+  padding: 20px 18px 22px;
   height: fit-content;
-  color: #294868;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  position: sticky;
+  top: 90px;
 }
 
 .filter-search {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+  gap: 9px;
+  background: #f4f7fb;
+  border: 1.5px solid #e4eaf3;
+  border-radius: 11px;
+  padding: 8px 12px;
+  margin-bottom: 20px;
+  transition: border-color .2s, box-shadow .2s;
+}
+.filter-search:focus-within {
+  border-color: #ED7226;
+  box-shadow: 0 0 0 3px rgba(237,114,38,.10);
+  background: #fff;
 }
 
 .filter-search span {
-  font-size: 22px;
-  color: #294868;
+  font-size: 16px;
+  color: #94a3b8;
+  flex-shrink: 0;
 }
 
 .filter-search input {
   width: 100%;
-  height: 18px;
-  border: 1px solid #bdbdbd;
-  border-radius: 3px;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  color: #1e3a5f;
+  outline: none;
+  height: auto;
 }
+.filter-search input::placeholder { color: #b0bccc; }
 
 .filter-sidebar h3 {
-  font-size: 14px;
+  font-size: 10px;
   font-weight: 800;
-  margin-bottom: 16px;
-  color: #294868;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f0f4fa;
 }
 
 .filter-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 2px;
 }
 
 .filter-list label {
   display: flex;
-  flex-direction: row-reverse;
-  justify-content: flex-end;
+  flex-direction: row;
   align-items: center;
-  font-size: 13px;
-  color: #294868;
-  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374f6b;
+  gap: 10px;
   cursor: pointer;
+  padding: 8px 10px;
+  border-radius: 9px;
+  transition: background .15s, color .15s;
+}
+.filter-list label:hover {
+  background: #f4f7fb;
+  color: #ED7226;
+}
+.filter-list label:has(input:checked) {
+  background: rgba(237,114,38,.08);
+  color: #ED7226;
+  font-weight: 600;
 }
 
 .filter-list input[type="checkbox"] {
   appearance: none;
-  width: 20px;
-  height: 20px;
-  border: 1px solid #294868;
-  border-radius: 3px;
+  width: 17px;
+  height: 17px;
+  min-width: 17px;
+  border: 2px solid #d0dae8;
+  border-radius: 5px;
   cursor: pointer;
+  transition: border-color .15s, background .15s;
+  position: relative;
 }
+.filter-list input[type="checkbox"]:hover { border-color: #ED7226; }
 
 .filter-list input[type="checkbox"]:checked {
   background: #ED7226;
   border-color: #ED7226;
-  box-shadow: inset 0 0 0 4px #fff;
+}
+.filter-list input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 5px;
+  width: 5px; height: 9px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg);
 }
 
 .catalog-main {
