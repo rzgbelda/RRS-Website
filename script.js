@@ -1449,7 +1449,7 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
 
   } catch (err) {
     console.error("Order submission error:", err);
-    alert("There was a problem submitting your order. Please try again or call us directly.");
+    alert("Order error: " + (err.message || JSON.stringify(err)));
   } finally {
     btn.textContent = originalText;
     btn.disabled = false;
