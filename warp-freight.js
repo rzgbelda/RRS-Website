@@ -3,18 +3,13 @@
 // API key is stored securely in Supabase Edge Function — not exposed here
 
 const WARP_CONFIG = {
-  edgeFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
-  baseUrl: 'https://www.wearewarp.com/api/v1',
+  edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
+  parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/parcel-quote',
   origin: {
     street: '609 Washington St',
     city: 'Plymouth',
     state: 'NC',
     zip: '27962',
-  },
-  pallet: {
-    length_in: 48,
-    width_in: 40,
-    max_weight_lbs: 1500,
   },
 };
 
@@ -89,65 +84,88 @@ function buildFreightItems(cartItems) {
     const dims = getProductDims(item.itemNumber || '');
     const qty  = item.quantity || 1;
     return {
-      description:  item.name || 'Supply Item',
-      quantity:     qty,
-      weight_lbs:   dims.weight_lbs * qty,
-      length_in:    dims.length_in,
-      width_in:     dims.width_in,
-      height_in:    dims.height_in,
+      description:   item.name || 'Supply Item',
+      quantity:      qty,
+      weight_lbs:    dims.weight_lbs,   // per-unit weight; Edge Function expands by qty
+      length_in:     dims.length_in,
+      width_in:      dims.width_in,
+      height_in:     dims.height_in,
       freight_class: dims.freight_class,
     };
   });
 }
 
-const LTL_MIN_WEIGHT_LBS = 150; // below this, route to parcel — not LTL
+const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LTL (Warp)
 const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
+const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
 
-// Fetch live LTL quotes from Warp
+// Fetch live parcel rates from Shippo (via Edge Function) for orders < 150 lbs
+async function fetchParcelQuotes(destinationZip, destinationCity, destinationState, cartItems) {
+  const items = buildFreightItems(cartItems);
+  const payload = {
+    destination_zip:   destinationZip,
+    destination_city:  destinationCity  || '',
+    destination_state: destinationState || '',
+    items,
+  };
+  console.log('[Parcel] Shippo payload:', JSON.stringify(payload));
+  try {
+    const res = await fetch(WARP_CONFIG.parcelFunctionUrl, {
+      method:  'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { console.error('[Parcel] non-JSON:', text); return null; }
+    if (!res.ok) { console.error('[Parcel] Shippo error:', data); return null; }
+    const rates = data.rates || [];
+    console.log('[Parcel] rates received:', rates.length);
+    return rates.length ? rates : null;
+  } catch(e) {
+    console.error('[Parcel] fetch error:', e);
+    return null;
+  }
+}
+
+// Fetch live LTL quotes from Warp for orders >= 150 lbs
 async function fetchFreightQuotes(destinationZip, cartItems) {
   if (!destinationZip || destinationZip.length < 5) return null;
 
   const items = buildFreightItems(cartItems);
-  const totalWeight = items.reduce((s, i) => s + i.weight_lbs, 0);
+  const totalWeight = items.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
 
-  // Under LTL threshold — parcel shipping, not LTL
   if (totalWeight < LTL_MIN_WEIGHT_LBS) {
-    console.log(`[Freight] ${totalWeight.toFixed(1)} lbs — below LTL threshold, routing to parcel`);
+    console.log(`[Freight] ${totalWeight.toFixed(1)} lbs — below LTL threshold`);
     return 'parcel';
   }
 
   const pickup = nextBusinessDay();
-
-  // Send accurate item-level dimensions — NO pallet_config (that forces pallet pricing)
   const payload = {
     origin_zip:      WARP_CONFIG.origin.zip,
     destination_zip: destinationZip,
     pickup_date:     pickup,
     items,
   };
-
   console.log('[Freight] LTL payload:', JSON.stringify(payload));
 
   try {
     const res = await fetch(WARP_CONFIG.edgeFunctionUrl, {
       method:  'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY`,
+        'Content-Type':  'application/json',
+        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
       body: JSON.stringify(payload),
     });
-
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { console.error('Freight non-JSON response:', text); return null; }
+    try { data = JSON.parse(text); } catch(e) { console.error('[Freight] non-JSON:', text); return null; }
+    if (!res.ok) { console.error('[Freight] Warp error:', data); return null; }
 
-    if (!res.ok) {
-      console.error('[Freight] Warp error:', data);
-      return null;
-    }
-
-    // Normalize response — Warp returns a single object or array
     let quotes = data.quotes || data.rates || null;
     if (!quotes) {
       if (Array.isArray(data)) quotes = data;
@@ -155,7 +173,6 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     }
     if (!quotes) return null;
 
-    // Normalize field names
     quotes = quotes.map(q => ({
       ...q,
       total_charge: q.total_charge || q.price_usd || q.price || 0,
@@ -163,17 +180,15 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       transit_days: q.transit_days ?? q.transit_days_min ?? null,
     }));
 
-    // Sanity check — filter out quotes that are > 3× the order subtotal
     const subtotal = getCartSubtotal();
     if (subtotal > 0) {
       const sane = quotes.filter(q => q.total_charge <= subtotal * QUOTE_SANITY_RATIO);
       if (sane.length === 0) {
-        console.warn(`[Freight] All quotes exceed ${QUOTE_SANITY_RATIO}× subtotal ($${subtotal.toFixed(2)}) — flagging for manual review`);
+        console.warn(`[Freight] All LTL quotes exceed ${QUOTE_SANITY_RATIO}× subtotal — flagging for review`);
         return 'review';
       }
       quotes = sane;
     }
-
     return quotes;
   } catch (e) {
     console.error('[Freight] fetch error:', e);
@@ -251,6 +266,25 @@ async function triggerQuote(zip) {
     return;
   }
 
+  // Determine weight to choose parcel vs LTL
+  const freightItems = buildFreightItems(cartItems);
+  const totalWeight = freightItems.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
+
+  if (totalWeight < LTL_MIN_WEIGHT_LBS) {
+    // Parcel route — get city/state from form for accurate Shippo quote
+    const city  = document.getElementById('checkout-city')?.value.trim()  || '';
+    const state = document.getElementById('checkout-state')?.value        || '';
+    renderQuotePanel(null, 'loading');
+    const parcelRates = await fetchParcelQuotes(zip, city, state, cartItems);
+    if (parcelRates) {
+      renderQuotePanel(parcelRates, 'results');
+    } else {
+      renderQuotePanel(null, 'parcel'); // fallback: show "quoted at confirmation"
+    }
+    return;
+  }
+
+  // LTL route (Warp)
   const quotes = await fetchFreightQuotes(zip, cartItems);
   if (quotes === 'parcel') { renderQuotePanel(null, 'parcel'); return; }
   if (quotes === 'review') { renderQuotePanel(null, 'review'); return; }
@@ -364,7 +398,7 @@ function renderQuotePanel(quotes, state) {
   panel.innerHTML = `
     <p class="fq-label">Select a shipping option:</p>
     <div class="fq-list">${rows}</div>
-    <p class="fq-note">Live freight rates. Final pricing confirmed in your order.</p>`;
+    <p class="fq-note">Live shipping rates via UPS/FedEx and LTL carriers. Final pricing confirmed in your order.</p>`;
 }
 
 function selectFreightQuote(jsonStr) {
