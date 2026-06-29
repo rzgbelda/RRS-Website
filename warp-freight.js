@@ -100,65 +100,83 @@ function buildFreightItems(cartItems) {
   });
 }
 
-// Fetch live LTL quotes from Warp sandbox
+const LTL_MIN_WEIGHT_LBS = 150; // below this, route to parcel — not LTL
+const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
+
+// Fetch live LTL quotes from Warp
 async function fetchFreightQuotes(destinationZip, cartItems) {
   if (!destinationZip || destinationZip.length < 5) return null;
 
   const items = buildFreightItems(cartItems);
   const totalWeight = items.reduce((s, i) => s + i.weight_lbs, 0);
 
-  // Pickup date = next business day
+  // Under LTL threshold — parcel shipping, not LTL
+  if (totalWeight < LTL_MIN_WEIGHT_LBS) {
+    console.log(`[Freight] ${totalWeight.toFixed(1)} lbs — below LTL threshold, routing to parcel`);
+    return 'parcel';
+  }
+
   const pickup = nextBusinessDay();
 
+  // Send accurate item-level dimensions — NO pallet_config (that forces pallet pricing)
   const payload = {
-    origin_zip:       WARP_CONFIG.origin.zip,
-    destination_zip:  destinationZip,
-    pickup_date:      pickup,
+    origin_zip:      WARP_CONFIG.origin.zip,
+    destination_zip: destinationZip,
+    pickup_date:     pickup,
     items,
-    pallet_config: {
-      length_in:      WARP_CONFIG.pallet.length_in,
-      width_in:       WARP_CONFIG.pallet.width_in,
-      max_weight_lbs: WARP_CONFIG.pallet.max_weight_lbs,
-    },
   };
+
+  console.log('[Freight] LTL payload:', JSON.stringify(payload));
 
   try {
     const res = await fetch(WARP_CONFIG.edgeFunctionUrl, {
       method:  'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${window.SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY'}`,
+        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY`,
       },
       body: JSON.stringify(payload),
     });
 
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { alert('Freight raw response: ' + text.slice(0, 300)); return null; }
+    try { data = JSON.parse(text); } catch(e) { console.error('Freight non-JSON response:', text); return null; }
 
     if (!res.ok) {
-      console.error('Warp error:', data);
+      console.error('[Freight] Warp error:', data);
       return null;
     }
 
-    // Warp returns a single quote object or array — normalize to array
+    // Normalize response — Warp returns a single object or array
     let quotes = data.quotes || data.rates || null;
     if (!quotes) {
       if (Array.isArray(data)) quotes = data;
-      else if (data.quote_id || data.price_usd) quotes = [data]; // single quote object
+      else if (data.quote_id || data.price_usd) quotes = [data];
     }
-    // Normalize field names to what renderQuotePanel expects
-    if (quotes) {
-      quotes = quotes.map(q => ({
-        ...q,
-        total_charge: q.total_charge || q.price_usd || q.price || 0,
-        carrier_name: q.carrier_name || q.carrier || (q.mode ? 'Warp ' + q.mode.toUpperCase() : 'Warp LTL'),
-        transit_days: q.transit_days ?? q.transit_days_min ?? null,
-      }));
+    if (!quotes) return null;
+
+    // Normalize field names
+    quotes = quotes.map(q => ({
+      ...q,
+      total_charge: q.total_charge || q.price_usd || q.price || 0,
+      carrier_name: q.carrier_name || q.carrier || (q.mode ? 'Warp ' + q.mode.toUpperCase() : 'Warp LTL'),
+      transit_days: q.transit_days ?? q.transit_days_min ?? null,
+    }));
+
+    // Sanity check — filter out quotes that are > 3× the order subtotal
+    const subtotal = getCartSubtotal();
+    if (subtotal > 0) {
+      const sane = quotes.filter(q => q.total_charge <= subtotal * QUOTE_SANITY_RATIO);
+      if (sane.length === 0) {
+        console.warn(`[Freight] All quotes exceed ${QUOTE_SANITY_RATIO}× subtotal ($${subtotal.toFixed(2)}) — flagging for manual review`);
+        return 'review';
+      }
+      quotes = sane;
     }
+
     return quotes;
   } catch (e) {
-    console.error('Freight fetch error:', e);
+    console.error('[Freight] fetch error:', e);
     return null;
   }
 }
@@ -234,6 +252,8 @@ async function triggerQuote(zip) {
   }
 
   const quotes = await fetchFreightQuotes(zip, cartItems);
+  if (quotes === 'parcel') { renderQuotePanel(null, 'parcel'); return; }
+  if (quotes === 'review') { renderQuotePanel(null, 'review'); return; }
   renderQuotePanel(quotes, quotes ? 'results' : 'error');
 }
 
@@ -273,6 +293,36 @@ function renderQuotePanel(quotes, state) {
 
   if (state === 'empty-cart') {
     panel.innerHTML = `<p class="fq-hint">Add products to your order to see shipping rates.</p>`;
+    return;
+  }
+
+  if (state === 'parcel') {
+    _selectedQuote = { total_charge: 0, carrier_name: 'Parcel', transit_days: null, parcel: true };
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
+    panel.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px 16px;">
+        <span style="font-size:18px;">📦</span>
+        <div>
+          <strong style="color:#1e40af;font-size:14px;">Parcel Shipping</strong>
+          <p style="color:#1d4ed8;font-size:12px;margin:2px 0 0;">Your order is under 150 lbs — shipping will be quoted as parcel (UPS/FedEx). Final cost confirmed in your order.</p>
+        </div>
+      </div>`;
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
+    return;
+  }
+
+  if (state === 'review') {
+    _selectedQuote = { total_charge: 0, carrier_name: 'Manual Review', transit_days: null, review: true };
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
+    panel.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;background:#fefce8;border:1.5px solid #fde047;border-radius:10px;padding:12px 16px;">
+        <span style="font-size:18px;">⚠️</span>
+        <div>
+          <strong style="color:#854d0e;font-size:14px;">Shipping Rate Under Review</strong>
+          <p style="color:#92400e;font-size:12px;margin:2px 0 0;">The estimated freight cost seems unusually high. Our team will confirm the correct shipping cost in your order confirmation.</p>
+        </div>
+      </div>`;
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
