@@ -1524,11 +1524,11 @@ async function setupProfilePage() {
     }
   } catch(e) {}
 
-  setText("profile-business", userBusiness, "Room Ready Customer");
-  setText("profile-email", userEmail, "customer@email.com");
-  setText("businessName", userBusiness, "Room Ready Customer");
+  setText("profile-business", userBusiness || userName || userEmail, "");
+  setText("profile-email", userEmail, "");
+  setText("businessName", userBusiness, "Not added yet");
   setText("contactName", userName);
-  setText("emailAddress", userEmail, "customer@email.com");
+  setText("emailAddress", userEmail, "");
 
   const orderHistoryList = document.getElementById("orderHistoryList");
 
