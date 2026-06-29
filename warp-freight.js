@@ -125,19 +125,24 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
   try {
     const res = await fetch(WARP_CONFIG.edgeFunctionUrl, {
       method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${window.SUPABASE_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY'}`,
+      },
       body: JSON.stringify(payload),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { alert('Freight raw response: ' + text.slice(0, 300)); return null; }
+
     if (!res.ok) {
-      console.error('Warp API error:', JSON.stringify(data));
-      alert('Freight error: ' + JSON.stringify(data).slice(0, 300));
+      alert('Freight error (' + res.status + '): ' + JSON.stringify(data).slice(0, 300));
       return null;
     }
 
-    console.log('Warp API response:', JSON.stringify(data).slice(0, 500));
-    return data.quotes || data.rates || data || null;
+    console.log('Warp response:', JSON.stringify(data).slice(0, 500));
+    return data.quotes || data.rates || (Array.isArray(data) ? data : null);
   } catch (e) {
     console.error('Warp fetch failed:', e);
     return null;
