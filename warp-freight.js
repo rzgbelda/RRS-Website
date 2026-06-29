@@ -1,9 +1,9 @@
 // Warp Freight API Integration
 // Origin: 609 Washington St, Plymouth, NC 27962
-// Docs: https://www.wearewarp.com/api/v1
+// API key is stored securely in Supabase Edge Function — not exposed here
 
 const WARP_CONFIG = {
-  apiKey: 'wak_live_kQvPhM0LL-GeeTeYcqA9UICNNJV3YwsCUh1t0x3Gv20',  // production key
+  edgeFunctionUrl: 'https://gjprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
   baseUrl: 'https://www.wearewarp.com/api/v1',
   origin: {
     street: '609 Washington St',
@@ -123,12 +123,9 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
   };
 
   try {
-    const res = await fetch(`${WARP_CONFIG.baseUrl}/ltl/quote`, {
+    const res = await fetch(WARP_CONFIG.edgeFunctionUrl, {
       method:  'POST',
-      headers: {
-        'Authorization': `Bearer ${WARP_CONFIG.apiKey}`,
-        'Content-Type':  'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
