@@ -327,7 +327,7 @@
     <div class="submit-order-actions">
       <button
         class="submit-order-btn"
-        onclick="window.location.href='payment.html'"
+        onclick="saveCheckoutAndProceed()"
       >
         Review and Submit Order Request
       </button>
@@ -347,6 +347,28 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
+<script>
+function saveCheckoutAndProceed() {
+  const data = {
+    business: document.getElementById('checkout-business')?.value.trim() || '',
+    contact:  document.getElementById('checkout-contact')?.value.trim()  || '',
+    phone:    document.getElementById('checkout-phone')?.value.trim()    || '',
+    email:    document.getElementById('checkout-email')?.value.trim()    || '',
+    street:   document.getElementById('checkout-street')?.value.trim()   || '',
+    city:     document.getElementById('checkout-city')?.value.trim()     || '',
+    state:    document.getElementById('checkout-state')?.value           || '',
+    zip:      document.getElementById('checkout-zip')?.value.trim()      || '',
+    notes:    document.getElementById('checkout-notes')?.value.trim()    || '',
+    orderType: document.getElementById('reorderOption')?.checked ? 'reorder' : 'one_time',
+    referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',
+  };
+  if (!data.business) { alert('Please enter your business name.'); return; }
+  if (!data.phone)    { alert('Please enter your phone number.'); return; }
+  if (!data.street)   { alert('Please enter your delivery address.'); return; }
+  localStorage.setItem('rrs_checkout_data', JSON.stringify(data));
+  window.location.href = 'payment.html';
+}
+</script>
 </body>
 </html>
 <!-- ── Floating Catalog QR Widget ───────────────────────────── -->

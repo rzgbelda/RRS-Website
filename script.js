@@ -1366,35 +1366,36 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
   btn.disabled = true;
 
   try {
-    // Collect form values
-    const business  = document.getElementById("checkout-business")?.value.trim() || "";
-    const contact   = document.getElementById("checkout-contact")?.value.trim()  || "";
-    const phone     = document.getElementById("checkout-phone")?.value.trim()    || "";
-    const email     = document.getElementById("checkout-email")?.value.trim()    || "";
-    const street    = document.getElementById("checkout-street")?.value.trim()   || "";
-    const city      = document.getElementById("checkout-city")?.value.trim()     || "";
-    const state     = document.getElementById("checkout-state")?.value           || "";
-    const zip       = document.getElementById("checkout-zip")?.value.trim()      || "";
-    const notes     = document.getElementById("checkout-notes")?.value.trim()    || "";
-    const orderType = document.getElementById("reorderOption")?.checked ? "reorder" : "one_time";
-    const referral  = document.getElementById("checkout-referral-code")?.value.trim() || null;
+    // Read checkout data saved from checkout.html
+    const cd = JSON.parse(localStorage.getItem("rrs_checkout_data") || "{}");
+    const business  = cd.business  || "";
+    const contact   = cd.contact   || "";
+    const phone     = cd.phone     || "";
+    const email     = cd.email     || "";
+    const street    = cd.street    || "";
+    const city      = cd.city      || "";
+    const state     = cd.state     || "";
+    const zip       = cd.zip       || "";
+    const notes     = cd.notes     || "";
+    const orderType = cd.orderType || "one_time";
+    const referral  = cd.referral  || null;
 
     // Validate required fields
-    if (!business) { alert("Please enter your business name."); btn.textContent = originalText; btn.disabled = false; return; }
-    if (!phone)    { alert("Please enter your phone number.");  btn.textContent = originalText; btn.disabled = false; return; }
-    if (!street)   { alert("Please enter your delivery address."); btn.textContent = originalText; btn.disabled = false; return; }
+    if (!business) { alert("Please enter your business name on the Customer Details page."); btn.textContent = originalText; btn.disabled = false; return; }
+    if (!phone)    { alert("Please enter your phone number on the Customer Details page.");  btn.textContent = originalText; btn.disabled = false; return; }
+    if (!street)   { alert("Please enter your delivery address on the Customer Details page."); btn.textContent = originalText; btn.disabled = false; return; }
 
     // Get cart
     const cart = JSON.parse(localStorage.getItem("rrs_cart") || "[]");
     if (!cart.length) { alert("Your cart is empty."); btn.textContent = originalText; btn.disabled = false; return; }
 
     // Get subtotal
-    const subtotalText = document.getElementById("summary-subtotal")?.textContent || "0";
+    const subtotalText = document.getElementById("payment-subtotal")?.textContent || "0";
     const subtotal = parseFloat(subtotalText.replace(/[^0-9.]/g, "")) || 0;
 
     // Get selected freight quote
-    const freightQuote = typeof getSelectedFreightQuote === "function" ? getSelectedFreightQuote() : null;
-    const shippingCost = freightQuote ? (freightQuote.total_charge || freightQuote.price || 0) : 0;
+    const freightQuote = JSON.parse(localStorage.getItem("rrs_freight_quote") || "null");
+    const shippingCost = freightQuote ? parseFloat(freightQuote.total_charge || freightQuote.price || 0) : 0;
     const total = subtotal + shippingCost;
 
     // Get logged-in user (optional — guests allowed)
