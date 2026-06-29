@@ -137,14 +137,28 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     try { data = JSON.parse(text); } catch(e) { alert('Freight raw response: ' + text.slice(0, 300)); return null; }
 
     if (!res.ok) {
-      alert('Freight error (' + res.status + '): ' + JSON.stringify(data).slice(0, 300));
+      console.error('Warp error:', data);
       return null;
     }
 
-    alert('Warp OK response: ' + JSON.stringify(data).slice(0, 400));
-    return data.quotes || data.rates || (Array.isArray(data) ? data : null);
+    // Warp returns a single quote object or array — normalize to array
+    let quotes = data.quotes || data.rates || null;
+    if (!quotes) {
+      if (Array.isArray(data)) quotes = data;
+      else if (data.quote_id || data.price_usd) quotes = [data]; // single quote object
+    }
+    // Normalize field names to what renderQuotePanel expects
+    if (quotes) {
+      quotes = quotes.map(q => ({
+        ...q,
+        total_charge: q.total_charge || q.price_usd || q.price || 0,
+        carrier_name: q.carrier_name || q.carrier || q.mode || 'Warp LTL',
+        transit_days: q.transit_days ?? q.transit_days_min ?? null,
+      }));
+    }
+    return quotes;
   } catch (e) {
-    alert('Freight fetch exception: ' + (e.message || String(e)));
+    console.error('Freight fetch error:', e);
     return null;
   }
 }
