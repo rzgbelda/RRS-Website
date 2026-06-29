@@ -141,7 +141,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       return null;
     }
 
-    console.log('Warp response:', JSON.stringify(data).slice(0, 500));
+    alert('Warp OK response: ' + JSON.stringify(data).slice(0, 400));
     return data.quotes || data.rates || (Array.isArray(data) ? data : null);
   } catch (e) {
     alert('Freight fetch exception: ' + (e.message || String(e)));
