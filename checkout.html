@@ -132,17 +132,17 @@
         <h2>1. Customer details</h2>
 
         <div class="form-grid">
-          <label>Business Name* <input type="text" placeholder="Enter business name"></label>
-          <label>Contact Name: <input type="text" placeholder="Enter contact name"></label>
-          <label>Phone Number* <input type="text" placeholder="(123) 456-7890"></label>
-          <label>Email Address: <input type="email" placeholder="email@business.com"></label>
+          <label>Business Name* <input type="text" id="checkout-business" placeholder="Enter business name"></label>
+          <label>Contact Name: <input type="text" id="checkout-contact" placeholder="Enter contact name"></label>
+          <label>Phone Number* <input type="text" id="checkout-phone" placeholder="(123) 456-7890"></label>
+          <label>Email Address: <input type="email" id="checkout-email" placeholder="email@business.com"></label>
         </div>
 
-        <label class="full-field">Delivery Address* <input type="text" placeholder="Street address"></label>
+        <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address"></label>
 
         <div class="address-grid">
-          <input type="text" placeholder="City">
-            <select>
+          <input type="text" id="checkout-city" placeholder="City">
+            <select id="checkout-state">
               <option value="">Select State</option>
 
               <option value="AL">Alabama</option>
@@ -285,7 +285,7 @@
 
 <div class="special-instructions">
   <label>Notes or Special Instructions</label>
-  <textarea placeholder="Any special delivery instructions, preferred brands, or other notes?"></textarea>
+  <textarea id="checkout-notes" placeholder="Any special delivery instructions, preferred brands, or other notes?"></textarea>
 </div>
       </div>
 
