@@ -3,7 +3,7 @@
 // API key is stored securely in Supabase Edge Function — not exposed here
 
 const WARP_CONFIG = {
-  edgeFunctionUrl: 'https://gjprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
+  edgeFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
   baseUrl: 'https://www.wearewarp.com/api/v1',
   origin: {
     street: '609 Washington St',
