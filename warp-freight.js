@@ -245,9 +245,26 @@ async function triggerQuote(zip) {
     return;
   }
 
-  // Free shipping for orders $500+ (temporarily disabled for testing)
-  // const subtotal = getCartSubtotal();
-  // if (subtotal >= 500) { ... }
+  // Free shipping for orders $500+
+  const subtotal = getCartSubtotal();
+  if (subtotal >= 500) {
+    _selectedQuote = { total_charge: 0, carrier_name: 'Free Shipping', transit_days: null, free: true };
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
+    const panel = document.getElementById('freight-quote-panel');
+    const shippingEl = document.getElementById('summary-shipping');
+    if (panel) panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
+        <span style="font-size:18px;">🎉</span>
+        <div>
+          <strong style="color:#166534;font-size:14px;">Free Shipping!</strong>
+          <p style="color:#15803d;font-size:12px;margin:2px 0 0;">Your order qualifies for free shipping (orders $500+).</p>
+        </div>
+      </div>`;
+    if (shippingEl) shippingEl.textContent = 'FREE';
+    const totalEl = document.getElementById('summary-total');
+    if (totalEl) totalEl.textContent = `$${subtotal.toFixed(2)}`;
+    return;
+  }
 
   // Determine weight to choose parcel vs LTL
   const freightItems = buildFreightItems(cartItems);
