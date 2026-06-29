@@ -1497,26 +1497,38 @@ async function setupProfilePage() {
     });
   });
 
-  const checkoutInfo = JSON.parse(localStorage.getItem("checkoutInfo")) || {};
-  const orders = JSON.parse(localStorage.getItem("orderHistory")) || [];
-
   const setText = (id, value, fallback = "Not added yet") => {
     const el = document.getElementById(id);
     if (el) el.textContent = value || fallback;
   };
 
-  setText("profile-business", checkoutInfo.businessName, "Room Ready Customer");
-  setText("profile-email", checkoutInfo.email, "customer@email.com");
+  // Load real profile from Supabase
+  let userEmail = "", userName = "", userBusiness = "";
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    if (session?.user) {
+      userEmail = session.user.email || "";
+      const { data: profile } = await window.sb
+        .from("profiles")
+        .select("*")
+        .eq("id", session.user.id)
+        .single();
+      if (profile) {
+        userName = [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+        userBusiness = profile.business_name || "";
+        // Populate avatar initials
+        const initials = (profile.first_name?.[0] || "") + (profile.last_name?.[0] || "");
+        const avatarEl = document.getElementById("profile-avatar");
+        if (avatarEl && initials) avatarEl.textContent = initials.toUpperCase();
+      }
+    }
+  } catch(e) {}
 
-  setText("businessName", checkoutInfo.businessName, "Room Ready Customer");
-  setText("contactName", checkoutInfo.contactName);
-  setText("emailAddress", checkoutInfo.email, "customer@email.com");
-  setText("phoneNumber", checkoutInfo.phone);
-
-  setText("deliveryAddress", checkoutInfo.address, "No address saved yet");
-  setText("deliveryCity", checkoutInfo.city);
-  setText("deliveryState", checkoutInfo.state);
-  setText("deliveryZip", checkoutInfo.zip);
+  setText("profile-business", userBusiness, "Room Ready Customer");
+  setText("profile-email", userEmail, "customer@email.com");
+  setText("businessName", userBusiness, "Room Ready Customer");
+  setText("contactName", userName);
+  setText("emailAddress", userEmail, "customer@email.com");
 
   const orderHistoryList = document.getElementById("orderHistoryList");
 
@@ -1528,7 +1540,7 @@ async function setupProfilePage() {
         const { data: sbOrders, error } = await window.sb
           .from("orders")
           .select("id, order_number, created_at, total, status, subtotal")
-          .eq("user_id", session.user.id)
+          .or(`user_id.eq.${session.user.id},customer_email.eq.${session.user.email}`)
           .order("created_at", { ascending: false });
 
         if (error) throw error;
