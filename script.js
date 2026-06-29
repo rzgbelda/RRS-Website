@@ -1386,7 +1386,7 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
     if (!street)   { alert("Please enter your delivery address on the Customer Details page."); btn.textContent = originalText; btn.disabled = false; return; }
 
     // Get cart
-    const cart = JSON.parse(localStorage.getItem("rrs_cart") || "[]");
+    const cart = getCart();
     if (!cart.length) { alert("Your cart is empty."); btn.textContent = originalText; btn.disabled = false; return; }
 
     // Get subtotal
@@ -1441,7 +1441,7 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
     if (itemsErr) console.warn("Order items insert error:", itemsErr.message);
 
     // Clear cart
-    localStorage.removeItem("rrs_cart");
+    localStorage.removeItem("cart");
 
     // Show confirmation
     document.getElementById("orderRef").textContent = order.order_number;
