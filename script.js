@@ -1530,6 +1530,15 @@ async function setupProfilePage() {
   setText("contactName", userName);
   setText("emailAddress", userEmail, "");
 
+  // Also populate the editable input values in the form
+  const setInput = (id, value) => { const el = document.querySelector(`#${id} ~ input, input[data-field="${id}"]`); if (el) el.value = value || ""; };
+  const bizInput  = document.querySelector('#accountGrid .info-box:nth-child(1) input');
+  const nameInput = document.querySelector('#accountGrid .info-box:nth-child(2) input');
+  const emailInput= document.querySelector('#accountGrid .info-box:nth-child(3) input');
+  if (bizInput)   bizInput.value   = userBusiness || "";
+  if (nameInput)  nameInput.value  = userName     || "";
+  if (emailInput) emailInput.value = userEmail    || "";
+
   const orderHistoryList = document.getElementById("orderHistoryList");
 
   if (orderHistoryList) {
