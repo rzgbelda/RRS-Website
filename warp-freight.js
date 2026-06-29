@@ -186,7 +186,7 @@ async function triggerQuote(zip) {
 
 function getCartItemsForFreight() {
   try {
-    const cart = JSON.parse(localStorage.getItem('rrs_cart') || '[]');
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
     return cart.map(item => ({
       name:       item.name || item.productName || 'Item',
       itemNumber: item.itemNumber || item.sku || '',
