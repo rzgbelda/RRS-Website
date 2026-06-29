@@ -29,10 +29,55 @@ const DEFAULT_ITEM_DIMS = {
   freight_class: '70', // NMFC class 70 = common household/commercial supplies
 };
 
-// Per-product overrides keyed by Item Number from products.csv.
-// Fill these in as you get real measurements.
+// Real product dimensions from products.csv
 const PRODUCT_DIMS = {
-  // '11008635042': { weight_lbs: 18, length_in: 12, width_in: 10, height_in: 8, freight_class: '70' },
+  '11008635042': { weight_lbs: 57.5, length_in: 13,   width_in: 13,   height_in: 13,   freight_class: '70' },
+  '74828':       { weight_lbs: 18.6, length_in: 11.5, width_in: 8.5,  height_in: 11,   freight_class: '70' },
+  '68970':       { weight_lbs: 14.5, length_in: 11.5, width_in: 8.5,  height_in: 12.5, freight_class: '70' },
+  '31547':       { weight_lbs: 12.1, length_in: 10,   width_in: 10,   height_in: 11,   freight_class: '70' },
+  'P22884':      { weight_lbs: 22,   length_in: 17,   width_in: 11.5, height_in: 8.5,  freight_class: '70' },
+  '438-5155':    { weight_lbs: 18,   length_in: 10.5, width_in: 8.5,  height_in: 12.5, freight_class: '70' },
+  'P050':        { weight_lbs: 19,   length_in: 11,   width_in: 8.5,  height_in: 12.5, freight_class: '70' },
+  '316147':      { weight_lbs: 29,   length_in: 13,   width_in: 10,   height_in: 12,   freight_class: '70' },
+  '313042':      { weight_lbs: 16,   length_in: 12,   width_in: 9,    height_in: 12.5, freight_class: '70' },
+  'PP40PAIL':    { weight_lbs: 43,   length_in: 15,   width_in: 15,   height_in: 14,   freight_class: '70' },
+  '5016':        { weight_lbs: 41,   length_in: 13,   width_in: 13,   height_in: 13.5, freight_class: '70' },
+  '60607':       { weight_lbs: 18.5, length_in: 12,   width_in: 10,   height_in: 11.5, freight_class: '70' },
+  '97330':       { weight_lbs: 17,   length_in: 12,   width_in: 10,   height_in: 8.5,  freight_class: '70' },
+  '70681':       { weight_lbs: 46,   length_in: 13,   width_in: 13,   height_in: 15,   freight_class: '70' },
+  'PL385815B':   { weight_lbs: 16.2, length_in: 17.1, width_in: 13,   height_in: 4.8,  freight_class: '70' },
+  'S243308N':    { weight_lbs: 17.2, length_in: 17,   width_in: 13,   height_in: 5,    freight_class: '70' },
+  'RM3858H':     { weight_lbs: 21,   length_in: 17.5, width_in: 13.5, height_in: 5.5,  freight_class: '70' },
+  'NOVA519':     { weight_lbs: 25.5, length_in: 17.5, width_in: 13.5, height_in: 5.5,  freight_class: '70' },
+  'NOVA523':     { weight_lbs: 34,   length_in: 18.5, width_in: 14.5, height_in: 6.5,  freight_class: '70' },
+  'NOVA517':     { weight_lbs: 21,   length_in: 17,   width_in: 13,   height_in: 5,    freight_class: '70' },
+  'NOVA522':     { weight_lbs: 31,   length_in: 18,   width_in: 14,   height_in: 6,    freight_class: '70' },
+  '276':         { weight_lbs: 26,   length_in: 26.5, width_in: 18,   height_in: 17,   freight_class: '85' },
+  '248':         { weight_lbs: 23,   length_in: 26.1, width_in: 17.6, height_in: 16.8, freight_class: '85' },
+  'FT 30852':    { weight_lbs: 19,   length_in: 24,   width_in: 15.5, height_in: 14,   freight_class: '85' },
+  'FT 301002':   { weight_lbs: 20,   length_in: 24,   width_in: 15.5, height_in: 14.5, freight_class: '85' },
+  '11516':       { weight_lbs: 21,   length_in: 24.5, width_in: 16,   height_in: 15,   freight_class: '85' },
+  '11513':       { weight_lbs: 18.5, length_in: 22.5, width_in: 15,   height_in: 12.5, freight_class: '85' },
+  'CP 660010':   { weight_lbs: 22,   length_in: 22,   width_in: 15,   height_in: 9.5,  freight_class: '85' },
+  '410081':      { weight_lbs: 23,   length_in: 22,   width_in: 15,   height_in: 10,   freight_class: '85' },
+  '585':         { weight_lbs: 20,   length_in: 23,   width_in: 15,   height_in: 12,   freight_class: '85' },
+  'NOVA 3085':   { weight_lbs: 21,   length_in: 23,   width_in: 15,   height_in: 12,   freight_class: '85' },
+  'R720':        { weight_lbs: 27,   length_in: 23.5, width_in: 15.5, height_in: 9.5,  freight_class: '85' },
+  'VT1106':      { weight_lbs: 28,   length_in: 23.5, width_in: 15.5, height_in: 9.5,  freight_class: '85' },
+  'NOVA 350N':   { weight_lbs: 20,   length_in: 24,   width_in: 16,   height_in: 8.5,  freight_class: '85' },
+  'NOVA 800N':   { weight_lbs: 22.5, length_in: 24.5, width_in: 16.5, height_in: 9,    freight_class: '85' },
+  'NOVA 350W':   { weight_lbs: 21.5, length_in: 24,   width_in: 16,   height_in: 8.5,  freight_class: '85' },
+  'NOVA 800W':   { weight_lbs: 24,   length_in: 24.5, width_in: 16.5, height_in: 9,    freight_class: '85' },
+  'ENPFS2001':   { weight_lbs: 15,   length_in: 14,   width_in: 11,   height_in: 10,   freight_class: '70' },
+  'ENPFM2002':   { weight_lbs: 15.3, length_in: 14,   width_in: 11,   height_in: 10,   freight_class: '70' },
+  'ENPFL2003':   { weight_lbs: 15.6, length_in: 14,   width_in: 11,   height_in: 10.2, freight_class: '70' },
+  'ENPFXL2004':  { weight_lbs: 16,   length_in: 14,   width_in: 11,   height_in: 10.5, freight_class: '70' },
+  'ENES2001':    { weight_lbs: 15.5, length_in: 14,   width_in: 11,   height_in: 10,   freight_class: '70' },
+  'ENEM2002':    { weight_lbs: 15.8, length_in: 14,   width_in: 11,   height_in: 10,   freight_class: '70' },
+  'ENEL2003':    { weight_lbs: 16.1, length_in: 14,   width_in: 11,   height_in: 10.2, freight_class: '70' },
+  'ENEXL2004':   { weight_lbs: 16.5, length_in: 14,   width_in: 11,   height_in: 10.5, freight_class: '70' },
+  '88047':       { weight_lbs: 37,   length_in: 13,   width_in: 13,   height_in: 13,   freight_class: '70' },
+  'PP-28130':    { weight_lbs: 37,   length_in: 13,   width_in: 13,   height_in: 13,   freight_class: '70' },
 };
 
 function getProductDims(itemNumber) {
