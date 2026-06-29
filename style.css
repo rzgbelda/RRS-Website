@@ -3808,16 +3808,20 @@ span.flatpickr-weekday {
 }
 
 
-/* ── Profile page ── */
+/* ══════════════════════════════════════════
+   PROFILE PAGE — fluid, device-agnostic
+   ══════════════════════════════════════════ */
+
 .profile-page {
   background: #f4f6fb;
   min-height: 100vh;
   color: #0b2344;
 }
 
+/* ── Hero ── */
 .profile-hero {
   background: linear-gradient(135deg, #0b2d52 0%, #1a4a7a 55%, #ed7226 100%);
-  padding: 40px 6% 72px;
+  padding: clamp(28px, 5vw, 48px) clamp(16px, 6%, 80px) clamp(56px, 8vw, 80px);
   position: relative;
   overflow: hidden;
 }
@@ -3838,7 +3842,7 @@ span.flatpickr-weekday {
 }
 
 .profile-hero h1 {
-  font-size: clamp(26px, 4vw, 42px);
+  font-size: clamp(24px, 4vw + 6px, 42px);
   margin: 0 0 10px;
   color: #fff;
   font-weight: 800;
@@ -3846,23 +3850,25 @@ span.flatpickr-weekday {
 }
 
 .profile-hero p {
-  max-width: 520px;
-  font-size: 15px;
+  max-width: min(520px, 90%);
+  font-size: clamp(13px, 1.5vw + 6px, 15px);
   line-height: 1.65;
   color: rgba(255,255,255,.75);
   position: relative;
+  margin: 0;
 }
 
-/* ── Layout ── */
+/* ── Outer container ── */
 .profile-container {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: clamp(200px, 22%, 260px) minmax(0, 1fr);
+  gap: clamp(14px, 2vw, 24px);
   max-width: 1200px;
-  margin: -44px auto 60px;
-  padding: 0 24px;
+  margin: clamp(-48px, -5vw, -36px) auto clamp(40px, 6vw, 72px);
+  padding: 0 clamp(12px, 4%, 28px);
   position: relative;
   z-index: 1;
+  align-items: start;
 }
 
 .profile-sidebar,
@@ -3870,60 +3876,67 @@ span.flatpickr-weekday {
   min-width: 0;
 }
 
-/* ── Sidebar ── */
+/* ── Sidebar shell ── */
 .profile-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+  position: sticky;
+  top: 16px;
 }
 
 .profile-card,
 .profile-content {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #e8ecf2;
-  border-radius: 18px;
-  box-shadow: 0 4px 20px rgba(11, 35, 68, 0.07);
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(11,35,68,.07);
 }
 
+/* ── User card ── */
 .user-card {
-  padding: 24px 20px;
+  padding: 22px 18px;
   text-align: center;
 }
 
 .user-avatar {
-  width: 68px;
-  height: 68px;
-  margin: 0 auto 14px;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 12px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ed7226, #f0924a);
   color: #fff;
   display: grid;
   place-items: center;
   font-weight: 900;
-  font-size: 22px;
+  font-size: 20px;
   box-shadow: 0 4px 14px rgba(237,114,38,.35);
+  flex-shrink: 0;
 }
 
 .user-card h3 {
-  margin: 0 0 4px;
-  font-size: 15px;
+  margin: 0 0 3px;
+  font-size: 14px;
   font-weight: 800;
   color: #0b2d52;
+  word-break: break-word;
 }
 
 .user-card p {
   margin: 0;
   color: #8a9ab0;
-  font-size: 13px;
+  font-size: 12px;
+  word-break: break-all;
 }
 
+/* ── Nav tabs ── */
 .profile-tab,
 .profile-logout {
   width: 100%;
   border: none;
   background: transparent;
   color: #5a6a7e;
-  padding: 12px 16px;
+  padding: 11px 14px;
   border-radius: 10px;
   font-weight: 600;
   font-size: 14px;
@@ -3932,7 +3945,11 @@ span.flatpickr-weekday {
   transition: all .17s;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-sizing: border-box;
 }
 
 .profile-tab:hover {
@@ -3951,7 +3968,6 @@ span.flatpickr-weekday {
   color: #dc2626;
   margin-top: 4px;
 }
-
 .profile-logout:hover {
   background: #fef2f2;
   color: #b91c1c;
@@ -3959,46 +3975,36 @@ span.flatpickr-weekday {
 
 /* ── Content panel ── */
 .profile-content {
-  padding: 32px;
+  padding: clamp(18px, 3vw, 32px);
 }
 
-.profile-panel {
-  display: none;
-}
-
-.profile-panel.active {
-  display: block;
-}
+.profile-panel { display: none; }
+.profile-panel.active { display: block; }
 
 .profile-panel h2 {
-  font-size: 20px;
+  font-size: clamp(17px, 2vw + 4px, 20px);
   font-weight: 800;
-  margin: 0 0 24px;
+  margin: 0 0 20px;
   color: #0b2d52;
 }
 
 /* ── Info grid ── */
 .profile-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: clamp(10px, 1.5vw, 14px);
 }
 
 .info-box {
   background: #f8fafc;
   border: 1.5px solid #e8ecf2;
   border-radius: 12px;
-  padding: 16px 18px;
+  padding: clamp(12px, 2vw, 18px);
   transition: border-color .17s;
+  min-width: 0;
 }
-
-.info-box:hover {
-  border-color: #c8d3e0;
-}
-
-.info-box.wide {
-  grid-column: 1 / -1;
-}
+.info-box:hover { border-color: #c8d3e0; }
+.info-box.wide  { grid-column: 1 / -1; }
 
 .info-box span {
   display: block;
@@ -4007,14 +4013,15 @@ span.flatpickr-weekday {
   font-weight: 700;
   letter-spacing: .06em;
   text-transform: uppercase;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
 }
 
 .info-box strong {
   display: block;
   color: #0b2344;
-  font-size: 15px;
+  font-size: clamp(13px, 1.5vw + 5px, 15px);
   font-weight: 600;
+  word-break: break-word;
 }
 
 .order-list {
@@ -4324,19 +4331,33 @@ span.flatpickr-weekday {
   height: 1px;
 }
 
-@media (max-width: 900px) {
+/* Profile — single breakpoint where sidebar goes horizontal */
+@media (max-width: 860px) {
   .profile-container {
     grid-template-columns: 1fr;
+    margin-top: clamp(-32px, -4vw, -20px);
   }
-
-  .profile-hero h1 { font-size: 34px; }
-  .profile-grid { grid-template-columns: 1fr; }
-  .reorder-status-card { flex-direction: column; align-items: flex-start; }
-  .profile-container { grid-template-columns: 1fr; margin-top: -28px; gap: 16px; padding: 0 16px; }
-  .profile-sidebar { flex-direction: row; flex-wrap: wrap; gap: 6px; background: #fff; border-radius: 14px; padding: 10px; box-shadow: 0 4px 16px rgba(11,35,68,.07); }
+  .profile-sidebar {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    background: #fff;
+    border-radius: 14px;
+    padding: 10px;
+    box-shadow: 0 4px 16px rgba(11,35,68,.07);
+  }
   .user-card { display: none; }
-  .profile-tab, .profile-logout { flex: 1 1 auto; padding: 10px 12px; font-size: 13px; justify-content: center; border-radius: 8px; }
-  .profile-content { padding: 22px 18px; }
+  .profile-tab, .profile-logout {
+    flex: 1 1 auto;
+    min-width: fit-content;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+  .reorder-status-card { flex-direction: column; align-items: flex-start; }
 }
 /* RESPONSIVE */
 
@@ -4977,10 +4998,8 @@ span.flatpickr-weekday {
 
 /* ── Profile page ── */
 @media (max-width: 480px) {
-  .profile-hero { padding: 28px 16px 60px; }
-  .profile-hero h1 { font-size: 24px; }
-  .profile-tab, .profile-logout { font-size: 12px; padding: 9px 10px; }
-  .profile-content { padding: 18px 14px; }
+  .profile-tab, .profile-logout { font-size: 12px; padding: 9px 10px; gap: 5px; }
+  .profile-tab svg { display: none; }
 }
 
 /* ── Catalog hero ── */

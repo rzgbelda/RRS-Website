@@ -289,7 +289,8 @@
     @keyframes sec-spin { to { transform: rotate(360deg); } }
 
     .sec-card {
-      max-width: 480px;
+      max-width: min(480px, 100%);
+      width: 100%;
     }
     .sec-desc {
       font-size: 14px; color: #6b7280; margin: 0 0 24px; line-height: 1.6;
@@ -365,6 +366,12 @@
     }
     .sec-submit:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(237,114,38,.4); }
     .sec-submit:disabled { opacity: .65; cursor: not-allowed; transform: none; }
+
+    /* Keep floating QR button from overlapping inputs on small screens */
+    @media (max-width: 600px) {
+      #catalogQR { bottom: 12px !important; right: 12px !important; }
+      #catalogQRBtn { width: 44px !important; height: 44px !important; }
+    }
   </style>
 
   <script>
