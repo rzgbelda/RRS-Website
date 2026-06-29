@@ -129,13 +129,14 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       body: JSON.stringify(payload),
     });
 
+    const data = await res.json();
     if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      console.error('Warp API error:', err);
+      console.error('Warp API error:', JSON.stringify(data));
+      alert('Freight error: ' + JSON.stringify(data).slice(0, 300));
       return null;
     }
 
-    const data = await res.json();
+    console.log('Warp API response:', JSON.stringify(data).slice(0, 500));
     return data.quotes || data.rates || data || null;
   } catch (e) {
     console.error('Warp fetch failed:', e);
