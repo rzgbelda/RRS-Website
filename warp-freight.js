@@ -194,12 +194,45 @@ function initFreightQuoting() {
   });
 }
 
+function getCartSubtotal() {
+  try {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    return cart.reduce((sum, item) => {
+      const price = parseFloat(item.price) || 0;
+      const qty   = parseInt(item.quantity) || 1;
+      return sum + (price * qty);
+    }, 0);
+  } catch { return 0; }
+}
+
 async function triggerQuote(zip) {
   const cartItems = getCartItemsForFreight();
   if (!cartItems.length) {
     renderQuotePanel(null, 'empty-cart');
     return;
   }
+
+  // Free shipping for orders $500+
+  const subtotal = getCartSubtotal();
+  if (subtotal >= 500) {
+    _selectedQuote = { total_charge: 0, carrier_name: 'Free Shipping', transit_days: null, free: true };
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
+    const panel = document.getElementById('freight-quote-panel');
+    const shippingEl = document.getElementById('summary-shipping');
+    if (panel) panel.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
+        <span style="font-size:18px;">🎉</span>
+        <div>
+          <strong style="color:#166534;font-size:14px;">Free Shipping!</strong>
+          <p style="color:#15803d;font-size:12px;margin:2px 0 0;">Your order qualifies for free shipping (orders $500+).</p>
+        </div>
+      </div>`;
+    if (shippingEl) shippingEl.textContent = 'FREE';
+    const totalEl = document.getElementById('summary-total');
+    if (totalEl) totalEl.textContent = `$${subtotal.toFixed(2)}`;
+    return;
+  }
+
   const quotes = await fetchFreightQuotes(zip, cartItems);
   renderQuotePanel(quotes, quotes ? 'results' : 'error');
 }
