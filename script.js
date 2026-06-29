@@ -1449,7 +1449,7 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
 
   } catch (err) {
     console.error("Order submission error:", err);
-    alert("Order error: " + (err.message || JSON.stringify(err)));
+    alert("There was a problem submitting your order. Please try again or call us directly.");
   } finally {
     btn.textContent = originalText;
     btn.disabled = false;
@@ -1520,19 +1520,41 @@ function setupProfilePage() {
 
   const orderHistoryList = document.getElementById("orderHistoryList");
 
-  if (orderHistoryList && orders.length > 0) {
-    orderHistoryList.innerHTML = "";
+  if (orderHistoryList) {
+    orderHistoryList.innerHTML = `<p style="color:#888;font-size:14px;">Loading orders…</p>`;
+    try {
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (session?.user?.id) {
+        const { data: sbOrders, error } = await window.sb
+          .from("orders")
+          .select("id, order_number, created_at, total, status, subtotal")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
 
-    orders.forEach((order, index) => {
-      orderHistoryList.innerHTML += `
-        <div class="order-card">
-          <h4>Order #${index + 1}</h4>
-          <p><strong>Date:</strong> ${order.date || "Recently placed"}</p>
-          <p><strong>Total:</strong> ${order.total || "$0.00"}</p>
-          <p><strong>Status:</strong> ${order.status || "Submitted"}</p>
-        </div>
-      `;
-    });
+        if (error) throw error;
+
+        if (sbOrders && sbOrders.length > 0) {
+          orderHistoryList.innerHTML = sbOrders.map(o => {
+            const date = new Date(o.created_at).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+            const total = o.total ? `$${parseFloat(o.total).toFixed(2)}` : (o.subtotal ? `$${parseFloat(o.subtotal).toFixed(2)}` : "—");
+            const status = (o.status || "pending").charAt(0).toUpperCase() + (o.status || "pending").slice(1);
+            return `
+              <div class="order-card">
+                <h4>${o.order_number || "Order"}</h4>
+                <p><strong>Date:</strong> ${date}</p>
+                <p><strong>Total:</strong> ${total}</p>
+                <p><strong>Status:</strong> ${status}</p>
+              </div>`;
+          }).join("");
+        } else {
+          orderHistoryList.innerHTML = `<p style="color:#888;">No previous orders yet.</p>`;
+        }
+      } else {
+        orderHistoryList.innerHTML = `<p style="color:#888;">Please <a href="/login">log in</a> to view your order history.</p>`;
+      }
+    } catch (e) {
+      orderHistoryList.innerHTML = `<p style="color:#888;">No previous orders yet.</p>`;
+    }
   }
 
   const logoutProfileBtn = document.getElementById("logoutProfileBtn");
