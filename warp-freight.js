@@ -152,7 +152,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       quotes = quotes.map(q => ({
         ...q,
         total_charge: q.total_charge || q.price_usd || q.price || 0,
-        carrier_name: q.carrier_name || q.carrier || q.mode || 'Warp LTL',
+        carrier_name: q.carrier_name || q.carrier || (q.mode ? 'Warp ' + q.mode.toUpperCase() : 'Warp LTL'),
         transit_days: q.transit_days ?? q.transit_days_min ?? null,
       }));
     }
@@ -281,7 +281,7 @@ function renderQuotePanel(quotes, state) {
   panel.innerHTML = `
     <p class="fq-label">Select a shipping option:</p>
     <div class="fq-list">${rows}</div>
-    <p class="fq-note">Sandbox rates shown. Live rates will be confirmed in your order.</p>`;
+    <p class="fq-note">Live freight rates. Final pricing confirmed in your order.</p>`;
 }
 
 function selectFreightQuote(jsonStr) {
