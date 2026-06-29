@@ -3,8 +3,7 @@
 // Docs: https://www.wearewarp.com/api/v1
 
 const WARP_CONFIG = {
-  // Swap to wak_live_... key when going to production
-  apiKey: 'wak_test_JSBDcR_fyWnQSRfAHwmrVeE90mfsF0h',  // sandbox key only
+  apiKey: 'wak_live_kQvPhM0LL-GeeTeYcqA9UICNNJV3YwsCUh1t0x3Gv20',  // production key
   baseUrl: 'https://www.wearewarp.com/api/v1',
   origin: {
     street: '609 Washington St',
