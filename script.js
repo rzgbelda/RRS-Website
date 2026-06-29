@@ -1298,7 +1298,27 @@ function loadPaymentSummary() {
   }
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  totalEl.textContent = `$${subtotal.toFixed(2)}`;
+
+  // Load saved freight quote
+  const shippingEl = document.querySelector('.payment-summary-line strong:last-child') || null;
+  let shippingCost = 0;
+  try {
+    const savedQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || 'null');
+    if (savedQuote) {
+      shippingCost = parseFloat(savedQuote.total_charge || savedQuote.price || 0);
+      const carrier = savedQuote.carrier_name || savedQuote.carrier || 'Freight';
+      const transit = savedQuote.transit_days ? ` · ${savedQuote.transit_days} days` : '';
+      // Find the shipping <strong> by its sibling label
+      document.querySelectorAll('.payment-summary-line').forEach(row => {
+        if (row.querySelector('span')?.textContent.trim() === 'Shipping') {
+          row.querySelector('strong').textContent = `$${shippingCost.toFixed(2)}`;
+          row.querySelector('span').textContent = `Shipping (${carrier}${transit})`;
+        }
+      });
+    }
+  } catch(e) {}
+
+  totalEl.textContent = `$${(subtotal + shippingCost).toFixed(2)}`;
 }
 
 

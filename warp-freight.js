@@ -238,6 +238,7 @@ function renderQuotePanel(quotes, state) {
 
   // Auto-select cheapest
   _selectedQuote = sorted[0];
+  localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
   updateShippingSummary(_selectedQuote);
 
   const rows = sorted.slice(0, 5).map((q, i) => {
@@ -266,6 +267,7 @@ function renderQuotePanel(quotes, state) {
 function selectFreightQuote(jsonStr) {
   try {
     _selectedQuote = JSON.parse(jsonStr);
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
     updateShippingSummary(_selectedQuote);
     // Highlight selected
     document.querySelectorAll('.fq-option').forEach(el => el.classList.remove('fq-option--selected'));
