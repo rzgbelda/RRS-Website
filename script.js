@@ -1801,6 +1801,7 @@ function showCiqError(msg) {
 function openRegisterModal() {
   const modal = document.getElementById('registerModal');
   if (!modal) return;
+  document.body.appendChild(modal); // move to body to escape stacking context
   modal.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   // Reset form
