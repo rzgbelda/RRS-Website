@@ -5480,27 +5480,30 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 .fq-list { display: flex; flex-direction: column; gap: 8px; }
 .fq-option {
-  display: flex;
+  display: grid;
+  grid-template-columns: 20px 1fr;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   border: 1.5px solid #e2e8f0;
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   cursor: pointer;
   transition: border-color .15s, background .15s;
   background: #fff;
+  box-sizing: border-box;
+  width: 100%;
 }
-.fq-option input[type="radio"] { accent-color: #ED7226; flex-shrink: 0; }
+.fq-option input[type="radio"] { accent-color: #ED7226; flex-shrink: 0; width: 16px; height: 16px; }
 .fq-option:hover { border-color: #ED7226; background: #fff8f3; }
 .fq-option--selected { border-color: #ED7226 !important; background: #fff8f3 !important; }
 .fq-option-body {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
   align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
 }
-.fq-carrier { font-size: 13px; font-weight: 600; color: #1f3b5b; flex: 1; }
-.fq-transit { font-size: 12px; color: #8a9ab0; }
-.fq-price   { font-size: 14px; font-weight: 700; color: #ED7226; }
+.fq-carrier { font-size: 14px; font-weight: 700; color: #1f3b5b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fq-transit { font-size: 12px; color: #8a9ab0; white-space: nowrap; }
+.fq-price   { font-size: 15px; font-weight: 800; color: #ED7226; white-space: nowrap; }
 .fq-note    { font-size: 11px; color: #b0bac6; margin-top: 8px; font-style: italic; }
