@@ -7,62 +7,186 @@
   <title>My Account — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    .account-page { max-width:1100px; margin:60px auto; padding:0 24px; display:grid; grid-template-columns:240px 1fr; gap:32px; }
-    .account-sidebar { background:#fff; border:1px solid #eee; border-radius:12px; padding:24px; height:fit-content; }
-    .account-sidebar h3 { font-size:13px; color:#999; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px; }
-    .account-nav { list-style:none; margin:0; padding:0; }
-    .account-nav li a { display:block; padding:10px 12px; border-radius:8px; color:#333; text-decoration:none; font-size:14px; transition:background .15s; }
-    .account-nav li a:hover, .account-nav li a.active { background:#ED722610; color:#ED7226; font-weight:600; }
-    .account-main { background:#fff; border:1px solid #eee; border-radius:12px; padding:32px; }
-    .account-main h2 { font-size:22px; color:#0b2d52; margin-bottom:24px; }
-    .account-panel { display:none; }
-    .account-panel.active { display:block; }
-    .account-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-    .account-form-group { display:flex; flex-direction:column; gap:6px; }
-    .account-form-group label { font-size:13px; font-weight:600; color:#555; }
-    .account-form-group input, .account-form-group select { padding:10px 14px; border:1.5px solid #ddd; border-radius:8px; font-size:14px; outline:none; }
-    .account-form-group input:focus { border-color:#ED7226; }
-    .acc-btn { background:#ED7226; color:#fff; border:none; border-radius:8px; padding:11px 28px; font-size:14px; font-weight:600; cursor:pointer; }
-    .acc-btn:hover { background:#d4621e; }
-    .acc-btn-outline { background:#fff; color:#ED7226; border:1.5px solid #ED7226; border-radius:8px; padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer; margin-right:8px; }
-    .order-list { display:flex; flex-direction:column; gap:16px; }
-    .order-card { border:1px solid #eee; border-radius:10px; padding:20px; }
-    .order-card-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
-    .order-num { font-weight:700; color:#0b2d52; }
-    .order-date { font-size:13px; color:#888; }
-    .order-status { font-size:12px; font-weight:600; padding:4px 12px; border-radius:20px; }
-    .status-pending { background:#fff3cd; color:#856404; }
-    .status-confirmed { background:#d1ecf1; color:#0c5460; }
+    /* ── Page shell ── */
+    .acc-page { background:#f4f6fb; min-height:100vh; }
+
+    /* ── Hero banner ── */
+    .acc-hero {
+      background: linear-gradient(135deg, #0b2d52 0%, #1a4a7a 60%, #ED7226 100%);
+      padding: 48px 32px 80px;
+      position: relative;
+      overflow: hidden;
+    }
+    .acc-hero::before {
+      content:'';
+      position:absolute; inset:0;
+      background: radial-gradient(ellipse at 80% 50%, rgba(237,114,38,.25) 0%, transparent 60%);
+      pointer-events:none;
+    }
+    .acc-hero-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; gap:24px; position:relative; }
+    .acc-avatar {
+      width:80px; height:80px; border-radius:50%;
+      background: rgba(255,255,255,.18);
+      border: 3px solid rgba(255,255,255,.5);
+      display:flex; align-items:center; justify-content:center;
+      font-size:28px; font-weight:800; color:#fff;
+      flex-shrink:0; letter-spacing:-1px;
+      backdrop-filter: blur(4px);
+    }
+    .acc-hero-info h1 { font-size:26px; font-weight:800; color:#fff; margin:0 0 4px; }
+    .acc-hero-info p  { font-size:14px; color:rgba(255,255,255,.75); margin:0; }
+    .acc-hero-badge {
+      margin-left:auto;
+      background:rgba(255,255,255,.15);
+      border:1px solid rgba(255,255,255,.3);
+      border-radius:20px; padding:6px 16px;
+      font-size:12px; font-weight:700; color:#fff;
+      backdrop-filter:blur(4px);
+      white-space:nowrap;
+    }
+
+    /* ── Layout ── */
+    .acc-layout {
+      max-width:1100px; margin:-48px auto 60px;
+      padding:0 24px;
+      display:grid;
+      grid-template-columns:220px 1fr;
+      gap:24px;
+      position:relative; z-index:1;
+    }
+
+    /* ── Sidebar ── */
+    .acc-sidebar {
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 4px 24px rgba(11,45,82,.08);
+      padding:8px;
+      height:fit-content;
+      position:sticky; top:24px;
+    }
+    .acc-nav-item {
+      display:flex; align-items:center; gap:12px;
+      padding:12px 16px; border-radius:10px;
+      color:#5a6a7e; font-size:14px; font-weight:500;
+      text-decoration:none; cursor:pointer;
+      transition:all .18s;
+      border:none; background:none; width:100%; text-align:left;
+    }
+    .acc-nav-item:hover { background:#f4f6fb; color:#0b2d52; }
+    .acc-nav-item.active { background:linear-gradient(135deg,#ED7226,#f0924a); color:#fff; font-weight:700; box-shadow:0 4px 14px rgba(237,114,38,.3); }
+    .acc-nav-item svg { width:18px; height:18px; flex-shrink:0; }
+    .acc-nav-divider { height:1px; background:#f0f2f5; margin:6px 8px; }
+
+    /* ── Main panel ── */
+    .acc-main { display:flex; flex-direction:column; gap:20px; }
+    .acc-panel { display:none; flex-direction:column; gap:20px; }
+    .acc-panel.active { display:flex; }
+
+    /* ── Cards ── */
+    .acc-card {
+      background:#fff;
+      border-radius:16px;
+      box-shadow:0 4px 24px rgba(11,45,82,.07);
+      padding:28px 32px;
+    }
+    .acc-card-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:24px; padding-bottom:16px;
+      border-bottom:1px solid #f0f2f5;
+    }
+    .acc-card-title { font-size:16px; font-weight:700; color:#0b2d52; display:flex; align-items:center; gap:10px; }
+    .acc-card-title svg { color:#ED7226; width:20px; height:20px; }
+
+    /* ── Form ── */
+    .acc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .acc-field { display:flex; flex-direction:column; gap:6px; }
+    .acc-field label { font-size:12px; font-weight:700; color:#8a9ab0; text-transform:uppercase; letter-spacing:.05em; }
+    .acc-field input, .acc-field select {
+      padding:11px 14px;
+      border:1.5px solid #e8ecf2;
+      border-radius:10px;
+      font-size:14px; color:#1f3b5b;
+      outline:none; background:#fff;
+      transition:border-color .15s, box-shadow .15s;
+    }
+    .acc-field input:focus, .acc-field select:focus {
+      border-color:#ED7226;
+      box-shadow:0 0 0 3px rgba(237,114,38,.1);
+    }
+    .acc-field input:disabled { background:#f8fafc; color:#aaa; cursor:not-allowed; }
+    .acc-field.full { grid-column:1/-1; }
+
+    /* ── Buttons ── */
+    .acc-btn-primary {
+      background:linear-gradient(135deg,#ED7226,#f0924a);
+      color:#fff; border:none; border-radius:10px;
+      padding:12px 28px; font-size:14px; font-weight:700;
+      cursor:pointer; transition:all .18s;
+      box-shadow:0 4px 14px rgba(237,114,38,.3);
+    }
+    .acc-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(237,114,38,.4); }
+
+    /* ── Alerts ── */
+    .acc-alert { border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:4px; display:none; }
+    .acc-alert-success { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
+    .acc-alert-error   { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; }
+
+    /* ── Order cards ── */
+    .order-list { display:flex; flex-direction:column; gap:12px; }
+    .order-card {
+      border:1.5px solid #e8ecf2; border-radius:12px; padding:20px 24px;
+      display:grid; grid-template-columns:1fr auto; gap:8px;
+      transition:border-color .18s, box-shadow .18s;
+    }
+    .order-card:hover { border-color:#ED7226; box-shadow:0 4px 16px rgba(237,114,38,.1); }
+    .order-card-left {}
+    .order-num  { font-size:15px; font-weight:800; color:#0b2d52; }
+    .order-meta { font-size:12px; color:#8a9ab0; margin-top:4px; }
+    .order-card-right { text-align:right; display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+    .order-total { font-size:16px; font-weight:800; color:#0b2d52; }
+    .order-status { font-size:11px; font-weight:700; padding:4px 12px; border-radius:20px; }
+    .status-pending    { background:#fff3cd; color:#856404; }
+    .status-confirmed  { background:#d1ecf1; color:#0c5460; }
     .status-processing { background:#cce5ff; color:#004085; }
-    .status-shipped { background:#d4edda; color:#155724; }
-    .status-delivered { background:#d4edda; color:#155724; }
-    .status-cancelled { background:#f8d7da; color:#721c24; }
-    .order-total { font-weight:700; color:#333; font-size:15px; }
-    .empty-state { text-align:center; padding:60px 0; color:#999; }
-    .empty-state p { margin-top:12px; font-size:15px; }
-    .loading-state { text-align:center; padding:40px; color:#888; }
-    .acc-msg-success { background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:12px 16px; color:#16a34a; font-size:13px; margin-bottom:16px; display:none; }
-    .acc-msg-error { background:#fef2f2; border:1px solid #fca5a5; border-radius:8px; padding:12px 16px; color:#dc2626; font-size:13px; margin-bottom:16px; display:none; }
-    @media (max-width:768px) {
-      .account-page { grid-template-columns:1fr; }
-      .account-form-grid { grid-template-columns:1fr; }
+    .status-shipped    { background:#d4edda; color:#155724; }
+    .status-delivered  { background:#d4edda; color:#155724; }
+    .status-cancelled  { background:#f8d7da; color:#721c24; }
+
+    /* ── Empty / loading states ── */
+    .acc-empty { text-align:center; padding:48px 0; }
+    .acc-empty-icon { font-size:40px; margin-bottom:12px; }
+    .acc-empty p  { color:#8a9ab0; font-size:14px; margin:4px 0; }
+    .acc-empty a  { color:#ED7226; font-weight:700; text-decoration:none; }
+    .acc-loading  { text-align:center; padding:40px; color:#8a9ab0; font-size:14px; }
+
+    /* ── Wishlist grid ── */
+    .wishlist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
+    .wishlist-item { border:1.5px solid #e8ecf2; border-radius:12px; padding:14px; text-align:center; transition:.18s; }
+    .wishlist-item:hover { border-color:#ED7226; box-shadow:0 4px 14px rgba(237,114,38,.1); }
+    .wishlist-item img { width:72px; height:72px; object-fit:cover; border-radius:8px; }
+    .wishlist-item .wi-name { font-size:12px; font-weight:600; color:#0b2d52; margin:8px 0 2px; }
+    .wishlist-item .wi-price{ font-size:13px; font-weight:800; color:#ED7226; }
+
+    /* ── Responsive ── */
+    @media (max-width:900px) {
+      .acc-layout { grid-template-columns:1fr; margin-top:-32px; }
+      .acc-sidebar { position:static; display:flex; flex-wrap:wrap; gap:4px; padding:12px; }
+      .acc-nav-item { flex:1 1 auto; justify-content:center; padding:10px 12px; font-size:13px; }
+      .acc-nav-divider { display:none; }
+      .acc-hero { padding:36px 20px 64px; }
+      .acc-hero-badge { display:none; }
     }
-    @media (max-width:480px) {
-      .account-page { margin:24px auto; padding:0 14px; gap:16px; }
-      .account-main { padding:18px 14px; }
-      .account-sidebar { padding:16px; }
-      .account-main h2 { font-size:18px; margin-bottom:16px; }
-      .order-card { padding:14px; }
-    }
-    @media (max-width:360px) {
-      .account-page { margin:16px auto; padding:0 10px; gap:12px; }
-      .account-main { padding:14px 10px; }
-      .account-sidebar { padding:12px; }
-      .acc-btn, .acc-btn-outline { padding:10px 18px; font-size:13px; }
+    @media (max-width:600px) {
+      .acc-layout { padding:0 14px; margin-top:-24px; gap:14px; }
+      .acc-card { padding:20px 16px; }
+      .acc-form-grid { grid-template-columns:1fr; }
+      .acc-hero-inner { flex-wrap:wrap; }
+      .acc-avatar { width:60px; height:60px; font-size:20px; }
+      .acc-hero-info h1 { font-size:20px; }
     }
   </style>
 </head>
-<body>
+<body class="acc-page">
 
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
@@ -100,111 +224,165 @@
         <a href="/cart"><img src="hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
-      <!-- Mobile Nav Toggle -->
       <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open navigation menu">
-        <span></span>
-        <span></span>
-        <span></span>
+        <span></span><span></span><span></span>
       </button>
     </div>
   </header>
 
-  <div class="account-page" id="accountPage" style="display:none">
+  <!-- Hero -->
+  <div class="acc-hero" id="accHero" style="display:none">
+    <div class="acc-hero-inner">
+      <div class="acc-avatar" id="accAvatar">RR</div>
+      <div class="acc-hero-info">
+        <h1 id="accHeroName">Welcome Back</h1>
+        <p id="accHeroEmail">Loading…</p>
+      </div>
+      <div class="acc-hero-badge" id="accHeroBadge">Business Account</div>
+    </div>
+  </div>
 
-    <aside class="account-sidebar">
-      <h3>My Account</h3>
-      <ul class="account-nav">
-        <li><a href="#profile"  class="acc-tab active" data-panel="panel-profile">Profile</a></li>
-        <li><a href="#orders"   class="acc-tab"        data-panel="panel-orders">Order History</a></li>
-        <li><a href="#wishlist" class="acc-tab"        data-panel="panel-wishlist">Wishlist</a></li>
-        <li><a href="#security" class="acc-tab"        data-panel="panel-security">Security</a></li>
-      </ul>
+  <!-- Main layout -->
+  <div class="acc-layout" id="accountPage" style="display:none">
+
+    <!-- Sidebar -->
+    <aside class="acc-sidebar">
+      <button class="acc-nav-item active" data-panel="panel-profile">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Profile
+      </button>
+      <button class="acc-nav-item" data-panel="panel-orders">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+        Order History
+      </button>
+      <button class="acc-nav-item" data-panel="panel-wishlist">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+        Wishlist
+      </button>
+      <div class="acc-nav-divider"></div>
+      <button class="acc-nav-item" data-panel="panel-security">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Security
+      </button>
     </aside>
 
-    <div class="account-main">
+    <!-- Content panels -->
+    <div class="acc-main">
 
       <!-- PROFILE -->
-      <div class="account-panel active" id="panel-profile">
-        <h2>Business Profile</h2>
-        <div class="acc-msg-success" id="profileSuccess"></div>
-        <div class="acc-msg-error"   id="profileError"></div>
-        <form id="profileForm">
-          <div class="account-form-grid">
-            <div class="account-form-group">
-              <label>Business Name</label>
-              <input type="text" id="profileBusiness" placeholder="Your business name">
-            </div>
-            <div class="account-form-group">
-              <label>Business Type</label>
-              <select id="profileBusinessType">
-                <option value="">Select type…</option>
-                <option>Hotel</option><option>Motel</option><option>Short-Term Rental</option>
-                <option>Cleaning Company</option><option>Restaurant</option>
-                <option>Campground</option><option>RV Park</option>
-                <option>Facility Manager</option><option>Property Manager</option><option>Other</option>
-              </select>
-            </div>
-            <div class="account-form-group">
-              <label>Contact Name</label>
-              <input type="text" id="profileContact" placeholder="Your name">
-            </div>
-            <div class="account-form-group">
-              <label>Phone</label>
-              <input type="text" id="profilePhone" placeholder="(252) 227-0073">
-            </div>
-            <div class="account-form-group">
-              <label>Email</label>
-              <input type="email" id="profileEmail" placeholder="email@business.com" disabled style="background:#f9f9f9">
+      <div class="acc-panel active" id="panel-profile">
+        <div class="acc-card">
+          <div class="acc-card-header">
+            <div class="acc-card-title">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              Business Profile
             </div>
           </div>
-          <button type="submit" class="acc-btn">Save Changes</button>
-        </form>
+          <div class="acc-alert acc-alert-success" id="profileSuccess"></div>
+          <div class="acc-alert acc-alert-error"   id="profileError"></div>
+          <form id="profileForm">
+            <div class="acc-form-grid">
+              <div class="acc-field">
+                <label>Business Name</label>
+                <input type="text" id="profileBusiness" placeholder="Your business name">
+              </div>
+              <div class="acc-field">
+                <label>Business Type</label>
+                <select id="profileBusinessType">
+                  <option value="">Select type…</option>
+                  <option>Hotel</option><option>Motel</option><option>Short-Term Rental</option>
+                  <option>Cleaning Company</option><option>Restaurant</option>
+                  <option>Campground</option><option>RV Park</option>
+                  <option>Facility Manager</option><option>Property Manager</option><option>Other</option>
+                </select>
+              </div>
+              <div class="acc-field">
+                <label>Contact Name</label>
+                <input type="text" id="profileContact" placeholder="Your name">
+              </div>
+              <div class="acc-field">
+                <label>Phone</label>
+                <input type="text" id="profilePhone" placeholder="(252) 227-0073">
+              </div>
+              <div class="acc-field full">
+                <label>Email Address</label>
+                <input type="email" id="profileEmail" placeholder="email@business.com" disabled>
+              </div>
+            </div>
+            <div style="margin-top:20px">
+              <button type="submit" class="acc-btn-primary">Save Changes</button>
+            </div>
+          </form>
+        </div>
       </div>
 
       <!-- ORDERS -->
-      <div class="account-panel" id="panel-orders">
-        <h2>Order History</h2>
-        <div class="order-list" id="orderList">
-          <div class="loading-state">Loading orders…</div>
+      <div class="acc-panel" id="panel-orders">
+        <div class="acc-card">
+          <div class="acc-card-header">
+            <div class="acc-card-title">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+              Order History
+            </div>
+          </div>
+          <div class="order-list" id="orderList">
+            <div class="acc-loading">Loading orders…</div>
+          </div>
         </div>
       </div>
 
       <!-- WISHLIST -->
-      <div class="account-panel" id="panel-wishlist">
-        <h2>My Wishlist</h2>
-        <p style="color:#666;margin-bottom:16px">Items you've saved for later.</p>
-        <div id="accountWishlist"><div class="loading-state">Loading wishlist…</div></div>
-        <p><a href="/wishlist" style="color:#ED7226;font-weight:600">View full wishlist →</a></p>
+      <div class="acc-panel" id="panel-wishlist">
+        <div class="acc-card">
+          <div class="acc-card-header">
+            <div class="acc-card-title">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+              My Wishlist
+            </div>
+            <a href="/wishlist" style="font-size:13px;font-weight:600;color:#ED7226;text-decoration:none">View all →</a>
+          </div>
+          <div id="accountWishlist"><div class="acc-loading">Loading wishlist…</div></div>
+        </div>
       </div>
 
       <!-- SECURITY -->
-      <div class="account-panel" id="panel-security">
-        <h2>Change Password</h2>
-        <div class="acc-msg-success" id="securitySuccess"></div>
-        <div class="acc-msg-error"   id="securityError"></div>
-        <form id="securityForm">
-          <div class="account-form-grid" style="max-width:440px">
-            <div class="account-form-group" style="grid-column:1/-1">
-              <label>New Password</label>
-              <input type="password" id="newPw" placeholder="At least 8 characters">
-            </div>
-            <div class="account-form-group" style="grid-column:1/-1">
-              <label>Confirm New Password</label>
-              <input type="password" id="confirmPw" placeholder="Repeat new password">
+      <div class="acc-panel" id="panel-security">
+        <div class="acc-card">
+          <div class="acc-card-header">
+            <div class="acc-card-title">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              Change Password
             </div>
           </div>
-          <button type="submit" class="acc-btn">Update Password</button>
-        </form>
+          <div class="acc-alert acc-alert-success" id="securitySuccess"></div>
+          <div class="acc-alert acc-alert-error"   id="securityError"></div>
+          <form id="securityForm">
+            <div class="acc-form-grid" style="max-width:480px">
+              <div class="acc-field full">
+                <label>New Password</label>
+                <input type="password" id="newPw" placeholder="At least 8 characters">
+              </div>
+              <div class="acc-field full">
+                <label>Confirm New Password</label>
+                <input type="password" id="confirmPw" placeholder="Repeat new password">
+              </div>
+            </div>
+            <div style="margin-top:20px">
+              <button type="submit" class="acc-btn-primary">Update Password</button>
+            </div>
+          </form>
+        </div>
       </div>
 
     </div>
   </div>
 
-  <!-- Not logged in state -->
-  <div id="notLoggedIn" style="display:none;text-align:center;padding:80px 24px">
-    <h2 style="color:#0b2d52">Please sign in to view your account</h2>
-    <p style="color:#666;margin:12px 0 24px">You need to be logged in to access your account page.</p>
-    <a href="/login" class="acc-btn" style="display:inline-block;text-decoration:none">Sign In</a>
+  <!-- Not logged in -->
+  <div id="notLoggedIn" style="display:none;text-align:center;padding:100px 24px">
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
+    <h2 style="color:#0b2d52;margin-bottom:8px">Please sign in to view your account</h2>
+    <p style="color:#8a9ab0;margin:0 0 28px">You need to be logged in to access your account page.</p>
+    <a href="/login" class="acc-btn-primary" style="display:inline-block;text-decoration:none">Sign In</a>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -223,37 +401,48 @@
         return;
       }
 
+      document.getElementById("accHero").style.display = "block";
       document.getElementById("accountPage").style.display = "grid";
 
-      /* Load profile */
+      // Load profile
       const { data: profile } = await window.sb.from("profiles").select("*").eq("id", session.user.id).single();
+      const email    = session.user.email || "";
+      const bizName  = profile?.business_name || "";
+      const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || bizName || "Customer";
+      const initials = fullName.split(" ").map(w => w[0]).join("").slice(0,2).toUpperCase() || "RR";
+
+      // Populate hero
+      document.getElementById("accAvatar").textContent    = initials;
+      document.getElementById("accHeroName").textContent  = fullName;
+      document.getElementById("accHeroEmail").textContent = email;
+      if (profile?.business_type) document.getElementById("accHeroBadge").textContent = profile.business_type;
+
+      // Populate form
       if (profile) {
         document.getElementById("profileBusiness").value     = profile.business_name || "";
         document.getElementById("profileContact").value      = profile.contact_name  || "";
         document.getElementById("profilePhone").value        = profile.phone         || "";
-        document.getElementById("profileEmail").value        = session.user.email    || "";
         document.getElementById("profileBusinessType").value = profile.business_type || "";
       }
+      document.getElementById("profileEmail").value = email;
 
-      /* Tab navigation */
-      document.querySelectorAll(".acc-tab").forEach(tab => {
-        tab.addEventListener("click", e => {
-          e.preventDefault();
-          document.querySelectorAll(".acc-tab").forEach(t => t.classList.remove("active"));
-          document.querySelectorAll(".account-panel").forEach(p => p.classList.remove("active"));
-          tab.classList.add("active");
-          document.getElementById(tab.dataset.panel).classList.add("active");
-          if (tab.dataset.panel === "panel-orders")   loadOrders(session.user.id);
-          if (tab.dataset.panel === "panel-wishlist") loadAccountWishlist(session.user.id);
+      // Tab navigation
+      document.querySelectorAll(".acc-nav-item[data-panel]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          document.querySelectorAll(".acc-nav-item").forEach(b => b.classList.remove("active"));
+          document.querySelectorAll(".acc-panel").forEach(p => p.classList.remove("active"));
+          btn.classList.add("active");
+          document.getElementById(btn.dataset.panel).classList.add("active");
+          if (btn.dataset.panel === "panel-orders")   loadOrders(session.user.id, email);
+          if (btn.dataset.panel === "panel-wishlist") loadAccountWishlist(session.user.id);
         });
       });
 
-      /* Handle hash navigation */
       if (window.location.hash === "#orders") {
         document.querySelector('[data-panel="panel-orders"]').click();
       }
 
-      /* Profile save */
+      // Profile save
       document.getElementById("profileForm").addEventListener("submit", async e => {
         e.preventDefault();
         const successEl = document.getElementById("profileSuccess");
@@ -262,15 +451,15 @@
         const { error } = await window.sb.from("profiles").update({
           business_name: document.getElementById("profileBusiness").value.trim(),
           business_type: document.getElementById("profileBusinessType").value,
-          contact_name : document.getElementById("profileContact").value.trim(),
-          phone        : document.getElementById("profilePhone").value.trim(),
-          updated_at   : new Date().toISOString(),
+          contact_name:  document.getElementById("profileContact").value.trim(),
+          phone:         document.getElementById("profilePhone").value.trim(),
+          updated_at:    new Date().toISOString(),
         }).eq("id", session.user.id);
         if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; }
-        else { successEl.textContent = "Profile saved!"; successEl.style.display = "block"; }
+        else { successEl.textContent = "Profile saved successfully!"; successEl.style.display = "block"; }
       });
 
-      /* Change password */
+      // Change password
       document.getElementById("securityForm").addEventListener("submit", async e => {
         e.preventDefault();
         const successEl = document.getElementById("securitySuccess");
@@ -282,53 +471,58 @@
         if (pw !== cpw)    { errorEl.textContent = "Passwords do not match."; errorEl.style.display = "block"; return; }
         const { error } = await window.sb.auth.updateUser({ password: pw });
         if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; }
-        else { successEl.textContent = "Password updated!"; successEl.style.display = "block"; document.getElementById("securityForm").reset(); }
+        else { successEl.textContent = "Password updated successfully!"; successEl.style.display = "block"; document.getElementById("securityForm").reset(); }
       });
     });
 
-    async function loadOrders(userId) {
+    async function loadOrders(userId, userEmail) {
       const list = document.getElementById("orderList");
-      list.innerHTML = `<div class="loading-state">Loading…</div>`;
+      list.innerHTML = `<div class="acc-loading">Loading orders…</div>`;
       const { data: orders, error } = await window.sb
         .from("orders")
         .select("*, order_items(*)")
-        .eq("user_id", userId)
+        .or(`user_id.eq.${userId},customer_email.eq.${userEmail}`)
         .order("created_at", { ascending: false });
       if (error || !orders?.length) {
-        list.innerHTML = `<div class="empty-state"><p>No orders yet. <a href="/catalog" style="color:#ED7226">Start shopping!</a></p></div>`;
+        list.innerHTML = `
+          <div class="acc-empty">
+            <div class="acc-empty-icon">📦</div>
+            <p style="font-weight:700;color:#0b2d52">No orders yet</p>
+            <p><a href="/catalog">Browse our catalog</a> to place your first order.</p>
+          </div>`;
         return;
       }
       list.innerHTML = orders.map(o => `
         <div class="order-card">
-          <div class="order-card-header">
-            <span class="order-num">${o.order_number}</span>
-            <span class="order-date">${new Date(o.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
-            <span class="order-status status-${o.status}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span>
-            <span class="order-total">$${Number(o.total).toFixed(2)}</span>
+          <div class="order-card-left">
+            <div class="order-num">${o.order_number}</div>
+            <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
           </div>
-          <p style="font-size:13px;color:#666">${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</p>
+          <div class="order-card-right">
+            <div class="order-total">$${Number(o.total).toFixed(2)}</div>
+            <span class="order-status status-${o.status || 'pending'}">${(o.status||'pending').charAt(0).toUpperCase()+(o.status||'pending').slice(1)}</span>
+          </div>
         </div>`).join("");
     }
 
     async function loadAccountWishlist(userId) {
       const container = document.getElementById("accountWishlist");
-      container.innerHTML = `<div class="loading-state">Loading…</div>`;
-      const { data: wishlist } = await window.sb
-        .from("wishlists").select("id").eq("user_id", userId).single();
-      if (!wishlist) { container.innerHTML = `<div class="empty-state"><p>Wishlist is empty.</p></div>`; return; }
+      container.innerHTML = `<div class="acc-loading">Loading wishlist…</div>`;
+      const { data: wishlist } = await window.sb.from("wishlists").select("id").eq("user_id", userId).single();
+      if (!wishlist) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">🤍</div><p>Your wishlist is empty.</p></div>`; return; }
       const { data: items } = await window.sb
         .from("wishlist_items")
         .select("*, products(id, name, price, image_url)")
         .eq("wishlist_id", wishlist.id)
         .limit(6);
-      if (!items?.length) { container.innerHTML = `<div class="empty-state"><p>Wishlist is empty.</p></div>`; return; }
-      container.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+      if (!items?.length) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">🤍</div><p>Your wishlist is empty.</p></div>`; return; }
+      container.innerHTML = `<div class="wishlist-grid">
         ${items.map(i => {
           const p = i.products;
-          return `<div style="border:1px solid #eee;border-radius:8px;padding:12px;text-align:center">
-            <img src="${p.image_url || 'blanket.png'}" style="width:80px;height:80px;object-fit:cover;border-radius:6px" alt="${p.name}" onerror="this.src='blanket.png'">
-            <p style="font-size:13px;font-weight:600;margin:8px 0 4px;color:#0b2d52">${p.name}</p>
-            <p style="font-size:13px;color:#ED7226;font-weight:700">$${Number(p.price).toFixed(2)}</p>
+          return `<div class="wishlist-item">
+            <img src="${p.image_url || 'blanket.png'}" alt="${p.name}" onerror="this.src='blanket.png'">
+            <p class="wi-name">${p.name}</p>
+            <p class="wi-price">$${Number(p.price).toFixed(2)}</p>
           </div>`;
         }).join("")}
       </div>`;
