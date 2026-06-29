@@ -1457,7 +1457,7 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
 });
 
 // Profile page functionality
-function setupProfilePage() {
+async function setupProfilePage() {
   const profileTabs = document.querySelectorAll(".profile-sidebar .profile-tab");
   const profilePanels = document.querySelectorAll(".profile-panel");
 
