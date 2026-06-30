@@ -1827,10 +1827,49 @@ function showConsentModal() {
   const m = document.getElementById('consentModal');
   if (!m) return;
   const cb = document.getElementById('consentCheckbox');
-  if (cb) cb.checked = false;
+  if (cb) { cb.checked = false; cb.disabled = true; }
+  const lbl = document.getElementById('consentCheckLabel');
+  if (lbl) { lbl.style.opacity = '0.5'; lbl.style.cursor = 'not-allowed'; lbl.style.borderColor = '#e4e9f0'; lbl.style.background = '#f8fafd'; }
   const err = document.getElementById('consentError');
   if (err) err.style.display = 'none';
+  const hint = document.getElementById('consentScrollHint');
+  if (hint) hint.style.display = 'flex';
+  switchConsentTab('tos');
+  const box = document.getElementById('consentScrollBox');
+  if (box) box.scrollTop = 0;
   m.style.display = 'flex';
+}
+
+function switchConsentTab(tab) {
+  const tosPanel = document.getElementById('consentPanelTos');
+  const privPanel = document.getElementById('consentPanelPriv');
+  const tosBtn = document.getElementById('consentTabTos');
+  const privBtn = document.getElementById('consentTabPriv');
+  const box = document.getElementById('consentScrollBox');
+  if (!tosPanel || !privPanel) return;
+  if (tab === 'tos') {
+    tosPanel.style.display = 'block'; privPanel.style.display = 'none';
+    tosBtn.style.color = '#ed7226'; tosBtn.style.borderBottomColor = '#ed7226'; tosBtn.style.fontWeight = '800';
+    privBtn.style.color = '#6b7280'; privBtn.style.borderBottomColor = 'transparent'; privBtn.style.fontWeight = '700';
+  } else {
+    tosPanel.style.display = 'none'; privPanel.style.display = 'block';
+    privBtn.style.color = '#ed7226'; privBtn.style.borderBottomColor = '#ed7226'; privBtn.style.fontWeight = '800';
+    tosBtn.style.color = '#6b7280'; tosBtn.style.borderBottomColor = 'transparent'; tosBtn.style.fontWeight = '700';
+  }
+  if (box) box.scrollTop = 0;
+}
+
+function checkConsentScroll() {
+  const box = document.getElementById('consentScrollBox');
+  if (!box) return;
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 30;
+  if (!atBottom) return;
+  const cb = document.getElementById('consentCheckbox');
+  const lbl = document.getElementById('consentCheckLabel');
+  const hint = document.getElementById('consentScrollHint');
+  if (cb) { cb.disabled = false; }
+  if (lbl) { lbl.style.opacity = '1'; lbl.style.cursor = 'pointer'; lbl.style.borderColor = '#fed7aa'; lbl.style.background = '#fff8f3'; }
+  if (hint) hint.style.display = 'none';
 }
 
 function cancelConsent() {

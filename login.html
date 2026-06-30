@@ -270,62 +270,104 @@
 </div>
 
 <!-- ── Terms of Service Consent Modal ─────────────────────── -->
-<div id="consentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;overflow-y:auto;padding:20px;">
-  <div style="background:#fff;border-radius:18px;padding:0;max-width:500px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.25);position:relative;margin:auto;overflow:hidden;">
+<div id="consentModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10000;align-items:center;justify-content:center;overflow-y:auto;padding:16px;">
+  <div style="background:#fff;border-radius:18px;padding:0;max-width:580px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.3);position:relative;margin:auto;overflow:hidden;display:flex;flex-direction:column;max-height:92vh;">
 
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#0b2d52,#1a4a7a);padding:28px 32px 24px;">
-      <div style="width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M9 12l2 2 4-4"/><path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>
-      </div>
-      <h2 style="font-size:20px;font-weight:800;color:#fff;margin:0 0 6px;">Before You Continue</h2>
-      <p style="font-size:13px;color:rgba(255,255,255,.75);margin:0;line-height:1.5;">Please review and accept our Terms of Service and Privacy Policy to create your account.</p>
+    <div style="background:linear-gradient(135deg,#0b2d52,#1a4a7a);padding:24px 28px 20px;flex-shrink:0;">
+      <h2 style="font-size:19px;font-weight:800;color:#fff;margin:0 0 5px;">Terms of Service &amp; Privacy Policy</h2>
+      <p style="font-size:13px;color:rgba(255,255,255,.75);margin:0;line-height:1.4;">Read to the bottom to enable the agree checkbox.</p>
     </div>
 
-    <!-- Body -->
-    <div style="padding:24px 32px 28px;">
+    <!-- Tab strip -->
+    <div style="display:flex;border-bottom:2px solid #e4e9f0;flex-shrink:0;background:#f8fafd;">
+      <button id="consentTabTos" onclick="switchConsentTab('tos')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13.5px;font-weight:800;color:#ed7226;border-bottom:3px solid #ed7226;margin-bottom:-2px;cursor:pointer;">Terms of Service</button>
+      <button id="consentTabPriv" onclick="switchConsentTab('priv')" style="flex:1;padding:11px 0;border:none;background:transparent;font-size:13.5px;font-weight:700;color:#6b7280;border-bottom:3px solid transparent;margin-bottom:-2px;cursor:pointer;">Privacy Policy</button>
+    </div>
 
-      <!-- Policy summary -->
-      <div style="background:#f8fafd;border:1.5px solid #e4e9f0;border-radius:12px;padding:16px 18px;margin-bottom:20px;">
-        <p style="font-size:13px;color:#374151;line-height:1.65;margin:0 0 12px;">By creating an account with <strong style="color:#0b2d52;">Room Ready Supply</strong>, you agree to the following:</p>
-        <ul style="margin:0;padding:0 0 0 18px;font-size:13px;color:#4b5563;line-height:1.8;">
-          <li>Orders are considered requests until confirmed by Room Ready Supply.</li>
-          <li>Pricing is subject to availability and order volume.</li>
-          <li>Returns must be approved before any product is returned.</li>
-          <li>Your information is used to process orders and manage your account.</li>
-        </ul>
+    <!-- Scroll hint banner -->
+    <div id="consentScrollHint" style="background:#fff8f3;border-bottom:1.5px solid #fed7aa;padding:9px 18px;font-size:12.5px;color:#92400e;font-weight:600;display:flex;align-items:center;gap:8px;flex-shrink:0;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="7 13 12 18 17 13"/><polyline points="7 6 12 11 17 6"/></svg>
+      Scroll to the bottom to unlock the agreement checkbox
+    </div>
+
+    <!-- Scrollable content panels -->
+    <div id="consentScrollBox" onscroll="checkConsentScroll()" style="overflow-y:auto;flex:1;padding:20px 24px;">
+
+      <!-- ToS panel -->
+      <div id="consentPanelTos">
+        <h3 style="font-size:15px;font-weight:800;color:#0b2d52;margin:0 0 4px;">Terms of Service</h3>
+        <p style="font-size:12px;color:#9ca3af;margin:0 0 16px;">Last updated: June 2025</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 10px;">By creating an account, placing an order, or using the Room Ready Supply website, you agree to the following terms.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">1. Ordering Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">All submitted orders are considered <strong>order requests</strong> until product availability, pricing, delivery method, and payment terms are confirmed by Room Ready Supply. We serve hotels, motels, short-term rentals, cleaning companies, restaurants, campgrounds, property managers, and facility operators.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">2. Pricing Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">All pricing is subject to product availability, supplier cost, freight cost, and order volume. Prices shown on the website, catalog, price sheet, or quote are not final until confirmed by Room Ready Supply. Pricing may vary based on case quantity, recurring order volume, delivery distance, and product substitutions.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">3. Payment Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Payment terms are confirmed before order fulfillment. Large orders, special orders, truckload orders, and first-time customer orders may require a deposit or prepayment.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">4. Delivery &amp; Shipping Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Customers are responsible for providing accurate delivery information and availability. Room Ready Supply is not responsible for delays caused by incorrect delivery information, customer unavailability, weather, or carrier issues.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">5. Returns &amp; Refunds Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Returns must be approved by Room Ready Supply before any product is returned. Products must be unused, unopened, and in resellable condition. Special orders, bulk orders, clearance items, and certain hygiene or paper products may not be returnable. Approved returns may be subject to a restocking fee. Refunds may be issued as store credit, account credit, replacement product, or payment refund.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">6. Damaged or Incorrect Products</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Any damaged, missing, or incorrect product must be reported within 24 hours of delivery. Photos may be required. Claims made after products have been used, moved, or resold may not be approved.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">7. Limitation of Liability</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Room Ready Supply is not liable for indirect, incidental, or consequential damages. Our responsibility is limited to the value of the product purchased, replacement product, refund, or account credit when approved.</p>
+
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:12px 0 0;">Questions? Contact us at <strong style="color:#0b2d52;">hello@roomreadysupply.com</strong> or <strong style="color:#0b2d52;">(252) 227-0073</strong>.</p>
+        <div style="height:8px;"></div>
       </div>
 
-      <!-- Links -->
-      <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;">
-        <a href="/terms" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1.5px solid #e4e9f0;border-radius:8px;font-size:13px;font-weight:700;color:#0b2d52;text-decoration:none;transition:border-color .15s;" onmouseover="this.style.borderColor='#ed7226'" onmouseout="this.style.borderColor='#e4e9f0'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-          Terms of Service
-        </a>
-        <a href="/privacy" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:1.5px solid #e4e9f0;border-radius:8px;font-size:13px;font-weight:700;color:#0b2d52;text-decoration:none;transition:border-color .15s;" onmouseover="this.style.borderColor='#ed7226'" onmouseout="this.style.borderColor='#e4e9f0'">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Privacy Policy
-        </a>
+      <!-- Privacy panel (hidden by default) -->
+      <div id="consentPanelPriv" style="display:none;">
+        <h3 style="font-size:15px;font-weight:800;color:#0b2d52;margin:0 0 4px;">Privacy Policy</h3>
+        <p style="font-size:12px;color:#9ca3af;margin:0 0 16px;">Last updated: June 2025</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:0 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">Information We Collect</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">We collect your name, business name, email, phone, delivery address, order history, and payment method information (processed securely through our payment provider).</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">How We Use It</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">We use your information to process and fulfill orders, contact you about your account, manage recurring schedules, send invoices and delivery updates, and comply with legal obligations. We do not sell, rent, or share your personal information with third parties for their own marketing purposes.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">Data Security</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">Your account password is encrypted and never stored in plain text. Payment information is processed through a secure third-party provider and is not stored on our servers. You are responsible for keeping your account credentials confidential.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">Your Rights</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">You may request a copy of your data, correction of inaccurate information, deletion of your account, or opt out of marketing communications at any time by contacting <strong style="color:#0b2d52;">hello@roomreadysupply.com</strong>.</p>
+
+        <p style="font-size:13px;font-weight:800;color:#0b2d52;margin:18px 0 4px;border-bottom:1.5px solid #fed7aa;padding-bottom:4px;">Changes to This Policy</p>
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:0 0 8px;">We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated date. Continued use of our website or services constitutes acceptance of the updated policy.</p>
+
+        <p style="font-size:13.5px;color:#374151;line-height:1.7;margin:12px 0 0;">Questions? Contact us at <strong style="color:#0b2d52;">hello@roomreadysupply.com</strong> or <strong style="color:#0b2d52;">(252) 227-0073</strong>.</p>
+        <div style="height:8px;"></div>
       </div>
 
-      <!-- Checkbox -->
-      <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin-bottom:22px;padding:14px 16px;background:#fff8f3;border:1.5px solid #fed7aa;border-radius:10px;">
-        <input type="checkbox" id="consentCheckbox" style="width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#ed7226;cursor:pointer;">
-        <span style="font-size:13.5px;font-weight:600;color:#0b2d52;line-height:1.5;">
-          I have read and agree to the <a href="/terms" target="_blank" style="color:#ed7226;text-decoration:none;font-weight:700;">Terms of Service</a> and <a href="/privacy" target="_blank" style="color:#ed7226;text-decoration:none;font-weight:700;">Privacy Policy</a> of Room Ready Supply.
-        </span>
+    </div><!-- end scroll box -->
+
+    <!-- Footer (fixed at bottom of modal) -->
+    <div style="padding:16px 24px 20px;border-top:1.5px solid #e4e9f0;background:#fff;flex-shrink:0;">
+
+      <label id="consentCheckLabel" style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;padding:12px 14px;border-radius:10px;background:#f8fafd;border:1.5px solid #e4e9f0;cursor:not-allowed;opacity:.5;transition:opacity .3s,border-color .3s;">
+        <input type="checkbox" id="consentCheckbox" disabled style="width:18px;height:18px;margin-top:1px;flex-shrink:0;accent-color:#ed7226;cursor:not-allowed;">
+        <span style="font-size:13px;font-weight:700;color:#0b2d52;line-height:1.5;">I have read and agree to the Terms of Service and Privacy Policy of Room Ready Supply.</span>
       </label>
 
-      <p id="consentError" style="display:none;font-size:12.5px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:9px 12px;margin-bottom:16px;">
-        Please check the box to confirm you have read and agree to our Terms of Service and Privacy Policy.
+      <p id="consentError" style="display:none;font-size:12.5px;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;border-radius:7px;padding:9px 12px;margin-bottom:12px;">
+        Please check the box to confirm you have read and agree to our policies.
       </p>
 
-      <!-- Buttons -->
-      <div style="display:flex;gap:12px;">
-        <button onclick="cancelConsent()" style="flex:1;height:46px;border:1.5px solid #e4e9f0;background:#fff;color:#6b7280;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor='#9ca3af';this.style.color='#374151'" onmouseout="this.style.borderColor='#e4e9f0';this.style.color='#6b7280'">
+      <div style="display:flex;gap:10px;">
+        <button onclick="cancelConsent()" style="flex:1;height:44px;border:1.5px solid #e4e9f0;background:#fff;color:#6b7280;border-radius:10px;font-size:13.5px;font-weight:700;cursor:pointer;">
           Cancel
         </button>
-        <button onclick="acceptConsentAndRegister()" style="flex:2;height:46px;background:linear-gradient(135deg,#ed7226,#f0924a);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 4px 14px rgba(237,114,38,.35);transition:transform .15s,box-shadow .15s;" onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 20px rgba(237,114,38,.45)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 14px rgba(237,114,38,.35)'">
+        <button onclick="acceptConsentAndRegister()" style="flex:2;height:44px;background:linear-gradient(135deg,#ed7226,#f0924a);color:#fff;border:none;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;box-shadow:0 4px 12px rgba(237,114,38,.3);">
           Agree and Continue
         </button>
       </div>
