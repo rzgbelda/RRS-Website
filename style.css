@@ -6498,9 +6498,10 @@ button, a, [role="button"] { touch-action: manipulation; }
 }
 
 .submit-order-btn {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
+  width: 100%;
   height: 52px;
   padding: 0 36px;
   background: linear-gradient(135deg,var(--rrs-orange),#f0924a);
