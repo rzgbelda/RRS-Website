@@ -100,6 +100,10 @@ const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
 const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
 
 // Fetch live parcel rates from Shippo (via Edge Function) for orders < 150 lbs
+// Retries up to MAX_RETRIES times on failure to handle cold-start timeouts
+const PARCEL_FETCH_TIMEOUT_MS = 12000; // 12s — covers edge function cold start
+const MAX_RETRIES = 2;
+
 async function fetchParcelQuotes(destinationZip, destinationCity, destinationState, cartItems) {
   const items = buildFreightItems(cartItems);
   const payload = {
@@ -109,27 +113,52 @@ async function fetchParcelQuotes(destinationZip, destinationCity, destinationSta
     items,
   };
   console.log('[Parcel] Shippo payload:', JSON.stringify(payload));
-  try {
-    const res = await fetch(WARP_CONFIG.parcelFunctionUrl, {
-      method:  'POST',
-      headers: {
-        'Content-Type':  'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify(payload),
-    });
-    const text = await res.text();
-    let data;
-    try { data = JSON.parse(text); } catch(e) { console.error('[Parcel] non-JSON:', text); return null; }
-    if (!res.ok) { console.error('[Parcel] Shippo error:', data); return null; }
-    const rates = data.rates || [];
-    console.log('[Parcel] rates received:', rates.length);
-    return rates.length ? rates : null;
-  } catch(e) {
-    console.error('[Parcel] fetch error:', e);
-    return null;
+
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), PARCEL_FETCH_TIMEOUT_MS);
+
+      const res = await fetch(WARP_CONFIG.parcelFunctionUrl, {
+        method:  'POST',
+        headers: {
+          'Content-Type':  'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        },
+        body:   JSON.stringify(payload),
+        signal: controller.signal,
+      });
+      clearTimeout(timer);
+
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); } catch(e) { console.error('[Parcel] non-JSON:', text); data = null; }
+
+      if (!res.ok || !data) {
+        console.warn(`[Parcel] attempt ${attempt} failed (status ${res.status})`);
+        if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+        return null;
+      }
+
+      const rates = data.rates || [];
+      console.log(`[Parcel] attempt ${attempt} — rates received:`, rates.length);
+      if (rates.length) return rates;
+
+      // No rates returned — retry in case of transient API hiccup
+      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      return null;
+
+    } catch(e) {
+      const reason = e.name === 'AbortError' ? 'timeout' : e.message;
+      console.warn(`[Parcel] attempt ${attempt} error: ${reason}`);
+      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      return null;
+    }
   }
+  return null;
 }
+
+function _sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // Fetch live LTL quotes from Warp for orders >= 150 lbs
 async function fetchFreightQuotes(destinationZip, cartItems) {
@@ -152,26 +181,38 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
   };
   console.log('[Freight] LTL payload:', JSON.stringify(payload));
 
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PARCEL_FETCH_TIMEOUT_MS);
     const res = await fetch(WARP_CONFIG.edgeFunctionUrl, {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
         'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
       },
-      body: JSON.stringify(payload),
+      body:   JSON.stringify(payload),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { console.error('[Freight] non-JSON:', text); return null; }
-    if (!res.ok) { console.error('[Freight] Warp error:', data); return null; }
+    try { data = JSON.parse(text); } catch(e) { console.error('[Freight] non-JSON:', text); data = null; }
+    if (!res.ok || !data) {
+      console.warn(`[Freight] attempt ${attempt} failed (status ${res.status})`);
+      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      return null;
+    }
 
     let quotes = data.quotes || data.rates || null;
     if (!quotes) {
       if (Array.isArray(data)) quotes = data;
       else if (data.quote_id || data.price_usd) quotes = [data];
     }
-    if (!quotes) return null;
+    if (!quotes) {
+      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      return null;
+    }
 
     quotes = quotes.map(q => ({
       ...q,
@@ -190,10 +231,15 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       quotes = sane;
     }
     return quotes;
+
   } catch (e) {
-    console.error('[Freight] fetch error:', e);
+    const reason = e.name === 'AbortError' ? 'timeout' : e.message;
+    console.warn(`[Freight] attempt ${attempt} error: ${reason}`);
+    if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
     return null;
   }
+  } // end retry loop
+  return null;
 }
 
 function nextBusinessDay() {
@@ -279,7 +325,8 @@ async function triggerQuote(zip) {
     if (parcelRates) {
       renderQuotePanel(parcelRates, 'results');
     } else {
-      renderQuotePanel(null, 'parcel'); // fallback: show "quoted at confirmation"
+      // Shippo returned no rates after retries — show fallback banner
+      renderQuotePanel(null, 'parcel');
     }
     return;
   }
