@@ -5631,7 +5631,7 @@ button, a, [role="button"] { touch-action: manipulation; }
 :root {
   --rrs-navy:   #0b2d52;
   --rrs-orange: #ed7226;
-  --rrs-bg:     #f4f6fb;
+  --rrs-bg:     #ffffff;
   --rrs-card:   #ffffff;
   --rrs-border: #e4e9f0;
   --rrs-text:   #1a2e44;
