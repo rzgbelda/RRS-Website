@@ -1819,6 +1819,38 @@ function showCiqError(msg) {
    REGISTRATION MODAL
 ========================= */
 
+// ── Consent gate ─────────────────────────────────────────────
+// submitRegistration() now shows the consent modal first.
+// _proceedWithRegistration() does the actual signUp after consent.
+
+function showConsentModal() {
+  const m = document.getElementById('consentModal');
+  if (!m) return;
+  const cb = document.getElementById('consentCheckbox');
+  if (cb) cb.checked = false;
+  const err = document.getElementById('consentError');
+  if (err) err.style.display = 'none';
+  m.style.display = 'flex';
+}
+
+function cancelConsent() {
+  const m = document.getElementById('consentModal');
+  if (m) m.style.display = 'none';
+}
+
+function acceptConsentAndRegister() {
+  const cb = document.getElementById('consentCheckbox');
+  const err = document.getElementById('consentError');
+  if (!cb || !cb.checked) {
+    if (err) err.style.display = 'block';
+    return;
+  }
+  if (err) err.style.display = 'none';
+  const m = document.getElementById('consentModal');
+  if (m) m.style.display = 'none';
+  _proceedWithRegistration();
+}
+
 function openRegisterModal() {
   const modal = document.getElementById('registerModal');
   if (!modal) return;
@@ -1923,7 +1955,28 @@ document.addEventListener('input', e => {
   }
 });
 
-async function submitRegistration() {
+function submitRegistration() {
+  // Validate fields first, then show consent modal before creating account
+  const firstName = document.getElementById('regFirstName')?.value.trim() || '';
+  const lastName  = document.getElementById('regLastName')?.value.trim()  || '';
+  const business  = document.getElementById('regBusiness')?.value.trim()  || '';
+  const email     = document.getElementById('regEmail')?.value.trim()     || '';
+  const password  = document.getElementById('regPassword')?.value         || '';
+  const confirm   = document.getElementById('regConfirm')?.value          || '';
+  const showErr   = m => { const e = document.getElementById('regError'); if (e) { e.textContent = m; e.style.display = 'block'; } };
+  const clearErr  = () => { const e = document.getElementById('regError'); if (e) e.style.display = 'none'; };
+  clearErr();
+  if (!firstName || !lastName) return showErr('Please enter your first and last name.');
+  if (!business)  return showErr('Please enter your business name.');
+  if (!email)     return showErr('Please enter your email address.');
+  if (!password)  return showErr('Please enter a password.');
+  if (password.length < 6) return showErr('Password must be at least 6 characters.');
+  if (password !== confirm) return showErr('Passwords do not match.');
+  // All fields valid — show consent modal
+  showConsentModal();
+}
+
+async function _proceedWithRegistration() {
   const firstName = document.getElementById('regFirstName')?.value.trim();
   const lastName  = document.getElementById('regLastName')?.value.trim();
   const business  = document.getElementById('regBusiness')?.value.trim();
@@ -1987,6 +2040,8 @@ async function submitRegistration() {
       business_name: business,
       phone,
       role: 'customer',
+      accepted_terms: true,
+      accepted_terms_at: new Date().toISOString(),
     }, { onConflict: 'id' });
 
     // Link to sub-distributor if applicable
