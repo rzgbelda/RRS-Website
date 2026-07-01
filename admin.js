@@ -211,7 +211,7 @@ async function renderDashboardTab() {
     window.sb.from("profiles").select("*",        { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("inventory").select("*, products(name, category_name)").in("status",["out_of_stock","low_stock"]),
     window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(6),
-    window.sb.from("orders").select("total"),
+    window.sb.from("orders").select("total, status").neq("status", "cancelled"),
   ]);
 
   const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
