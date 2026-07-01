@@ -1270,7 +1270,10 @@ async function renderOrdersTable(filter) {
           ).join("")}
         </select>
       </td>
-      <td><button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button></td>
+      <td style="display:flex;gap:6px;align-items:center;">
+        <button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button>
+        ${o.status === "pending" ? `<button class="a-btn-sm" onclick="openOrderModal('${o.id}')" style="background:#0b2d52;color:#fff;border-color:#0b2d52;white-space:nowrap;">🚚 Approve</button>` : ""}
+      </td>
     </tr>`).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
 }
 
@@ -1285,36 +1288,167 @@ async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
   const addr = o.shipping_address || {};
+  const isPending    = o.status === "pending";
+  const isConfirmed  = o.status === "confirmed";
+  const isCancelled  = o.status === "cancelled";
+  const warpBooked   = !!o.warp_shipment_id;
+  const freightQuote = o.freight_quote ? (typeof o.freight_quote === "string" ? JSON.parse(o.freight_quote) : o.freight_quote) : null;
+
+  // Action bar — only show for actionable statuses
+  let actionBar = "";
+  if (isPending) {
+    actionBar = `
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:20px;">📋</span>
+          <div>
+            <strong style="font-size:14px;color:#15803d;display:block;">Order Pending Review</strong>
+            <span style="font-size:12px;color:#166534;">Review the order below, then approve to book with Warp or cancel if it's a mistake.</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="approveAndBookWithWarp('${o.id}')"
+            style="flex:1;min-width:180px;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            🚚 Approve &amp; Book with Warp
+          </button>
+          <button onclick="cancelOrderFromModal('${o.id}')"
+            style="flex:1;min-width:140px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
+            ✕ Cancel Order
+          </button>
+        </div>
+      </div>`;
+  } else if (isConfirmed && warpBooked) {
+    actionBar = `
+      <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">✅</span>
+        <div>
+          <strong style="color:#1e40af;font-size:13px;display:block;">Booked with Warp</strong>
+          <span style="color:#1d4ed8;font-size:12px;">Shipment ID: <code style="background:#dbeafe;padding:2px 6px;border-radius:4px;">${escHtml(o.warp_shipment_id)}</code></span>
+        </div>
+      </div>`;
+  } else if (isConfirmed) {
+    actionBar = `
+      <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">⏳</span>
+        <div>
+          <strong style="color:#854d0e;font-size:13px;display:block;">Confirmed — Warp Booking Pending</strong>
+          <span style="color:#92400e;font-size:12px;">Order confirmed. Warp booking will be initiated once API credentials are configured.</span>
+        </div>
+      </div>`;
+  }
+
   document.getElementById("orderModalBody").innerHTML = `
-    <p><strong>Order:</strong> ${escHtml(o.order_number)}</p>
-    <p><strong>Customer:</strong> ${escHtml(o.customer_name || "—")}</p>
-    <p><strong>Business:</strong> ${escHtml(o.business_name || "—")}</p>
-    <p><strong>Email:</strong> ${escHtml(o.customer_email || "—")}</p>
-    <p><strong>Phone:</strong> ${escHtml(o.phone || "—")}</p>
-    <p><strong>Address:</strong> ${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</p>
-    <p><strong>Type:</strong> ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</p>
-    <p><strong>Status:</strong> <span class="a-badge ${badgeClass(o.status)}">${o.status}</span></p>
-    <p><strong>Date:</strong> ${fmt(o.created_at)}</p>
-    <hr style="margin:16px 0;border:1px solid #eee">
-    <h4 style="margin-bottom:12px">Items</h4>
+    ${actionBar}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;margin-bottom:16px;">
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Order #</span><br><strong>${escHtml(o.order_number)}</strong></div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Status</span><br><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Customer</span><br>${escHtml(o.customer_name || "—")}</div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
+      <div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Ship To</span><br>${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
+      ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""}</div>` : ""}
+    </div>
+    <hr style="margin:16px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Items</h4>
     <table style="width:100%;font-size:13px;border-collapse:collapse">
-      <thead><tr style="background:#f5f7fa">
-        <th style="padding:8px 12px;text-align:left">Product</th>
-        <th style="padding:8px;text-align:center">Qty</th>
-        <th style="padding:8px;text-align:right">Price</th>
-        <th style="padding:8px;text-align:right">Subtotal</th>
+      <thead><tr style="background:#f8fafd">
+        <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Product</th>
+        <th style="padding:8px;text-align:center;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Qty</th>
+        <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Price</th>
+        <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Subtotal</th>
       </tr></thead>
       <tbody>
-        ${(o.order_items || []).map(i => `<tr style="border-top:1px solid #eee">
-          <td style="padding:8px 12px">${escHtml(i.name)}</td>
-          <td style="text-align:center">${i.quantity}</td>
-          <td style="text-align:right">$${Number(i.price).toFixed(2)}</td>
-          <td style="text-align:right">$${Number(i.subtotal).toFixed(2)}</td>
+        ${(o.order_items || []).map(i => `<tr style="border-top:1px solid #f0f4fa">
+          <td style="padding:9px 12px">${escHtml(i.name)}</td>
+          <td style="text-align:center;padding:9px 8px">${i.quantity}</td>
+          <td style="text-align:right;padding:9px 8px">$${Number(i.price).toFixed(2)}</td>
+          <td style="text-align:right;padding:9px 8px;font-weight:600">$${Number(i.subtotal).toFixed(2)}</td>
         </tr>`).join("")}
       </tbody>
     </table>
-    <div style="text-align:right;margin-top:12px;font-size:16px;font-weight:700">Total: $${Number(o.total).toFixed(2)}</div>`;
+    <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
+    <div id="orderActionResult" style="margin-top:14px;display:none;"></div>`;
   openModal("orderModal");
+}
+
+async function approveAndBookWithWarp(orderId) {
+  const btn = document.querySelector('[onclick^="approveAndBookWithWarp"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
+  const resultEl = document.getElementById("orderActionResult");
+
+  // Step 1: Mark order confirmed in DB
+  const { error: updateErr } = await window.sb.from("orders")
+    .update({ status: "confirmed", updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  if (updateErr) {
+    if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#dc2626;font-size:13px;">Error confirming order: ${escHtml(updateErr.message)}</div>`; }
+    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
+    return;
+  }
+
+  // Step 2: Build Warp booking payload (ready to send once Warp API key is configured)
+  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
+  const addr = order?.shipping_address || {};
+  const warpPayload = {
+    reference:    order?.order_number,
+    pickup_date:  nextBusinessDay(),
+    origin: {
+      street: "609 Washington St", city: "Plymouth", state: "NC", zip: "27962",
+    },
+    destination: {
+      street: addr.street || "", city: addr.city || "", state: addr.state || "", zip: addr.zip || "",
+      contact_name:  order?.customer_name  || "",
+      contact_phone: order?.phone          || "",
+      contact_email: order?.customer_email || "",
+    },
+    items: (order?.order_items || []).map(i => ({
+      description: i.name, quantity: i.quantity,
+      weight_lbs: 20, length_in: 14, width_in: 12, height_in: 10, freight_class: "70",
+    })),
+  };
+
+  // Step 3: TODO — call Warp booking API once credentials are ready
+  // const warpRes = await fetch("https://api.warp.com/v1/shipments", { method:"POST", headers:{ Authorization: "Bearer WARP_KEY", "Content-Type":"application/json" }, body: JSON.stringify(warpPayload) });
+  // const warpData = await warpRes.json();
+  // await window.sb.from("orders").update({ warp_shipment_id: warpData.id }).eq("id", orderId);
+
+  console.log("[Warp] Booking payload ready:", warpPayload);
+
+  // Step 4: Show success
+  if (resultEl) {
+    resultEl.style.display = "";
+    resultEl.innerHTML = `
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
+        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Order Confirmed</strong>
+        <span style="color:#166534;font-size:12px;">Status updated to <strong>Confirmed</strong>. Warp shipment will be booked once API credentials are configured. Booking payload is ready.</span>
+      </div>`;
+  }
+
+  showToast("Order confirmed! Warp booking payload prepared.");
+  renderOrdersTable(); // refresh table in background
+}
+
+async function cancelOrderFromModal(orderId) {
+  if (!confirm("Are you sure you want to cancel this order? This cannot be undone.")) return;
+  const { error } = await window.sb.from("orders")
+    .update({ status: "cancelled", updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) { showToast("Error: " + error.message); return; }
+  showToast("Order cancelled.");
+  closeModal("orderModal");
+  renderOrdersTable();
+}
+
+function nextBusinessDay() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  if (d.getDay() === 6) d.setDate(d.getDate() + 2);
+  if (d.getDay() === 0) d.setDate(d.getDate() + 1);
+  return d.toISOString().split("T")[0];
 }
 
 /* ── Users ─────────────────────────────────────────────────── */
