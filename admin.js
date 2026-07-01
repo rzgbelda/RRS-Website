@@ -1328,12 +1328,18 @@ async function openOrderModal(id) {
       </div>`;
   } else if (isConfirmed) {
     actionBar = `
-      <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
-        <span style="font-size:20px;">⏳</span>
-        <div>
-          <strong style="color:#854d0e;font-size:13px;display:block;">Confirmed — Warp Booking Pending</strong>
-          <span style="color:#92400e;font-size:12px;">Order confirmed. Warp booking will be initiated once API credentials are configured.</span>
+      <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:20px;">⚠️</span>
+          <div>
+            <strong style="font-size:14px;color:#854d0e;display:block;">Warp Booking Failed — Retry</strong>
+            <span style="font-size:12px;color:#92400e;">Order is confirmed but Warp booking did not complete. Click below to retry.</span>
+          </div>
         </div>
+        <button onclick="approveAndBookWithWarp('${o.id}')"
+          style="width:100%;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+          🚚 Retry Warp Booking
+        </button>
       </div>`;
   }
 
@@ -1379,15 +1385,17 @@ async function approveAndBookWithWarp(orderId) {
   if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
   const resultEl = document.getElementById("orderActionResult");
 
-  // Step 1: Mark order confirmed in DB
-  const { error: updateErr } = await window.sb.from("orders")
-    .update({ status: "confirmed", updated_at: new Date().toISOString() })
-    .eq("id", orderId);
-
-  if (updateErr) {
-    if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#dc2626;font-size:13px;">Error confirming order: ${escHtml(updateErr.message)}</div>`; }
-    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
-    return;
+  // Step 1: Mark order confirmed in DB (skip if already confirmed)
+  const { data: currentOrder } = await window.sb.from("orders").select("status").eq("id", orderId).single();
+  if (currentOrder?.status !== "confirmed") {
+    const { error: updateErr } = await window.sb.from("orders")
+      .update({ status: "confirmed", updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+    if (updateErr) {
+      if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#dc2626;font-size:13px;">Error confirming order: ${escHtml(updateErr.message)}</div>`; }
+      if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
+      return;
+    }
   }
 
   // Step 2: Build Warp booking payload (ready to send once Warp API key is configured)
