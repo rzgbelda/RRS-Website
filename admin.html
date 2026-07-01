@@ -1039,7 +1039,7 @@
   <div class="a-modal">
     <div class="a-modal-header">
       <h3 id="modalTitle">Add Product</h3>
-      <button class="a-modal-close" id="closeProductModal">âœ•</button>
+      <button class="a-modal-close" id="closeProductModal">&#x2715;</button>
     </div>
     <div class="a-modal-body">
       <form id="productForm" onsubmit="return false">
@@ -1077,9 +1077,9 @@
               <option>Facility Supplies</option>
             </select>
           </div>
-          <div class="a-field">
+          <div class="a-field a-field-checkbox">
             <label>Active / Visible</label>
-            <label class="a-checkbox-label" style="margin-top:6px;">
+            <label class="a-checkbox-label">
               <input type="checkbox" id="prodActive" checked />
               Show product on site
             </label>
@@ -1102,9 +1102,9 @@
             <label>Sale Price</label>
             <input type="number" id="prodSalePrice" placeholder="0.00" min="0" step="0.01" />
           </div>
-          <div class="a-field">
+          <div class="a-field a-field-checkbox">
             <label>On Sale?</label>
-            <label class="a-checkbox-label" style="margin-top:6px;">
+            <label class="a-checkbox-label">
               <input type="checkbox" id="prodIsOnSale" />
               Enable sale price
             </label>
@@ -1183,7 +1183,7 @@
   <div class="a-modal" style="max-width:780px;width:95vw">
     <div class="a-modal-header">
       <h3>Bulk Import Products (CSV)</h3>
-      <button class="a-modal-close" onclick="closeCsvImport()">âœ•</button>
+      <button class="a-modal-close" onclick="closeCsvImport()">&#x2715;</button>
     </div>
     <div class="a-modal-body" style="padding:20px 24px">
 
@@ -1233,7 +1233,7 @@
             <strong id="csvRowCount" style="font-size:15px;color:#0d2c50"></strong>
             <span style="font-size:13px;color:#666;margin-left:6px" id="csvDupNote"></span>
           </div>
-          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="csvReset()">âœ• Change File</button>
+          <button class="a-btn-outline" style="width:auto;font-size:12px;padding:5px 12px" onclick="csvReset()">&#x2715; Change File</button>
         </div>
         <div style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;margin-top:10px;max-height:260px;overflow-y:auto">
           <table class="a-table" id="csvPreviewTable" style="font-size:12px;min-width:600px">
@@ -1289,7 +1289,7 @@
   <div class="a-modal a-modal-lg">
     <div class="a-modal-header">
       <h3>Order Details</h3>
-      <button class="a-modal-close" id="closeOrderModal">âœ•</button>
+      <button class="a-modal-close" id="closeOrderModal">&#x2715;</button>
     </div>
     <div class="a-modal-body" id="orderModalBody">
     </div>
@@ -1304,7 +1304,7 @@
   <div class="a-modal a-modal-sm">
     <div class="a-modal-header">
       <h3>Confirm Delete</h3>
-      <button class="a-modal-close" id="closeDeleteModal">âœ•</button>
+      <button class="a-modal-close" id="closeDeleteModal">&#x2715;</button>
     </div>
     <div class="a-modal-body">
       <p id="deleteModalMsg" style="font-size:14.5px;color:var(--text-secondary);line-height:1.6">Are you sure you want to delete this item? This cannot be undone.</p>
@@ -1322,7 +1322,7 @@
   <div class="a-modal" style="max-width:600px">
     <div class="a-modal-header">
       <h3 id="sdModalTitle">Add Sub-Distributor</h3>
-      <button class="a-modal-close" id="btnCloseSdX">âœ•</button>
+      <button class="a-modal-close" id="btnCloseSdX">&#x2715;</button>
     </div>
     <div class="a-modal-body">
       <input type="hidden" id="sdEditId">
@@ -1367,7 +1367,7 @@
   <div class="a-modal" style="max-width:560px">
     <div class="a-modal-header">
       <h3 id="empModalTitle">Add Employee / Referrer</h3>
-      <button class="a-modal-close" id="btnCloseEmpX">âœ•</button>
+      <button class="a-modal-close" id="btnCloseEmpX">&#x2715;</button>
     </div>
     <div class="a-modal-body">
       <input type="hidden" id="empEditId">
@@ -1426,6 +1426,7 @@
 </script>
 </body>
 </html>
+
 
 
 

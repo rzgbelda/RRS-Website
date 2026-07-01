@@ -1702,8 +1702,16 @@ body.admin-body {
   box-shadow: 0 24px 80px rgba(0,0,0,.22), 0 4px 20px rgba(0,0,0,.10);
 }
 .a-modal-header { padding: 22px 28px 18px; border-bottom: 1px solid #f0f4fa; }
-.a-modal-header h3 { font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
-.a-modal-close { width: 30px; height: 30px; border-radius: 8px; background: #f3f6fb; border-color: #e4e9f2; font-size: 14px; }
+.a-modal-header h3 { font-size: 17px; font-weight: 800; letter-spacing: -.3px; color: #0d1f38; }
+.a-modal-close {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #f3f6fb; border: 1.5px solid #e4e9f2;
+  font-size: 15px; line-height: 1; color: #7a8ba8;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; transition: background .15s, color .15s, border-color .15s;
+  padding: 0;
+}
+.a-modal-close:hover { background: #fee2e2; color: #dc2626; border-color: #fca5a5; }
 .a-modal-body  { padding: 22px 28px; }
 .a-modal-footer { padding: 16px 28px; border-top: 1px solid #f0f4fa; }
 
@@ -1722,6 +1730,29 @@ body.admin-body {
   background: #fff;
   border-color: var(--orange);
   box-shadow: 0 0 0 3px rgba(245,130,32,.10);
+}
+
+/* ── Checkbox field alignment ─────────────────────────────── */
+.a-field-checkbox {
+  display: flex; flex-direction: column;
+}
+.a-field-checkbox .a-checkbox-label {
+  margin-top: 0;
+  height: 42px;
+  display: flex; align-items: center; gap: 9px;
+  background: #f8fafd;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 10px;
+  padding: 0 13px;
+  font-size: 13px; font-weight: 500; color: #4b5877;
+  cursor: pointer; transition: border-color .2s, background .2s;
+}
+.a-field-checkbox .a-checkbox-label:hover {
+  border-color: var(--orange);
+  background: #fff;
+}
+.a-field-checkbox .a-checkbox-label input[type="checkbox"] {
+  width: 15px; height: 15px; flex-shrink: 0;
 }
 
 /* ── Badges ───────────────────────────────────────────────── */
