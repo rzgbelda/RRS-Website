@@ -1407,18 +1407,7 @@ async function approveAndBookWithWarp(orderId) {
   if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
   const resultEl = document.getElementById("orderActionResult");
 
-  // Step 1: Mark order confirmed in DB (skip if already confirmed)
-  const { data: currentOrder } = await window.sb.from("orders").select("status").eq("id", orderId).single();
-  if (currentOrder?.status !== "confirmed") {
-    const { error: updateErr } = await window.sb.from("orders")
-      .update({ status: "confirmed", updated_at: new Date().toISOString() })
-      .eq("id", orderId);
-    if (updateErr) {
-      if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:10px;padding:12px 16px;color:#dc2626;font-size:13px;">Error confirming order: ${escHtml(updateErr.message)}</div>`; }
-      if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
-      return;
-    }
-  }
+  // Status will only be set to "confirmed" AFTER Warp booking succeeds
 
   // Step 2: Build Warp booking payload (ready to send once Warp API key is configured)
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
@@ -1516,13 +1505,23 @@ async function approveAndBookWithWarp(orderId) {
   if (resultEl) {
     resultEl.style.display = "";
     if (warpError) {
+      // Warp failed — keep order as pending so admin can retry
       resultEl.innerHTML = `
         <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
-          <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Order Confirmed — Warp Booking Failed</strong>
-          <span style="color:#b91c1c;font-size:12px;">Order is confirmed in your system but Warp returned an error: <em>${escHtml(warpError)}</em>. Please book manually in your Warp dashboard.</span>
+          <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Warp Booking Failed — Order Still Pending</strong>
+          <span style="color:#b91c1c;font-size:12px;">Warp returned an error: <em>${escHtml(warpError)}</em>. Order has NOT been confirmed. Fix the issue and try again.</span>
         </div>`;
-      showToast("Order confirmed. Warp booking failed — check details.");
+      if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
+      showToast("Warp booking failed — order remains pending.");
     } else {
+      // Warp succeeded — now confirm the order in DB
+      await window.sb.from("orders").update({
+        status:           "confirmed",
+        warp_shipment_id: warpShipmentId ? String(warpShipmentId) : "booked",
+        warp_booked_at:   new Date().toISOString(),
+        updated_at:       new Date().toISOString(),
+      }).eq("id", orderId);
+
       resultEl.innerHTML = `
         <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
           <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Warp!</strong>
