@@ -1411,25 +1411,87 @@ async function approveAndBookWithWarp(orderId) {
     })),
   };
 
-  // Step 3: TODO — call Warp booking API once credentials are ready
-  // const warpRes = await fetch("https://api.warp.com/v1/shipments", { method:"POST", headers:{ Authorization: "Bearer WARP_KEY", "Content-Type":"application/json" }, body: JSON.stringify(warpPayload) });
-  // const warpData = await warpRes.json();
-  // await window.sb.from("orders").update({ warp_shipment_id: warpData.id }).eq("id", orderId);
-
-  console.log("[Warp] Booking payload ready:", warpPayload);
-
-  // Step 4: Show success
+  // Step 3: Call Warp booking via Edge Function (quote → book in one call)
   if (resultEl) {
     resultEl.style.display = "";
-    resultEl.innerHTML = `
-      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
-        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Order Confirmed</strong>
-        <span style="color:#166534;font-size:12px;">Status updated to <strong>Confirmed</strong>. Warp shipment will be booked once API credentials are configured. Booking payload is ready.</span>
-      </div>`;
+    resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Booking with Warp…</div>`;
   }
 
-  showToast("Order confirmed! Warp booking payload prepared.");
-  renderOrdersTable(); // refresh table in background
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+
+  let warpShipmentId = null;
+  let warpError = null;
+
+  try {
+    const warpRes = await fetch("https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        action: "book",
+        quotePayload: {
+          origin_zip:      "27962",
+          destination_zip: addr.zip || "",
+          pickup_date:     warpPayload.pickup_date,
+          pallets:         Math.max(1, Math.ceil((order?.order_items || []).length / 4)),
+          weight_lbs_per_pallet: 400,
+          commodity:       "general freight",
+          length_in: 48, width_in: 40, height_in: 48,
+        },
+        bookPayload: {
+          reference:     order?.order_number,
+          contact_name:  order?.customer_name  || "",
+          contact_phone: order?.phone          || "",
+          contact_email: order?.customer_email || "",
+          destination: {
+            street: addr.street || "",
+            city:   addr.city   || "",
+            state:  addr.state  || "",
+            zip:    addr.zip    || "",
+          },
+        },
+      }),
+    });
+
+    const warpData = await warpRes.json();
+
+    if (!warpRes.ok || warpData.error) {
+      warpError = warpData.error || warpData.message || `Warp API error (${warpRes.status})`;
+    } else {
+      warpShipmentId = warpData.id || warpData.shipment_id || warpData.quote_id || null;
+      // Save shipment ID to order
+      await window.sb.from("orders").update({
+        warp_shipment_id: warpShipmentId ? String(warpShipmentId) : "booked",
+        warp_booked_at:   new Date().toISOString(),
+      }).eq("id", orderId);
+    }
+  } catch (e) {
+    warpError = e.message;
+  }
+
+  // Step 4: Show result
+  if (resultEl) {
+    resultEl.style.display = "";
+    if (warpError) {
+      resultEl.innerHTML = `
+        <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
+          <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Order Confirmed — Warp Booking Failed</strong>
+          <span style="color:#b91c1c;font-size:12px;">Order is confirmed in your system but Warp returned an error: <em>${escHtml(warpError)}</em>. Please book manually in your Warp dashboard.</span>
+        </div>`;
+      showToast("Order confirmed. Warp booking failed — check details.");
+    } else {
+      resultEl.innerHTML = `
+        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
+          <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Warp!</strong>
+          <span style="color:#166534;font-size:12px;">Order confirmed and shipment booked.${warpShipmentId ? ` Warp Shipment ID: <strong>${escHtml(String(warpShipmentId))}</strong>` : ""}</span>
+        </div>`;
+      showToast("Order confirmed and booked with Warp! 🚚");
+    }
+  }
+
+  renderOrdersTable();
 }
 
 async function cancelOrderFromModal(orderId) {
