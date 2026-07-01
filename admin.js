@@ -5,6 +5,27 @@
 /* ── Bootstrap ─────────────────────────────────────────────── */
 window._adminRole = "admin"; // default; overwritten below
 
+async function loadWarpModeBadge() {
+  try {
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+    const res = await fetch("https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+      body: JSON.stringify({ action: "mode" }),
+    });
+    const { mode } = await res.json();
+    const badge = document.getElementById("warpModeBadge");
+    if (!badge) return;
+    if (mode === "live") {
+      badge.style.cssText += "display:flex;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;";
+      badge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Warp LIVE`;
+    } else {
+      badge.style.cssText += "display:flex;background:#fef9ec;color:#b45309;border:1.5px solid #fde68a;";
+      badge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> Warp TEST`;
+    }
+  } catch (e) { console.warn("[Warp] Mode check failed:", e.message); }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   if (typeof window.sb === "undefined") {
     showLoginError("Supabase not configured. Set your credentials in supabase.js.");
@@ -28,6 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyRoleRestrictions(role);
   showDashboard();
   switchTab("dashboard");
+  loadWarpModeBadge();
 
   /* Wire buttons */
   document.getElementById("openCsvImport")?.addEventListener("click", openCsvImport);
