@@ -1402,17 +1402,89 @@ async function openOrderModal(id) {
   openModal("orderModal");
 }
 
+function showWarpConfirmDialog({ orderNumber, customer, business, shipTo, total, freightCost, carrier, isLive }) {
+  return new Promise((resolve) => {
+    const existing = document.getElementById("warpConfirmOverlay");
+    if (existing) existing.remove();
+
+    const overlay = document.createElement("div");
+    overlay.id = "warpConfirmOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
+        <div style="background:#0b2d52;padding:20px 24px;display:flex;align-items:center;gap:12px;">
+          <span style="font-size:24px;">🚚</span>
+          <div>
+            <div style="color:#fff;font-size:15px;font-weight:800;">Confirm Warp Booking</div>
+            <div style="color:#93c5fd;font-size:12px;margin-top:2px;">Please review before booking</div>
+          </div>
+        </div>
+        ${isLive ? `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;">⚠️</span>
+          <span style="color:#dc2626;font-size:12px;font-weight:700;">LIVE MODE — This will create a REAL shipment and incur freight charges.</span>
+        </div>` : `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;display:flex;align-items:center;gap:8px;">
+          <span style="font-size:14px;">🧪</span>
+          <span style="color:#b45309;font-size:12px;font-weight:700;">TEST MODE — No real shipment or charges will occur.</span>
+        </div>`}
+        <div style="padding:20px 24px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px;margin-bottom:18px;">
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order</span><strong>${escHtml(orderNumber)}</strong></div>
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order Total</span><strong>${escHtml(total)}</strong></div>
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Customer</span>${escHtml(customer || "—")}</div>
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Business</span>${escHtml(business || "—")}</div>
+            <div style="grid-column:span 2"><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Ship To</span>${escHtml(shipTo || "—")}</div>
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Carrier</span>${escHtml(carrier)}</div>
+            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Est. Freight Cost</span><strong style="color:#0b2d52;">${escHtml(freightCost)}</strong></div>
+          </div>
+          <div style="background:#f8fafd;border:1.5px solid #e4e9f2;border-radius:10px;padding:12px 14px;font-size:12px;color:#64748b;margin-bottom:18px;">
+            By confirming, you authorize Room Ready Supply to book this LTL shipment with Warp.${isLive ? " <strong style='color:#dc2626;'>Freight charges will apply.</strong>" : ""}
+          </div>
+          <div style="display:flex;gap:10px;">
+            <button id="warpConfirmCancel" style="flex:1;padding:11px;border:1.5px solid #e4e9f2;border-radius:10px;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;">Cancel</button>
+            <button id="warpConfirmProceed" style="flex:2;padding:11px;border:none;border-radius:10px;background:#0b2d52;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
+              ${isLive ? "✅ Yes, Book Shipment" : "✅ Yes, Book (Test)"}
+            </button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById("warpConfirmCancel").onclick  = () => { overlay.remove(); resolve(false); };
+    document.getElementById("warpConfirmProceed").onclick = () => { overlay.remove(); resolve(true); };
+    overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+  });
+}
+
 async function approveAndBookWithWarp(orderId) {
-  const btn = document.querySelector('[onclick^="approveAndBookWithWarp"]');
-  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
   const resultEl = document.getElementById("orderActionResult");
 
-  // Status will only be set to "confirmed" AFTER Warp booking succeeds
-
-  // Step 2: Build Warp booking payload (ready to send once Warp API key is configured)
+  // Fetch order details first for the confirmation dialog
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
   const addr = order?.shipping_address || {};
-  const warpPayload = {
+  const freightQuote = order?.freight_quote ? (typeof order.freight_quote === "string" ? JSON.parse(order.freight_quote) : order.freight_quote) : null;
+  const freightCost  = freightQuote?.total_charge ? `$${Number(freightQuote.total_charge).toFixed(2)}` : "TBD by Warp";
+  const carrier      = freightQuote?.carrier_name || "Warp LTL";
+  const isLiveMode   = document.getElementById("warpModeBadge")?.textContent?.includes("LIVE");
+
+  // Show confirmation dialog
+  const confirmed = await showWarpConfirmDialog({
+    orderNumber:  order?.order_number,
+    customer:     order?.customer_name,
+    business:     order?.business_name,
+    shipTo:       [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "),
+    total:        `$${Number(order?.total || 0).toFixed(2)}`,
+    freightCost,
+    carrier,
+    isLive:       isLiveMode,
+  });
+
+  if (!confirmed) return; // user cancelled
+
+  const btn = document.querySelector('[onclick^="approveAndBookWithWarp"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
+  const warpPayload = { // addr already defined above
     reference:    order?.order_number,
     pickup_date:  nextBusinessDay(),
     origin: {
