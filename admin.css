@@ -670,6 +670,7 @@ body.admin-body {
 .a-form-grid { display: flex; flex-direction: column; gap: 16px; }
 .a-form-col-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .a-form-col-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+.a-form-col-2 > *, .a-form-col-3 > * { min-width: 0; }
 .full-width { width: 100%; }
 
 .a-field label {

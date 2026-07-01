@@ -1046,6 +1046,7 @@
       <input type="hidden" id="editProductId" />
       <div class="a-form-grid">
 
+        <!-- Row 1: Name + SKU -->
         <div class="a-form-col-2">
           <div class="a-field">
             <label>Product Name <span class="req">*</span></label>
@@ -1057,6 +1058,7 @@
           </div>
         </div>
 
+        <!-- Row 2: Category + Active toggle -->
         <div class="a-form-col-2">
           <div class="a-field">
             <label>Category <span class="req">*</span></label>
@@ -1077,18 +1079,20 @@
           </div>
           <div class="a-field">
             <label>Active / Visible</label>
-            <label class="a-checkbox-label">
+            <label class="a-checkbox-label" style="margin-top:6px;">
               <input type="checkbox" id="prodActive" checked />
               Show product on site
             </label>
           </div>
         </div>
 
-        <div class="a-field full-width">
+        <!-- Row 3: Description -->
+        <div class="a-field">
           <label>Description</label>
-          <textarea id="prodDescription" rows="2" placeholder="Short product description…"></textarea>
+          <textarea id="prodDescription" rows="3" placeholder="Short product description…"></textarea>
         </div>
 
+        <!-- Row 4: Price + Sale Price + On Sale -->
         <div class="a-form-col-3">
           <div class="a-field">
             <label>Price <span class="req">*</span></label>
@@ -1100,13 +1104,14 @@
           </div>
           <div class="a-field">
             <label>On Sale?</label>
-            <label class="a-checkbox-label">
+            <label class="a-checkbox-label" style="margin-top:6px;">
               <input type="checkbox" id="prodIsOnSale" />
               Enable sale price
             </label>
           </div>
         </div>
 
+        <!-- Row 5: Unit + Case Qty + Pack Size + Stock Qty + Stock Status -->
         <div class="a-form-col-3">
           <div class="a-field">
             <label>Unit</label>
@@ -1116,12 +1121,13 @@
             <label>Case Qty</label>
             <input type="number" id="prodCaseQty" placeholder="6" min="1" />
           </div>
-
-        <div class="a-form-col-3">
           <div class="a-field">
             <label>Pack Size</label>
             <input type="number" id="prodPackSize" placeholder="1" min="1" />
           </div>
+        </div>
+
+        <div class="a-form-col-2">
           <div class="a-field">
             <label>Stock Qty</label>
             <input type="number" id="prodStockQty" placeholder="0" min="0" />
@@ -1136,20 +1142,26 @@
           </div>
         </div>
 
-        <div class="a-form-col-2">
+        <!-- Row 6: Image -->
+        <div class="a-field">
+          <label>Image URL</label>
+          <input type="text" id="prodImage" placeholder="blanket.png or https://…" />
+        </div>
+
+        <div class="a-form-col-2" style="align-items:start;">
           <div class="a-field">
-            <label>Image URL</label>
-            <input type="text" id="prodImage" placeholder="blanket.png or https://…" />
-            <label style="margin-top:8px;font-size:12px;color:var(--text-muted)">Or upload image:</label>
-            <input type="file" id="prodImageFile" accept="image/*" style="margin-top:4px;font-size:13px" />
+            <label>Upload Image <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(optional, overrides URL)</span></label>
+            <input type="file" id="prodImageFile" accept="image/*" style="font-size:13px;padding:6px 0;" />
           </div>
-          <div class="a-field" style="display:flex;flex-direction:column;gap:10px">
-            <label>Image Preview</label>
-            <img id="prodImagePreview" src="blanket.png" style="width:84px;height:84px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border)" onerror="this.src='blanket.png'" alt="Preview">
-            <label class="a-checkbox-label">
-              <input type="checkbox" id="prodFeatured" />
-              Featured on Homepage
-            </label>
+          <div class="a-field" style="display:flex;flex-direction:column;gap:8px;">
+            <label>Preview</label>
+            <div style="display:flex;align-items:center;gap:14px;">
+              <img id="prodImagePreview" src="blanket.png" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;" onerror="this.src='blanket.png'" alt="Preview">
+              <label class="a-checkbox-label">
+                <input type="checkbox" id="prodFeatured" />
+                Featured on Homepage
+              </label>
+            </div>
           </div>
         </div>
 
