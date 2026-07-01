@@ -986,22 +986,53 @@ async function runCsvImport() {
 
   showCsvStep(3);
 
+  /* ── Deduplicate within the CSV itself ───────────────────── */
+  const normName = s => (s || "").toLowerCase().trim();
+  const seenSku  = new Map(); // sku → last row index
+  const seenName = new Map(); // normalized name → last row index
+  _csvRows.forEach((r, i) => {
+    if (r.sku) seenSku.set(r.sku.trim(), i);
+    else        seenName.set(normName(r.name), i);
+  });
+  const deduped = _csvRows.filter((r, i) =>
+    r.sku ? seenSku.get(r.sku.trim()) === i : seenName.get(normName(r.name)) === i
+  );
+  const csvDupCount = _csvRows.length - deduped.length;
+
+  /* ── For no-SKU rows: skip products that already exist in DB by name ── */
+  const noSkuRows = deduped.filter(r => !r.sku);
+  let existingNames = new Set();
+  if (noSkuRows.length) {
+    const { data: existingProds } = await window.sb
+      .from("products").select("name");
+    if (existingProds) existingProds.forEach(p => existingNames.add(normName(p.name)));
+  }
+  const rows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
+  const dbDupCount = deduped.length - rows.length;
+  const skippedTotal = csvDupCount + dbDupCount;
+
+  if (skippedTotal) {
+    document.getElementById("csvProgressSub").textContent =
+      `Skipped ${skippedTotal} duplicate(s) — importing ${rows.length} unique product(s)…`;
+    await new Promise(r => setTimeout(r, 800));
+  }
+
   const BATCH   = 100;
-  const total   = _csvRows.length;
+  const total   = rows.length;
   let inserted  = 0;
   let updated   = 0;
   const errLines = [];
 
   const setProgress = (done) => {
-    const pct = Math.round((done / total) * 100);
+    const pct = total ? Math.round((done / total) * 100) : 100;
     document.getElementById("csvProgressBar").style.width = pct + "%";
-    document.getElementById("csvProgressSub").textContent = `${done.toLocaleString()} / ${total.toLocaleString()} processed`;
+    document.getElementById("csvProgressSub").textContent = `${done.toLocaleString()} / ${total.toLocaleString()} processed${skippedTotal ? ` (${skippedTotal} duplicates skipped)` : ""}`;
   };
   setProgress(0);
 
   /* Process in chunks */
   for (let start = 0; start < total; start += BATCH) {
-    const chunk  = _csvRows.slice(start, start + BATCH);
+    const chunk  = rows.slice(start, start + BATCH);
     const hasSku = chunk.some(r => r.sku);
     const now    = new Date().toISOString();
 
@@ -1071,6 +1102,8 @@ async function runCsvImport() {
   document.getElementById("csvResUpdated").textContent  = updated.toLocaleString();
   document.getElementById("csvResErrors").textContent   = errLines.length;
   document.getElementById("csvProgressLabel").textContent = "Import complete!";
+  const skipEl = document.getElementById("csvResSkipped");
+  if (skipEl) skipEl.textContent = skippedTotal.toLocaleString();
 
   if (errLines.length) {
     const log = document.getElementById("csvErrorLog");
