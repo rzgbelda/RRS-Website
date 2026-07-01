@@ -240,27 +240,74 @@ function setupProductCardClicks() {
   });
 }
 
+/* search is now handled by applyFilters() in the CATEGORY FILTERS section */
+
 /* =========================
-   SEARCH
+   CATEGORY FILTERS
 ========================= */
 
-document.addEventListener("input", e => {
-  if (e.target.id !== "search-input") return;
+// Keywords matched against product name + description for each category
+const CATEGORY_KEYWORDS = {
+  'toilet-paper':        ['bath tissue', 'toilet paper', 'toilet tissue', 'bath roll'],
+  'paper-towels':        ['paper towel', 'hardwound', 'roll towel', 'kitchen towel', 'hand towel roll'],
+  'trash-liners':        ['can liner', 'trash bag', 'trash liner', 'garbage bag', 'liner'],
+  'cleaning-chemicals':  ['bleach', 'disinfectant', 'cleaner', 'pine-sol', 'lysol', 'sanitizer', 'germicidal', 'multi-surface'],
+  'hand-soap':           ['hand soap', 'hand wash', 'foaming soap', 'soap dispenser'],
+  'laundry-supplies':    ['laundry', 'detergent', 'fabric softener', 'dryer sheet', 'washing'],
+  'dishwashing-supplies':['dish', 'dishwasher', 'powerball', 'dawn', 'pot & pan', 'pot and pan'],
+  'guest-room-supplies': ['guest', 'amenity', 'shampoo', 'conditioner', 'lotion', 'room supply'],
+  'towels-linens':       ['towel', 'linen', 'sheet', 'pillowcase', 'blanket', 'washcloth'],
+  'food-service':        ['food service', 'food safe', 'glove', 'nitrile', 'food prep'],
+  'facility-supplies':   ['facility', 'janitorial', 'mop', 'broom', 'floor', 'squeegee'],
+};
 
-  const keyword = e.target.value.toLowerCase();
+function getActiveCategories() {
+  return Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
+}
 
-  const filteredProducts = allProducts.filter(product =>
-    product.name.toLowerCase().includes(keyword) ||
-    product.description.toLowerCase().includes(keyword) ||
-    product.overview.toLowerCase().includes(keyword) ||
-    product.feature1.toLowerCase().includes(keyword) ||
-    product.feature2.toLowerCase().includes(keyword) ||
-    product.feature3.toLowerCase().includes(keyword) ||
-    product.feature4.toLowerCase().includes(keyword) ||
-    product.itemNumber.toLowerCase().includes(keyword)
-  );
+function applyFilters() {
+  const keyword   = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const categories = getActiveCategories();
+  const sortAZ     = categories.includes('a-z');
+  const catFilters = categories.filter(c => c !== 'a-z');
 
-  renderProducts(filteredProducts);
+  let filtered = allProducts.filter(product => {
+    // Search keyword match
+    if (keyword) {
+      const haystack = [
+        product.name, product.description, product.overview,
+        product.feature1, product.feature2, product.feature3, product.feature4, product.itemNumber
+      ].join(' ').toLowerCase();
+      if (!haystack.includes(keyword)) return false;
+    }
+
+    // Category match — product must match at least one checked category
+    if (catFilters.length > 0) {
+      const haystack = (product.name + ' ' + product.description + ' ' + product.overview).toLowerCase();
+      const matches = catFilters.some(cat => {
+        const kws = CATEGORY_KEYWORDS[cat] || [];
+        return kws.some(kw => haystack.includes(kw));
+      });
+      if (!matches) return false;
+    }
+
+    return true;
+  });
+
+  if (sortAZ) {
+    filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  renderProducts(filtered);
+}
+
+// Replace old search listener with unified filter handler
+document.addEventListener('input', e => {
+  if (e.target.id === 'search-input') applyFilters();
+});
+
+document.addEventListener('change', e => {
+  if (e.target.classList.contains('category-filter')) applyFilters();
 });
 
 /* =========================
