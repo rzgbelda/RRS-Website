@@ -515,6 +515,9 @@ async function openEditProduct(id) {
   setVal("prodCategory",   p.category_name  || "");
   setVal("prodDescription",p.description    || "");
   setVal("prodPrice",      p.price          || 0);
+  setVal("prodPrice1",     p.price_tier1    || "");
+  setVal("prodPrice2",     p.price_tier2    || "");
+  setVal("prodPrice3",     p.price_tier3    || "");
   setVal("prodSalePrice",  p.sale_price     || "");
   setVal("prodUnit",       p.unit           || "Case");
   setVal("prodCaseQty",    p.case_qty       || 1);
@@ -555,6 +558,9 @@ async function saveProduct() {
     category_name : (document.getElementById("prodCategory")?.value || "").trim(),
     description   : (document.getElementById("prodDescription")?.value || "").trim(),
     price         : parseFloat(document.getElementById("prodPrice")?.value) || 0,
+    price_tier1   : parseFloat(document.getElementById("prodPrice1")?.value) || null,
+    price_tier2   : parseFloat(document.getElementById("prodPrice2")?.value) || null,
+    price_tier3   : parseFloat(document.getElementById("prodPrice3")?.value) || null,
     sale_price    : isOnSale ? spRaw : null,
     is_on_sale    : isOnSale,
     unit          : document.getElementById("prodUnit")?.value || "Case",
