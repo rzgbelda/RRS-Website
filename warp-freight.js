@@ -303,9 +303,14 @@ async function triggerQuote(zip) {
   const totalWeight = freightItems.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
 
   if (totalWeight < LTL_MIN_WEIGHT_LBS) {
-    // Parcel route — get city/state from form for accurate Shippo quote
+    // Parcel route — need city + state for Shippo to return rates
     const city  = document.getElementById('checkout-city')?.value.trim()  || '';
     const state = document.getElementById('checkout-state')?.value        || '';
+    if (!state) {
+      const panel = document.getElementById('freight-quote-panel');
+      if (panel) panel.innerHTML = `<p class="fq-hint" style="color:#b45309;">&#9432; Please select your state to see live shipping rates.</p>`;
+      return;
+    }
     renderQuotePanel(null, 'loading');
     const parcelRates = await fetchParcelQuotes(zip, city, state, cartItems);
     if (parcelRates) {
