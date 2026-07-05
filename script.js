@@ -94,9 +94,12 @@ function parseCSV(csvText) {
 
       price1: values[12]?.trim() || "",
       price2: values[13]?.trim() || "",
-      price3: values[14]?.trim() || ""
+      price3: values[14]?.trim() || "",
 
-      
+      get slug() {
+        return (this.itemNumber || this.name)
+          .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      }
     };
   });
 }
@@ -174,7 +177,7 @@ function renderProducts(products) {
     const price = cleanPrice(product.price1) || cleanPrice(product.price);
 
     productsGrid.innerHTML += `
-      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.itemNumber)}">
+      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
         <div class="product-image">
           <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
         </div>
@@ -319,15 +322,16 @@ function loadProductPage() {
   if (!productNameEl) return;
 
   const params = new URLSearchParams(window.location.search);
-  const itemNumber = params.get("item");
+  const itemParam = params.get("item");
 
-  if (!itemNumber) {
+  if (!itemParam) {
     productNameEl.textContent = "Product not found";
     return;
   }
 
   const product = allProducts.find(p => {
-    return String(p.itemNumber).trim() === String(itemNumber).trim();
+    return String(p.itemNumber).trim() === String(itemParam).trim()
+        || p.slug === itemParam;
   });
 
   if (!product) {
@@ -1182,7 +1186,7 @@ function showFeaturedProducts() {
     const price = cleanPrice(product.price);
 
     return `
-      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.itemNumber)}">
+      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
 
         <div class="product-image">
           <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
