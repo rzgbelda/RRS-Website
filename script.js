@@ -870,9 +870,13 @@ function loadCheckoutProducts() {
     }).join("");
   }
 
+  const tax = subtotal * 0.07;
+  const taxEl = document.getElementById('summary-tax');
+  if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
+
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${subtotal.toFixed(2)}`;
+  if (totalEl) totalEl.textContent = `$${(subtotal + tax).toFixed(2)}`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 }
 
@@ -1361,7 +1365,11 @@ function loadPaymentSummary() {
     }
   } catch(e) {}
 
-  totalEl.textContent = `$${(subtotal + shippingCost).toFixed(2)}`;
+  const tax = subtotal * 0.07;
+  const taxEl = document.getElementById('payment-tax');
+  if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
+
+  totalEl.textContent = `$${(subtotal + shippingCost + tax).toFixed(2)}`;
 }
 
 
@@ -1443,7 +1451,8 @@ document.getElementById("submitOrderBtn")?.addEventListener("click", async e => 
     // Get selected freight quote
     const freightQuote = JSON.parse(localStorage.getItem("rrs_freight_quote") || "null");
     const shippingCost = freightQuote ? parseFloat(freightQuote.total_charge || freightQuote.price || 0) : 0;
-    const total = subtotal + shippingCost;
+    const tax = parseFloat((subtotal * 0.07).toFixed(2));
+    const total = subtotal + shippingCost + tax;
 
     // Get logged-in user (optional — guests allowed)
     const { data: { session } } = await window.sb.auth.getSession();

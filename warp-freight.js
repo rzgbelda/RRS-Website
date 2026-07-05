@@ -459,11 +459,12 @@ function updateShippingSummary(quote) {
   const price = quote.total_charge || quote.price || 0;
   shippingEl.textContent = `$${Number(price).toFixed(2)}`;
 
-  // Recalculate total
+  // Recalculate total (subtotal + shipping + 7% tax)
   const subtotalEl = document.getElementById('summary-subtotal');
   if (subtotalEl && totalEl) {
     const sub = parseFloat(subtotalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
-    totalEl.textContent = `$${(sub + Number(price)).toFixed(2)}`;
+    const tax = sub * 0.07;
+    totalEl.textContent = `$${(sub + Number(price) + tax).toFixed(2)}`;
   }
 }
 
