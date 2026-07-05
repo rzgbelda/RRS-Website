@@ -257,20 +257,23 @@ let _quoteDebounce = null;
 let _selectedQuote = null;
 
 function initFreightQuoting() {
-  const zipInput = document.getElementById('checkout-zip');
-  const panel    = document.getElementById('freight-quote-panel');
+  const zipInput   = document.getElementById('checkout-zip');
+  const cityInput  = document.getElementById('checkout-city');
+  const stateInput = document.getElementById('checkout-state');
+  const panel      = document.getElementById('freight-quote-panel');
   if (!zipInput || !panel) return;
 
-  zipInput.addEventListener('input', () => {
+  function maybeQuote() {
     clearTimeout(_quoteDebounce);
     const zip = zipInput.value.replace(/\D/g, '').slice(0, 5);
-    if (zip.length < 5) {
-      renderQuotePanel(null, 'waiting');
-      return;
-    }
+    if (zip.length < 5) { renderQuotePanel(null, 'waiting'); return; }
     renderQuotePanel(null, 'loading');
     _quoteDebounce = setTimeout(() => triggerQuote(zip), 600);
-  });
+  }
+
+  zipInput.addEventListener('input', maybeQuote);
+  cityInput?.addEventListener('blur', maybeQuote);
+  stateInput?.addEventListener('change', maybeQuote);
 }
 
 function getCartSubtotal() {
