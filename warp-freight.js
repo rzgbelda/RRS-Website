@@ -101,8 +101,8 @@ const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdX
 
 // Fetch live parcel rates from Shippo (via Edge Function) for orders < 150 lbs
 // Retries up to MAX_RETRIES times on failure to handle cold-start timeouts
-const PARCEL_FETCH_TIMEOUT_MS = 12000; // 12s — covers edge function cold start
-const MAX_RETRIES = 2;
+const PARCEL_FETCH_TIMEOUT_MS = 20000; // 20s — covers edge function cold start
+const MAX_RETRIES = 3;
 
 async function fetchParcelQuotes(destinationZip, destinationCity, destinationState, cartItems) {
   const items = buildFreightItems(cartItems);
@@ -136,7 +136,7 @@ async function fetchParcelQuotes(destinationZip, destinationCity, destinationSta
 
       if (!res.ok || !data) {
         console.warn(`[Parcel] attempt ${attempt} failed (status ${res.status})`);
-        if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+        if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
         return null;
       }
 
@@ -145,13 +145,13 @@ async function fetchParcelQuotes(destinationZip, destinationCity, destinationSta
       if (rates.length) return rates;
 
       // No rates returned — retry in case of transient API hiccup
-      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
 
     } catch(e) {
       const reason = e.name === 'AbortError' ? 'timeout' : e.message;
       console.warn(`[Parcel] attempt ${attempt} error: ${reason}`);
-      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
     }
   }
@@ -200,7 +200,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     try { data = JSON.parse(text); } catch(e) { console.error('[Freight] non-JSON:', text); data = null; }
     if (!res.ok || !data) {
       console.warn(`[Freight] attempt ${attempt} failed (status ${res.status})`);
-      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
     }
 
@@ -210,7 +210,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       else if (data.quote_id || data.price_usd) quotes = [data];
     }
     if (!quotes) {
-      if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+      if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
     }
 
@@ -235,7 +235,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
   } catch (e) {
     const reason = e.name === 'AbortError' ? 'timeout' : e.message;
     console.warn(`[Freight] attempt ${attempt} error: ${reason}`);
-    if (attempt < MAX_RETRIES) { await _sleep(1200 * attempt); continue; }
+    if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
     return null;
   }
   } // end retry loop
