@@ -341,10 +341,59 @@ function loadProductPage() {
 
   const price = cleanPrice(product.price);
 
-  document.title = `${product.name} | Room Ready Supply`;
+  // Build SEO title: extract size and material from description spec line if present
+  function buildSeoTitle(p) {
+    const desc = p.description || "";
+    const sizeMatch = desc.match(/Size:\s*([^|]+)/);
+    const matMatch  = desc.match(/Material:\s*([^|]+)/);
+    const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
+    const matStr    = matMatch  ? matMatch[1].trim()  : "";
+    const prefix    = sizeStr ? `${sizeStr} ` : "";
+    const suffix    = matStr  ? ` (${matStr})` : "";
+    return `${prefix}${p.name} – Wholesale Pricing for Hotels & Motels${suffix}`;
+  }
+
+  const seoTitle = buildSeoTitle(product);
+  const metaDesc = (product.overview || product.description || "")
+    .replace(/\s+/g, " ").trim().slice(0, 155) + (
+    (product.overview || "").length > 155 ? "…" : ""
+  );
+  const pageUrl  = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
+
+  document.title = `${seoTitle} | Room Ready Supply`;
+
+  // Meta / OG / Canonical
+  const setMeta = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
+  setMeta("metaDescription", "content", metaDesc);
+  setMeta("canonicalUrl",    "href",    pageUrl);
+  setMeta("ogTitle",         "content", seoTitle);
+  setMeta("ogDescription",   "content", metaDesc);
+  setMeta("ogImage",         "content", product.image);
+  setMeta("ogUrl",           "content", pageUrl);
+
+  // JSON-LD Product structured data
+  const priceVal = price > 0 ? price.toFixed(2) : null;
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: seoTitle,
+    description: metaDesc,
+    image: product.image,
+    sku: product.itemNumber || product.slug,
+    brand: { "@type": "Brand", name: "Room Ready Supply" },
+    offers: {
+      "@type": "Offer",
+      priceCurrency: "USD",
+      price: priceVal,
+      availability: "https://schema.org/InStock",
+      seller: { "@type": "Organization", name: "Room Ready Supply" }
+    }
+  };
+  const ldEl = document.getElementById("productJsonLd");
+  if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
 
   setText("breadcrumbProductName", product.name);
-  setText("productName", product.name);
+  setText("productName", seoTitle);
   setText("productItemNumber", product.itemNumber);
   setText("productCaseQty", product.caseQty);
   setText("productSize", product.size);
@@ -375,14 +424,16 @@ function loadProductPage() {
   const mainImage = document.getElementById("mainProductImage");
   const thumbImage = document.getElementById("thumbImage");
 
+  const altText = product.size ? `${product.name} – ${product.size}` : product.name;
+
   if (mainImage) {
     mainImage.src = product.image;
-    mainImage.alt = product.name;
+    mainImage.alt = altText;
   }
 
   if (thumbImage) {
     thumbImage.src = product.image;
-    thumbImage.alt = product.name;
+    thumbImage.alt = altText;
   }
 
   const featuresList = document.getElementById("featuresList");
