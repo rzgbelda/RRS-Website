@@ -363,6 +363,15 @@ function loadProductPage() {
   setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
   setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
 
+  // Hide tier pricing cards if all prices are identical or missing (single-price item)
+  const t1 = cleanPrice(product.price1), t2 = cleanPrice(product.price2), t3 = cleanPrice(product.price3);
+  const tierCardsEl = document.querySelector(".pricing-tier-cards");
+  if (tierCardsEl) {
+    const allSame = t1 && t2 && t3 && t1 === t2 && t2 === t3;
+    const noPrices = !t1 && !t2 && !t3;
+    tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
+  }
+
   const mainImage = document.getElementById("mainProductImage");
   const thumbImage = document.getElementById("thumbImage");
 
