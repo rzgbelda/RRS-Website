@@ -1,8 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node -e ' *)"
-      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/audit.js\")"
+      "Bash(node -e ' *)",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/audit.js\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/fix-catalog.js\")"
     ]
   },
   "hooks": {
