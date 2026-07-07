@@ -166,30 +166,89 @@ function injectVariantCSS() {
   const style = document.createElement('style');
   style.id = 'variant-css';
   style.textContent = `
+    /* ── Catalog card pills ── */
     .variant-selector {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
-      margin: 8px 0 10px;
+      gap: 5px;
+      margin: 10px 0 12px;
     }
     .variant-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 4px 10px;
-      border: 1.5px solid #ccc;
-      border-radius: 20px;
-      background: #fff;
-      font-size: 12px;
+      border: 1.5px solid #d8dce3;
+      border-radius: 6px;
+      background: #f2f3f5;
+      font-size: 11.5px;
+      font-weight: 500;
+      color: #505a68;
       cursor: pointer;
-      transition: border-color 0.15s, background 0.15s, color 0.15s;
       white-space: nowrap;
+      line-height: 1.3;
+      letter-spacing: 0.01em;
+      user-select: none;
+      transition: border-color 0.18s cubic-bezier(0.2,0,0.2,1),
+                  background  0.18s cubic-bezier(0.2,0,0.2,1),
+                  color       0.18s cubic-bezier(0.2,0,0.2,1),
+                  box-shadow  0.18s cubic-bezier(0.2,0,0.2,1);
     }
     .variant-pill:hover {
       border-color: #1a6b4a;
+      background: #eaf3ee;
       color: #1a6b4a;
+    }
+    .variant-pill:focus-visible {
+      outline: 2px solid #1a6b4a;
+      outline-offset: 2px;
     }
     .variant-pill.active {
       border-color: #1a6b4a;
       background: #1a6b4a;
       color: #fff;
+      font-weight: 600;
+      box-shadow: 0 2px 6px rgba(10, 50, 30, 0.22);
+    }
+
+    /* ── Product page pills — larger, with a header label ── */
+    #product-variant-selector {
+      margin: 16px 0 20px;
+    }
+    .variant-option-label {
+      font-size: 10.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #8a95a3;
+      margin-bottom: 9px;
+    }
+    #product-variant-selector .variant-selector {
+      gap: 8px;
+      margin: 0;
+    }
+    #product-variant-selector .variant-pill {
+      padding: 8px 16px;
+      font-size: 13px;
+      border-radius: 7px;
+      border-width: 1.5px;
+    }
+    #product-variant-selector .variant-pill.active {
+      box-shadow: 0 3px 10px rgba(10, 50, 30, 0.22);
+    }
+
+    @media (max-width: 600px) {
+      #product-variant-selector .variant-pill {
+        padding: 7px 13px;
+        font-size: 12px;
+      }
+      .variant-pill {
+        font-size: 11px;
+        padding: 4px 9px;
+      }
+      .variant-selector {
+        gap: 5px;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -598,8 +657,10 @@ function injectProductVariantSelector(variants, activeProduct) {
 
   const selector = document.createElement("div");
   selector.id = "product-variant-selector";
-  selector.style.cssText = "margin: 14px 0 18px;";
-  selector.innerHTML = `<div class="variant-selector">${pillsHtml}</div>`;
+  selector.innerHTML = `
+    <div class="variant-option-label">Select Option</div>
+    <div class="variant-selector">${pillsHtml}</div>
+  `;
 
   const descEl = document.getElementById("productDescription");
   if (descEl) descEl.parentNode.insertBefore(selector, descEl);
