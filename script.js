@@ -99,6 +99,13 @@ function parseCSV(csvText) {
       productFamily: values[15]?.trim() || "",
       variantLabel:  values[16]?.trim() || "",
 
+      sellByEach: values[17]?.trim() || "",
+      priceBy:    values[18]?.trim() || "",
+      weight:     values[19]?.trim() || "",
+      length:     values[20]?.trim() || "",
+      width:      values[21]?.trim() || "",
+      height:     values[22]?.trim() || "",
+
       get slug() {
         return (this.itemNumber || this.name)
           .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -255,7 +262,9 @@ function injectVariantCSS() {
 }
 
 function renderSingleCard(product) {
-  const price = cleanPrice(product.price1) || cleanPrice(product.price);
+  const displayPrice = cleanPrice(product.price);
+  const cartPrice = cleanPrice(product.price1) || cleanPrice(product.price);
+  const price = displayPrice || cartPrice;
   return `
     <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
@@ -277,14 +286,14 @@ function renderSingleCard(product) {
         <div class="product-bottom">
           <div>
             <span class="price">$${price.toFixed(2)}</span>
-            <span class="unit">/ Case</span>
+            <span class="unit">/ ${product.priceBy || "Case"}</span>
           </div>
           <button
             class="add-btn"
             data-item="${product.itemNumber}"
             data-name="${product.name}"
             data-description="${(product.description || "").replace(/"/g, "&quot;")}"
-            data-price="${price}"
+            data-price="${cartPrice}"
             data-price1="${cleanPrice(product.price1)}"
             data-price2="${cleanPrice(product.price2)}"
             data-price3="${cleanPrice(product.price3)}"
@@ -299,7 +308,9 @@ function renderSingleCard(product) {
 
 function renderVariantCard(variants) {
   const v = variants[0];
-  const price = cleanPrice(v.price1) || cleanPrice(v.price);
+  const displayPrice = cleanPrice(v.price);
+  const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
+  const price = displayPrice || cartPrice;
 
   const variantsData = variants.map(vv => ({
     itemNumber: vv.itemNumber,
@@ -312,6 +323,7 @@ function renderVariantCard(variants) {
     price1: vv.price1,
     price2: vv.price2,
     price3: vv.price3,
+    priceBy: vv.priceBy || "",
     slug: vv.slug,
     variantLabel: vv.variantLabel || vv.size || "",
   }));
@@ -347,14 +359,14 @@ function renderVariantCard(variants) {
         <div class="product-bottom">
           <div>
             <span class="price">$${price.toFixed(2)}</span>
-            <span class="unit">/ Case</span>
+            <span class="unit">/ ${v.priceBy || "Case"}</span>
           </div>
           <button
             class="add-btn"
             data-item="${v.itemNumber}"
             data-name="${v.name}"
             data-description="${(v.description || "").replace(/"/g, "&quot;")}"
-            data-price="${price}"
+            data-price="${cartPrice}"
             data-price1="${cleanPrice(v.price1)}"
             data-price2="${cleanPrice(v.price2)}"
             data-price3="${cleanPrice(v.price3)}"
@@ -376,10 +388,15 @@ function selectVariant(pillEl, idx) {
     p.classList.toggle("active", i === idx);
   });
 
-  const price = cleanPrice(v.price1) || cleanPrice(v.price);
+  const displayPrice = cleanPrice(v.price);
+  const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
+  const price = displayPrice || cartPrice;
 
   const priceEl = card.querySelector(".price");
   if (priceEl) priceEl.textContent = "$" + price.toFixed(2);
+
+  const unitEl = card.querySelector(".unit");
+  if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
 
   const img = card.querySelector(".product-image img");
   if (img) img.src = v.image;
@@ -398,7 +415,7 @@ function selectVariant(pillEl, idx) {
     btn.dataset.item        = v.itemNumber;
     btn.dataset.name        = v.name;
     btn.dataset.description = v.description;
-    btn.dataset.price       = price;
+    btn.dataset.price       = cartPrice;
     btn.dataset.price1      = cleanPrice(v.price1);
     btn.dataset.price2      = cleanPrice(v.price2);
     btn.dataset.price3      = cleanPrice(v.price3);
@@ -598,11 +615,37 @@ function populateProductPage(product) {
 
   setText("productPrice", `$${price.toFixed(2)}`);
 
+  // Update "Per Case" unit label dynamically
+  const pricingBoxP = document.querySelector(".pricing-box p");
+  if (pricingBoxP) pricingBoxP.textContent = `Per ${product.priceBy || "Case"}`;
+
   setText("specName", product.name);
   setText("specItemNumber", product.itemNumber);
   setText("specCaseQty", product.caseQty);
   setText("specSize", product.size);
   setText("specPrice", `$${price.toFixed(2)}`);
+
+  // Inject weight/dimension rows into specs table if available
+  const specsTable = document.querySelector(".specs-card table");
+  document.getElementById("specWeightRow")?.remove();
+  document.getElementById("specDimRow")?.remove();
+  if (specsTable) {
+    const tbody = specsTable.querySelector("tbody") || specsTable;
+    if (product.weight) {
+      const wRow = document.createElement("tr");
+      wRow.id = "specWeightRow";
+      wRow.innerHTML = `<td>Weight</td><td>${product.weight} lbs</td>`;
+      tbody.appendChild(wRow);
+    }
+    if (product.length || product.width || product.height) {
+      const dims = [product.length, product.width, product.height].filter(Boolean).join('" × ') + '"';
+      const dRow = document.createElement("tr");
+      dRow.id = "specDimRow";
+      dRow.innerHTML = `<td>Dimensions (in)</td><td>${dims}</td>`;
+      tbody.appendChild(dRow);
+    }
+  }
+
   setText("tier1Price", product.price1 ? `$${cleanPrice(product.price1).toFixed(2)}` : "$--.--");
   setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
   setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
@@ -634,7 +677,7 @@ function populateProductPage(product) {
     addBtn.dataset.item        = product.itemNumber;
     addBtn.dataset.name        = product.name;
     addBtn.dataset.description = product.description || "";
-    addBtn.dataset.price       = price;
+    addBtn.dataset.price       = cleanPrice(product.price1) || price;
     addBtn.dataset.image       = product.image;
     addBtn.dataset.price1      = cleanPrice(product.price1);
     addBtn.dataset.price2      = cleanPrice(product.price2);
@@ -1517,7 +1560,7 @@ function showFeaturedProducts() {
         </div>
 
         <div class="price">
-          $${price.toFixed(2)} <span>/Case</span>
+          $${price.toFixed(2)} <span>/${product.priceBy || "Case"}</span>
         </div>
 
         <button
@@ -1525,7 +1568,7 @@ function showFeaturedProducts() {
           data-item="${product.itemNumber}"
           data-name="${product.name}"
           data-description="${product.description || ""}"
-          data-price="${price}"
+          data-price="${cleanPrice(product.price1) || price}"
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
           data-price3="${cleanPrice(product.price3)}"
