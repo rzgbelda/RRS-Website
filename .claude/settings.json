@@ -16,7 +16,8 @@
       "Bash(node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\" --require \"C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules/@supabase/supabase-js/dist/index.cjs\")",
       "Bash(NODE_PATH=\"C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules\" node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\")",
       "Bash(NODE_PATH=C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules node -e ' *)",
-      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/add-variant-columns.js\")"
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/add-variant-columns.js\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-towel-variants.js\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
