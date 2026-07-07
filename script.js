@@ -96,6 +96,9 @@ function parseCSV(csvText) {
       price2: values[13]?.trim() || "",
       price3: values[14]?.trim() || "",
 
+      productFamily: values[15]?.trim() || "",
+      variantLabel:  values[16]?.trim() || "",
+
       get slug() {
         return (this.itemNumber || this.name)
           .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -158,72 +161,224 @@ function getTierPrice(item) {
    CATALOG PRODUCTS
 ========================= */
 
-function renderProducts(products) {
-  const productsGrid = document.getElementById("products-grid");
-  if (!productsGrid) return;
+function injectVariantCSS() {
+  if (document.getElementById('variant-css')) return;
+  const style = document.createElement('style');
+  style.id = 'variant-css';
+  style.textContent = `
+    .variant-selector {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 8px 0 10px;
+    }
+    .variant-pill {
+      padding: 4px 10px;
+      border: 1.5px solid #ccc;
+      border-radius: 20px;
+      background: #fff;
+      font-size: 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+    .variant-pill:hover {
+      border-color: #1a6b4a;
+      color: #1a6b4a;
+    }
+    .variant-pill.active {
+      border-color: #1a6b4a;
+      background: #1a6b4a;
+      color: #fff;
+    }
+  `;
+  document.head.appendChild(style);
+}
 
-  productsGrid.innerHTML = "";
-
-  const visibleProducts = products.filter(product => {
-    return (
-      cleanPrice(product.price1) > 0 ||
-      cleanPrice(product.price2) > 0 ||
-      cleanPrice(product.price3) > 0 ||
-      cleanPrice(product.price) > 0
-    );
-  });
-
-  visibleProducts.forEach(product => {
-    const price = cleanPrice(product.price1) || cleanPrice(product.price);
-
-    productsGrid.innerHTML += `
-      <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
-        <div class="product-image">
-          <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
+function renderSingleCard(product) {
+  const price = cleanPrice(product.price1) || cleanPrice(product.price);
+  return `
+    <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
+      <div class="product-image">
+        <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
+      </div>
+      <div class="product-content">
+        <h3>${product.name}</h3>
+        <p class="product-description">${product.description || ""}</p>
+        <div class="product-details">
+          <div class="detail-item">
+            <img src="box.svg" alt="">
+            <span>Case Qty: ${product.caseQty || ""}</span>
+          </div>
+          <div class="detail-item">
+            <img src="pack.svg" alt="">
+            <span>Pack Size: ${product.size || ""}</span>
+          </div>
         </div>
-
-        <div class="product-content">
-          <h3>${product.name}</h3>
-
-          <p class="product-description">
-            ${product.description || ""}
-          </p>
-
-          <div class="product-details">
-            <div class="detail-item">
-              <img src="box.svg" alt="">
-              <span>Case Qty: ${product.caseQty || ""}</span>
-            </div>
-
-            <div class="detail-item">
-              <img src="pack.svg" alt="">
-              <span>Pack Size: ${product.size || ""}</span>
-            </div>
+        <div class="product-bottom">
+          <div>
+            <span class="price">$${price.toFixed(2)}</span>
+            <span class="unit">/ Case</span>
           </div>
-
-          <div class="product-bottom">
-            <div>
-              <span class="price">$${price.toFixed(2)}</span>
-              <span class="unit">/ Case</span>
-            </div>
-
-            <button 
-              class="add-btn"
-              data-item="${product.itemNumber}"
-              data-name="${product.name}"
-              data-description="${product.description || ""}"
-              data-price="${price}"
-              data-price1="${cleanPrice(product.price1)}"
-              data-price2="${cleanPrice(product.price2)}"
-              data-price3="${cleanPrice(product.price3)}"
-              data-image="${product.image}"
-            >
-              Add to Order
-            </button>
-          </div>
+          <button
+            class="add-btn"
+            data-item="${product.itemNumber}"
+            data-name="${product.name}"
+            data-description="${(product.description || "").replace(/"/g, "&quot;")}"
+            data-price="${price}"
+            data-price1="${cleanPrice(product.price1)}"
+            data-price2="${cleanPrice(product.price2)}"
+            data-price3="${cleanPrice(product.price3)}"
+            data-image="${product.image}"
+          >
+            Add to Order
+          </button>
         </div>
       </div>
-    `;
+    </div>`;
+}
+
+function renderVariantCard(variants) {
+  const v = variants[0];
+  const price = cleanPrice(v.price1) || cleanPrice(v.price);
+
+  const variantsData = variants.map(vv => ({
+    itemNumber: vv.itemNumber,
+    name: vv.name,
+    description: vv.description || "",
+    image: vv.image,
+    caseQty: vv.caseQty || "",
+    size: vv.size || "",
+    price: vv.price,
+    price1: vv.price1,
+    price2: vv.price2,
+    price3: vv.price3,
+    slug: vv.slug,
+    variantLabel: vv.variantLabel || vv.size || "",
+  }));
+
+  const escapedJson = JSON.stringify(variantsData)
+    .replace(/&/g, "&amp;").replace(/"/g, "&quot;");
+
+  const pillsHtml = variants.map((vv, i) =>
+    `<button class="variant-pill${i === 0 ? " active" : ""}" onclick="selectVariant(this,${i})">${vv.variantLabel || vv.size || "Option " + (i + 1)}</button>`
+  ).join("");
+
+  return `
+    <div class="product-card"
+         data-url="/product?item=${encodeURIComponent(v.slug)}"
+         data-variants="${escapedJson}">
+      <div class="product-image">
+        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/blanket.png'">
+      </div>
+      <div class="product-content">
+        <h3>${v.productFamily || v.name}</h3>
+        <div class="variant-selector">${pillsHtml}</div>
+        <p class="product-description">${v.description || ""}</p>
+        <div class="product-details">
+          <div class="detail-item">
+            <img src="box.svg" alt="">
+            <span>Case Qty: ${v.caseQty || ""}</span>
+          </div>
+          <div class="detail-item">
+            <img src="pack.svg" alt="">
+            <span>Pack Size: ${v.size || ""}</span>
+          </div>
+        </div>
+        <div class="product-bottom">
+          <div>
+            <span class="price">$${price.toFixed(2)}</span>
+            <span class="unit">/ Case</span>
+          </div>
+          <button
+            class="add-btn"
+            data-item="${v.itemNumber}"
+            data-name="${v.name}"
+            data-description="${(v.description || "").replace(/"/g, "&quot;")}"
+            data-price="${price}"
+            data-price1="${cleanPrice(v.price1)}"
+            data-price2="${cleanPrice(v.price2)}"
+            data-price3="${cleanPrice(v.price3)}"
+            data-image="${v.image}"
+          >
+            Add to Order
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function selectVariant(pillEl, idx) {
+  const card = pillEl.closest(".product-card");
+  const variants = JSON.parse(card.dataset.variants);
+  const v = variants[idx];
+
+  card.querySelectorAll(".variant-pill").forEach((p, i) => {
+    p.classList.toggle("active", i === idx);
+  });
+
+  const price = cleanPrice(v.price1) || cleanPrice(v.price);
+
+  const priceEl = card.querySelector(".price");
+  if (priceEl) priceEl.textContent = "$" + price.toFixed(2);
+
+  const img = card.querySelector(".product-image img");
+  if (img) img.src = v.image;
+
+  const spans = card.querySelectorAll(".detail-item span");
+  if (spans[0]) spans[0].textContent = "Case Qty: " + v.caseQty;
+  if (spans[1]) spans[1].textContent = "Pack Size: " + v.size;
+
+  card.dataset.url = "/product?item=" + encodeURIComponent(v.slug);
+
+  const btn = card.querySelector(".add-btn");
+  if (btn) {
+    btn.dataset.item        = v.itemNumber;
+    btn.dataset.name        = v.name;
+    btn.dataset.description = v.description;
+    btn.dataset.price       = price;
+    btn.dataset.price1      = cleanPrice(v.price1);
+    btn.dataset.price2      = cleanPrice(v.price2);
+    btn.dataset.price3      = cleanPrice(v.price3);
+    btn.dataset.image       = v.image;
+  }
+}
+
+function renderProducts(products) {
+  const grid = document.getElementById("products-grid");
+  if (!grid) return;
+
+  grid.innerHTML = "";
+  injectVariantCSS();
+
+  const priced = products.filter(p =>
+    cleanPrice(p.price1) > 0 || cleanPrice(p.price2) > 0 ||
+    cleanPrice(p.price3) > 0 || cleanPrice(p.price) > 0
+  );
+
+  const familyGroups = new Map();
+  const order = [];
+  let soloIdx = 0;
+
+  priced.forEach(p => {
+    if (p.productFamily) {
+      if (!familyGroups.has(p.productFamily)) {
+        familyGroups.set(p.productFamily, []);
+        order.push(p.productFamily);
+      }
+      familyGroups.get(p.productFamily).push(p);
+    } else {
+      const key = "__solo_" + soloIdx++;
+      familyGroups.set(key, [p]);
+      order.push(key);
+    }
+  });
+
+  order.forEach(key => {
+    const variants = familyGroups.get(key);
+    grid.innerHTML += variants.length === 1
+      ? renderSingleCard(variants[0])
+      : renderVariantCard(variants);
   });
 
   setupProductCardClicks();
@@ -234,6 +389,7 @@ function setupProductCardClicks() {
   document.querySelectorAll(".product-card").forEach(card => {
     card.onclick = e => {
       if (e.target.closest(".add-btn")) return;
+      if (e.target.closest(".variant-pill")) return;
 
       const url = card.dataset.url;
       if (url) {
