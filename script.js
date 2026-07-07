@@ -325,6 +325,9 @@ function selectVariant(pillEl, idx) {
   const img = card.querySelector(".product-image img");
   if (img) img.src = v.image;
 
+  const descEl = card.querySelector(".product-description");
+  if (descEl) descEl.textContent = v.description || "";
+
   const spans = card.querySelectorAll(".detail-item span");
   if (spans[0]) spans[0].textContent = "Case Qty: " + v.caseQty;
   if (spans[1]) spans[1].textContent = "Pack Size: " + v.size;
@@ -374,12 +377,13 @@ function renderProducts(products) {
     }
   });
 
-  order.forEach(key => {
+  const html = order.map(key => {
     const variants = familyGroups.get(key);
-    grid.innerHTML += variants.length === 1
+    return variants.length === 1
       ? renderSingleCard(variants[0])
       : renderVariantCard(variants);
-  });
+  }).join("");
+  grid.innerHTML = html;
 
   setupProductCardClicks();
   setupAddToCartButtons();
