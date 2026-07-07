@@ -17,7 +17,8 @@
       "Bash(NODE_PATH=\"C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules\" node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\")",
       "Bash(NODE_PATH=C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules node -e ' *)",
       "Bash(node \"C:/Users/rguti/AppData/Local/Temp/add-variant-columns.js\")",
-      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-towel-variants.js\")"
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-towel-variants.js\")",
+      "Bash(node -e \"const fs=require\\('fs'\\); const text=fs.readFileSync\\('C:/Users/rguti/Downloads/products - RRS Products.csv','utf8'\\); const lines=text.split\\('\\\\n'\\); console.log\\('Total lines:', lines.length\\); console.log\\('\\\\nLast 15 lines:'\\); lines.slice\\(-15\\).forEach\\(\\(l,i\\)=>console.log\\(lines.length-15+i+1,l.substring\\(0,120\\)\\)\\);\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
