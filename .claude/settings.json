@@ -7,7 +7,15 @@
       "Bash(git filter-branch *)",
       "Bash(git stash *)",
       "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter \"node \\\\\"C:/Users/rguti/AppData/Local/Temp/strip-secret.js\\\\\"\" -- 9344ae6^..HEAD)",
-      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-skus-and-prices.js\")"
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-skus-and-prices.js\")",
+      "Bash(node -e \"const {createClient}=require\\('@supabase/supabase-js'\\);console.log\\('supabase ok'\\);\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\")",
+      "Bash(node -e \"require\\('@supabase/supabase-js'\\)\")",
+      "Bash(npm root *)",
+      "Bash(node -e \"console.log\\(require.resolve\\('@supabase/supabase-js'\\)\\)\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\" --require \"C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules/@supabase/supabase-js/dist/index.cjs\")",
+      "Bash(NODE_PATH=\"C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules\" node \"C:/Users/rguti/AppData/Local/Temp/sync-admin-panel.js\")",
+      "Bash(NODE_PATH=C:/Users/rguti/OneDrive/Documents/RRS-Website/node_modules node -e ' *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
