@@ -6,7 +6,8 @@
       "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/fix-catalog.js\")",
       "Bash(git filter-branch *)",
       "Bash(git stash *)",
-      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter \"node \\\\\"C:/Users/rguti/AppData/Local/Temp/strip-secret.js\\\\\"\" -- 9344ae6^..HEAD)"
+      "Bash(FILTER_BRANCH_SQUELCH_WARNING=1 git filter-branch -f --tree-filter \"node \\\\\"C:/Users/rguti/AppData/Local/Temp/strip-secret.js\\\\\"\" -- 9344ae6^..HEAD)",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/update-skus-and-prices.js\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
