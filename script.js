@@ -477,52 +477,29 @@ document.addEventListener('change', e => {
    PRODUCT PAGE
 ========================= */
 
-function loadProductPage() {
-  const productNameEl = document.getElementById("productName");
-  if (!productNameEl) return;
+function buildSeoTitle(p) {
+  const desc = p.description || "";
+  const sizeMatch = desc.match(/Size:\s*([^|]+)/);
+  const matMatch  = desc.match(/Material:\s*([^|]+)/);
+  const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
+  const matStr    = matMatch  ? matMatch[1].trim()  : "";
+  const prefix    = sizeStr ? `${sizeStr} ` : "";
+  const suffix    = matStr  ? ` (${matStr})` : "";
+  return `${prefix}${p.name} – Wholesale Pricing for Hotels & Motels${suffix}`;
+}
 
-  const params = new URLSearchParams(window.location.search);
-  const itemParam = params.get("item");
-
-  if (!itemParam) {
-    productNameEl.textContent = "Product not found";
-    return;
-  }
-
-  const product = allProducts.find(p => {
-    return String(p.itemNumber).trim() === String(itemParam).trim()
-        || p.slug === itemParam;
-  });
-
-  if (!product) {
-    productNameEl.textContent = "Product not found";
-    return;
-  }
-
+function populateProductPage(product) {
   const price = cleanPrice(product.price);
-
-  // Build SEO title: extract size and material from description spec line if present
-  function buildSeoTitle(p) {
-    const desc = p.description || "";
-    const sizeMatch = desc.match(/Size:\s*([^|]+)/);
-    const matMatch  = desc.match(/Material:\s*([^|]+)/);
-    const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
-    const matStr    = matMatch  ? matMatch[1].trim()  : "";
-    const prefix    = sizeStr ? `${sizeStr} ` : "";
-    const suffix    = matStr  ? ` (${matStr})` : "";
-    return `${prefix}${p.name} – Wholesale Pricing for Hotels & Motels${suffix}`;
-  }
 
   const seoTitle = buildSeoTitle(product);
   const metaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
     (product.overview || "").length > 155 ? "…" : ""
   );
-  const pageUrl  = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
+  const pageUrl = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
 
   document.title = `${seoTitle} | Room Ready Supply`;
 
-  // Meta / OG / Canonical
   const setMeta = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
   setMeta("metaDescription", "content", metaDesc);
   setMeta("canonicalUrl",    "href",    pageUrl);
@@ -531,7 +508,6 @@ function loadProductPage() {
   setMeta("ogImage",         "content", product.image);
   setMeta("ogUrl",           "content", pageUrl);
 
-  // JSON-LD Product structured data
   const priceVal = price > 0 ? price.toFixed(2) : null;
   const jsonLd = {
     "@context": "https://schema.org",
@@ -572,7 +548,6 @@ function loadProductPage() {
   setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
   setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
 
-  // Hide tier pricing cards if all prices are identical or missing (single-price item)
   const t1 = cleanPrice(product.price1), t2 = cleanPrice(product.price2), t3 = cleanPrice(product.price3);
   const tierCardsEl = document.querySelector(".pricing-tier-cards");
   if (tierCardsEl) {
@@ -581,50 +556,97 @@ function loadProductPage() {
     tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
   }
 
+  const altText = product.size ? `${product.name} – ${product.size}` : product.name;
   const mainImage = document.getElementById("mainProductImage");
   const thumbImage = document.getElementById("thumbImage");
-
-  const altText = product.size ? `${product.name} – ${product.size}` : product.name;
-
-  if (mainImage) {
-    mainImage.src = product.image;
-    mainImage.alt = altText;
-  }
-
-  if (thumbImage) {
-    thumbImage.src = product.image;
-    thumbImage.alt = altText;
-  }
+  if (mainImage) { mainImage.src = product.image; mainImage.alt = altText; }
+  if (thumbImage) { thumbImage.src = product.image; thumbImage.alt = altText; }
 
   const featuresList = document.getElementById("featuresList");
-
   if (featuresList) {
-    featuresList.innerHTML = "";
-
-    [
-      product.feature1,
-      product.feature2,
-      product.feature3,
-      product.feature4
-    ]
-      .filter(feature => feature && feature.trim() !== "")
-      .forEach(feature => {
-        featuresList.innerHTML += `<li>${feature}</li>`;
-      });
+    featuresList.innerHTML = [product.feature1, product.feature2, product.feature3, product.feature4]
+      .filter(f => f && f.trim())
+      .map(f => `<li>${f}</li>`)
+      .join("");
   }
 
   const addBtn = document.getElementById("productAddToCart");
-
   if (addBtn) {
-    addBtn.dataset.item = product.itemNumber;
-    addBtn.dataset.name = product.name;
+    addBtn.dataset.item        = product.itemNumber;
+    addBtn.dataset.name        = product.name;
     addBtn.dataset.description = product.description || "";
-    addBtn.dataset.price = price;
-    addBtn.dataset.image = product.image;
-    addBtn.dataset.price1 = cleanPrice(product.price1);
-    addBtn.dataset.price2 = cleanPrice(product.price2);
-    addBtn.dataset.price3 = cleanPrice(product.price3);
+    addBtn.dataset.price       = price;
+    addBtn.dataset.image       = product.image;
+    addBtn.dataset.price1      = cleanPrice(product.price1);
+    addBtn.dataset.price2      = cleanPrice(product.price2);
+    addBtn.dataset.price3      = cleanPrice(product.price3);
   }
+}
+
+function injectProductVariantSelector(variants, activeProduct) {
+  const existing = document.getElementById("product-variant-selector");
+  if (existing) existing.remove();
+
+  injectVariantCSS();
+
+  const pillsHtml = variants.map(v =>
+    `<button class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}"
+             data-slug="${v.slug}"
+             onclick="switchProductVariant('${v.slug}')"
+     >${v.variantLabel || v.size || v.name}</button>`
+  ).join("");
+
+  const selector = document.createElement("div");
+  selector.id = "product-variant-selector";
+  selector.style.cssText = "margin: 14px 0 18px;";
+  selector.innerHTML = `<div class="variant-selector">${pillsHtml}</div>`;
+
+  const descEl = document.getElementById("productDescription");
+  if (descEl) descEl.parentNode.insertBefore(selector, descEl);
+}
+
+function switchProductVariant(slug) {
+  const product = allProducts.find(p => p.slug === slug || p.itemNumber === slug);
+  if (!product) return;
+
+  history.pushState(null, "", "/product?item=" + encodeURIComponent(slug));
+
+  document.querySelectorAll("#product-variant-selector .variant-pill").forEach(p => {
+    p.classList.toggle("active", p.dataset.slug === slug);
+  });
+
+  populateProductPage(product);
+}
+
+function loadProductPage() {
+  const productNameEl = document.getElementById("productName");
+  if (!productNameEl) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const itemParam = params.get("item");
+
+  if (!itemParam) {
+    productNameEl.textContent = "Product not found";
+    return;
+  }
+
+  const product = allProducts.find(p =>
+    String(p.itemNumber).trim() === String(itemParam).trim() || p.slug === itemParam
+  );
+
+  if (!product) {
+    productNameEl.textContent = "Product not found";
+    return;
+  }
+
+  if (product.productFamily) {
+    const siblings = allProducts.filter(p => p.productFamily === product.productFamily);
+    if (siblings.length > 1) {
+      injectProductVariantSelector(siblings, product);
+    }
+  }
+
+  populateProductPage(product);
 }
 
 function setText(id, value) {
