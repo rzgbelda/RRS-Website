@@ -561,7 +561,8 @@ function buildSeoTitle(p) {
   const matStr    = matMatch  ? matMatch[1].trim()  : "";
   const prefix    = sizeStr ? `${sizeStr} ` : "";
   const suffix    = matStr  ? ` (${matStr})` : "";
-  return `${prefix}${p.name} – Wholesale Pricing for Hotels & Motels${suffix}`;
+  const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
+  return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
 }
 
 function populateProductPage(product) {
