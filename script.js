@@ -490,7 +490,8 @@ function setupProductCardClicks() {
 // Products matching these keywords are pinned to the top of the default catalog view
 const PRIORITY_KEYWORDS = [
   'paper towel', 'kitchen towel', 'hardwound', 'roll towel',
-  'center pull towel', 'multifold towel', 'facial tissue',
+  'center pull', 'multifold', 'facial tissue',
+  'bath tissue', 'bathroom tissue', 'toilet tissue', 'toilet paper', 'bath roll',
 ];
 
 function getProductPriority(p) {
