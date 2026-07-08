@@ -559,9 +559,12 @@ function buildSeoTitle(p) {
   const matMatch  = desc.match(/Material:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
   const matStr    = matMatch  ? matMatch[1].trim()  : "";
-  const prefix    = sizeStr ? `${sizeStr} ` : "";
   const suffix    = matStr  ? ` (${matStr})` : "";
   const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
+  // Only prepend size if the name doesn't already start with it
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const nameAlreadyHasSize = sizeStr && norm(cleanName).startsWith(norm(sizeStr));
+  const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : "";
   return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
 }
 
