@@ -315,23 +315,23 @@
 
             <h3>Business Information</h3>
 
-            <form class="pricing-form">
+            <form class="pricing-form" id="quoteForm">
 
                 <div class="form-grid">
 
                     <div class="form-left">
 
-                        <label>Business Name</label>
-                        <input type="text" placeholder="Enter business name">
+                        <label for="qBusinessName">Business Name</label>
+                        <input id="qBusinessName" type="text" placeholder="Enter business name" required>
 
-                        <label>Customer Type</label>
-                        <input type="text" placeholder="Hotel, Motel, Restaurant, Facility, etc.">
+                        <label for="qCustomerType">Customer Type</label>
+                        <input id="qCustomerType" type="text" placeholder="Hotel, Motel, Restaurant, Facility, etc.">
 
-                        <label>Contact Name</label>
-                        <input type="text" placeholder="Enter contact name">
+                        <label for="qContactName">Contact Name</label>
+                        <input id="qContactName" type="text" placeholder="Enter contact name" required>
 
-                        <label>Email</label>
-                        <input type="email" placeholder="Enter email address">
+                        <label for="qEmail">Email</label>
+                        <input id="qEmail" type="email" placeholder="Enter email address" required>
 
                     </div>
 
@@ -339,15 +339,17 @@
 
                         <label>Upload Current Invoice / Sample Order</label>
 
-                        <div class="upload-box">
+                        <div class="upload-box" id="uploadBox">
 
-                            <img src="file-list-3-line.svg" alt="Upload">
+                            <img src="file-list-3-line.svg" alt="Upload" id="uploadIcon">
 
-                            <h4>Drag & Drop Your File Here</h4>
+                            <h4 id="uploadTitle">Drag & Drop Your File Here</h4>
 
-                            <p>or <span>browse</span> to upload</p>
+                            <p>or <span id="uploadBrowse" style="cursor:pointer;color:#e8621a;text-decoration:underline;">browse</span> to upload</p>
 
                             <small>PDF, JPG, PNG (Max 10MB)</small>
+
+                            <input type="file" id="qFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
 
                         </div>
 
@@ -359,11 +361,13 @@
                     Additional Notes
                 </label>
 
-                <textarea
+                <textarea id="qNotes"
                     placeholder="Tell us anything else that will help us quote your business."
                 ></textarea>
 
-                <button type="submit" class="quote-btn">
+                <div id="quoteFormMsg" style="display:none;margin-bottom:12px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;"></div>
+
+                <button type="submit" class="quote-btn" id="quoteSubmitBtn">
                     Get My Business Quote
                 </button>
 
@@ -695,5 +699,115 @@
   });
 </script>
 <!-- ── End Floating Catalog QR Widget ───────────────────────── -->
+
+<!-- ── Quote Request Form ────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  const SUPABASE_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  const QUOTE_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/quote-request';
+  const BUCKET        = 'quote-files';
+
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  // ── File upload wiring ───────────────────────────────────────
+  const uploadBox    = document.getElementById('uploadBox');
+  const uploadInput  = document.getElementById('qFile');
+  const uploadTitle  = document.getElementById('uploadTitle');
+  const uploadBrowse = document.getElementById('uploadBrowse');
+  let selectedFile   = null;
+
+  uploadBrowse.addEventListener('click', () => uploadInput.click());
+  uploadInput.addEventListener('change', () => setFile(uploadInput.files[0]));
+
+  uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag-over'); });
+  uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
+  uploadBox.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadBox.classList.remove('drag-over');
+    const f = e.dataTransfer.files[0];
+    if (f) setFile(f);
+  });
+
+  function setFile(f) {
+    if (!f) return;
+    if (f.size > 10 * 1024 * 1024) { showMsg('File must be under 10 MB.', false); return; }
+    selectedFile = f;
+    uploadTitle.textContent = f.name;
+    uploadBox.style.borderColor = '#e8621a';
+  }
+
+  // ── Form submit ──────────────────────────────────────────────
+  const form      = document.getElementById('quoteForm');
+  const submitBtn = document.getElementById('quoteSubmitBtn');
+  const msgEl     = document.getElementById('quoteFormMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending…';
+    msgEl.style.display = 'none';
+
+    try {
+      let file_url  = null;
+      let file_name = null;
+
+      // Upload file to Supabase Storage if one was selected
+      if (selectedFile) {
+        const ext  = selectedFile.name.split('.').pop();
+        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, selectedFile, {
+          contentType: selectedFile.type,
+          upsert: false,
+        });
+        if (upErr) throw new Error('File upload failed: ' + upErr.message);
+        const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
+        file_url  = urlData.publicUrl;
+        file_name = selectedFile.name;
+      }
+
+      // Call edge function — saves to DB and sends email
+      const res = await fetch(QUOTE_FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({
+          business_name: document.getElementById('qBusinessName').value.trim(),
+          customer_type: document.getElementById('qCustomerType').value.trim(),
+          contact_name:  document.getElementById('qContactName').value.trim(),
+          email:         document.getElementById('qEmail').value.trim(),
+          notes:         document.getElementById('qNotes').value.trim(),
+          file_url,
+          file_name,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Submission failed.');
+
+      showMsg('Thank you! We received your request and will be in touch shortly.', true);
+      form.reset();
+      selectedFile = null;
+      uploadTitle.textContent = 'Drag & Drop Your File Here';
+      uploadBox.style.borderColor = '';
+
+    } catch (err) {
+      showMsg(err.message || 'Something went wrong. Please try again.', false);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Get My Business Quote';
+    }
+  });
+
+  function showMsg(text, success) {
+    msgEl.textContent = text;
+    msgEl.style.display = 'block';
+    msgEl.style.background = success ? '#d1fae5' : '#fee2e2';
+    msgEl.style.color       = success ? '#065f46' : '#991b1b';
+    msgEl.style.border      = success ? '1px solid #6ee7b7' : '1px solid #fca5a5';
+  }
+})();
+</script>
+<!-- ── End Quote Request Form ────────────────────────────────── -->
 
 </body>

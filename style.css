@@ -1058,7 +1058,8 @@ padding-top: 20px;
     transition: .3s ease;
 }
 
-.upload-box:hover {
+.upload-box:hover,
+.upload-box.drag-over {
     border-color: #ED7226;
     background: #fff9f5;
 }
