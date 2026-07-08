@@ -28,7 +28,8 @@ document.addEventListener("DOMContentLoaded", () => {
     .then(csvText => {
       allProducts = parseCSV(csvText);
 
-      renderProducts(allProducts);
+      const prioritized = allProducts.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
+      renderProducts(prioritized);
       loadProductPage();
       loadFeaturedProducts();
 
