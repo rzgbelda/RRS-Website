@@ -435,6 +435,8 @@ async function renderProductsTable(filter) {
       <td>
         $${Number(p.price).toFixed(2)}
         ${p.is_on_sale && p.sale_price ? `<br><small style="color:#ED7226">Sale: $${Number(p.sale_price).toFixed(2)}</small>` : ""}
+        ${p.cost_per_case ? `<br><small style="color:#64748b">Cost: $${Number(p.cost_per_case).toFixed(2)}</small>` : ""}
+        ${p.cost_per_case && p.price ? `<br><small style="color:#16a34a">Margin: ${(((p.price - p.cost_per_case) / p.price) * 100).toFixed(1)}%</small>` : ""}
       </td>
       <td>${p.case_qty || 1}</td>
       <td>${inv?.stock_qty ?? 0} — <span class="a-badge ${badgeClass(inv?.status)}">${inv?.status || "?"}</span></td>
@@ -525,6 +527,9 @@ async function openEditProduct(id) {
   setVal("prodStockQty",   p.inventory?.[0]?.stock_qty ?? 0);
   setVal("prodStock",      p.inventory?.[0]?.status    || "in_stock");
   setVal("prodImage",      p.image_url      || "");
+  setVal("prodCostPerCase",  p.cost_per_case   || "");
+  setVal("prodLandedCost",   p.landed_cost     || "");
+  setVal("prodTruckloadQty", p.truckload_qty   || "");
   setChk("prodIsOnSale",   !!p.is_on_sale);
   setChk("prodFeatured",   !!p.is_featured);
   setChk("prodActive",     !!p.is_active);
@@ -567,6 +572,9 @@ async function saveProduct() {
     case_qty      : parseInt(document.getElementById("prodCaseQty")?.value) || 1,
     pack_size     : parseInt(document.getElementById("prodPackSize")?.value) || 1,
     image_url     : (document.getElementById("prodImage")?.value || "").trim() || null,
+    cost_per_case : parseFloat(document.getElementById("prodCostPerCase")?.value) || null,
+    landed_cost   : parseFloat(document.getElementById("prodLandedCost")?.value)  || null,
+    truckload_qty : parseInt(document.getElementById("prodTruckloadQty")?.value)   || null,
     is_featured   : document.getElementById("prodFeatured")?.checked || false,
     is_active     : document.getElementById("prodActive")?.checked ?? true,
     updated_at    : new Date().toISOString(),
