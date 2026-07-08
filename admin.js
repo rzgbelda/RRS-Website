@@ -1327,55 +1327,64 @@ async function openOrderModal(id) {
   const isPending    = o.status === "pending";
   const isConfirmed  = o.status === "confirmed";
   const isCancelled  = o.status === "cancelled";
-  const warpBooked   = !!o.warp_shipment_id;
+  const estesBooked  = !!o.estes_bol_number;
   const freightQuote = o.freight_quote ? (typeof o.freight_quote === "string" ? JSON.parse(o.freight_quote) : o.freight_quote) : null;
+  const estesQuoted  = freightQuote?.carrier_name === "Estes Express";
 
   // Action bar — only show for actionable statuses
   let actionBar = "";
   if (isPending) {
+    const quotePanel = estesQuoted ? `
+      <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Freight Cost</span>
+          <strong style="color:#0c4a6e;font-size:16px;">$${Number(freightQuote.total_charge).toFixed(2)}</strong></div>
+        <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Transit</span>
+          <strong style="color:#0c4a6e;font-size:16px;">${freightQuote.transit_days ?? "—"} days</strong></div>
+        <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Est. Delivery</span>
+          <strong style="color:#0c4a6e;font-size:13px;">${freightQuote.delivery_date ?? "—"}</strong></div>
+      </div>
+      ${freightQuote.test_mode ? `<div style="background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11.5px;color:#92400e;font-weight:600;">🧪 TEST MODE — Quote is from Estes UAT. No real charges until credentials switch to production.</div>` : ""}` : "";
+
     actionBar = `
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <span style="font-size:20px;">📋</span>
           <div>
             <strong style="font-size:14px;color:#15803d;display:block;">Order Pending Review</strong>
-            <span style="font-size:12px;color:#166534;">Review the order below, then approve to book with Warp or cancel if it's a mistake.</span>
+            <span style="font-size:12px;color:#166534;">Get a freight quote from Estes Express, then confirm to book.</span>
           </div>
         </div>
+        ${quotePanel}
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button onclick="approveAndBookWithWarp('${o.id}')"
-            style="flex:1;min-width:180px;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            🚚 Approve &amp; Book with Warp
+          <button onclick="getEstesQuote('${o.id}')"
+            style="flex:1;min-width:160px;background:#fff;color:#0b2d52;border:1.5px solid #0b2d52;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            📦 ${estesQuoted ? "Refresh Quote" : "Get Estes Quote"}
           </button>
+          ${estesQuoted ? `<button onclick="bookWithEstes('${o.id}')"
+            style="flex:2;min-width:180px;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            🚚 Confirm &amp; Book with Estes
+          </button>` : ""}
           <button onclick="cancelOrderFromModal('${o.id}')"
-            style="flex:1;min-width:140px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
+            style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
             ✕ Cancel Order
           </button>
         </div>
       </div>`;
-  } else if (isConfirmed && warpBooked) {
+  } else if (isConfirmed && estesBooked) {
     actionBar = `
-      <div style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:20px;">✅</span>
         <div>
-          <strong style="color:#1e40af;font-size:13px;display:block;">Booked with Warp</strong>
-          <span style="color:#1d4ed8;font-size:12px;">Shipment ID: <code style="background:#dbeafe;padding:2px 6px;border-radius:4px;">${escHtml(o.warp_shipment_id)}</code></span>
+          <strong style="color:#15803d;font-size:13px;display:block;">Booked with Estes Express</strong>
+          <span style="color:#166534;font-size:12px;">BOL: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.estes_bol_number)}</code>
+          ${o.estes_pro_number ? ` &nbsp;·&nbsp; PRO: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.estes_pro_number)}</code>` : ""}</span>
         </div>
       </div>`;
   } else if (isConfirmed) {
     actionBar = `
-      <div style="background:#fefce8;border:1.5px solid #fde047;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-          <span style="font-size:20px;">⚠️</span>
-          <div>
-            <strong style="font-size:14px;color:#854d0e;display:block;">Warp Booking Failed — Retry</strong>
-            <span style="font-size:12px;color:#92400e;">Order is confirmed but Warp booking did not complete. Click below to retry.</span>
-          </div>
-        </div>
-        <button onclick="approveAndBookWithWarp('${o.id}')"
-          style="width:100%;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-          🚚 Retry Warp Booking
-        </button>
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">✅</span>
+        <div><strong style="color:#15803d;font-size:13px;display:block;">Order Confirmed</strong></div>
       </div>`;
   }
 
@@ -1618,6 +1627,183 @@ async function approveAndBookWithWarp(orderId) {
   }
 
   renderOrdersTable();
+}
+
+// ── Estes Express Integration ────────────────────────────────────────────────
+const SUPABASE_ANON_KEY_ESTES = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+const ESTES_FN_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight";
+
+async function callEstesFunction(action, payload) {
+  const res = await fetch(ESTES_FN_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${SUPABASE_ANON_KEY_ESTES}`,
+    },
+    body: JSON.stringify({ action, payload }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) throw new Error(data.error || `Estes error (${res.status})`);
+  return data;
+}
+
+async function getEstesQuote(orderId) {
+  const resultEl = document.getElementById("orderActionResult");
+  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Getting Estes rate quote…</div>`; }
+
+  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
+  const addr  = order?.shipping_address || {};
+  const items = order?.order_items || [];
+
+  // Calculate total shipment weight: sum of (qty × 40 lbs default per case)
+  const totalWeight = items.reduce((sum, i) => sum + (i.quantity * (i.weight_lbs || 40)), 0) || 40;
+
+  try {
+    const quote = await callEstesFunction("quote", {
+      destination_zip:   addr.zip   || "",
+      destination_city:  addr.city  || "",
+      destination_state: addr.state || "",
+      weight_lbs: totalWeight,
+    });
+
+    // Save quote to order
+    await window.sb.from("orders").update({
+      freight_quote: JSON.stringify(quote),
+      updated_at: new Date().toISOString(),
+    }).eq("id", orderId);
+
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
+        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Quote received — Estes Express</strong>
+        <span style="color:#166534;font-size:12px;">$${Number(quote.total_charge).toFixed(2)} · ${quote.transit_days ?? "?"} transit days · Est. delivery: ${quote.delivery_date ?? "TBD"}</span>
+      </div>`;
+    }
+    showToast("Estes quote received! Click 'Confirm & Book' to proceed.");
+    // Reopen modal to refresh action bar with quote panel
+    setTimeout(() => showOrderModal(orderId), 800);
+  } catch (e) {
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 16px;">
+        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Quote Failed</strong>
+        <span style="color:#b91c1c;font-size:12px;">${escHtml(e.message)}</span>
+      </div>`;
+    }
+  }
+}
+
+async function bookWithEstes(orderId) {
+  const resultEl = document.getElementById("orderActionResult");
+
+  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
+  const addr  = order?.shipping_address || {};
+  const items = order?.order_items || [];
+  const freightQuote = order?.freight_quote
+    ? (typeof order.freight_quote === "string" ? JSON.parse(order.freight_quote) : order.freight_quote)
+    : null;
+
+  const freightCostStr = freightQuote?.total_charge ? `$${Number(freightQuote.total_charge).toFixed(2)}` : "TBD";
+  const confirmed = await showFreightConfirmDialog({
+    orderNumber: order?.order_number,
+    customer:    order?.customer_name,
+    business:    order?.business_name,
+    shipTo:      [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "),
+    total:       `$${Number(order?.total || 0).toFixed(2)}`,
+    freightCost: freightCostStr,
+    transitDays: freightQuote?.transit_days ?? "?",
+    testMode:    !!freightQuote?.test_mode,
+  });
+  if (!confirmed) return;
+
+  const btn = document.querySelector('[onclick^="bookWithEstes"]');
+  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Booking…"; }
+  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Creating BOL with Estes…</div>`; }
+
+  const totalWeight = items.reduce((sum, i) => sum + (i.quantity * (i.weight_lbs || 40)), 0) || 40;
+
+  try {
+    const result = await callEstesFunction("book", {
+      order_number: order?.order_number,
+      quote_id:     freightQuote?.quote_id ?? null,
+      ship_date:    freightQuote?.ship_date ?? null,
+      destination: {
+        name:   order?.business_name || order?.customer_name || "Customer",
+        street: addr.street || "",
+        city:   addr.city   || "",
+        state:  addr.state  || "",
+        zip:    addr.zip    || "",
+        phone:  order?.phone          || "",
+        email:  order?.customer_email || "",
+      },
+      items: items.map(i => ({
+        description: i.name,
+        quantity:    i.quantity,
+        weight_lbs:  i.quantity * (i.weight_lbs || 40),
+      })),
+    });
+
+    // Save BOL + confirm order
+    await window.sb.from("orders").update({
+      status:           "confirmed",
+      estes_bol_number: result.bol_number || "booked",
+      estes_pro_number: result.pro_number || null,
+      estes_booked_at:  new Date().toISOString(),
+      updated_at:       new Date().toISOString(),
+    }).eq("id", orderId);
+
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
+        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Estes Express!</strong>
+        <span style="color:#166534;font-size:12px;">BOL: <strong>${escHtml(result.bol_number)}</strong>${result.pro_number ? ` · PRO: <strong>${escHtml(result.pro_number)}</strong>` : ""}</span>
+      </div>`;
+    }
+    showToast("Order confirmed and booked with Estes Express! 🚚");
+    renderOrdersTable();
+  } catch (e) {
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
+        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Estes Booking Failed — Order Still Pending</strong>
+        <span style="color:#b91c1c;font-size:12px;">${escHtml(e.message)}</span>
+      </div>`;
+    }
+    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Confirm &amp; Book with Estes"; }
+    showToast("Estes booking failed — order remains pending.");
+  }
+}
+
+function showFreightConfirmDialog({ orderNumber, customer, business, shipTo, total, freightCost, transitDays, testMode }) {
+  return new Promise((resolve) => {
+    const existing = document.getElementById("estesConfirmOverlay");
+    if (existing) existing.remove();
+    const overlay = document.createElement("div");
+    overlay.id = "estesConfirmOverlay";
+    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
+    overlay.innerHTML = `
+      <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
+        <div style="padding:22px 24px 16px;border-bottom:1px solid #f0f4fa;">
+          <strong style="font-size:16px;color:#0d1f38;display:block;margin-bottom:4px;">Confirm Estes Express Booking</strong>
+          <span style="font-size:12px;color:#64748b;">Order #${escHtml(orderNumber)}</span>
+        </div>
+        ${testMode ? `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;font-size:12px;color:#b45309;font-weight:700;">🧪 TEST MODE — No real shipment or charges.</div>` : `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;font-size:12px;color:#dc2626;font-weight:700;">⚠️ LIVE — This will create a real Estes shipment.</div>`}
+        <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
+          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Customer</span>${escHtml(customer || "—")}</div>
+          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Business</span>${escHtml(business || "—")}</div>
+          <div style="grid-column:span 2"><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Ship To</span>${escHtml(shipTo || "—")}</div>
+          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order Total</span>${escHtml(total)}</div>
+          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Freight Cost</span><strong style="color:#0b2d52;">${escHtml(freightCost)}</strong></div>
+          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Transit Days</span>${escHtml(String(transitDays))}</div>
+        </div>
+        <div style="padding:0 24px 20px;display:flex;gap:10px;">
+          <button id="estesCancel" style="flex:1;padding:11px;border:1.5px solid #e4e9f2;border-radius:10px;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;">Cancel</button>
+          <button id="estesProceed" style="flex:2;padding:11px;border:none;border-radius:10px;background:#0b2d52;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
+            ${testMode ? "✅ Yes, Book (Test)" : "✅ Yes, Book Shipment"}
+          </button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+    document.getElementById("estesCancel").onclick  = () => { overlay.remove(); resolve(false); };
+    document.getElementById("estesProceed").onclick = () => { overlay.remove(); resolve(true); };
+    overlay.addEventListener("click", e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
+  });
 }
 
 async function cancelOrderFromModal(orderId) {
