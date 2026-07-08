@@ -486,6 +486,17 @@ function setupProductCardClicks() {
 ========================= */
 
 // Keywords matched against product name + description for each category
+// Products matching these keywords are pinned to the top of the default catalog view
+const PRIORITY_KEYWORDS = [
+  'paper towel', 'kitchen towel', 'hardwound', 'roll towel',
+  'center pull towel', 'multifold towel', 'facial tissue',
+];
+
+function getProductPriority(p) {
+  const hay = (p.name + ' ' + (p.description || '')).toLowerCase();
+  return PRIORITY_KEYWORDS.some(kw => hay.includes(kw)) ? 0 : 1;
+}
+
 const CATEGORY_KEYWORDS = {
   'toilet-paper':        ['bath tissue', 'toilet paper', 'toilet tissue', 'bath roll'],
   'paper-towels':        ['paper towel', 'hardwound', 'roll towel', 'kitchen towel', 'hand towel roll'],
@@ -535,6 +546,9 @@ function applyFilters() {
 
   if (sortAZ) {
     filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
+  } else if (catFilters.length === 0 && !keyword) {
+    // Default view: pin paper towels, kitchen towels, and facial tissues first
+    filtered = filtered.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
   }
 
   renderProducts(filtered);
