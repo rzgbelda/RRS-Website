@@ -681,18 +681,9 @@ padding-top: 20px;
   padding: 90px 70px 100px;
   background: linear-gradient(160deg, #f5f3f0 0%, #ede9e4 100%);
   display: grid;
-  grid-template-columns: 1fr 520px;
-  gap: 80px;
-  align-items: center;
-  background: rgba(255, 255, 255, 0.88);
-    background-image:
-        radial-gradient(
-            rgba(237,114,38,.04) 1px,
-            transparent 1px
-        );
-    background-size: 24px 24px;
-
-    
+  grid-template-columns: 1fr 480px;
+  gap: 70px;
+  align-items: start;
 }
 
 /* Legacy alias */
@@ -736,45 +727,46 @@ padding-top: 20px;
 .step-item {
   flex: 1;
   text-align: center;
-  padding: 0 12px;
+  padding: 0 8px;
 }
 
 .step-top {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .step-num {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
-  letter-spacing: .12em;
+  letter-spacing: .14em;
   color: #ED7226;
+  line-height: 1;
   margin-bottom: 10px;
 }
 
 .step-icon {
-  width: 96px;
-  height: 96px;
+  width: 88px;
+  height: 88px;
   background: #ffffff;
   border-radius: 50%;
-  border: 2px solid #ede8e2;
+  border: 2px solid #e8e2db;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0,0,0,.07);
+  box-shadow: 0 4px 14px rgba(0,0,0,.08);
   transition: box-shadow .25s, border-color .25s;
 }
 
 .step-item:hover .step-icon {
   border-color: #ED7226;
-  box-shadow: 0 6px 24px rgba(237,114,38,.18);
+  box-shadow: 0 6px 20px rgba(237,114,38,.18);
 }
 
 .step-icon img {
-  width: 50px;
-  height: 50px;
+  width: 44px;
+  height: 44px;
   object-fit: contain;
   filter: invert(55%) sepia(78%) saturate(1713%)
           hue-rotate(347deg) brightness(98%) contrast(90%);
@@ -782,23 +774,26 @@ padding-top: 20px;
 
 .step-item h3 {
   color: #0B1F38;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 800;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .step-item p {
   color: #64748b;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.55;
 }
 
+/* connector aligns to vertical center of icon:
+   step-num height ~12px + margin 10px + icon-center 44px = 66px */
 .step-connector {
   flex-shrink: 0;
-  width: 36px;
+  width: 32px;
   height: 2px;
-  background: linear-gradient(90deg, #ED7226, #f0a060);
-  margin-top: 56px;
+  background: #ED7226;
+  opacity: .45;
+  margin-top: 66px;
   border-radius: 1px;
 }
 
