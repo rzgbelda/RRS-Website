@@ -2557,32 +2557,75 @@ function openQuoteDetail(id) {
   if (!r) return;
   currentQuoteId = id;
 
+  const statusColors = {
+    new:      { bg:"#eff6ff", color:"#1d4ed8", dot:"#3b82f6" },
+    reviewed: { bg:"#fefce8", color:"#854d0e", dot:"#eab308" },
+    quoted:   { bg:"#f0fdf4", color:"#166534", dot:"#22c55e" },
+    closed:   { bg:"#f8fafc", color:"#475569", dot:"#94a3b8" },
+  };
+  const sc = statusColors[r.status||"new"] || statusColors.new;
+
+  // Update modal title with business name
+  const titleEl = document.getElementById("quoteDetailTitle");
+  if (titleEl) titleEl.textContent = r.business_name || "Quote Request";
+
   const items = r.requested_items;
   const itemsHtml = items?.length
-    ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;">
-        <tr style="background:#f1f5f9"><th align="left" style="padding:6px 8px">Product</th><th align="center" style="padding:6px 8px">Qty (cases)</th></tr>
-        ${items.map(i => `<tr><td style="padding:6px 8px;border-top:1px solid #e2e8f0">${esc(i.name)}</td><td align="center" style="padding:6px 8px;border-top:1px solid #e2e8f0">${i.quantity}</td></tr>`).join("")}
-      </table>`
-    : "<p style='color:#94a3b8;font-size:13px'>No specific products listed.</p>";
+    ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
+        <div style="display:grid;grid-template-columns:1fr 90px;background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
+          <span>Product</span><span style="text-align:center">Qty (cases)</span>
+        </div>
+        ${items.map((i, idx) => `
+          <div style="display:grid;grid-template-columns:1fr 90px;padding:10px 14px;border-top:1px solid #f1f5f9;background:${idx%2===0?'#fff':'#fafbfc'};font-size:13px;align-items:center">
+            <span style="color:#1e293b;font-weight:500">${esc(i.name)}</span>
+            <span style="text-align:center;font-weight:700;color:#0d2c50">${i.quantity}</span>
+          </div>`).join("")}
+      </div>`
+    : `<div style="padding:14px;background:#f8fafc;border-radius:10px;font-size:13px;color:#94a3b8;text-align:center;margin-top:8px">No specific products listed</div>`;
 
   const fileHtml = r.file_url
-    ? `<p style="margin-top:12px"><a href="${r.file_url}" target="_blank" style="color:#e8621a">📎 ${esc(r.file_name||"View attached file")}</a></p>`
+    ? `<a href="${r.file_url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:8px 14px;background:#fff7f0;border:1px solid #fed7aa;border-radius:8px;color:#e8621a;font-size:13px;font-weight:600;text-decoration:none">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+        ${esc(r.file_name || "View attached file")}
+      </a>`
     : "";
 
   document.getElementById("quoteDetailBody").innerHTML = `
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;margin-bottom:16px;">
-      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Business</label><p style="margin:2px 0;font-weight:600">${esc(r.business_name)}</p></div>
-      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Customer Type</label><p style="margin:2px 0">${esc(r.customer_type||"—")}</p></div>
-      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Contact</label><p style="margin:2px 0">${esc(r.contact_name)}</p></div>
-      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Email</label><p style="margin:2px 0"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></p></div>
+    <!-- Status pill -->
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:10px 14px;background:${sc.bg};border-radius:10px">
+      <span style="width:8px;height:8px;border-radius:50%;background:${sc.dot};flex-shrink:0"></span>
+      <span style="font-size:12px;font-weight:700;color:${sc.color};text-transform:uppercase;letter-spacing:.06em">${r.status||"new"}</span>
+      <span style="margin-left:auto;font-size:11px;color:#94a3b8">Submitted ${new Date(r.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
     </div>
-    <div style="margin-bottom:14px">
-      <label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Requested Products</label>
+
+    <!-- Contact info grid -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:20px">
+      ${[
+        ["Business", esc(r.business_name)],
+        ["Customer Type", esc(r.customer_type||"—")],
+        ["Contact Name", esc(r.contact_name)],
+        ["Email", `<a href="mailto:${esc(r.email)}" style="color:#e8621a;text-decoration:none">${esc(r.email)}</a>`],
+      ].map(([label, val]) => `
+        <div style="background:#fff;padding:12px 16px">
+          <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0 0 3px">${label}</p>
+          <p style="font-size:13px;font-weight:600;color:#1e293b;margin:0">${val}</p>
+        </div>`).join("")}
+    </div>
+
+    <!-- Requested products -->
+    <div style="margin-bottom:20px">
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin:0 0 4px">Requested Products</p>
       ${itemsHtml}
     </div>
-    ${r.notes ? `<div style="margin-bottom:14px"><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Notes</label><p style="font-size:13px;margin:4px 0;background:#f8fafc;padding:10px;border-radius:6px">${esc(r.notes)}</p></div>` : ""}
-    ${fileHtml}
-    <p style="font-size:11px;color:#94a3b8;margin-top:16px">Submitted: ${new Date(r.created_at).toLocaleString()}</p>
+
+    ${r.notes ? `
+    <!-- Notes -->
+    <div style="margin-bottom:16px">
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin:0 0 6px">Notes</p>
+      <p style="font-size:13px;color:#334155;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;margin:0;line-height:1.6">${esc(r.notes)}</p>
+    </div>` : ""}
+
+    ${fileHtml ? `<div style="margin-bottom:8px">${fileHtml}</div>` : ""}
   `;
 
   document.getElementById("quoteStatusSelect").value = r.status || "new";
