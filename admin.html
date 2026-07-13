@@ -68,6 +68,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         Orders
       </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="quote-requests">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
+        Quote Requests
+      </a>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="users">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         Users
@@ -666,6 +670,64 @@
       </div>
 
     </div><!-- /orders tab -->
+
+    <!-- ============ QUOTE REQUESTS TAB ============ -->
+    <div id="tab-quote-requests" class="a-tab" style="display:none">
+
+      <div class="a-toolbar">
+        <input type="text" id="quoteSearch" class="a-search" placeholder="Search quote requests…">
+        <select id="quoteStatusFilter" class="a-select">
+          <option value="">All Statuses</option>
+          <option value="new">New</option>
+          <option value="reviewed">Reviewed</option>
+          <option value="quoted">Quoted</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
+
+      <div class="a-card">
+        <div class="a-table-wrap">
+          <table class="a-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Business</th>
+                <th>Contact</th>
+                <th>Email</th>
+                <th>Products Requested</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="quoteRequestsTableBody">
+              <tr><td colspan="7" class="a-empty">No quote requests yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Quote Request Detail Modal -->
+      <div id="quoteDetailModal" class="a-modal-overlay" style="display:none">
+        <div class="a-modal" style="max-width:640px">
+          <div class="a-modal-header">
+            <h3>Quote Request Detail</h3>
+            <button class="a-modal-close" onclick="document.getElementById('quoteDetailModal').style.display='none'">×</button>
+          </div>
+          <div class="a-modal-body" id="quoteDetailBody"></div>
+          <div class="a-modal-footer">
+            <select id="quoteStatusSelect" class="a-select" style="width:160px">
+              <option value="new">New</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="quoted">Quoted</option>
+              <option value="closed">Closed</option>
+            </select>
+            <button class="a-btn a-btn-primary" onclick="saveQuoteStatus()">Save Status</button>
+            <button class="a-btn" onclick="document.getElementById('quoteDetailModal').style.display='none'">Close</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /quote-requests tab -->
 
     <!-- ============ USERS TAB ============ -->
     <div id="tab-users" class="a-tab" style="display:none">

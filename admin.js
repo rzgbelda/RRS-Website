@@ -192,17 +192,19 @@ function switchTab(tab) {
   document.getElementById("adminPageTitle").textContent =
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
-      "manage-hero":"Hero Section", "manage-about":"About Section" }[tab] || tab;
+      "manage-hero":"Hero Section", "manage-about":"About Section",
+      "quote-requests":"Quote Requests" }[tab] || tab;
 
-  if (tab === "dashboard")     renderDashboardTab();
-  if (tab === "products")      renderProductsTable();
-  if (tab === "inventory")     renderInventoryTable();
-  if (tab === "orders")        renderOrdersTable();
-  if (tab === "users")         renderUsersTable();
-  if (tab === "reports")       renderReportsTab();
-  if (tab === "manage-hero")        loadHeroSection();
-  if (tab === "manage-about")       loadAboutSection();
-  if (tab === "sub-distributors")   renderSubDistributorsTab();
+  if (tab === "dashboard")        renderDashboardTab();
+  if (tab === "products")         renderProductsTable();
+  if (tab === "inventory")        renderInventoryTable();
+  if (tab === "orders")           renderOrdersTable();
+  if (tab === "users")            renderUsersTable();
+  if (tab === "reports")          renderReportsTab();
+  if (tab === "manage-hero")      loadHeroSection();
+  if (tab === "manage-about")     loadAboutSection();
+  if (tab === "sub-distributors") renderSubDistributorsTab();
+  if (tab === "quote-requests")   renderQuoteRequestsTable();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -2483,4 +2485,114 @@ function setText(id, val) {
 
 function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Quote Requests ─────────────────────────────────────────── */
+
+let allQuoteRequests = [];
+let currentQuoteId   = null;
+
+async function renderQuoteRequestsTable() {
+  if (!window.sb) return;
+  const tbody  = document.getElementById("quoteRequestsTableBody");
+  const search = (document.getElementById("quoteSearch")?.value || "").toLowerCase();
+  const status = document.getElementById("quoteStatusFilter")?.value || "";
+
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Loading…</td></tr>`;
+
+  const { data, error } = await window.sb
+    .from("quote_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error || !data?.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="a-empty">${error ? "Error loading requests." : "No quote requests yet."}</td></tr>`;
+    return;
+  }
+
+  allQuoteRequests = data;
+
+  let rows = data.filter(r => {
+    const hay = `${r.business_name} ${r.contact_name} ${r.email}`.toLowerCase();
+    return (!search || hay.includes(search)) && (!status || r.status === status);
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="a-empty">No matching requests.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const date     = new Date(r.created_at).toLocaleDateString();
+    const items    = r.requested_items;
+    const itemsStr = items?.length
+      ? items.map(i => `${i.name} ×${i.quantity}`).join(", ")
+      : "<em style='color:#94a3b8'>No products listed</em>";
+    const badge = {
+      new:      "background:#dbeafe;color:#1d4ed8",
+      reviewed: "background:#fef3c7;color:#92400e",
+      quoted:   "background:#d1fae5;color:#065f46",
+      closed:   "background:#f1f5f9;color:#475569",
+    }[r.status] || "";
+
+    return `<tr>
+      <td>${date}</td>
+      <td><strong>${esc(r.business_name)}</strong><br><small>${esc(r.customer_type||"")}</small></td>
+      <td>${esc(r.contact_name)}</td>
+      <td><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></td>
+      <td style="max-width:220px;font-size:12px;line-height:1.4">${itemsStr}</td>
+      <td><span style="padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;${badge}">${r.status||"new"}</span></td>
+      <td><button class="a-btn a-btn-sm" onclick="openQuoteDetail('${r.id}')">View</button></td>
+    </tr>`;
+  }).join("");
+
+  // Wire search/filter
+  document.getElementById("quoteSearch")?.addEventListener("input", renderQuoteRequestsTable, { once: true });
+  document.getElementById("quoteStatusFilter")?.addEventListener("change", renderQuoteRequestsTable, { once: true });
+}
+
+function openQuoteDetail(id) {
+  const r = allQuoteRequests.find(x => x.id === id);
+  if (!r) return;
+  currentQuoteId = id;
+
+  const items = r.requested_items;
+  const itemsHtml = items?.length
+    ? `<table style="width:100%;border-collapse:collapse;font-size:13px;margin-top:6px;">
+        <tr style="background:#f1f5f9"><th align="left" style="padding:6px 8px">Product</th><th align="center" style="padding:6px 8px">Qty (cases)</th></tr>
+        ${items.map(i => `<tr><td style="padding:6px 8px;border-top:1px solid #e2e8f0">${esc(i.name)}</td><td align="center" style="padding:6px 8px;border-top:1px solid #e2e8f0">${i.quantity}</td></tr>`).join("")}
+      </table>`
+    : "<p style='color:#94a3b8;font-size:13px'>No specific products listed.</p>";
+
+  const fileHtml = r.file_url
+    ? `<p style="margin-top:12px"><a href="${r.file_url}" target="_blank" style="color:#e8621a">📎 ${esc(r.file_name||"View attached file")}</a></p>`
+    : "";
+
+  document.getElementById("quoteDetailBody").innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;margin-bottom:16px;">
+      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Business</label><p style="margin:2px 0;font-weight:600">${esc(r.business_name)}</p></div>
+      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Customer Type</label><p style="margin:2px 0">${esc(r.customer_type||"—")}</p></div>
+      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Contact</label><p style="margin:2px 0">${esc(r.contact_name)}</p></div>
+      <div><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Email</label><p style="margin:2px 0"><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></p></div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Requested Products</label>
+      ${itemsHtml}
+    </div>
+    ${r.notes ? `<div style="margin-bottom:14px"><label style="font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Notes</label><p style="font-size:13px;margin:4px 0;background:#f8fafc;padding:10px;border-radius:6px">${esc(r.notes)}</p></div>` : ""}
+    ${fileHtml}
+    <p style="font-size:11px;color:#94a3b8;margin-top:16px">Submitted: ${new Date(r.created_at).toLocaleString()}</p>
+  `;
+
+  document.getElementById("quoteStatusSelect").value = r.status || "new";
+  document.getElementById("quoteDetailModal").style.display = "flex";
+}
+
+async function saveQuoteStatus() {
+  if (!currentQuoteId || !window.sb) return;
+  const status = document.getElementById("quoteStatusSelect").value;
+  await window.sb.from("quote_requests").update({ status }).eq("id", currentQuoteId);
+  document.getElementById("quoteDetailModal").style.display = "none";
+  renderQuoteRequestsTable();
 }
