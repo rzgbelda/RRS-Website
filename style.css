@@ -679,7 +679,7 @@ padding-top: 20px;
 
 .ordering-section {
   padding: 90px 70px 100px;
-  background: linear-gradient(160deg, #f5f3f0 0%, #ede9e4 100%);
+  background: #ffffff;
   display: grid;
   grid-template-columns: 1fr 480px;
   gap: 70px;
@@ -876,18 +876,12 @@ padding-top: 20px;
 .reorder-icon-wrap {
   width: 58px;
   height: 58px;
-  background: rgba(237,114,38,.18);
+  background: rgba(237,114,38,.15);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   margin: 0 auto 14px;
-}
-
-.reorder-icon-wrap img {
-  width: 30px;
-  height: 30px;
-  filter: brightness(0) invert(1);
 }
 
 .reorder-card-header h2 {
@@ -959,6 +953,11 @@ padding-top: 20px;
   height: 1.5px;
   background: #f0ebe4;
   margin: 20px 0 18px;
+}
+
+.schedule-content a {
+  text-decoration: none;
+  display: block;
 }
 
 .choose-schedule-btn {
