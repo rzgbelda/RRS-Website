@@ -264,17 +264,38 @@
   <!-- Right: reorder card -->
   <div class="reorder-card" id="reorder-header">
 
-    <!-- Header -->
+    <!-- Header with glow blob -->
     <div class="reorder-card-header">
-      <div class="reorder-icon-wrap">
-        <svg class="reorder-spin-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+      <div class="rc-blob"></div>
+      <div class="rc-top-row">
+        <div class="reorder-icon-wrap">
+          <svg class="reorder-spin-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+        </div>
+        <span class="reorder-chip">Smart Reorder</span>
       </div>
-      <span class="reorder-chip">Smart Reorder</span>
       <h2>Never Run Out.<br>Set It Once.</h2>
       <p>We send your supplies on your schedule — with your approval before every order.</p>
+
+      <!-- Inline stats strip -->
+      <div class="rc-stats">
+        <div class="rc-stat">
+          <span class="rc-stat-num">500+</span>
+          <span class="rc-stat-label">NC Businesses</span>
+        </div>
+        <div class="rc-stat-divider"></div>
+        <div class="rc-stat">
+          <span class="rc-stat-num">0</span>
+          <span class="rc-stat-label">Contracts</span>
+        </div>
+        <div class="rc-stat-divider"></div>
+        <div class="rc-stat">
+          <span class="rc-stat-num">24hr</span>
+          <span class="rc-stat-label">Approval Window</span>
+        </div>
+      </div>
     </div>
 
-    <!-- Schedule pills -->
+    <!-- Schedule content — white card bottom -->
     <div class="schedule-content">
 
       <p class="schedule-label">How often do you need supplies?</p>
@@ -292,12 +313,6 @@
       <div class="reorder-preview">
         <span class="preview-pulse"></span>
         <span>Next auto-delivery in <strong id="nextDeliveryText">7 days</strong></span>
-      </div>
-
-      <!-- Social proof -->
-      <div class="reorder-proof">
-        <span class="proof-stars">★★★★★</span>
-        <span>Trusted by <strong>500+ NC businesses</strong></span>
       </div>
 
       <a href="/cart" class="schedule-content-link">
