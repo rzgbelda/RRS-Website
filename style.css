@@ -800,6 +800,17 @@ padding-top: 20px;
 .step-dots { display: none; }
 .ordering-line { display: none; }
 
+/* LEFT COLUMN STRETCH */
+
+.ordering-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.ordering-cta-box {
+  margin-top: auto;
+}
+
 /* CTA CALLOUT BOX */
 
 .ordering-cta-box {
