@@ -226,13 +226,25 @@ Return ONLY valid JSON with no extra text:
   ]
 }`;
 
-    // Try models in order until one works
+    // First, discover which models are actually available
+    const modelsRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
+    );
+    const modelsData = await modelsRes.json();
+    if (!modelsRes.ok) throw new Error("Could not list Gemini models: " + JSON.stringify(modelsData));
+
+    // Find vision-capable models (support generateContent)
+    const available: string[] = (modelsData.models ?? [])
+      .filter((m: any) => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+      .map((m: any) => (m.name as string).replace("models/", ""));
+
+    if (available.length === 0) throw new Error("No generateContent models available. Models response: " + JSON.stringify(modelsData));
+
+    // Prefer flash models, then pro
+    const preferred = ["gemini-1.5-flash", "gemini-1.5-flash-002", "gemini-1.5-pro", "gemini-2.0-flash", "gemini-2.0-flash-lite"];
     const MODELS = [
-      "gemini-1.5-flash",
-      "gemini-1.5-flash-002",
-      "gemini-1.5-pro",
-      "gemini-2.0-flash-lite",
-      "gemini-2.0-flash-exp",
+      ...preferred.filter(m => available.includes(m)),
+      ...available.filter(m => !preferred.includes(m) && (m.includes("flash") || m.includes("pro")) && m.includes("gemini")),
     ];
 
     let geminiRes: Response | null = null;
@@ -261,7 +273,7 @@ Return ONLY valid JSON with no extra text:
       // not found = try next model
     }
 
-    if (!geminiRes) throw new Error(`No available Gemini model found. Last error: ${lastErr}`);
+    if (!geminiRes) throw new Error(`No available Gemini model found. Tried: ${MODELS.join(", ")}. Last error: ${lastErr}`);
 
     const geminiData = await geminiRes.json();
     const rawText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
