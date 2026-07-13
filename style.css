@@ -1634,6 +1634,55 @@ textarea:focus {
   filter: brightness(0) invert(1);
 }
 
+/* Volume pricing quote button */
+.quote-add-btn {
+  width: 100%;
+  height: 34px;
+  border: 1.5px solid #ED7226;
+  border-radius: 4px;
+  background: transparent;
+  color: #ED7226;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .2s ease;
+}
+.quote-add-btn:hover {
+  background: #fff4ef;
+}
+
+/* Quote basket nav icon */
+.quote-basket-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  color: #0d2c50;
+  text-decoration: none;
+  margin-right: 4px;
+}
+.quote-basket-icon:hover { color: #ED7226; }
+
+.quote-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  background: #ED7226;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+}
+
 .cart-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;

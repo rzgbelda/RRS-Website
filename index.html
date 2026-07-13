@@ -28,7 +28,7 @@
       <a href="/catalog">Catalog</a>
       <a href="/#how-it-works">How it Works</a>
       <a href="/#reorder-header">Reorder Program</a>
-      <a href="/#business-pricing">Business Pricing</a>
+      <a href="/#business-pricing">Volume Pricing</a>
       <a href="/#about-us">About Us</a>
       <a href="#" onclick="openContactModal();return false;">Contact</a>
     </nav>
@@ -56,6 +56,11 @@
 </div>
       </div>
 
+      <a href="/#business-pricing" class="quote-basket-icon" title="View volume pricing request" id="quoteBasketNav">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
+        <span id="quoteBadge" class="quote-badge" style="display:none;">0</span>
+      </a>
+
       <div class="cart-container">
         <a href="/cart">
           <img src="hl3.svg" alt="Cart">
@@ -72,7 +77,7 @@
     <a href="/catalog">Catalog</a>
     <a href="/#how-it-works">How it Works</a>
     <a href="/#reorder-header">Reorder Program</a>
-    <a href="/#business-pricing">Business Pricing</a>
+    <a href="/#business-pricing">Volume Pricing</a>
     <a href="/#about-us">About Us</a>
     <a href="#" onclick="openContactModal();return false;">Contact</a>
     <a href="/cart">🛒 My Cart</a>
@@ -100,7 +105,7 @@
 
         <a href="#business-pricing" class="btn btn-outline" id="heroBtnSecondaryEl">
           <img src="file-list-3-line.svg" alt="" />
-          Request Business Pricing
+          Request Volume Pricing
         </a>
       </div>
     </section>
@@ -274,13 +279,12 @@
         <!-- LEFT SIDE -->
         <div class="pricing-left">
 
-            <h2>Request Business Pricing</h2>
+            <h2>Request Volume Pricing</h2>
 
             <div class="pricing-line"></div>
 
             <p class="pricing-intro">
-                Let us quote the products you already buy. Send your current supply list,
-                invoice, or estimated monthly usage and we will help review available options.
+                Need pricing on large quantities? Browse our catalog, click <strong>Get Volume Price</strong> on any product, then submit this form. We'll send you a custom quote within 1 business day.
             </p>
 
             <div class="pricing-benefits">
@@ -357,6 +361,18 @@
 
                 </div>
 
+                <!-- Products selected for volume quote -->
+                <div id="quoteBasketPanel" style="display:none;margin-bottom:20px;">
+                    <label style="font-weight:700;font-size:13px;color:#1e293b;display:block;margin-bottom:10px;">
+                        Products Requested for Volume Pricing
+                        <span style="font-weight:400;color:#64748b;margin-left:6px;">— edit quantities below</span>
+                    </label>
+                    <div id="quoteBasketItems"></div>
+                    <button type="button" id="clearQuoteBasket" style="margin-top:8px;font-size:12px;color:#e8621a;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">
+                        Clear all
+                    </button>
+                </div>
+
                 <label class="notes-label">
                     Additional Notes
                 </label>
@@ -368,7 +384,7 @@
                 <div id="quoteFormMsg" style="display:none;margin-bottom:12px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;"></div>
 
                 <button type="submit" class="quote-btn" id="quoteSubmitBtn">
-                    Get My Business Quote
+                    Get My Volume Price Quote
                 </button>
 
             </form>
@@ -711,6 +727,66 @@
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+  // ── Quote basket rendering ───────────────────────────────────
+  function getBasket() {
+    try { return JSON.parse(localStorage.getItem('quoteBasket') || '[]'); } catch { return []; }
+  }
+  function saveBasket(b) { localStorage.setItem('quoteBasket', JSON.stringify(b)); }
+
+  function renderBasketPanel() {
+    const panel     = document.getElementById('quoteBasketPanel');
+    const container = document.getElementById('quoteBasketItems');
+    const badge     = document.getElementById('quoteBadge');
+    const basket    = getBasket();
+
+    if (badge) { badge.textContent = basket.length; badge.style.display = basket.length > 0 ? 'flex' : 'none'; }
+    if (!panel || !container) return;
+
+    if (basket.length === 0) { panel.style.display = 'none'; return; }
+    panel.style.display = 'block';
+
+    container.innerHTML = basket.map((item, idx) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;">
+        <img src="${item.image||'/blanket.png'}" onerror="this.src='/blanket.png'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;">
+        <span style="flex:1;font-size:13px;font-weight:600;color:#1e293b;line-height:1.3;">${item.name}</span>
+        <label style="font-size:12px;color:#64748b;flex-shrink:0;">Qty (cases):</label>
+        <input type="number" min="1" value="${item.quantity}" data-idx="${idx}"
+          class="basket-qty-input"
+          style="width:60px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">
+        <button type="button" data-idx="${idx}" class="basket-remove-btn"
+          style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0 2px;line-height:1;" title="Remove">×</button>
+      </div>
+    `).join('');
+
+    container.querySelectorAll('.basket-qty-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const b = getBasket();
+        const i = parseInt(input.dataset.idx);
+        b[i].quantity = Math.max(1, parseInt(input.value) || 1);
+        saveBasket(b);
+      });
+    });
+    container.querySelectorAll('.basket-remove-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const b = getBasket();
+        b.splice(parseInt(btn.dataset.idx), 1);
+        saveBasket(b);
+        renderBasketPanel();
+      });
+    });
+  }
+
+  document.getElementById('clearQuoteBasket')?.addEventListener('click', () => {
+    saveBasket([]);
+    renderBasketPanel();
+  });
+
+  // Render on load + whenever basket changes
+  renderBasketPanel();
+  window.addEventListener('storage', e => { if (e.key === 'quoteBasket') renderBasketPanel(); });
+  // Poll for updates when quote buttons on the same page update the basket
+  setInterval(renderBasketPanel, 800);
+
   // ── File upload wiring ───────────────────────────────────────
   const uploadBox    = document.getElementById('uploadBox');
   const uploadInput  = document.getElementById('qFile');
@@ -767,16 +843,20 @@
         file_name = selectedFile.name;
       }
 
+      // Read current basket quantities (user may have edited them)
+      const basket = getBasket();
+
       // Call edge function — saves to DB and sends email
       const res = await fetch(QUOTE_FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
         body: JSON.stringify({
-          business_name: document.getElementById('qBusinessName').value.trim(),
-          customer_type: document.getElementById('qCustomerType').value.trim(),
-          contact_name:  document.getElementById('qContactName').value.trim(),
-          email:         document.getElementById('qEmail').value.trim(),
-          notes:         document.getElementById('qNotes').value.trim(),
+          business_name:  document.getElementById('qBusinessName').value.trim(),
+          customer_type:  document.getElementById('qCustomerType').value.trim(),
+          contact_name:   document.getElementById('qContactName').value.trim(),
+          email:          document.getElementById('qEmail').value.trim(),
+          notes:          document.getElementById('qNotes').value.trim(),
+          requested_items: basket,
           file_url,
           file_name,
         }),
@@ -785,17 +865,19 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed.');
 
-      showMsg('Thank you! We received your request and will be in touch shortly.', true);
+      showMsg('Thank you! We received your volume pricing request and will be in touch within 1 business day.', true);
       form.reset();
       selectedFile = null;
       uploadTitle.textContent = 'Drag & Drop Your File Here';
       uploadBox.style.borderColor = '';
+      saveBasket([]);
+      renderBasketPanel();
 
     } catch (err) {
       showMsg(err.message || 'Something went wrong. Please try again.', false);
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Get My Business Quote';
+      submitBtn.textContent = 'Get My Volume Price Quote';
     }
   });
 

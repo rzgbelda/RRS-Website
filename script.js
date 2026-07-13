@@ -12,6 +12,7 @@ let isSliding = false;
 document.addEventListener("DOMContentLoaded", () => {
   setupMobileNav();
   updateCartBadge();
+  updateQuoteBadge();
   setupReorderDropdowns();
   setupLogin();
   setupAccountDropdown();
@@ -302,6 +303,15 @@ function renderSingleCard(product) {
           >
             Add to Order
           </button>
+          <button
+            class="quote-add-btn"
+            data-item="${product.itemNumber}"
+            data-name="${product.name}"
+            data-image="${product.image}"
+            title="Request volume pricing for this product"
+          >
+            Get Volume Price
+          </button>
         </div>
       </div>
     </div>`;
@@ -375,6 +385,15 @@ function renderVariantCard(variants) {
           >
             Add to Order
           </button>
+          <button
+            class="quote-add-btn"
+            data-item="${v.itemNumber}"
+            data-name="${v.name}"
+            data-image="${v.image}"
+            title="Request volume pricing for this product"
+          >
+            Get Volume Price
+          </button>
         </div>
       </div>
     </div>`;
@@ -422,6 +441,13 @@ function selectVariant(pillEl, idx) {
     btn.dataset.price3      = cleanPrice(v.price3);
     btn.dataset.image       = v.image;
   }
+
+  const qBtn = card.querySelector(".quote-add-btn");
+  if (qBtn) {
+    qBtn.dataset.item  = v.itemNumber;
+    qBtn.dataset.name  = v.name;
+    qBtn.dataset.image = v.image;
+  }
 }
 
 function renderProducts(products) {
@@ -464,6 +490,7 @@ function renderProducts(products) {
 
   setupProductCardClicks();
   setupAddToCartButtons();
+  setupQuoteButtons();
 }
 
 function setupProductCardClicks() {
@@ -828,6 +855,52 @@ function setupAddToCartButtons() {
       saveCart(cart);
       updateCartBadge();
       flyToCart(button);
+    };
+  });
+}
+
+/* =========================
+   QUOTE BASKET
+========================= */
+
+function getQuoteBasket() {
+  try { return JSON.parse(localStorage.getItem("quoteBasket") || "[]"); } catch { return []; }
+}
+function saveQuoteBasket(b) { localStorage.setItem("quoteBasket", JSON.stringify(b)); }
+
+function updateQuoteBadge() {
+  const basket = getQuoteBasket();
+  const badge = document.getElementById("quoteBadge");
+  if (!badge) return;
+  badge.textContent = basket.length;
+  badge.style.display = basket.length > 0 ? "flex" : "none";
+}
+
+function setupQuoteButtons() {
+  document.querySelectorAll(".quote-add-btn").forEach(btn => {
+    btn.onclick = e => {
+      e.preventDefault();
+      e.stopPropagation();
+      const item = {
+        itemNumber: btn.dataset.item || "",
+        name:       btn.dataset.name || "",
+        image:      btn.dataset.image || "",
+        quantity:   1,
+      };
+      if (!item.name) return;
+      const basket = getQuoteBasket();
+      if (!basket.find(i => i.itemNumber === item.itemNumber)) {
+        basket.push(item);
+        saveQuoteBasket(basket);
+      }
+      updateQuoteBadge();
+      btn.textContent = "✓ Added";
+      btn.style.background = "#16a34a";
+      setTimeout(() => { btn.textContent = "Get Volume Price"; btn.style.background = ""; }, 1800);
+
+      // Scroll to the form and highlight it
+      const section = document.getElementById("business-pricing");
+      if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     };
   });
 }
@@ -1604,6 +1677,7 @@ function showFeaturedProducts() {
 
   setupProductCardClicks();
   setupAddToCartButtons();
+  setupQuoteButtons();
 }
 
 function getFeaturedPageSize() {

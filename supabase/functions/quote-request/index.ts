@@ -22,6 +22,7 @@ serve(async (req) => {
       contact_name,
       email,
       notes,
+      requested_items,
       file_url,
       file_name,
     } = body;
@@ -36,6 +37,7 @@ serve(async (req) => {
         contact_name,
         email,
         notes,
+        requested_items: requested_items || null,
         file_url:  file_url  || null,
         file_name: file_name || null,
         status: "new",
@@ -47,6 +49,14 @@ serve(async (req) => {
 
     // ── 2. Send email via Resend ─────────────────────────────────────────────
     if (RESEND_API_KEY) {
+      const itemsSection = requested_items?.length
+        ? `<h3 style="margin-top:20px;">Requested Products</h3>
+           <table cellpadding="6" style="border-collapse:collapse;font-family:sans-serif;font-size:14px;width:100%;">
+             <tr style="background:#f1f5f9;"><th align="left">Product</th><th align="center">Qty (cases)</th></tr>
+             ${requested_items.map((i: any) => `<tr><td>${i.name}</td><td align="center">${i.quantity}</td></tr>`).join("")}
+           </table>`
+        : "";
+
       const fileSection = file_url
         ? `<p><strong>Attached file:</strong> <a href="${file_url}">${file_name}</a></p>`
         : "<p><em>No file attached.</em></p>";
@@ -60,6 +70,7 @@ serve(async (req) => {
           <tr><td><strong>Email</strong></td><td>${email}</td></tr>
           <tr><td><strong>Notes</strong></td><td>${notes || "—"}</td></tr>
         </table>
+        ${itemsSection}
         ${fileSection}
         <p style="margin-top:16px;color:#888;font-size:12px;">Submitted via RoomReadySupply.com · Request ID: ${row.id}</p>
       `;
