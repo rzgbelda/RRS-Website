@@ -683,7 +683,7 @@ padding-top: 20px;
   display: grid;
   grid-template-columns: 1fr 480px;
   gap: 70px;
-  align-items: center;
+  align-items: end;
 }
 
 /* Legacy alias */
