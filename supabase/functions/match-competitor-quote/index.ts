@@ -290,15 +290,87 @@ Return ONLY valid JSON with no extra text:
       .replace(/\s*```$/i, "")
       .trim();
 
-    // Extract JSON object
-    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("Could not parse AI response. Raw: " + rawText.slice(0, 300));
-
+    // Try JSON first
     let result: any;
-    try {
-      result = JSON.parse(jsonMatch[0]);
-    } catch (parseErr) {
-      throw new Error("JSON parse failed. Raw: " + rawText.slice(0, 300));
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        result = JSON.parse(jsonMatch[0]);
+      } catch (_) {
+        result = null;
+      }
+    }
+
+    // Fallback: parse Gemini's natural text format
+    // Pattern per line: `COMP_ID` * Confidence: high * **Line N**: "description" * RRS Catalog: `ID | Name | Cat | Specs | $price/unit`
+    if (!result) {
+      const lines = rawText.split('\n').map((l: string) => l.trim()).filter(Boolean);
+      const matches: any[] = [];
+      const unmatched: any[] = [];
+
+      // Try to extract supplier name from first line or header
+      let supplier_name = "Unknown Supplier";
+      const suppMatch = rawText.match(/(?:supplier|distributor|from|vendor)[:\s]+([^\n,*]+)/i);
+      if (suppMatch) supplier_name = suppMatch[1].trim().replace(/[`*]/g, "");
+
+      for (const line of lines) {
+        const confMatch = line.match(/Confidence:\s*(high|medium|low)/i);
+        if (!confMatch) {
+          // Check for "no match" line
+          const noMatchLine = line.match(/\*\*Line\s*\d+\*\*[:\s]+"([^"]+)".*[Nn]o\s+[Mm]atch/);
+          if (noMatchLine) {
+            unmatched.push({
+              line_item: noMatchLine[1],
+              competitor_qty: 1,
+              competitor_unit_price: 0,
+              reason: "No matching product found in RRS catalog"
+            });
+          }
+          continue;
+        }
+
+        const confidence = confMatch[1].toLowerCase();
+
+        // Extract line item text
+        const lineItemMatch = line.match(/\*\*Line\s*\d+\*\*[:\s]*"([^"]+)"/);
+        const line_item = lineItemMatch ? lineItemMatch[1] : "";
+
+        // Extract RRS catalog entry (after "RRS Catalog:")
+        const catalogMatch = line.match(/RRS Catalog[:\s]+`?([^`\n]+)`?/i);
+        if (!catalogMatch) continue;
+
+        const parts = catalogMatch[1].split('|').map((p: string) => p.trim());
+        const rrs_id = parts[0] ?? "";
+        const rrs_name = parts[1] ?? "";
+        const priceMatch = (parts[4] ?? "").match(/[\$]?([\d.]+)/);
+        const rrs_price = priceMatch ? parseFloat(priceMatch[1]) : 0;
+
+        // Try to get competitor qty/price from line text
+        const qtyMatch = line_item.match(/^\s*(\d+)\s*(?:cs|ea|bx|pk|case|box|each)\b/i);
+        const priceInLine = line.match(/\$\s*([\d.]+)\s*(?:\/ea|\/cs|\/each|\/case|ea|cs|each|case)/i);
+
+        matches.push({
+          line_item,
+          competitor_qty: qtyMatch ? parseInt(qtyMatch[1]) : 1,
+          competitor_unit_price: priceInLine ? parseFloat(priceInLine[1]) : 0,
+          rrs_id,
+          rrs_name,
+          rrs_price,
+          confidence,
+          match_reason: `Matched from AI analysis`
+        });
+      }
+
+      if (matches.length === 0 && unmatched.length === 0) {
+        throw new Error("Could not parse AI response. Raw: " + rawText.slice(0, 300));
+      }
+
+      result = {
+        supplier_name,
+        total_items_found: matches.length + unmatched.length,
+        matches,
+        unmatched
+      };
     }
 
     return new Response(JSON.stringify(result), {
