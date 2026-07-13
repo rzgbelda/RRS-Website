@@ -228,16 +228,15 @@ Return ONLY valid JSON with no extra text:
 
     // Call Gemini API (free tier: gemini-1.5-flash)
     const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
           contents: [{
             parts: [
+              { text: systemPrompt + "\n\nPlease analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." },
               inlinePart,
-              { text: "Please analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." }
             ]
           }],
           generationConfig: {
