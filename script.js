@@ -527,15 +527,15 @@ function getProductPriority(p) {
 }
 
 const CATEGORY_KEYWORDS = {
-  'toilet-paper':        ['bath tissue', 'toilet paper', 'toilet tissue', 'bath roll'],
-  'paper-towels':        ['paper towel', 'hardwound', 'roll towel', 'kitchen towel', 'hand towel roll'],
+  'toilet-paper':        ['bath tissue', 'toilet paper', 'toilet tissue', 'bath roll', '2-ply bathroom', '2 ply bathroom', 'bathroom tissue'],
+  'paper-towels':        ['paper towel', 'hardwound', 'roll towel', 'kitchen towel', 'hand towel roll', 'center pull', 'multifold', 'c-fold', 'facial tissue', 'tissue'],
   'trash-liners':        ['can liner', 'trash bag', 'trash liner', 'garbage bag', 'liner'],
   'cleaning-chemicals':  ['bleach', 'disinfectant', 'cleaner', 'pine-sol', 'lysol', 'sanitizer', 'germicidal', 'multi-surface'],
   'hand-soap':           ['hand soap', 'hand wash', 'foaming soap', 'soap dispenser'],
   'laundry-supplies':    ['laundry', 'detergent', 'fabric softener', 'dryer sheet', 'washing'],
   'dishwashing-supplies':['dish', 'dishwasher', 'powerball', 'dawn', 'pot & pan', 'pot and pan'],
   'guest-room-supplies': ['guest', 'amenity', 'shampoo', 'conditioner', 'lotion', 'room supply'],
-  'towels-linens':       ['towel', 'linen', 'sheet', 'pillowcase', 'blanket', 'washcloth'],
+  'towels-linens':       ['bath towel', 'hand towel', 'pool towel', 'gym towel', 'linen', 'sheet set', 'bed sheet', 'pillowcase', 'blanket', 'washcloth', 'terry', 'microfiber towel'],
   'food-service':        ['food service', 'food safe', 'glove', 'nitrile', 'food prep'],
   'facility-supplies':   ['facility', 'janitorial', 'mop', 'broom', 'floor', 'squeegee'],
 };
