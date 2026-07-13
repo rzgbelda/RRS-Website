@@ -55,7 +55,7 @@ function buildQuoteHtml(payload: {
   <!-- Header -->
   <div style="background:#0d2c50;padding:32px 40px;display:flex;align-items:center;justify-content:space-between">
     <div>
-      <img src="${RRS.logo_url}" alt="Room Ready Supply" style="height:52px;object-fit:contain">
+      <img src="${RRS.logo_url}" alt="Room Ready Supply" style="height:72px;width:auto;max-width:200px;object-fit:contain;display:block">
     </div>
     <div style="text-align:right">
       <p style="margin:0;font-size:22px;font-weight:800;color:#fff;letter-spacing:-.5px">QUOTATION</p>
