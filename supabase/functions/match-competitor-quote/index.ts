@@ -258,15 +258,11 @@ Return ONLY valid JSON with no extra text:
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: systemPrompt + "\n\nAnalyze this competitor quote image/PDF. Return ONLY a raw JSON object — no markdown, no code fences, no explanation, just the JSON object starting with { and ending with }." },
+                { text: systemPrompt + '\n\nAnalyze the attached competitor quote. Your entire response must be ONLY the JSON object below — no markdown fences, no explanation, no text before or after. Start your response with { and end with }.\n\nExample of required output format:\n{"supplier_name":"Example Co","total_items_found":2,"matches":[{"line_item":"Scott 2-ply tissue","competitor_qty":10,"competitor_unit_price":29.99,"rrs_id":"276","rrs_name":"Green Heritage Pro 2-Ply Bathroom Tissue 500 sheets","rrs_price":49.95,"confidence":"high","match_reason":"Same product type and ply"}],"unmatched":[]}' },
                 inlinePart,
               ]
             }],
-            generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 4096,
-            responseMimeType: "application/json",
-          }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
           })
         }
       );
