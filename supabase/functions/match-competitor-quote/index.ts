@@ -226,31 +226,42 @@ Return ONLY valid JSON with no extra text:
   ]
 }`;
 
-    // Call Gemini API (free tier: gemini-1.5-flash)
-    const geminiRes = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: systemPrompt + "\n\nPlease analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." },
-              inlinePart,
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 4096,
-          }
-        })
-      }
-    );
+    // Try models in order until one works
+    const MODELS = [
+      "gemini-1.5-flash",
+      "gemini-1.5-flash-002",
+      "gemini-1.5-pro",
+      "gemini-2.0-flash-lite",
+      "gemini-2.0-flash-exp",
+    ];
 
-    if (!geminiRes.ok) {
-      const err = await geminiRes.json().catch(() => ({}));
-      throw new Error((err as any).error?.message || `Gemini API error: ${geminiRes.status}`);
+    let geminiRes: Response | null = null;
+    let lastErr = "";
+    for (const model of MODELS) {
+      const r = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            contents: [{
+              parts: [
+                { text: systemPrompt + "\n\nPlease analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." },
+                inlinePart,
+              ]
+            }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
+          })
+        }
+      );
+      if (r.ok) { geminiRes = r; break; }
+      const errBody = await r.json().catch(() => ({}));
+      lastErr = (errBody as any).error?.message ?? `HTTP ${r.status}`;
+      // quota exceeded = model exists but no free tier, skip
+      // not found = try next model
     }
+
+    if (!geminiRes) throw new Error(`No available Gemini model found. Last error: ${lastErr}`);
 
     const geminiData = await geminiRes.json();
     const rawText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
