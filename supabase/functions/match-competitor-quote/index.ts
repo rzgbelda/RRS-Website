@@ -262,7 +262,7 @@ Return ONLY valid JSON with no extra text:
                 inlinePart,
               ]
             }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
+            generationConfig: { temperature: 0.1, maxOutputTokens: 8192 }
           })
         }
       );
@@ -297,7 +297,22 @@ Return ONLY valid JSON with no extra text:
       try {
         result = JSON.parse(jsonMatch[0]);
       } catch (_) {
-        result = null;
+        // JSON truncated or malformed — extract individual match objects via regex
+        try {
+          const supplier = cleaned.match(/"supplier_name"\s*:\s*"([^"]+)"/)?.[1] ?? "Unknown Supplier";
+          const matchObjs: any[] = [];
+          // Each match object spans from { to the next }, inside "matches":[...]
+          const matchSection = cleaned.match(/"matches"\s*:\s*\[([\s\S]*)/)?.[1] ?? "";
+          // Extract complete individual match objects (stop at unmatched/closing bracket)
+          const objRe = /\{[^{}]*"line_item"[^{}]*\}/g;
+          let m: RegExpExecArray | null;
+          while ((m = objRe.exec(matchSection)) !== null) {
+            try { matchObjs.push(JSON.parse(m[0])); } catch (_2) { /* skip malformed item */ }
+          }
+          if (matchObjs.length > 0) {
+            result = { supplier_name: supplier, total_items_found: matchObjs.length, matches: matchObjs, unmatched: [] };
+          }
+        } catch (_3) { /* fall through to text parser */ }
       }
     }
 
