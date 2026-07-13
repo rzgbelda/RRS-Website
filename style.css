@@ -886,12 +886,7 @@ padding-top: 20px;
   position: relative;
 }
 
-.reorder-glow-bar {
-  height: 3px;
-  background: linear-gradient(90deg, #f07828, #ED7226, #ffb347, #ED7226, #f07828);
-  background-size: 200% 100%;
-  animation: shimmer 2.5s linear infinite;
-}
+.reorder-glow-bar { display: none; }
 
 .reorder-card-header {
   color: #fff;
@@ -1035,31 +1030,22 @@ padding-top: 20px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 20px;
   font-size: 12px;
   color: rgba(255,255,255,.45);
 }
 
-.proof-dots {
-  display: flex;
+.reorder-proof strong {
+  color: rgba(255,255,255,.75);
+  font-weight: 700;
 }
 
-.proof-dots span {
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  border: 2px solid #0B1F38;
-  margin-left: -7px;
-  display: inline-block;
+.proof-stars {
+  color: #f59e0b;
+  font-size: 13px;
+  letter-spacing: 1px;
 }
-
-.proof-dots span:first-child { margin-left: 0; }
-.proof-dots span:nth-child(1) { background: #f59e0b; }
-.proof-dots span:nth-child(2) { background: #3b82f6; }
-.proof-dots span:nth-child(3) { background: #10b981; }
-.proof-dots span:nth-child(4) { background: #8b5cf6; }
-.proof-dots span:nth-child(5) { background: #ED7226; }
 
 .schedule-content-link {
   text-decoration: none;
