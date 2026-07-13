@@ -1026,7 +1026,7 @@
     try {
       // Upload file to Supabase Storage first
       const ext  = competitorFileObj.name.split('.').pop();
-      const path = `competitor-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: upErr } = await sb.storage.from(BUCKET).upload(path, competitorFileObj, {
         contentType: competitorFileObj.type, upsert: false,
       });
