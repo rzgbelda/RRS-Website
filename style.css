@@ -679,8 +679,9 @@ padding-top: 20px;
 
 .ordering-section {
   padding: 90px 70px 100px;
+  background: linear-gradient(160deg, #f5f3f0 0%, #ede9e4 100%);
   display: grid;
-  grid-template-columns: 1fr 590px;
+  grid-template-columns: 1fr 520px;
   gap: 80px;
   align-items: center;
   background: rgba(255, 255, 255, 0.88);
@@ -694,211 +695,309 @@ padding-top: 20px;
     
 }
 
-.ordering-left h4 {
-  font-size: 40px;
+/* Legacy alias */
+.ordering-left h4 { display: none; }
+
+.ordering-eyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
   color: #ED7226;
-  font-weight: 800;
-  letter-spacing: 1px;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .ordering-left h2 {
-  font-size: 50px;
-  line-height: 1.5;
-  color: #0b2d52;
-  font-weight: 800;
-  margin-bottom: 55px;
+  font-size: 42px;
+  line-height: 1.2;
+  color: #0B1F38;
+  font-weight: 900;
+  margin-bottom: 16px;
 }
+
+.ordering-subtext {
+  font-size: 16px;
+  line-height: 1.75;
+  color: #64748b;
+  margin-bottom: 44px;
+  max-width: 520px;
+}
+
+/* STEPS */
 
 .ordering-steps {
   display: flex;
   align-items: flex-start;
-  gap: 28px;
+  gap: 0;
+  margin-bottom: 44px;
 }
 
 .step-item {
-  width: 140px;
+  flex: 1;
   text-align: center;
+  padding: 0 12px;
+}
+
+.step-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.step-num {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  color: #ED7226;
+  margin-bottom: 10px;
 }
 
 .step-icon {
-  width: 130px;
-    height: 130px;
-    margin: 0 auto 30px;
-    border-radius: 50%;
-    background: #fff;
-    box-shadow: 0 10px 18px rgba(0,0,0,.22);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  width: 96px;
+  height: 96px;
+  background: #ffffff;
+  border-radius: 50%;
+  border: 2px solid #ede8e2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0,0,0,.07);
+  transition: box-shadow .25s, border-color .25s;
+}
+
+.step-item:hover .step-icon {
+  border-color: #ED7226;
+  box-shadow: 0 6px 24px rgba(237,114,38,.18);
 }
 
 .step-icon img {
-  width: 85px;
-    height: 85px;
-    object-fit: contain;
-    filter: invert(55%) sepia(86%) saturate(1849%)
-            hue-rotate(347deg) brightness(98%) contrast(90%);
+  width: 50px;
+  height: 50px;
+  object-fit: contain;
+  filter: invert(55%) sepia(78%) saturate(1713%)
+          hue-rotate(347deg) brightness(98%) contrast(90%);
 }
 
 .step-item h3 {
-  color: #0b2d52;
-  font-size: 16px;
+  color: #0B1F38;
+  font-size: 14px;
   font-weight: 800;
-  line-height: 1.15;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .step-item p {
-  color: #0b2d52;
-  font-size: 12px;
-  line-height: 1.25;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.55;
 }
 
-.step-dots {
-  color: #ED7226;
-  font-size: 21px;
+.step-connector {
+  flex-shrink: 0;
+  width: 36px;
+  height: 2px;
+  background: linear-gradient(90deg, #ED7226, #f0a060);
+  margin-top: 56px;
+  border-radius: 1px;
+}
+
+.step-dots { display: none; }
+.ordering-line { display: none; }
+
+/* CTA CALLOUT BOX */
+
+.ordering-cta-box {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  background: #0B1F38;
+  border-radius: 16px;
+  padding: 22px 26px;
+}
+
+.ordering-cta-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.ordering-cta-text strong {
+  font-size: 14px;
   font-weight: 800;
-  margin-top: 47px;
+  color: #ffffff;
+  line-height: 1.3;
 }
 
-.ordering-line {
-  width: 360px;
-  height: 4px;
-  background: #ED7226;
-  margin: 26px 0 0 10px;
+.ordering-cta-text span {
+  font-size: 12.5px;
+  color: rgba(255,255,255,.55);
+  line-height: 1.5;
 }
+
+.ordering-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+  padding: 11px 20px;
+  background: #ED7226;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  border-radius: 10px;
+  text-decoration: none;
+  box-shadow: 0 5px 16px rgba(237,114,38,.35);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.ordering-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(237,114,38,.45);
+}
+
+/* REORDER CARD */
 
 .reorder-card {
-  position: relative;
   width: 100%;
   background: #fff;
-  border-radius: 4px;
-  box-shadow: 0 3px 8px rgba(0,0,0,.25);
+  border-radius: 20px;
+  box-shadow: 0 20px 56px rgba(11,31,56,.14);
+  overflow: hidden;
+  align-self: start;
 }
 
-.reorder-badge {
-    position: absolute;
-    top: -50px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-}
+.reorder-badge { display: none; }
+.reorder-header { display: none; }
 
-.reorder-badge img {
-    width: 100px;
-    height: 100px;
-    display: block;
-}
-
-.reorder-header {
-  position: relative;
-  background: #0b2d52;
+.reorder-card-header {
+  background: #0B1F38;
   color: #fff;
   text-align: center;
-  padding: 40px 30px 62px;
-  border-radius: 4px 4px 0 0;
-  clip-path: polygon(0 0,100% 0,100% 73%,53% 100%,0 73%);
+  padding: 32px 24px 28px;
 }
 
-.reorder-header h2 {
-  font-size: 28px;
-  font-weight: 800;
+.reorder-icon-wrap {
+  width: 58px;
+  height: 58px;
+  background: rgba(237,114,38,.18);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 14px;
 }
 
-.reorder-header div {
-  width: 120px;
-  height: 2px;
-  background: #ED7226;
-  margin: 12px auto 18px;
+.reorder-icon-wrap img {
+  width: 30px;
+  height: 30px;
+  filter: brightness(0) invert(1);
 }
 
-.reorder-header p {
-  font-size: 15px;
-  line-height: 1.2;
+.reorder-card-header h2 {
+  font-size: 19px;
+  font-weight: 900;
+  letter-spacing: .03em;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.reorder-card-header p {
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: rgba(255,255,255,.6);
 }
 
 .schedule-content {
-  padding: 25px 22px 24px;
+  padding: 26px 22px 26px;
   text-align: center;
 }
 
 .schedule-content h3 {
-  color: #0b2d52;
-  font-size: 21px;
+  color: #0B1F38;
+  font-size: 12px;
   font-weight: 800;
-  margin-bottom: 26px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
 }
 
 .schedule-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 11px 108px;
+  gap: 8px;
 }
 
 .schedule-grid button {
-  height: 63px;
-  border: none;
-  background: #f7f7f7;
-  box-shadow: 0 4px 5px rgba(0,0,0,.28);
-  color: #0b2d52;
-  font-weight: 700;
-  font-size: 15px;
+  height: 50px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
   display: flex;
   align-items: center;
-  gap: 22px;
-  padding: 0 15px;
+  gap: 9px;
+  padding: 0 13px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
   cursor: pointer;
+  transition: background .2s, border-color .2s, color .2s;
 }
 
 .schedule-grid button:hover {
-  background: #fff1e9;
+  background: #fff5ee;
+  border-color: #ED7226;
   color: #ED7226;
 }
 
 .schedule-grid img {
-  
-  width: 28px;
-    height: 28px;
-    object-fit: contain;
-    margin-right: 14px;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  flex-shrink: 0;
   filter: invert(55%) sepia(92%) saturate(2375%) hue-rotate(346deg) brightness(98%) contrast(91%);
 }
 
 .schedule-line {
-  width: 270px;
-  height: 2px;
-  background: #ED7226;
-  margin: 24px auto 20px;
+  width: 100%;
+  height: 1.5px;
+  background: #f0ebe4;
+  margin: 20px 0 18px;
 }
 
 .choose-schedule-btn {
-  height: 58px;
-  width: 380px;
+  height: 52px;
+  width: 100%;
   border: none;
-  background: #ff6b15;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f07828 0%, #ED7226 60%, #d45f15 100%);
   color: #fff;
-  font-size: 21px;
-  font-weight: 700;
-  border-radius: 7px;
-  box-shadow: 0 4px 7px rgba(0,0,0,.22);
-  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  text-decoration: none;
+  gap: 9px;
   cursor: pointer;
+  box-shadow: 0 6px 18px rgba(237,114,38,.3);
+  transition: transform .2s, box-shadow .2s;
+}
+
+.choose-schedule-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(237,114,38,.42);
 }
 
 .choose-schedule-btn img {
-  width: 30px;
+  width: 18px;
   filter: brightness(0) invert(1);
 }
 
 .schedule-content > p {
-  margin-top: 12px;
-  color: #0b2d52;
-  font-size: 15px;
+  margin-top: 11px;
+  color: #94a3b8;
+  font-size: 12.5px;
 }
 
 /* ===========================
@@ -5126,14 +5225,11 @@ span.flatpickr-weekday {
 
 /* ── Ordering section: font sizes and step stacking ── */
 @media (max-width: 768px) {
-  .ordering-left h4 { font-size: 22px; }
-  .ordering-left h2 { font-size: 32px; margin-bottom: 32px; }
-  .ordering-line { width: 100%; max-width: 260px; }
-  .step-item { width: 120px; }
-  .step-icon { width: 100px; height: 100px; }
-  .step-icon img { width: 60px; height: 60px; }
-  .choose-schedule-btn { width: 100%; font-size: 16px; }
-  .schedule-grid { gap: 11px 30px; }
+  .ordering-left h2 { font-size: 28px; }
+  .ordering-subtext { margin-bottom: 32px; }
+  .step-icon { width: 80px; height: 80px; }
+  .step-icon img { width: 42px; height: 42px; }
+  .ordering-cta-box { flex-direction: column; align-items: flex-start; gap: 14px; }
 }
 @media (max-width: 540px) {
   .ordering-steps {
@@ -5365,29 +5461,15 @@ img, video, svg { max-width: 100%; height: auto; }
 /* ── Ordering / How it Works section ── */
 .ordering-section {
   padding: clamp(36px, 6vw, 90px) clamp(14px, 5vw, 70px);
-  gap: clamp(24px, 5vw, 80px);
+  gap: clamp(24px, 5vw, 60px);
 }
-.ordering-left h4 { font-size: clamp(15px, 2.2vw + 0.3rem, 40px); margin-bottom: clamp(10px, 1.5vw, 18px); }
-.ordering-left h2 { font-size: clamp(20px, 2.8vw + 0.6rem, 50px); line-height: 1.3; margin-bottom: clamp(20px, 3.5vw, 55px); }
-
-/* Steps: auto-wrap instead of fixed width */
-.ordering-steps { flex-wrap: wrap; justify-content: center; gap: clamp(12px, 2.5vw, 28px); }
-.step-item { flex: 1 1 clamp(90px, 15vw, 140px); max-width: 160px; min-width: 0; width: auto; }
-.step-icon { width: clamp(70px, 10vw, 130px); height: clamp(70px, 10vw, 130px); }
-.step-icon img { width: clamp(40px, 6vw, 85px); height: clamp(40px, 6vw, 85px); }
-.step-item h3 { font-size: clamp(12px, 1.1vw + 0.2rem, 16px); }
-.step-dots { margin-top: clamp(24px, 4vw, 47px); font-size: clamp(14px, 2vw, 21px); flex-shrink: 0; }
-.ordering-line { width: min(360px, 100%); }
-
-/* Schedule card */
-.reorder-header h2 { font-size: clamp(16px, 1.8vw + 0.4rem, 28px); }
-.schedule-grid {
-  grid-template-columns: repeat(auto-fill, minmax(min(180px, 100%), 1fr));
-  gap: clamp(8px, 1.5vw, 11px);
-}
-.schedule-grid button { height: clamp(48px, 6vw, 63px); font-size: clamp(12px, 1.2vw + 0.2rem, 15px); gap: clamp(8px, 1.5vw, 22px); }
-.choose-schedule-btn { width: min(380px, 100%); font-size: clamp(14px, 1.5vw + 0.3rem, 21px); height: clamp(48px, 6vw, 58px); }
-.schedule-line { width: min(270px, 80%); }
+.ordering-left h2 { font-size: clamp(22px, 2.8vw + 0.6rem, 42px); line-height: 1.2; }
+.ordering-subtext { font-size: clamp(14px, 1.2vw + 0.3rem, 16px); }
+.step-icon { width: clamp(72px, 8vw, 96px); height: clamp(72px, 8vw, 96px); }
+.step-icon img { width: clamp(36px, 5vw, 50px); height: clamp(36px, 5vw, 50px); }
+.step-item h3 { font-size: clamp(12px, 1.1vw + 0.2rem, 14px); }
+.step-connector { width: clamp(16px, 3vw, 36px); margin-top: clamp(38px, 5vw, 56px); }
+.choose-schedule-btn { font-size: clamp(13px, 1.3vw + 0.2rem, 14px); }
 
 /* ── Pricing / quote section ── */
 .pricing-section { padding: clamp(36px, 6vw, 100px) clamp(12px, 4vw, 60px); }
@@ -5483,10 +5565,11 @@ button, a, [role="button"] { touch-action: manipulation; }
 /* ── Ordering section: collapse side-by-side when narrow ── */
 @media (max-width: 860px) {
   .ordering-section { grid-template-columns: 1fr; }
-  .reorder-card { max-width: min(560px, 100%); margin: 0 auto; }
-  .ordering-left { text-align: center; }
-  .ordering-steps { justify-content: center; }
-  .ordering-line { margin: 26px auto 0; }
+  .reorder-card { max-width: min(520px, 100%); margin: 0 auto; }
+  .ordering-subtext { max-width: 100%; }
+  .step-connector { display: none; }
+  .ordering-steps { flex-wrap: wrap; justify-content: center; gap: 24px; }
+  .step-item { flex: 1 1 120px; max-width: 180px; }
 }
 
 /* ── About section: collapse at narrow widths ── */
