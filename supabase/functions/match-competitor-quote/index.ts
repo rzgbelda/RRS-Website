@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -150,7 +150,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
-    if (!ANTHROPIC_API_KEY) throw new Error("ANTHROPIC_API_KEY not configured in Supabase secrets");
+    if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not configured in Supabase secrets");
 
     const { file_url, file_name } = await req.json();
     if (!file_url) throw new Error("file_url is required");
@@ -179,23 +179,12 @@ serve(async (req) => {
       .map(p => `${p.id} | ${p.name} | [${p.cat}] | ${p.specs}${p.price != null ? ` | $${p.price}/case` : " | price on request"}`)
       .join("\n");
 
-    // Build the file content block
-    const fileBlock = isPdf
-      ? { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64Data } }
-      : { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } };
+    // Build Gemini inline data part
+    const inlinePart = {
+      inline_data: { mime_type: mediaType, data: base64Data }
+    };
 
-    // Call Claude API
-    const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "claude-haiku-4-5-20251001",
-        max_tokens: 4096,
-        system: `You are an expert hospitality supply procurement specialist. Your job is to:
+    const systemPrompt = `You are an expert hospitality supply procurement specialist. Your job is to:
 1. Extract all line items from a competitor's supply quote
 2. Match each item to the best equivalent product in the RRS catalog
 
@@ -235,29 +224,37 @@ Return ONLY valid JSON with no extra text:
       "reason": "why no match exists"
     }
   ]
-}`,
-        messages: [
-          {
-            role: "user",
-            content: [
-              fileBlock,
-              {
-                type: "text",
-                text: "Please analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response."
-              }
-            ]
-          }
-        ]
-      })
-    });
+}`;
 
-    if (!claudeRes.ok) {
-      const err = await claudeRes.json().catch(() => ({}));
-      throw new Error((err as any).error?.message || `Claude API error: ${claudeRes.status}`);
+    // Call Gemini API (free tier: gemini-1.5-flash)
+    const geminiRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{
+            parts: [
+              inlinePart,
+              { text: "Please analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+          }
+        })
+      }
+    );
+
+    if (!geminiRes.ok) {
+      const err = await geminiRes.json().catch(() => ({}));
+      throw new Error((err as any).error?.message || `Gemini API error: ${geminiRes.status}`);
     }
 
-    const claudeData = await claudeRes.json();
-    const rawText: string = claudeData.content?.[0]?.text ?? "{}";
+    const geminiData = await geminiRes.json();
+    const rawText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
 
     // Extract JSON from response
     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
