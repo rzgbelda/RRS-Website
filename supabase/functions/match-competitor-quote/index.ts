@@ -258,11 +258,15 @@ Return ONLY valid JSON with no extra text:
           body: JSON.stringify({
             contents: [{
               parts: [
-                { text: systemPrompt + "\n\nPlease analyze this competitor quote and match all products to the RRS catalog. Return only the JSON response." },
+                { text: systemPrompt + "\n\nAnalyze this competitor quote image/PDF. Return ONLY a raw JSON object — no markdown, no code fences, no explanation, just the JSON object starting with { and ending with }." },
                 inlinePart,
               ]
             }],
-            generationConfig: { temperature: 0.1, maxOutputTokens: 4096 }
+            generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,
+            responseMimeType: "application/json",
+          }
           })
         }
       );
