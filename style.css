@@ -1355,9 +1355,9 @@ textarea:focus {
 /* EYEBROW */
 .about-eyebrow {
   display: inline-block;
-  font-size: 11px;
+  font-size: 18px;
   font-weight: 800;
-  letter-spacing: .14em;
+  letter-spacing: .1em;
   text-transform: uppercase;
   color: #ED7226;
   margin-bottom: 16px;
