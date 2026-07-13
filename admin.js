@@ -50,6 +50,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   showDashboard();
   switchTab("dashboard");
   loadWarpModeBadge();
+  updateNotifBadgeFromStorage();
 
   /* Wire buttons */
   document.getElementById("openCsvImport")?.addEventListener("click", openCsvImport);
@@ -2485,6 +2486,150 @@ function setText(id, val) {
 
 function esc(str) {
   return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── Notifications ──────────────────────────────────────────── */
+
+const NOTIF_STORAGE_KEY = "rrs_admin_read_notifs";
+
+function getReadIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(NOTIF_STORAGE_KEY) || "[]")); } catch { return new Set(); }
+}
+function markIdRead(id) {
+  const ids = getReadIds(); ids.add(id);
+  localStorage.setItem(NOTIF_STORAGE_KEY, JSON.stringify([...ids]));
+}
+
+let notifPanelOpen = false;
+
+function toggleNotifPanel() {
+  const panel = document.getElementById("notifPanel");
+  notifPanelOpen = !notifPanelOpen;
+  panel.style.display = notifPanelOpen ? "block" : "none";
+  if (notifPanelOpen) loadNotifications();
+}
+
+// Close panel when clicking outside
+document.addEventListener("click", e => {
+  if (notifPanelOpen && !e.target.closest("#notifBtn") && !e.target.closest("#notifPanel")) {
+    document.getElementById("notifPanel").style.display = "none";
+    notifPanelOpen = false;
+  }
+});
+
+async function loadNotifications() {
+  if (!window.sb) return;
+  const list = document.getElementById("notifList");
+  list.innerHTML = `<div style="padding:24px;text-align:center;color:#94a3b8;font-size:13px">Loading…</div>`;
+
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // last 7 days
+
+  const [ordersRes, quotesRes] = await Promise.all([
+    window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+    window.sb.from("quote_requests").select("id,created_at,status,business_name,contact_name").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+  ]);
+
+  const readIds = getReadIds();
+
+  const items = [
+    ...(ordersRes.data || []).map(o => ({
+      id: "order-" + o.id,
+      type: "order",
+      title: `New order from ${o.shipping_name || "customer"}`,
+      sub: `$${Number(o.total||0).toFixed(2)} · ${o.status}`,
+      time: o.created_at,
+      action: () => { switchTab("orders"); toggleNotifPanel(); },
+    })),
+    ...(quotesRes.data || []).map(q => ({
+      id: "quote-" + q.id,
+      type: "quote",
+      title: `Volume quote from ${q.business_name}`,
+      sub: `${q.contact_name} · ${q.status}`,
+      time: q.created_at,
+      action: () => { switchTab("quote-requests"); toggleNotifPanel(); },
+    })),
+  ].sort((a, b) => new Date(b.time) - new Date(a.time));
+
+  const unread = items.filter(i => !readIds.has(i.id));
+  updateNotifBadge(unread.length);
+
+  if (!items.length) {
+    list.innerHTML = `<div style="padding:28px;text-align:center;color:#94a3b8;font-size:13px">No activity in the last 7 days.</div>`;
+    return;
+  }
+
+  const icons = {
+    order: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
+    quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>`,
+  };
+
+  list.innerHTML = items.map(item => {
+    const isUnread = !readIds.has(item.id);
+    const ago = timeAgo(item.time);
+    return `<div onclick="handleNotifClick('${item.id}')" style="padding:12px 18px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:12px;align-items:flex-start;background:${isUnread ? "#fffbf7" : "#fff"};transition:.15s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='${isUnread ? "#fffbf7" : "#fff"}'">
+      <div style="width:30px;height:30px;border-radius:8px;background:${item.type==="order"?"#eff6ff":"#fff7f0"};color:${item.type==="order"?"#3b82f6":"#e8621a"};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+        ${icons[item.type]}
+      </div>
+      <div style="flex:1;min-width:0">
+        <p style="margin:0 0 2px;font-size:13px;font-weight:${isUnread?"700":"500"};color:#1e293b;line-height:1.3">${esc(item.title)}</p>
+        <p style="margin:0;font-size:11px;color:#64748b">${esc(item.sub)}</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+        <span style="font-size:10px;color:#94a3b8">${ago}</span>
+        ${isUnread ? `<span style="width:7px;height:7px;background:#e8621a;border-radius:50%;flex-shrink:0"></span>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function handleNotifClick(id) {
+  markIdRead(id);
+  // find item and trigger action
+  document.getElementById("notifPanel").style.display = "none";
+  notifPanelOpen = false;
+  if (id.startsWith("order-")) switchTab("orders");
+  else if (id.startsWith("quote-")) switchTab("quote-requests");
+  // refresh badge
+  updateNotifBadgeFromStorage();
+}
+
+function markAllRead() {
+  const list = document.getElementById("notifList");
+  list.querySelectorAll("[onclick^='handleNotifClick']").forEach(el => {
+    const match = el.getAttribute("onclick").match(/'([^']+)'/);
+    if (match) markIdRead(match[1]);
+  });
+  loadNotifications();
+}
+
+function updateNotifBadge(count) {
+  const badge = document.getElementById("notifBadge");
+  if (!badge) return;
+  badge.style.display = count > 0 ? "flex" : "none";
+  badge.textContent = count > 9 ? "9+" : count;
+}
+
+async function updateNotifBadgeFromStorage() {
+  if (!window.sb) return;
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+  const [o, q] = await Promise.all([
+    window.sb.from("orders").select("id,created_at").gte("created_at", since),
+    window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
+  ]);
+  const readIds = getReadIds();
+  const total = [...(o.data||[]).map(x => "order-"+x.id), ...(q.data||[]).map(x => "quote-"+x.id)]
+    .filter(id => !readIds.has(id)).length;
+  updateNotifBadge(total);
+}
+
+function timeAgo(iso) {
+  const diff = Date.now() - new Date(iso).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 1)  return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 /* ── Quote Requests ─────────────────────────────────────────── */
