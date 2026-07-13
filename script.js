@@ -2711,3 +2711,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
   counters.forEach(function (el) { observer.observe(el); });
 })();
+
+// ── Schedule pill interaction ────────────────────────────────
+(function () {
+  const pills = document.querySelectorAll('.schedule-pill');
+  const deliveryText = document.getElementById('nextDeliveryText');
+  if (!pills.length || !deliveryText) return;
+
+  pills.forEach(function (pill) {
+    pill.addEventListener('click', function () {
+      pills.forEach(function (p) { p.classList.remove('active'); });
+      pill.classList.add('active');
+      const days = parseInt(pill.dataset.days, 10);
+      if (days === 0) {
+        deliveryText.textContent = 'a custom date';
+      } else if (days === 1) {
+        deliveryText.textContent = '1 day';
+      } else {
+        deliveryText.textContent = days + ' days';
+      }
+    });
+  });
+})();
