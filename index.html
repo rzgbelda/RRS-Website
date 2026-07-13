@@ -264,36 +264,56 @@
   <!-- Right: reorder card -->
   <div class="reorder-card" id="reorder-header">
 
+    <!-- Glowing top bar -->
+    <div class="reorder-glow-bar"></div>
+
+    <!-- Header -->
     <div class="reorder-card-header">
       <div class="reorder-icon-wrap">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+        <svg class="reorder-spin-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
       </div>
-      <h2>Auto-Reorder Program</h2>
-      <p>Never run out of critical supplies.<br>Set it once, we’ll handle the rest.</p>
+      <span class="reorder-chip">Smart Reorder</span>
+      <h2>Never Run Out.<br>Set It Once.</h2>
+      <p>We send your supplies on your schedule — with your approval before every order.</p>
     </div>
 
+    <!-- Schedule pills -->
     <div class="schedule-content">
-      <h3>Choose Your Schedule</h3>
 
-      <div class="schedule-grid">
-        <button><img src="calendar.svg" alt="">Weekly</button>
-        <button><img src="calendar.svg" alt="">Every 2 Weeks</button>
-        <button><img src="calendar.svg" alt="">Monthly</button>
-        <button><img src="calendar.svg" alt="">Every 45 Days</button>
-        <button><img src="calendar.svg" alt="">Every 60 Days</button>
-        <button><img src="calendar.svg" alt="">Custom Schedule</button>
+      <p class="schedule-label">How often do you need supplies?</p>
+
+      <div class="schedule-pills">
+        <button class="schedule-pill active" data-days="7">Weekly</button>
+        <button class="schedule-pill" data-days="14">Every 2 Weeks</button>
+        <button class="schedule-pill" data-days="30">Monthly</button>
+        <button class="schedule-pill" data-days="45">Every 45 Days</button>
+        <button class="schedule-pill" data-days="60">Every 60 Days</button>
+        <button class="schedule-pill" data-days="0">Custom</button>
       </div>
 
-      <div class="schedule-line"></div>
+      <!-- Live preview -->
+      <div class="reorder-preview">
+        <span class="preview-pulse"></span>
+        <span>Next auto-delivery in <strong id="nextDeliveryText">7 days</strong></span>
+      </div>
 
-      <a href="/cart">
+      <!-- Social proof -->
+      <div class="reorder-proof">
+        <div class="proof-dots">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <span>500+ NC businesses on auto-reorder</span>
+      </div>
+
+      <a href="/cart" class="schedule-content-link">
         <button class="choose-schedule-btn">
-          <img src="calendar.svg" alt="">
+          <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
           Set Up Auto-Reorder
         </button>
       </a>
 
-      <p>You can update or cancel anytime.</p>
+      <p class="cancel-note">Cancel or update anytime. No contracts.</p>
+
     </div>
 
   </div>
