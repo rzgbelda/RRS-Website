@@ -1683,6 +1683,108 @@ textarea:focus {
   padding: 0 3px;
 }
 
+/* ── Competitor Quote Upload ─────────────────────────── */
+.competitor-toggle-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  padding: 11px 16px;
+  background: #fff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: border-color .2s, color .2s, background .2s;
+}
+.competitor-toggle-btn:hover {
+  border-color: #e8621a;
+  color: #e8621a;
+  background: #fff7f0;
+}
+.competitor-drop-zone {
+  border: 2px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  background: #fff;
+}
+.competitor-drop-zone.dragover,
+.competitor-drop-zone:hover {
+  border-color: #e8621a;
+  background: #fff7f0;
+}
+.competitor-drop-zone.has-file {
+  border-color: #16a34a;
+  background: #f0fdf4;
+}
+.competitor-analyze-btn {
+  margin-top: 12px;
+  width: 100%;
+  padding: 10px 16px;
+  background: #0d2c50;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .2s, opacity .2s;
+}
+.competitor-analyze-btn:hover:not(:disabled) { background: #1a4a7a; }
+.competitor-analyze-btn:disabled { opacity: .45; cursor: not-allowed; }
+.competitor-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.competitor-match-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid #dcfce7;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+.competitor-match-row input[type=checkbox] { margin-top: 2px; accent-color: #16a34a; }
+.competitor-match-info { flex: 1; }
+.competitor-match-name { font-weight: 700; color: #0d2c50; font-size: 13px; }
+.competitor-match-meta { color: #64748b; margin-top: 2px; }
+.competitor-match-reason { color: #94a3b8; font-style: italic; margin-top: 2px; font-size: 11px; }
+.competitor-match-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.badge-high { background: #dcfce7; color: #16a34a; }
+.badge-medium { background: #fef9c3; color: #ca8a04; }
+.badge-low { background: #fee2e2; color: #dc2626; }
+.competitor-unmatched-row {
+  padding: 8px 12px;
+  background: #fff;
+  border: 1px solid #fee2e2;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+.competitor-unmatched-row strong { color: #1e293b; }
+
 .cart-page {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 360px;
