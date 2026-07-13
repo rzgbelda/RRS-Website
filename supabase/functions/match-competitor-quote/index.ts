@@ -276,13 +276,30 @@ Return ONLY valid JSON with no extra text:
     if (!geminiRes) throw new Error(`No available Gemini model found. Tried: ${MODELS.join(", ")}. Last error: ${lastErr}`);
 
     const geminiData = await geminiRes.json();
-    const rawText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "{}";
+    const rawText: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
 
-    // Extract JSON from response
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) throw new Error("AI returned invalid response format");
+    if (!rawText) {
+      // Log full response for debugging
+      throw new Error("Empty AI response. Full response: " + JSON.stringify(geminiData).slice(0, 500));
+    }
 
-    const result = JSON.parse(jsonMatch[0]);
+    // Strip markdown code fences if present
+    const cleaned = rawText
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    // Extract JSON object
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Could not parse AI response. Raw: " + rawText.slice(0, 300));
+
+    let result: any;
+    try {
+      result = JSON.parse(jsonMatch[0]);
+    } catch (parseErr) {
+      throw new Error("JSON parse failed. Raw: " + rawText.slice(0, 300));
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...CORS, "Content-Type": "application/json" },
