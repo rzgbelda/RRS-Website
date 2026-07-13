@@ -313,11 +313,16 @@ Return ONLY valid JSON with no extra text:
       const suppMatch = rawText.match(/(?:supplier|distributor|from|vendor)[:\s]+([^\n,*]+)/i);
       if (suppMatch) supplier_name = suppMatch[1].trim().replace(/[`*]/g, "");
 
+      // Quote chars: straight " or curly " "
+      const anyQuote = `[“”"]`;
+      const openQ = `[“"]`;
+      const closeQ = `[”"]`;
+
       for (const line of lines) {
         const confMatch = line.match(/Confidence:\s*(high|medium|low)/i);
         if (!confMatch) {
-          // Check for "no match" line
-          const noMatchLine = line.match(/\*\*Line\s*\d+\*\*[:\s]+"([^"]+)".*[Nn]o\s+[Mm]atch/);
+          // Check for "no match" line — curly or straight quotes
+          const noMatchLine = line.match(new RegExp(`\\*\\*Line\\s*\\d+\\*\\*[:\\s]*${openQ}([^\\u201d"]+)${closeQ}.*[Nn]o\\s+[Mm]atch`));
           if (noMatchLine) {
             unmatched.push({
               line_item: noMatchLine[1],
@@ -331,33 +336,35 @@ Return ONLY valid JSON with no extra text:
 
         const confidence = confMatch[1].toLowerCase();
 
-        // Extract line item text
-        const lineItemMatch = line.match(/\*\*Line\s*\d+\*\*[:\s]*"([^"]+)"/);
+        // Extract line item text — handle both straight and curly quotes
+        const lineItemMatch = line.match(new RegExp(`\\*\\*Line\\s*\\d+\\*\\*[:\\s]*${openQ}([^\\u201d"]+)${closeQ}`));
         const line_item = lineItemMatch ? lineItemMatch[1] : "";
 
-        // Extract RRS catalog entry (after "RRS Catalog:")
+        // Extract RRS catalog entry (after "RRS Catalog:" or "Match:")
         const catalogMatch = line.match(/RRS Catalog[:\s]+`?([^`\n]+)`?/i);
         if (!catalogMatch) continue;
 
         const parts = catalogMatch[1].split('|').map((p: string) => p.trim());
-        const rrs_id = parts[0] ?? "";
+        // Prefer "Match: `ID`" over catalog first part for rrs_id
+        const matchIdFromLine = line.match(/\bMatch:\s*`([^`]+)`/i);
+        const rrs_id = (matchIdFromLine ? matchIdFromLine[1] : parts[0]) ?? "";
         const rrs_name = parts[1] ?? "";
-        const priceMatch = (parts[4] ?? "").match(/[\$]?([\d.]+)/);
+        const priceMatch = (parts[4] ?? "").match(/\$?([\d.]+)/);
         const rrs_price = priceMatch ? parseFloat(priceMatch[1]) : 0;
 
-        // Try to get competitor qty/price from line text
-        const qtyMatch = line_item.match(/^\s*(\d+)\s*(?:cs|ea|bx|pk|case|box|each)\b/i);
-        const priceInLine = line.match(/\$\s*([\d.]+)\s*(?:\/ea|\/cs|\/each|\/case|ea|cs|each|case)/i);
+        // Competitor qty: look for N/case or N cs etc before the Match marker
+        const qtyInLine = line.match(/(\d+)\s*\/\s*(?:case|cs|ea|box|bx|pk)/i);
+        const priceInLine = line.match(/\$\s*([\d.]+)\s*\/?\s*(?:ea|cs|each|case|box)/i);
 
         matches.push({
           line_item,
-          competitor_qty: qtyMatch ? parseInt(qtyMatch[1]) : 1,
+          competitor_qty: qtyInLine ? parseInt(qtyInLine[1]) : 1,
           competitor_unit_price: priceInLine ? parseFloat(priceInLine[1]) : 0,
           rrs_id,
           rrs_name,
           rrs_price,
           confidence,
-          match_reason: `Matched from AI analysis`
+          match_reason: "Matched from AI analysis"
         });
       }
 
