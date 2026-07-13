@@ -2777,6 +2777,157 @@ function openQuoteDetail(id) {
   document.getElementById("quoteDetailModal").style.display = "flex";
 }
 
+/* ── Quote Composer ─────────────────────────────────────────── */
+
+const SEND_QUOTE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-quote";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+
+function openQuoteComposer() {
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return;
+
+  // Default valid until = 30 days from now
+  const d = new Date(); d.setDate(d.getDate() + 30);
+  document.getElementById("quoteValidUntil").value = d.toISOString().slice(0, 10);
+  document.getElementById("quoteMessage").value = `Dear ${r.contact_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
+
+  const items = r.requested_items || [];
+  const container = document.getElementById("quoteLineItems");
+
+  if (!items.length) {
+    container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">No products listed — add them manually below.</div>`;
+  } else {
+    container.innerHTML = items.map((item, idx) => `
+      <div style="display:grid;grid-template-columns:1fr 100px 120px 100px;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;align-items:center;background:${idx%2===0?"#fff":"#fafbfc"}">
+        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}</span>
+        <div style="text-align:center">
+          <input type="number" min="1" value="${item.quantity}" data-idx="${idx}" class="ql-qty"
+            style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center"
+            oninput="recalcQuoteTotal()">
+        </div>
+        <div style="text-align:right">
+          <input type="number" min="0" step="0.01" value="" placeholder="0.00" data-idx="${idx}" class="ql-price"
+            style="width:100px;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right"
+            oninput="recalcQuoteTotal()">
+        </div>
+        <div style="text-align:right;font-size:13px;font-weight:700;color:#0d2c50" id="ql-line-${idx}">—</div>
+      </div>`).join("");
+  }
+
+  recalcQuoteTotal();
+  document.getElementById("quoteComposerModal").style.display = "flex";
+}
+
+function recalcQuoteTotal() {
+  let total = 0;
+  document.querySelectorAll(".ql-price").forEach((priceEl, idx) => {
+    const qtyEl = document.querySelectorAll(".ql-qty")[idx];
+    const price = parseFloat(priceEl.value) || 0;
+    const qty   = parseInt(qtyEl?.value) || 0;
+    const line  = price * qty;
+    total += line;
+    const lineEl = document.getElementById(`ql-line-${idx}`);
+    if (lineEl) lineEl.textContent = line > 0 ? `$${line.toFixed(2)}` : "—";
+  });
+  const el = document.getElementById("quoteGrandTotal");
+  if (el) el.textContent = `$${total.toFixed(2)}`;
+}
+
+function getComposerPayload() {
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return null;
+  const items = [];
+  const priceEls = document.querySelectorAll(".ql-price");
+  const qtyEls   = document.querySelectorAll(".ql-qty");
+  const names     = (r.requested_items || []).map(i => i.name);
+  priceEls.forEach((el, idx) => {
+    const price = parseFloat(el.value);
+    const qty   = parseInt(qtyEls[idx]?.value) || 1;
+    if (price > 0) {
+      items.push({ name: names[idx] || `Item ${idx+1}`, quantity: qty, unit_price: price });
+    }
+  });
+  return {
+    quote_request_id: currentQuoteId,
+    items,
+    valid_until: document.getElementById("quoteValidUntil").value,
+    message: document.getElementById("quoteMessage").value.trim(),
+  };
+}
+
+async function previewQuote() {
+  const payload = getComposerPayload();
+  if (!payload) return;
+  if (!payload.items.length) { alert("Please enter at least one unit price before previewing."); return; }
+
+  const btn = document.querySelector("button[onclick='previewQuote()']");
+  if (btn) { btn.textContent = "Loading…"; btn.disabled = true; }
+
+  try {
+    const res = await fetch(SEND_QUOTE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      body: JSON.stringify({ ...payload, preview_only: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Preview failed");
+
+    const frame = document.getElementById("quotePreviewFrame");
+    const overlay = document.getElementById("quotePreviewOverlay");
+    frame.srcdoc = data.html;
+    overlay.style.display = "flex";
+  } catch (err) {
+    alert("Preview error: " + err.message);
+  } finally {
+    if (btn) { btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Preview Quote`; btn.disabled = false; }
+  }
+}
+
+async function sendQuote() {
+  const payload = getComposerPayload();
+  if (!payload) return;
+  if (!payload.items.length) { alert("Please enter at least one unit price before sending."); return; }
+  if (!payload.valid_until) { alert("Please set a valid until date."); return; }
+
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!confirm(`Send this quote to ${r?.email}?`)) return;
+
+  await doSendQuote(payload);
+}
+
+async function sendQuoteFromPreview() {
+  const payload = getComposerPayload();
+  if (!payload) return;
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!confirm(`Send this quote to ${r?.email}?`)) return;
+  document.getElementById("quotePreviewOverlay").style.display = "none";
+  await doSendQuote(payload);
+}
+
+async function doSendQuote(payload) {
+  const btn = document.getElementById("sendQuoteBtn");
+  if (btn) { btn.textContent = "Sending…"; btn.disabled = true; }
+
+  try {
+    const res = await fetch(SEND_QUOTE_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Send failed");
+
+    document.getElementById("quoteComposerModal").style.display = "none";
+    document.getElementById("quoteDetailModal").style.display = "none";
+    alert(`✅ Quote ${data.quote_number} sent successfully!`);
+    renderQuoteRequestsTable();
+  } catch (err) {
+    alert("Send error: " + err.message);
+  } finally {
+    if (btn) { btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg> Send to Customer`; btn.disabled = false; }
+  }
+}
+
 async function saveQuoteStatus() {
   if (!currentQuoteId || !window.sb) return;
   const status = document.getElementById("quoteStatusSelect").value;
