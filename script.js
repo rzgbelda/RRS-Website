@@ -2684,7 +2684,7 @@ document.addEventListener('DOMContentLoaded', function() {
   function animateCounter(el) {
     const target = parseInt(el.dataset.target, 10);
     const suffix = el.dataset.suffix || '';
-    const duration = 1600;
+    const duration = parseInt(el.dataset.duration, 10) || 1600;
     const start = performance.now();
 
     function step(now) {
