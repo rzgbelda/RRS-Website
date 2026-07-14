@@ -1225,6 +1225,13 @@ padding-top: 20px;
     margin-bottom: 28px;
 }
 
+.pricing-form-subtitle {
+    font-size: 13.5px;
+    color: #64748b;
+    line-height: 1.6;
+    margin: -4px 0 20px;
+}
+
 .pricing-intro strong {
     color: rgba(255,255,255,.9);
     font-weight: 700;
