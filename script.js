@@ -871,12 +871,42 @@ function saveQuoteBasket(b) { localStorage.setItem("quoteBasket", JSON.stringify
 function updateQuoteBadge() {
   const basket = getQuoteBasket();
   const badge = document.getElementById("quoteBadge");
-  if (!badge) return;
-  badge.textContent = basket.length;
-  badge.style.display = basket.length > 0 ? "flex" : "none";
+  if (badge) {
+    badge.textContent = basket.length;
+    badge.style.display = basket.length > 0 ? "flex" : "none";
+  }
+  renderVpBasketPanel(basket);
+}
+
+function renderVpBasketPanel(basket) {
+  const panel = document.getElementById("vpBasketPanel");
+  const countEl = document.getElementById("vpBasketCount");
+  const listEl = document.getElementById("vpBasketItems");
+  if (!panel || !listEl) return;
+
+  panel.style.display = basket.length > 0 ? "block" : "none";
+  if (countEl) countEl.textContent = basket.length;
+
+  listEl.innerHTML = basket.map((item, idx) => `
+    <li class="vp-basket-item">
+      <img src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'">
+      <span class="vp-basket-item-name">${item.name}</span>
+      <button class="vp-basket-remove" data-idx="${idx}" title="Remove">×</button>
+    </li>
+  `).join('');
+
+  listEl.querySelectorAll('.vp-basket-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const b = getQuoteBasket();
+      b.splice(parseInt(btn.dataset.idx), 1);
+      saveQuoteBasket(b);
+      updateQuoteBadge();
+    });
+  });
 }
 
 function setupQuoteButtons() {
+  renderVpBasketPanel(getQuoteBasket());
   document.querySelectorAll(".quote-add-btn").forEach(btn => {
     btn.onclick = e => {
       e.preventDefault();

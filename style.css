@@ -2124,6 +2124,112 @@ textarea:focus {
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
+/* VOLUME PRICING BASKET PANEL (catalog sidebar) */
+
+.vp-basket-panel {
+  margin-top: 24px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+}
+
+.vp-basket-header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #0B1F38;
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 800;
+  padding: 12px 14px;
+  letter-spacing: .03em;
+}
+
+.vp-basket-count {
+  margin-left: auto;
+  background: #ED7226;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  border-radius: 100px;
+  padding: 2px 8px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.vp-basket-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.vp-basket-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 12px;
+  color: #1e293b;
+}
+
+.vp-basket-item img {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: 6px;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.vp-basket-item-name {
+  flex: 1;
+  font-weight: 600;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.vp-basket-remove {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 4px;
+  flex-shrink: 0;
+  transition: color .15s;
+}
+
+.vp-basket-remove:hover { color: #dc2626; }
+
+.vp-basket-empty {
+  padding: 16px 14px;
+  font-size: 12px;
+  color: #94a3b8;
+  text-align: center;
+}
+
+.vp-basket-cta {
+  display: block;
+  text-align: center;
+  background: #ED7226;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 13px;
+  text-decoration: none;
+  transition: background .2s;
+}
+
+.vp-basket-cta:hover { background: #f07828; }
+
 .catalog-main {
   display: grid;
   grid-template-columns: 245px minmax(0, 1fr);
