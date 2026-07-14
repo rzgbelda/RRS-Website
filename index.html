@@ -382,89 +382,72 @@
 
                     </div>
 
+                    <!-- AI Upload Box -->
                     <div class="form-right">
+                        <div class="ai-upload-card" id="aiUploadCard">
 
-                        <label>Upload Current Invoice / Sample Order</label>
+                            <!-- Animated AI badge -->
+                            <div class="ai-upload-badge">
+                                <span class="ai-badge-dot"></span>
+                                AI Price Matching
+                            </div>
 
-                        <div class="upload-box" id="uploadBox">
+                            <!-- Try it arrow + heading -->
+                            <div class="ai-try-row">
+                                <div class="ai-try-arrow">
+                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
+                                </div>
+                                <span class="ai-try-label">Try it!</span>
+                            </div>
 
-                            <img src="file-list-3-line.svg" alt="Upload" id="uploadIcon">
+                            <!-- Drop zone -->
+                            <div class="ai-drop-zone" id="competitorDropZone">
+                                <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+                                <div class="ai-drop-icon">
+                                    <svg width="30" height="30" fill="none" stroke="#ED7226" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                                </div>
+                                <p class="ai-drop-title" id="competitorDropText">Drop your competitor's quote here</p>
+                                <p class="ai-drop-sub">or <span class="ai-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
+                                <p class="ai-drop-hint">PDF, JPG, PNG — Max 10MB</p>
+                            </div>
 
-                            <h4 id="uploadTitle">Drag & Drop Your File Here</h4>
+                            <p class="ai-upload-desc">Upload any supplier's quote — our AI reads it and instantly finds matching products in our catalog, even across different brands.</p>
 
-                            <p>or <span id="uploadBrowse" style="cursor:pointer;color:#e8621a;text-decoration:underline;">browse</span> to upload</p>
+                            <button type="button" id="analyzeCompetitorBtn" class="ai-analyze-btn" disabled>
+                                <span id="analyzeCompetitorBtnText">
+                                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                    Analyze with AI
+                                </span>
+                                <span id="analyzeCompetitorBtnLoading" style="display:none">
+                                    <span class="competitor-spinner"></span> Analyzing…
+                                </span>
+                            </button>
 
-                            <small>PDF, JPG, PNG (Max 10MB)</small>
+                            <!-- Results -->
+                            <div id="competitorResults" style="display:none;margin-top:16px;">
+                                <div id="competitorResultsHeader" style="margin-bottom:12px;"></div>
+                                <div id="competitorMatchedSection" style="display:none;">
+                                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
+                                    <div id="competitorMatchedList"></div>
+                                    <button type="button" id="addMatchedToBasketBtn" style="margin-top:10px;padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
+                                </div>
+                                <div id="competitorUnmatchedSection" style="display:none;margin-top:14px;">
+                                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
+                                    <div id="competitorUnmatchedList"></div>
+                                    <p style="margin:6px 0 0;font-size:11px;color:#94a3b8;">These items aren't currently in our catalog. You can mention them in the notes below.</p>
+                                </div>
+                            </div>
+                            <div id="competitorError" style="display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#dc2626;"></div>
 
+                            <!-- Hidden legacy file input kept for JS compatibility -->
                             <input type="file" id="qFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-
                         </div>
-
                     </div>
 
                 </div>
 
-                <!-- Competitor Quote Upload -->
-                <div id="competitorQuoteSection" style="margin-bottom:20px;">
-                    <button type="button" id="toggleCompetitorUpload" class="competitor-toggle-btn">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                        Have a competitor quote? Upload it for instant AI matching
-                        <span id="competitorToggleArrow" style="margin-left:auto;transition:transform .2s">▼</span>
-                    </button>
-
-                    <div id="competitorUploadPanel" style="display:none;margin-top:10px;padding:18px 20px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
-                        <p style="margin:0 0 12px;font-size:13px;color:#475569;line-height:1.6">
-                            Upload your current supplier's quote (PDF or image). Our AI will read it and automatically find matching products in our catalog — even if the brands are different.
-                        </p>
-
-                        <!-- Drop zone -->
-                        <div id="competitorDropZone" class="competitor-drop-zone">
-                            <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-                            <svg width="28" height="28" fill="none" stroke="#94a3b8" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                            <p id="competitorDropText" style="margin:8px 0 0;font-size:13px;color:#64748b">
-                                Drop your competitor quote here, or <span style="color:#e8621a;cursor:pointer;text-decoration:underline;" onclick="document.getElementById('competitorFile').click()">browse</span>
-                            </p>
-                            <p style="margin:4px 0 0;font-size:11px;color:#94a3b8">PDF, JPG, or PNG accepted</p>
-                        </div>
-
-                        <button type="button" id="analyzeCompetitorBtn" class="competitor-analyze-btn" disabled>
-                            <span id="analyzeCompetitorBtnText">
-                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:5px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                Analyze with AI
-                            </span>
-                            <span id="analyzeCompetitorBtnLoading" style="display:none">
-                                <span class="competitor-spinner"></span> Analyzing…
-                            </span>
-                        </button>
-
-                        <!-- Results -->
-                        <div id="competitorResults" style="display:none;margin-top:16px;">
-                            <div id="competitorResultsHeader" style="margin-bottom:12px;"></div>
-
-                            <!-- Matched items -->
-                            <div id="competitorMatchedSection" style="display:none;">
-                                <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">
-                                    ✓ Matched Products
-                                </p>
-                                <div id="competitorMatchedList"></div>
-                                <button type="button" id="addMatchedToBasketBtn" style="margin-top:10px;padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">
-                                    Add Selected Matches to Quote Basket
-                                </button>
-                            </div>
-
-                            <!-- Unmatched items -->
-                            <div id="competitorUnmatchedSection" style="display:none;margin-top:14px;">
-                                <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">
-                                    ✗ No Match Found
-                                </p>
-                                <div id="competitorUnmatchedList"></div>
-                                <p style="margin:6px 0 0;font-size:11px;color:#94a3b8;">These items aren't currently in our catalog. You can mention them in the notes below.</p>
-                            </div>
-                        </div>
-
-                        <div id="competitorError" style="display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#dc2626;"></div>
-                    </div>
-                </div>
+                <!-- Hidden legacy competitor section (accordion removed, now inline above) -->
+                <div id="competitorQuoteSection" style="display:none;"></div>
 
                 <!-- Products selected for volume quote -->
                 <div id="quoteBasketPanel" style="display:none;margin-bottom:20px;">
@@ -1048,9 +1031,6 @@
   // ── Competitor Quote Upload ──────────────────────────────────
   const MATCH_FN_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/match-competitor-quote';
 
-  const toggleBtn        = document.getElementById('toggleCompetitorUpload');
-  const uploadPanel      = document.getElementById('competitorUploadPanel');
-  const toggleArrow      = document.getElementById('competitorToggleArrow');
   const competitorDrop   = document.getElementById('competitorDropZone');
   const competitorInput  = document.getElementById('competitorFile');
   const competitorDropTx = document.getElementById('competitorDropText');
@@ -1068,12 +1048,6 @@
 
   let competitorFileObj  = null;
   let currentMatches     = [];
-
-  toggleBtn.addEventListener('click', () => {
-    const open = uploadPanel.style.display === 'block';
-    uploadPanel.style.display = open ? 'none' : 'block';
-    toggleArrow.style.transform = open ? '' : 'rotate(180deg)';
-  });
 
   // Drag & drop
   competitorDrop.addEventListener('click', () => competitorInput.click());

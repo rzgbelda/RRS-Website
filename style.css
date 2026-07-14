@@ -1401,6 +1401,204 @@ padding-top: 20px;
     font-size: 11.5px;
 }
 
+/* AI UPLOAD CARD */
+
+@keyframes badgePulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(237,114,38,.5); }
+  50%       { box-shadow: 0 0 0 6px rgba(237,114,38,0); }
+}
+
+@keyframes arrowBounce {
+  0%, 100% { transform: translateX(0); }
+  50%       { transform: translateX(5px); }
+}
+
+@keyframes tryPop {
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.08); }
+}
+
+@keyframes scanLine {
+  0%   { top: 0; opacity: 1; }
+  90%  { top: 100%; opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+.form-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-upload-card {
+  flex: 1;
+  background: linear-gradient(160deg, #0f2640 0%, #0B1F38 100%);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+/* Subtle dot grid */
+.ai-upload-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 18px 18px;
+  pointer-events: none;
+}
+
+/* Badge */
+.ai-upload-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #ED7226;
+  background: rgba(237,114,38,.12);
+  border: 1px solid rgba(237,114,38,.3);
+  border-radius: 100px;
+  padding: 4px 12px;
+  width: fit-content;
+  position: relative;
+}
+
+.ai-badge-dot {
+  width: 7px;
+  height: 7px;
+  background: #ED7226;
+  border-radius: 50%;
+  animation: badgePulse 1.8s ease-out infinite;
+  flex-shrink: 0;
+}
+
+/* "Try it!" animated row */
+.ai-try-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.ai-try-arrow {
+  animation: arrowBounce 1s ease-in-out infinite;
+}
+
+.ai-try-label {
+  font-size: 17px;
+  font-weight: 900;
+  color: #fff;
+  animation: tryPop 2s ease-in-out infinite;
+  letter-spacing: .01em;
+}
+
+/* Drop zone */
+.ai-drop-zone {
+  border: 2px dashed rgba(237,114,38,.4);
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: background .2s, border-color .2s;
+  position: relative;
+  overflow: hidden;
+}
+
+.ai-drop-zone:hover,
+.ai-drop-zone.drag-over {
+  background: rgba(237,114,38,.08);
+  border-color: #ED7226;
+}
+
+/* Scan line animation */
+.ai-drop-zone::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(237,114,38,.6), transparent);
+  animation: scanLine 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.ai-drop-icon {
+  margin-bottom: 10px;
+}
+
+.ai-drop-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.ai-drop-sub {
+  font-size: 12.5px;
+  color: rgba(255,255,255,.5);
+  margin-bottom: 4px;
+}
+
+.ai-browse-link {
+  color: #ED7226;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.ai-drop-hint {
+  font-size: 11px;
+  color: rgba(255,255,255,.3);
+}
+
+/* Description text */
+.ai-upload-desc {
+  font-size: 12px;
+  color: rgba(255,255,255,.45);
+  line-height: 1.65;
+  margin: 0;
+}
+
+/* Analyze button */
+.ai-analyze-btn {
+  width: 100%;
+  height: 44px;
+  border: none;
+  border-radius: 10px;
+  background: #ED7226;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  transition: background .2s, transform .15s, box-shadow .2s;
+  box-shadow: 0 4px 14px rgba(237,114,38,.35);
+}
+
+.ai-analyze-btn:disabled {
+  background: rgba(237,114,38,.3);
+  color: rgba(255,255,255,.4);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.ai-analyze-btn:not(:disabled):hover {
+  background: #f07828;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(237,114,38,.45);
+}
+
 /* NOTES */
 
 textarea {
