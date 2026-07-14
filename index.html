@@ -98,7 +98,7 @@
       </p>
 
       <div class="hero-buttons">
-        <a href="/catalog" class="btn btn-primary" id="heroBtnPrimaryEl">
+        <a href="/catalog" class="btn btn-primary" id="heroBtnPrimaryEl" onclick="return requireAuth('/catalog')">
           <img src="Cart.png" alt="" />
           Shop Catalog
         </a>
@@ -142,7 +142,7 @@
       </div>
 
         <div class="view-more-wrapper">
-            <a href="/catalog" class="view-more-btn">
+            <a href="/catalog" class="view-more-btn" onclick="return requireAuth('/catalog')">
                 View More >>
             </a>
         </div>
@@ -253,7 +253,7 @@
         <strong>Ready to stop worrying about supply shortages?</strong>
         <span>Join hospitality businesses across NC that trust Room Ready Supply for fast, reliable delivery.</span>
       </div>
-      <a href="/catalog" class="ordering-cta-btn">
+      <a href="/catalog" class="ordering-cta-btn" onclick="return requireAuth('/catalog')">
         Shop the Catalog
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
@@ -315,7 +315,7 @@
         <span>Next auto-delivery in <strong id="nextDeliveryText">7 days</strong></span>
       </div>
 
-      <a href="/cart" class="schedule-content-link">
+      <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
         <button class="choose-schedule-btn">
           <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
           Set Up Auto-Reorder

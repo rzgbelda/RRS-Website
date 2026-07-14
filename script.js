@@ -1462,7 +1462,9 @@ function setupLogin() {
           if (profile?.role === "admin") {
             window.location.href = "/admin";
           } else {
-            window.location.href = "/";
+            const redirect = sessionStorage.getItem("authRedirect") || "/";
+            sessionStorage.removeItem("authRedirect");
+            window.location.href = redirect;
           }
         }
       } else {
@@ -1471,7 +1473,9 @@ function setupLogin() {
           localStorage.setItem("loggedIn", "true");
           updateLoginUI();
           updateCartBadge();
-          window.location.href = "/";
+          const redirect = sessionStorage.getItem("authRedirect") || "/";
+          sessionStorage.removeItem("authRedirect");
+          window.location.href = redirect;
         } else {
           alert("Invalid email or password");
         }
@@ -1490,6 +1494,25 @@ function setupLogin() {
     });
   }
 }
+
+// Redirect guests to login, saving their intended destination
+function requireAuth(dest) {
+  if (localStorage.getItem("loggedIn") === "true") return true; // logged in — follow link normally
+  sessionStorage.setItem("authRedirect", dest || window.location.href);
+  window.location.href = "/login";
+  return false; // prevent default link navigation
+}
+
+// Guard nav catalog links on pages that include the main nav
+(function () {
+  document.querySelectorAll('a[href="/catalog"]').forEach(link => {
+    if (!link.getAttribute('onclick')) {
+      link.addEventListener('click', e => {
+        if (!requireAuth('/catalog')) e.preventDefault();
+      });
+    }
+  });
+})();
 
 function updateLoginUI() {
   const isLoggedIn = localStorage.getItem("loggedIn") === "true";
