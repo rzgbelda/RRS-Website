@@ -2929,9 +2929,27 @@ async function doSendQuote(payload) {
 }
 
 async function saveQuoteStatus() {
-  if (!currentQuoteId || !window.sb) return;
+  const btn = document.querySelector('[onclick="saveQuoteStatus()"]');
+  if (!currentQuoteId) { alert("No quote selected."); return; }
+  if (!window.sb) { alert("Supabase not initialized."); return; }
   const status = document.getElementById("quoteStatusSelect").value;
-  await window.sb.from("quote_requests").update({ status }).eq("id", currentQuoteId);
+  if (!status) { alert("Please select a status."); return; }
+
+  if (btn) { btn.textContent = "Saving…"; btn.disabled = true; }
+
+  const { error } = await window.sb.from("quote_requests").update({ status }).eq("id", currentQuoteId);
+
+  if (btn) { btn.textContent = "Save Status"; btn.disabled = false; }
+
+  if (error) {
+    alert("Error saving status: " + error.message);
+    return;
+  }
+
+  // Update local cache so UI reflects new status without re-fetch
+  const local = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (local) local.status = status;
+
   document.getElementById("quoteDetailModal").style.display = "none";
   renderQuoteRequestsTable();
 }
