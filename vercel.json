@@ -1,5 +1,16 @@
 {
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/payment",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-src https://js.stripe.com https://hooks.stripe.com; script-src 'self' 'unsafe-inline' https://js.stripe.com; connect-src 'self' https://api.stripe.com"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/",               "destination": "/index.html" },
     { "source": "/catalog",        "destination": "/catalog.html" },

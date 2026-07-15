@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
+  <script src="https://js.stripe.com/v3/"></script>
 </head>
 
 <body>
@@ -477,8 +478,6 @@
   </div>
 </div>
 <!-- â”€â”€ End Contact Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
-  <!-- Stripe.js -->
-  <script src="https://js.stripe.com/v3/"></script>
   <style>
     @keyframes spin { to { transform: rotate(360deg); } }
     #submitOrderBtn:disabled { opacity: .65; cursor: not-allowed; }
@@ -490,6 +489,11 @@
     let stripe, cardElement, clientSecret, paymentIntentId;
 
     function initStripe() {
+      try {
+      if (typeof Stripe === 'undefined') {
+        document.getElementById('stripe-card-errors').textContent = 'Payment system failed to load. Please refresh the page.';
+        return;
+      }
       stripe = Stripe(PUBLISHABLE_KEY);
       const elements = stripe.elements();
       cardElement = elements.create('card', {
@@ -517,6 +521,7 @@
 
       // Create payment intent as soon as page loads
       initPaymentIntent();
+      } catch(err) { console.error('Stripe init error:', err); document.getElementById('stripe-card-errors').textContent = 'Card payment unavailable: ' + err.message; }
     }
 
     if (document.readyState === "loading") {
