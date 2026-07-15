@@ -131,17 +131,18 @@ async function fetchParcelQuotes(destinationZip, destinationCity, destinationSta
       clearTimeout(timer);
 
       const text = await res.text();
+      console.log(`[Parcel] attempt ${attempt} raw response (${res.status}):`, text.slice(0, 500));
       let data;
       try { data = JSON.parse(text); } catch(e) { console.error('[Parcel] non-JSON:', text); data = null; }
 
       if (!res.ok || !data) {
-        console.warn(`[Parcel] attempt ${attempt} failed (status ${res.status})`);
+        console.warn(`[Parcel] attempt ${attempt} failed (status ${res.status})`, text);
         if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
         return null;
       }
 
       const rates = data.rates || [];
-      console.log(`[Parcel] attempt ${attempt} — rates received:`, rates.length);
+      console.log(`[Parcel] attempt ${attempt} — rates received:`, rates.length, rates);
       if (rates.length) return rates;
 
       // No rates returned — retry in case of transient API hiccup
