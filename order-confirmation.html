@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Order Confirmed — Room Ready Supply</title>
+  <link rel="icon" href="/favicon.ico" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; }
+
+    /* Nav */
+    .nav { background: #0B1F38; padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+    .nav-logo img { height: 36px; }
+    .nav-logo span { color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
+    .nav-home { color: rgba(255,255,255,.7); font-size: 13px; text-decoration: none; }
+    .nav-home:hover { color: #fff; }
+
+    /* Hero */
+    .confirm-hero { background: linear-gradient(145deg, #0f2640, #0B1F38); padding: 72px 32px 60px; text-align: center; position: relative; overflow: hidden; }
+    .confirm-hero::before { content:''; position:absolute; inset:0; background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px); background-size:20px 20px; pointer-events:none; }
+    .check-circle { width: 72px; height: 72px; background: rgba(34,197,94,.18); border: 2px solid rgba(34,197,94,.45); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both; }
+    .check-circle svg { width: 36px; height: 36px; }
+    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .confirm-hero h1 { font-size: clamp(26px, 5vw, 38px); font-weight: 900; color: #fff; margin-bottom: 12px; letter-spacing: -.5px; }
+    .confirm-hero p { font-size: 15px; color: rgba(255,255,255,.65); max-width: 460px; margin: 0 auto 24px; line-height: 1.6; }
+    .order-badge { display: inline-block; background: rgba(237,114,38,.15); border: 1.5px solid rgba(237,114,38,.4); border-radius: 100px; padding: 8px 20px; font-size: 14px; font-weight: 800; color: #ED7226; letter-spacing: .05em; }
+
+    /* Content */
+    .confirm-body { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+
+    .confirm-card { background: #fff; border-radius: 16px; border: 1.5px solid #e2e8f0; overflow: hidden; margin-bottom: 24px; }
+    .confirm-card-header { background: #f8fafc; border-bottom: 1.5px solid #e2e8f0; padding: 16px 22px; display: flex; align-items: center; gap: 10px; }
+    .confirm-card-header h2 { font-size: 14px; font-weight: 800; color: #0B1F38; text-transform: uppercase; letter-spacing: .1em; }
+    .confirm-card-body { padding: 22px; }
+
+    /* Item list */
+    .order-items { display: flex; flex-direction: column; gap: 12px; }
+    .order-item { display: flex; align-items: center; gap: 14px; padding-bottom: 12px; border-bottom: 1px solid #f1f5f9; }
+    .order-item:last-child { border-bottom: none; padding-bottom: 0; }
+    .item-thumb { width: 52px; height: 52px; border-radius: 8px; border: 1px solid #e2e8f0; object-fit: contain; background: #f8fafc; flex-shrink: 0; }
+    .item-info { flex: 1; min-width: 0; }
+    .item-name { font-size: 14px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .item-sub { font-size: 12px; color: #94a3b8; margin-top: 2px; }
+    .item-price { font-size: 15px; font-weight: 800; color: #0B1F38; flex-shrink: 0; }
+
+    /* Totals */
+    .totals-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; font-size: 14px; color: #475569; border-bottom: 1px solid #f1f5f9; }
+    .totals-row:last-child { border-bottom: none; }
+    .totals-row.total { font-size: 17px; font-weight: 900; color: #0B1F38; padding-top: 14px; margin-top: 4px; border-top: 2px solid #e2e8f0; border-bottom: none; }
+
+    /* Info grid */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 560px) { .info-grid { grid-template-columns: 1fr; } }
+    .info-block label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: #94a3b8; display: block; margin-bottom: 4px; }
+    .info-block p { font-size: 14px; color: #334155; line-height: 1.5; font-weight: 500; }
+
+    /* What's next */
+    .next-steps { display: flex; flex-direction: column; gap: 14px; }
+    .next-step { display: flex; align-items: flex-start; gap: 14px; }
+    .step-num { width: 28px; height: 28px; border-radius: 50%; background: #ED7226; color: #fff; font-size: 12px; font-weight: 900; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+    .step-text strong { display: block; font-size: 14px; color: #1e293b; font-weight: 700; margin-bottom: 2px; }
+    .step-text p { font-size: 13px; color: #64748b; line-height: 1.5; }
+
+    /* Actions */
+    .confirm-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .btn-primary { background: #ED7226; color: #fff; border: none; border-radius: 10px; padding: 14px 28px; font-size: 15px; font-weight: 800; text-decoration: none; cursor: pointer; display: inline-block; }
+    .btn-secondary { background: transparent; color: #0B1F38; border: 2px solid #e2e8f0; border-radius: 10px; padding: 13px 24px; font-size: 15px; font-weight: 700; text-decoration: none; display: inline-block; }
+    .btn-primary:hover { background: #d4611a; }
+    .btn-secondary:hover { border-color: #0B1F38; }
+
+    /* Payment status badge */
+    .status-paid { display: inline-flex; align-items: center; gap: 6px; background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 100px; padding: 5px 14px; font-size: 12px; font-weight: 800; color: #16a34a; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+
+    .icon-box { width: 34px; height: 34px; border-radius: 8px; background: rgba(237,114,38,.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <a href="/" class="nav-logo">
+    <img src="/images/RRS_Logo.png" alt="Room Ready Supply" onerror="this.style.display='none'">
+    <span>Room Ready Supply</span>
+  </a>
+  <a href="/" class="nav-home">← Back to Home</a>
+</nav>
+
+<section class="confirm-hero">
+  <div class="check-circle">
+    <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"></polyline>
+    </svg>
+  </div>
+  <h1>Order Confirmed!</h1>
+  <p>Thank you for your order. We've received it and our team will begin processing right away.</p>
+  <div class="order-badge" id="confirmOrderBadge">Order #—</div>
+</section>
+
+<div class="confirm-body">
+
+  <!-- Order summary -->
+  <div class="confirm-card">
+    <div class="confirm-card-header">
+      <div class="icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+      </div>
+      <h2>Order Summary</h2>
+      <div style="margin-left:auto;"><span class="status-paid"><span class="status-dot"></span>Payment Received</span></div>
+    </div>
+    <div class="confirm-card-body">
+      <div class="order-items" id="confirmItems">
+        <p style="color:#94a3b8;font-size:14px;">Loading order…</p>
+      </div>
+      <div style="margin-top:18px;border-top:2px solid #f1f5f9;padding-top:14px;">
+        <div class="totals-row"><span>Subtotal</span><span id="confSubtotal">—</span></div>
+        <div class="totals-row"><span>Tax (7%)</span><span id="confTax">—</span></div>
+        <div class="totals-row"><span>Shipping</span><span style="color:#64748b;font-size:13px;">Freight quote to follow</span></div>
+        <div class="totals-row total"><span>Total Charged</span><span id="confTotal">—</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer & shipping info -->
+  <div class="confirm-card">
+    <div class="confirm-card-header">
+      <div class="icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 0 1-2.827 0l-4.244-4.243a8 8 0 1 1 11.314 0z"/><circle cx="12" cy="11" r="3"/>
+        </svg>
+      </div>
+      <h2>Delivery Information</h2>
+    </div>
+    <div class="confirm-card-body">
+      <div class="info-grid" id="deliveryInfo">
+        <div class="info-block">
+          <label>Contact</label>
+          <p id="confContact">—</p>
+        </div>
+        <div class="info-block">
+          <label>Business</label>
+          <p id="confBusiness">—</p>
+        </div>
+        <div class="info-block">
+          <label>Email</label>
+          <p id="confEmail">—</p>
+        </div>
+        <div class="info-block">
+          <label>Phone</label>
+          <p id="confPhone">—</p>
+        </div>
+        <div class="info-block" style="grid-column:1/-1">
+          <label>Shipping Address</label>
+          <p id="confAddress">—</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- What's next -->
+  <div class="confirm-card">
+    <div class="confirm-card-header">
+      <div class="icon-box">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+      </div>
+      <h2>What Happens Next</h2>
+    </div>
+    <div class="confirm-card-body">
+      <div class="next-steps">
+        <div class="next-step">
+          <div class="step-num">1</div>
+          <div class="step-text">
+            <strong>Order Processing</strong>
+            <p>Our team reviews your order and confirms product availability — typically within a few hours.</p>
+          </div>
+        </div>
+        <div class="next-step">
+          <div class="step-num">2</div>
+          <div class="step-text">
+            <strong>Freight Quote</strong>
+            <p>We'll calculate your shipping cost based on your location and order size and email it to you before finalizing.</p>
+          </div>
+        </div>
+        <div class="next-step">
+          <div class="step-num">3</div>
+          <div class="step-text">
+            <strong>Shipment & Tracking</strong>
+            <p>Once dispatched, you'll receive a confirmation email with tracking information.</p>
+          </div>
+        </div>
+        <div class="next-step">
+          <div class="step-num">4</div>
+          <div class="step-text">
+            <strong>Delivery</strong>
+            <p>Products are delivered to your door. Our team is available if you need anything during this time.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="confirm-actions">
+    <a href="/catalog" class="btn-primary">Continue Shopping →</a>
+    <a href="/" class="btn-secondary">Back to Home</a>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  // Read order from localStorage (set by payment.html on success)
+  const lastOrder = JSON.parse(localStorage.getItem('rrs_last_order') || '{}');
+  const urlParams = new URLSearchParams(window.location.search);
+  const orderNum = urlParams.get('order') || lastOrder.orderNumber || 'RRS-' + Date.now();
+
+  // Badge
+  document.getElementById('confirmOrderBadge').textContent = 'Order #' + orderNum;
+
+  // Items
+  const items = lastOrder.items || [];
+  const itemsEl = document.getElementById('confirmItems');
+  if (items.length) {
+    itemsEl.innerHTML = items.map(function (item) {
+      const price = parseFloat(item.price) || 0;
+      const qty = parseInt(item.quantity) || 1;
+      return '<div class="order-item">' +
+        '<img class="item-thumb" src="' + (item.image || '/images/placeholder.png') + '" onerror="this.src=\'/images/placeholder.png\'" alt="">' +
+        '<div class="item-info"><div class="item-name">' + item.name + '</div>' +
+        '<div class="item-sub">Qty: ' + qty + (item.itemNumber ? ' &bull; #' + item.itemNumber : '') + '</div></div>' +
+        '<div class="item-price">$' + (price * qty).toFixed(2) + '</div>' +
+        '</div>';
+    }).join('');
+  } else {
+    itemsEl.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Order details will be sent to your email.</p>';
+  }
+
+  // Totals
+  const total = lastOrder.total || 0;
+  const tax = total / 1.07 * 0.07;
+  const subtotal = total - tax;
+  document.getElementById('confSubtotal').textContent = '$' + subtotal.toFixed(2);
+  document.getElementById('confTax').textContent = '$' + tax.toFixed(2);
+  document.getElementById('confTotal').textContent = '$' + total.toFixed(2);
+
+  // Delivery info
+  const checkout = lastOrder.checkout || {};
+  document.getElementById('confContact').textContent = checkout.contact || '—';
+  document.getElementById('confBusiness').textContent = checkout.business || '—';
+  document.getElementById('confEmail').textContent = checkout.email || '—';
+  document.getElementById('confPhone').textContent = checkout.phone || '—';
+  const addr = [checkout.street, checkout.city, checkout.state, checkout.zip].filter(Boolean).join(', ');
+  document.getElementById('confAddress').textContent = addr || '—';
+})();
+</script>
+</body>
+</html>

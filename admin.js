@@ -235,11 +235,11 @@ async function renderDashboardTab() {
     window.sb.from("orders").select("*",          { count:"exact", head:true }).eq("status", "pending"),
     window.sb.from("profiles").select("*",        { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("inventory").select("*, products(name, category_name)").in("status",["out_of_stock","low_stock"]),
-    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(6),
-    window.sb.from("orders").select("total, status").neq("status", "cancelled"),
+    window.sb.from("orders").select("order_number, customer_name, business_name, amount_total, status, created_at").order("created_at",{ascending:false}).limit(6),
+    window.sb.from("orders").select("amount_total, status").neq("status", "cancelled"),
   ]);
 
-  const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.amount_total || 0), 0) / 100;
 
   setEl("statRevenue",    "$" + revenue.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}));
   setEl("statProducts",   prodCount  ?? 0);
@@ -254,14 +254,17 @@ async function renderDashboardTab() {
   }
 
   const ro = document.getElementById("recentOrdersBody");
-  if (ro) ro.innerHTML = (recentOrders || []).map(o => `
+  if (ro) ro.innerHTML = (recentOrders || []).map(o => {
+    const totalDollars = o.amount_total ? '$' + (o.amount_total / 100).toFixed(2) : '—';
+    return `
     <tr>
       <td><strong>${escHtml(o.order_number || "—")}</strong></td>
       <td>${escHtml(o.customer_name || o.business_name || "—")}</td>
       <td>${fmt(o.created_at)}</td>
-      <td><strong>$${Number(o.total||0).toFixed(2)}</strong></td>
+      <td><strong>${totalDollars}</strong></td>
       <td><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></td>
-    </tr>`).join("") || "<tr><td colspan='5' class='a-empty'>No orders yet.</td></tr>";
+    </tr>`;
+  }).join("") || "<tr><td colspan='5' class='a-empty'>No orders yet.</td></tr>";
 
   const ls = document.getElementById("lowStockBody");
   if (ls) ls.innerHTML = (lowStockItems || []).map(i => `
@@ -291,7 +294,7 @@ async function loadTrendChart(mode, btnEl) {
   let labels = [], revenueData = [], ordersData = [];
 
   // Fetch all orders with created_at, total, and status
-  const { data: orders } = await window.sb.from("orders").select("created_at, total, status");
+  const { data: orders } = await window.sb.from("orders").select("created_at, amount_total, status");
   const rows = orders || [];
   let cancelledData = [];
 
@@ -1290,33 +1293,39 @@ async function renderOrdersTable(filter) {
   const tbody = document.getElementById("ordersTableBody");
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="8" class="a-empty">Loading…</td></tr>`;
-  let q = window.sb.from("orders").select("*, order_items(id)").order("created_at", { ascending: false });
-  if (filter) q = q.ilike("order_number", `%${filter}%`);
+  let q = window.sb.from("orders").select("*").order("created_at", { ascending: false });
+  if (filter) q = q.or(`order_number.ilike.%${filter}%,customer_name.ilike.%${filter}%,business_name.ilike.%${filter}%`);
+  const statusFilter = document.getElementById("orderStatusFilter")?.value;
+  if (statusFilter) q = q.eq("status", statusFilter);
   const { data: orders } = await q;
 
-  tbody.innerHTML = (orders || []).map(o => `
+  tbody.innerHTML = (orders || []).map(o => {
+    const items = Array.isArray(o.items) ? o.items : (typeof o.items === "string" ? JSON.parse(o.items || "[]") : []);
+    const totalDollars = o.amount_total ? (o.amount_total / 100).toFixed(2) : "0.00";
+    return `
     <tr>
       <td><strong>${escHtml(o.order_number)}</strong></td>
       <td>${escHtml(o.customer_name || "—")}</td>
       <td>${escHtml(o.business_name || "—")}</td>
-      <td>${(o.order_items || []).length}</td>
-      <td>$${Number(o.total).toFixed(2)}</td>
+      <td>${items.length} item${items.length !== 1 ? "s" : ""}</td>
+      <td>$${totalDollars}</td>`;
       <td>${fmt(o.created_at)}</td>
       <td>
-        <select onchange="updateOrderStatus('${o.id}', this.value)" class="a-select" style="font-size:12px">
-          ${["pending","confirmed","processing","shipped","delivered","cancelled"].map(s =>
+        <select onchange="updateOrderStatus('${o.id}', this.value)" class="a-select" style="font-size:12px;width:auto;min-width:130px">
+          ${["processing","confirmed","shipped","delivered","cancelled","refunded"].map(s =>
             `<option value="${s}" ${o.status===s?"selected":""}>${s.charAt(0).toUpperCase()+s.slice(1)}</option>`
           ).join("")}
         </select>
       </td>
       <td style="display:flex;gap:6px;align-items:center;">
         <button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button>
-        ${o.status === "pending" ? `<button class="a-btn-sm" onclick="openOrderModal('${o.id}')" style="background:#0b2d52;color:#fff;border-color:#0b2d52;white-space:nowrap;">🚚 Approve</button>` : ""}
       </td>
-    </tr>`).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
+    </tr>`;
+  }).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
 }
 
 document.getElementById("orderSearch")?.addEventListener("input", e => renderOrdersTable(e.target.value.trim()));
+document.getElementById("orderStatusFilter")?.addEventListener("change", () => renderOrdersTable(document.getElementById("orderSearch")?.value.trim()));
 
 async function updateOrderStatus(orderId, status) {
   await window.sb.from("orders").update({ status, updated_at: new Date().toISOString() }).eq("id", orderId);

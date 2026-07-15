@@ -145,34 +145,25 @@
             </div>
           </label>
 
-          <label class="payment-option">
-            <input type="radio" name="paymentMethod" value="card">
+          <label class="payment-option" id="cardOptionLabel">
+            <input type="radio" name="paymentMethod" value="card" id="cardRadio">
 
-            <div class="payment-icon">ðŸ’³</div>
+            <div class="payment-icon">💳</div>
 
             <div class="payment-option-content">
               <h3>Credit / Debit Card</h3>
-              <p>Securely pay with your credit or debit card.</p>
+              <p>Securely pay with your credit or debit card via Stripe.</p>
 
-              <div class="card-fields">
-                <div class="full">
-                  <label>Card Number</label>
-                  <input type="text" placeholder="1234 5678 9012 3456">
-                </div>
-
-                <div>
-                  <label>Expiration Date</label>
-                  <input type="text" placeholder="MM / YY">
-                </div>
-
-                <div>
-                  <label>CVV</label>
-                  <input type="text" placeholder="123">
-                </div>
-
+              <div class="card-fields" id="stripeCardFields" style="display:none;">
                 <div class="full">
                   <label>Name on Card</label>
-                  <input type="text" placeholder="Full name as it appears on card">
+                  <input type="text" id="cardholderName" placeholder="Full name as it appears on card"
+                    style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
+                </div>
+                <div class="full">
+                  <label>Card Details</label>
+                  <div id="stripe-card-element" style="padding:12px 14px;border:1.5px solid #d0d7e0;border-radius:8px;background:#fff;"></div>
+                  <div id="stripe-card-errors" style="color:#dc2626;font-size:12px;margin-top:6px;min-height:16px;"></div>
                 </div>
               </div>
             </div>
@@ -205,13 +196,13 @@
 
         </div>
 
+        <div id="payment-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;color:#dc2626;font-weight:600;"></div>
         <div class="payment-actions">
-          <a href="/checkout" class="back-link">â† Back to Customer Details</a>
-          <a href="#" id="submitOrderBtn" class="review-btn">
-  Submit Order â†’
-</a>
-        </div>
-
+          <a href="/checkout" class="back-link">&larr; Back to Customer Details</a>
+          <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
+            <span id="submitBtnText">Submit Order &rarr;</span>
+            <span id="submitBtnLoading" style="display:none;">Processing&hellip;</span>
+          </button>
       </div>
 
       <aside class="payment-summary">
@@ -492,5 +483,207 @@
   </div>
 </div>
 <!-- â”€â”€ End Contact Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+  <!-- Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #submitOrderBtn:disabled { opacity: .65; cursor: not-allowed; }
+  </style>
+  <script>
+  (function () {
+    const PUBLISHABLE_KEY = 'pk_live_51RLlVrEGK0faCLcpBV7lrr14xfD9Qe2aAv7Kk8iINww3KsBJqOEYlxGvzA4IopPJXUGPt1TZ0eHYZJZ9GYGM4X400IpTmLsXu';
+
+    let stripe, cardElement, clientSecret, paymentIntentId;
+
+    document.addEventListener('DOMContentLoaded', function () {
+      stripe = Stripe(PUBLISHABLE_KEY);
+      const elements = stripe.elements();
+      cardElement = elements.create('card', {
+        style: {
+          base: { fontSize: '15px', color: '#1e293b', '::placeholder': { color: '#94a3b8' } },
+          invalid: { color: '#dc2626' }
+        }
+      });
+      cardElement.mount('#stripe-card-element');
+      cardElement.on('change', function (e) {
+        document.getElementById('stripe-card-errors').textContent = e.error ? e.error.message : '';
+      });
+
+      // Show/hide card fields based on radio
+      document.querySelectorAll('input[name="paymentMethod"]').forEach(function (r) {
+        r.addEventListener('change', function () {
+          document.getElementById('stripeCardFields').style.display =
+            document.getElementById('cardRadio').checked ? 'block' : 'none';
+        });
+      });
+
+      // Load order summary
+      loadSummary();
+
+      // Create payment intent as soon as page loads
+      initPaymentIntent();
+    });
+
+    function loadSummary() {
+      const cart = JSON.parse(localStorage.getItem('rrs_cart') || '[]');
+      const list = document.getElementById('payment-summary-items');
+      if (!list) return;
+      let subtotal = 0;
+      list.innerHTML = cart.map(function (item) {
+        const price = parseFloat(item.price) || 0;
+        const qty = parseInt(item.quantity) || 1;
+        subtotal += price * qty;
+        return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">' +
+          '<span>' + item.name + ' &times; ' + qty + '</span>' +
+          '<span>
+</html>
+ + (price * qty).toFixed(2) + '</span></div>';
+      }).join('');
+      const tax = subtotal * 0.07;
+      const total = subtotal + tax;
+      document.getElementById('payment-subtotal').textContent = '
+</html>
+ + subtotal.toFixed(2);
+      document.getElementById('payment-tax').textContent = '
+</html>
+ + tax.toFixed(2);
+      document.getElementById('payment-total').textContent = '
+</html>
+ + total.toFixed(2);
+      window._orderSubtotal = subtotal;
+      window._orderTax = tax;
+      window._orderTotal = total;
+      window._orderItems = cart;
+    }
+
+    async function initPaymentIntent() {
+      const total = window._orderTotal || 0;
+      if (total < 0.50) return;
+      const amountCents = Math.round(total * 100);
+      const checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      const orderNumber = 'RRS-' + Date.now();
+      window._orderNumber = orderNumber;
+
+      try {
+        const res = await fetch('/api/create-payment-intent', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: amountCents,
+            metadata: {
+              order_number: orderNumber,
+              customer_name: checkout.contact || '',
+              customer_email: checkout.email || '',
+              business_name: checkout.business || '',
+              phone: checkout.phone || '',
+              shipping_address: JSON.stringify({
+                street: checkout.street,
+                city: checkout.city,
+                state: checkout.state,
+                zip: checkout.zip,
+              }),
+              items: JSON.stringify((window._orderItems || []).map(function (i) {
+                return { name: i.name, qty: i.quantity, price: i.price, itemNumber: i.itemNumber };
+              })),
+              notes: checkout.notes || '',
+              order_type: checkout.orderType || 'one_time',
+              referral_code: checkout.referral || '',
+              tax_amount: String(Math.round((window._orderTax || 0) * 100)),
+            }
+          })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        clientSecret = data.clientSecret;
+        paymentIntentId = data.paymentIntentId;
+      } catch (err) {
+        showError('Could not initialize payment. Please refresh and try again.');
+        console.error(err);
+      }
+    }
+
+    window.handlePaymentSubmit = async function (e) {
+      e.preventDefault();
+      const method = document.querySelector('input[name="paymentMethod"]:checked')?.value;
+      const btn = document.getElementById('submitOrderBtn');
+      const errEl = document.getElementById('payment-error-msg');
+      errEl.style.display = 'none';
+
+      // PO / Invoice methods — submit without Stripe
+      if (method === 'invoice' || method === 'po') {
+        btn.disabled = true;
+        document.getElementById('submitBtnText').style.display = 'none';
+        document.getElementById('submitBtnLoading').style.display = 'inline';
+        const orderNum = window._orderNumber || ('RRS-' + Date.now());
+        document.getElementById('orderRef').textContent = orderNum;
+        document.getElementById('orderModal').style.display = 'flex';
+        localStorage.removeItem('rrs_cart');
+        return;
+      }
+
+      // Card payment via Stripe
+      if (!clientSecret) {
+        showError('Payment not initialized. Please refresh and try again.');
+        return;
+      }
+      const name = document.getElementById('cardholderName')?.value.trim();
+      if (!name) { showError('Please enter the name on your card.'); return; }
+
+      btn.disabled = true;
+      document.getElementById('submitBtnText').style.display = 'none';
+      document.getElementById('submitBtnLoading').style.display = 'inline';
+
+      const checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: {
+          card: cardElement,
+          billing_details: {
+            name: name,
+            email: checkout.email || undefined,
+            address: {
+              line1: checkout.street || undefined,
+              city: checkout.city || undefined,
+              state: checkout.state || undefined,
+              postal_code: checkout.zip || undefined,
+              country: 'US',
+            }
+          }
+        }
+      });
+
+      btn.disabled = false;
+      document.getElementById('submitBtnText').style.display = 'inline';
+      document.getElementById('submitBtnLoading').style.display = 'none';
+
+      if (error) {
+        showError(error.message);
+        return;
+      }
+
+      if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture') {
+        // Clear cart and show confirmation
+        const orderNum = window._orderNumber || ('RRS-' + Date.now());
+        localStorage.removeItem('rrs_cart');
+        localStorage.setItem('rrs_last_order', JSON.stringify({
+          orderNumber: orderNum,
+          paymentIntentId: paymentIntent.id,
+          total: window._orderTotal,
+          items: window._orderItems,
+          checkout: checkout,
+        }));
+        // Redirect to confirmation page
+        window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
+      }
+    };
+
+    function showError(msg) {
+      const el = document.getElementById('payment-error-msg');
+      el.textContent = msg;
+      el.style.display = 'block';
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  })();
+  </script>
 </body>
 </html>
+
