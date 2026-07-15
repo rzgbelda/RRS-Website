@@ -484,214 +484,178 @@
   </style>
   <script>
   (function () {
-    const PUBLISHABLE_KEY = 'pk_live_51RLlVrEGK0faCLcpBV7lrr14xfD9Qe2aAv7Kk8iINww3KsBJqOEYlxGvzA4IopPJXUGPt1TZ0eHYZJZ9GYGM4X400IpTmLsXu';
-
-    let stripe, cardElement, clientSecret, paymentIntentId;
+    var PUBLISHABLE_KEY = 'pk_live_51RLlVrEGK0faCLcpBV7lrr14xfD9Qe2aAv7Kk8iINww3KsBJqOEYlxGvzA4IopPJXUGPt1TZ0eHYZJZ9GYGM4X400IpTmLsXu';
+    var stripe, cardElement, clientSecret, paymentIntentId;
 
     function initStripe() {
-      try {
       if (typeof Stripe === 'undefined') {
-        document.getElementById('stripe-card-errors').textContent = 'Payment system failed to load. Please refresh the page.';
+        document.getElementById('stripe-card-errors').textContent = 'Payment system failed to load. Please refresh.';
         return;
       }
-      stripe = Stripe(PUBLISHABLE_KEY);
-      const elements = stripe.elements();
-      cardElement = elements.create('card', {
-        style: {
-          base: { fontSize: '15px', color: '#1e293b', '::placeholder': { color: '#94a3b8' } },
-          invalid: { color: '#dc2626' }
-        }
-      });
-      cardElement.mount('#stripe-card-element');
-      cardElement.on('change', function (e) {
-        document.getElementById('stripe-card-errors').textContent = e.error ? e.error.message : '';
-      });
+      try {
+        stripe = Stripe(PUBLISHABLE_KEY);
+        var elements = stripe.elements();
+        cardElement = elements.create('card', {
+          style: {
+            base: { fontSize: '15px', color: '#1e293b', '::placeholder': { color: '#94a3b8' } },
+            invalid: { color: '#dc2626' }
+          }
+        });
+        cardElement.mount('#stripe-card-element');
+        cardElement.on('change', function (e) {
+          document.getElementById('stripe-card-errors').textContent = e.error ? e.error.message : '';
+        });
+      } catch(err) {
+        console.error('Stripe init error:', err);
+        document.getElementById('stripe-card-errors').textContent = 'Card payment unavailable: ' + err.message;
+        return;
+      }
 
-      // Show/hide card fields based on radio
+      // Show/hide card fields on radio change
       document.querySelectorAll('input[name="paymentMethod"]').forEach(function (r) {
         r.addEventListener('change', function () {
-          const show = document.getElementById('cardRadio').checked;
+          var show = document.getElementById('cardRadio').checked;
           document.getElementById('stripeCardFields').style.display = show ? 'block' : 'none';
           if (show && !clientSecret) initPaymentIntent();
         });
       });
 
-      // Load order summary
       loadSummary();
-
-      // Create payment intent as soon as page loads
       initPaymentIntent();
-      } catch(err) { console.error('Stripe init error:', err); document.getElementById('stripe-card-errors').textContent = 'Card payment unavailable: ' + err.message; }
     }
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", initStripe);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initStripe);
     } else {
       initStripe();
     }
 
-
     function loadSummary() {
-      const cart = JSON.parse(localStorage.getItem('rrs_cart') || '[]');
-      const list = document.getElementById('payment-summary-items');
+      var cart = JSON.parse(localStorage.getItem('rrs_cart') || '[]');
+      var list = document.getElementById('payment-summary-items');
       if (!list) return;
-      let subtotal = 0;
+      var subtotal = 0;
       list.innerHTML = cart.map(function (item) {
-        const price = parseFloat(item.price) || 0;
-        const qty = parseInt(item.quantity) || 1;
+        var price = parseFloat(item.price) || 0;
+        var qty = parseInt(item.quantity) || 1;
         subtotal += price * qty;
         return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">' +
-          '<span>' + item.name + ' &times; ' + qty + '</span>' +
-          '<span>
-</html>
- + (price * qty).toFixed(2) + '</span></div>';
+          '<span>' + item.name + ' x' + qty + '</span>' +
+          '<span>$' + (price * qty).toFixed(2) + '</span></div>';
       }).join('');
-      const tax = subtotal * 0.07;
-      const total = subtotal + tax;
-      document.getElementById('payment-subtotal').textContent = '
-</html>
- + subtotal.toFixed(2);
-      document.getElementById('payment-tax').textContent = '
-</html>
- + tax.toFixed(2);
-      document.getElementById('payment-total').textContent = '
-</html>
- + total.toFixed(2);
+      var tax = subtotal * 0.07;
+      var total = subtotal + tax;
+      document.getElementById('payment-subtotal').textContent = '$' + subtotal.toFixed(2);
+      document.getElementById('payment-tax').textContent = '$' + tax.toFixed(2);
+      document.getElementById('payment-total').textContent = '$' + total.toFixed(2);
       window._orderSubtotal = subtotal;
       window._orderTax = tax;
       window._orderTotal = total;
       window._orderItems = cart;
     }
 
-    async function initPaymentIntent() {
-      const total = window._orderTotal || 0;
+    function initPaymentIntent() {
+      var total = window._orderTotal || 0;
       if (total < 0.50) return;
-      const amountCents = Math.round(total * 100);
-      const checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-      const orderNumber = 'RRS-' + Date.now();
+      var amountCents = Math.round(total * 100);
+      var checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      var orderNumber = 'RRS-' + Date.now();
       window._orderNumber = orderNumber;
 
-      try {
-        const res = await fetch('/api/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: amountCents,
-            metadata: {
-              order_number: orderNumber,
-              customer_name: checkout.contact || '',
-              customer_email: checkout.email || '',
-              business_name: checkout.business || '',
-              phone: checkout.phone || '',
-              shipping_address: JSON.stringify({
-                street: checkout.street,
-                city: checkout.city,
-                state: checkout.state,
-                zip: checkout.zip,
-              }),
-              items: JSON.stringify((window._orderItems || []).map(function (i) {
-                return { name: i.name, qty: i.quantity, price: i.price, itemNumber: i.itemNumber };
-              })),
-              notes: checkout.notes || '',
-              order_type: checkout.orderType || 'one_time',
-              referral_code: checkout.referral || '',
-              tax_amount: String(Math.round((window._orderTax || 0) * 100)),
-            }
-          })
-        });
-        const data = await res.json();
+      fetch('/api/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountCents,
+          metadata: {
+            order_number: orderNumber,
+            customer_name: checkout.contact || '',
+            customer_email: checkout.email || '',
+            business_name: checkout.business || '',
+            phone: checkout.phone || '',
+            shipping_address: JSON.stringify({ street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip }),
+            items: JSON.stringify((window._orderItems || []).map(function (i) { return { name: i.name, qty: i.quantity, price: i.price, itemNumber: i.itemNumber }; })),
+            notes: checkout.notes || '',
+            order_type: checkout.orderType || 'one_time',
+            referral_code: checkout.referral || '',
+            tax_amount: String(Math.round((window._orderTax || 0) * 100))
+          }
+        })
+      }).then(function(res) { return res.json(); }).then(function(data) {
         if (data.error) throw new Error(data.error);
         clientSecret = data.clientSecret;
         paymentIntentId = data.paymentIntentId;
-      } catch (err) {
+      }).catch(function(err) {
+        console.error('PaymentIntent error:', err);
         showError('Could not initialize payment. Please refresh and try again.');
-        console.error(err);
-      }
+      });
     }
 
-    window.handlePaymentSubmit = async function (e) {
+    window.handlePaymentSubmit = function (e) {
       e.preventDefault();
-      const method = document.querySelector('input[name="paymentMethod"]:checked')?.value;
-      const btn = document.getElementById('submitOrderBtn');
-      const errEl = document.getElementById('payment-error-msg');
+      var methodEl = document.querySelector('input[name="paymentMethod"]:checked');
+      var method = methodEl ? methodEl.value : '';
+      var btn = document.getElementById('submitOrderBtn');
+      var errEl = document.getElementById('payment-error-msg');
       errEl.style.display = 'none';
 
-      // PO / Invoice methods — submit without Stripe
       if (method === 'invoice' || method === 'po') {
         btn.disabled = true;
         document.getElementById('submitBtnText').style.display = 'none';
         document.getElementById('submitBtnLoading').style.display = 'inline';
-        const orderNum = window._orderNumber || ('RRS-' + Date.now());
+        var orderNum = window._orderNumber || ('RRS-' + Date.now());
         document.getElementById('orderRef').textContent = orderNum;
         document.getElementById('orderModal').style.display = 'flex';
         localStorage.removeItem('rrs_cart');
         return;
       }
 
-      // Card payment via Stripe
       if (!clientSecret) {
-        // Try to init now in case cart loaded late
-        await initPaymentIntent();
-        if (!clientSecret) {
-          showError('Payment could not be initialized. Please make sure your cart has items and try again.');
-          btn.disabled = false;
-          document.getElementById('submitBtnText').style.display = 'inline';
-          document.getElementById('submitBtnLoading').style.display = 'none';
-          return;
-        }
+        showError('Payment not ready yet. Please wait a moment and try again.');
+        return;
       }
-      const name = document.getElementById('cardholderName')?.value.trim();
+      var name = document.getElementById('cardholderName') ? document.getElementById('cardholderName').value.trim() : '';
       if (!name) { showError('Please enter the name on your card.'); return; }
 
       btn.disabled = true;
       document.getElementById('submitBtnText').style.display = 'none';
       document.getElementById('submitBtnLoading').style.display = 'inline';
 
-      const checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-      const { error, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+      var checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      stripe.confirmCardPayment(clientSecret, {
         payment_method: {
           card: cardElement,
           billing_details: {
             name: name,
             email: checkout.email || undefined,
-            address: {
-              line1: checkout.street || undefined,
-              city: checkout.city || undefined,
-              state: checkout.state || undefined,
-              postal_code: checkout.zip || undefined,
-              country: 'US',
-            }
+            address: { line1: checkout.street || undefined, city: checkout.city || undefined, state: checkout.state || undefined, postal_code: checkout.zip || undefined, country: 'US' }
           }
         }
+      }).then(function(result) {
+        btn.disabled = false;
+        document.getElementById('submitBtnText').style.display = 'inline';
+        document.getElementById('submitBtnLoading').style.display = 'none';
+
+        if (result.error) { showError(result.error.message); return; }
+
+        var pi = result.paymentIntent;
+        if (pi.status === 'succeeded' || pi.status === 'requires_capture') {
+          var orderNum = window._orderNumber || ('RRS-' + Date.now());
+          localStorage.removeItem('rrs_cart');
+          localStorage.setItem('rrs_last_order', JSON.stringify({
+            orderNumber: orderNum,
+            paymentIntentId: pi.id,
+            total: window._orderTotal,
+            items: window._orderItems,
+            checkout: checkout
+          }));
+          window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
+        }
       });
-
-      btn.disabled = false;
-      document.getElementById('submitBtnText').style.display = 'inline';
-      document.getElementById('submitBtnLoading').style.display = 'none';
-
-      if (error) {
-        showError(error.message);
-        return;
-      }
-
-      if (paymentIntent.status === 'succeeded' || paymentIntent.status === 'requires_capture') {
-        // Clear cart and show confirmation
-        const orderNum = window._orderNumber || ('RRS-' + Date.now());
-        localStorage.removeItem('rrs_cart');
-        localStorage.setItem('rrs_last_order', JSON.stringify({
-          orderNumber: orderNum,
-          paymentIntentId: paymentIntent.id,
-          total: window._orderTotal,
-          items: window._orderItems,
-          checkout: checkout,
-        }));
-        // Redirect to confirmation page
-        window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
-      }
     };
 
     function showError(msg) {
-      const el = document.getElementById('payment-error-msg');
+      var el = document.getElementById('payment-error-msg');
       el.textContent = msg;
       el.style.display = 'block';
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
