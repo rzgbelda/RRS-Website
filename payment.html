@@ -531,7 +531,7 @@
     }
 
     function loadSummary() {
-      var cart = JSON.parse(localStorage.getItem('rrs_cart') || '[]');
+      var cart = JSON.parse(localStorage.getItem('cart') || '[]');
       var list = document.getElementById('payment-summary-items');
       if (!list) return;
       var subtotal = 0;
@@ -606,7 +606,7 @@
         var orderNum = window._orderNumber || ('RRS-' + Date.now());
         document.getElementById('orderRef').textContent = orderNum;
         document.getElementById('orderModal').style.display = 'flex';
-        localStorage.removeItem('rrs_cart');
+        localStorage.removeItem('cart');
         return;
       }
 
@@ -641,7 +641,7 @@
         var pi = result.paymentIntent;
         if (pi.status === 'succeeded' || pi.status === 'requires_capture') {
           var orderNum = window._orderNumber || ('RRS-' + Date.now());
-          localStorage.removeItem('rrs_cart');
+          localStorage.removeItem('cart');
           localStorage.setItem('rrs_last_order', JSON.stringify({
             orderNumber: orderNum,
             paymentIntentId: pi.id,
@@ -664,6 +664,7 @@
   </script>
 </body>
 </html>
+
 
 
 
