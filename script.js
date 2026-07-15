@@ -1503,16 +1503,6 @@ function requireAuth(dest) {
   return false; // prevent default link navigation
 }
 
-// Guard nav catalog links on pages that include the main nav
-(function () {
-  document.querySelectorAll('a[href="/catalog"]').forEach(link => {
-    if (!link.getAttribute('onclick')) {
-      link.addEventListener('click', e => {
-        if (!requireAuth('/catalog')) e.preventDefault();
-      });
-    }
-  });
-})();
 
 function updateLoginUI() {
   const isLoggedIn = localStorage.getItem("loggedIn") === "true";
