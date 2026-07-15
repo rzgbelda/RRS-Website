@@ -4499,9 +4499,12 @@ span.flatpickr-weekday {
   margin-bottom: 6px;
 }
 
-.card-fields input {
+.card-fields input, .card-fields .full input {
   width: 100%;
   max-width: 100%;
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
   box-sizing: border-box;
   padding: 13px;
   border: 1px solid #cfd6df;
