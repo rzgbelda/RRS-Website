@@ -1,4 +1,4 @@
-console.log("Script loaded!");
+﻿console.log("Script loaded!");
 
 let allProducts = [];
 let featuredProducts = [];
@@ -1899,105 +1899,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupPaymentMethods();
 });
 
-document.getElementById("submitOrderBtn")?.addEventListener("click", async e => {
-  e.preventDefault();
-
-  const btn = document.getElementById("submitOrderBtn");
-  const originalText = btn.textContent;
-  btn.textContent = "Submitting…";
-  btn.disabled = true;
-
-  try {
-    // Read checkout data saved from checkout.html
-    const cd = JSON.parse(localStorage.getItem("rrs_checkout_data") || "{}");
-    const business  = cd.business  || "";
-    const contact   = cd.contact   || "";
-    const phone     = cd.phone     || "";
-    const email     = cd.email     || "";
-    const street    = cd.street    || "";
-    const city      = cd.city      || "";
-    const state     = cd.state     || "";
-    const zip       = cd.zip       || "";
-    const notes     = cd.notes     || "";
-    const orderType = cd.orderType || "one_time";
-    const referral  = cd.referral  || null;
-
-    // Validate required fields
-    if (!business) { alert("Please enter your business name on the Customer Details page."); btn.textContent = originalText; btn.disabled = false; return; }
-    if (!phone)    { alert("Please enter your phone number on the Customer Details page.");  btn.textContent = originalText; btn.disabled = false; return; }
-    if (!street)   { alert("Please enter your delivery address on the Customer Details page."); btn.textContent = originalText; btn.disabled = false; return; }
-
-    // Get cart
-    const cart = getCart();
-    if (!cart.length) { alert("Your cart is empty."); btn.textContent = originalText; btn.disabled = false; return; }
-
-    // Get subtotal
-    const subtotalText = document.getElementById("payment-subtotal")?.textContent || "0";
-    const subtotal = parseFloat(subtotalText.replace(/[^0-9.]/g, "")) || 0;
-
-    // Get selected freight quote
-    const freightQuote = JSON.parse(localStorage.getItem("rrs_freight_quote") || "null");
-    const shippingCost = freightQuote ? parseFloat(freightQuote.total_charge || freightQuote.price || 0) : 0;
-    const tax = parseFloat((subtotal * 0.07).toFixed(2));
-    const total = subtotal + shippingCost + tax;
-
-    // Get logged-in user (optional — guests allowed)
-    const { data: { session } } = await window.sb.auth.getSession();
-    const userId = session?.user?.id || null;
-
-    // Insert order
-    const { data: order, error: orderErr } = await window.sb
-      .from("orders")
-      .insert({
-        user_id:          userId,
-        customer_name:    contact || business,
-        customer_email:   email   || null,
-        business_name:    business,
-        phone:            phone,
-        shipping_address: { street, city, state, zip },
-        order_type:       orderType,
-        subtotal:         subtotal,
-        total:            total,
-        status:           "pending",
-        payment_method:   "invoice",
-        notes:            [
-          notes,
-          freightQuote ? `Freight: ${freightQuote.carrier_name || freightQuote.carrier || "TBD"} $${Number(shippingCost).toFixed(2)} (${freightQuote.transit_days || "?"} days)` : "",
-          referral ? `Referral code: ${referral}` : "",
-        ].filter(Boolean).join(" | ") || null,
-      })
-      .select("id, order_number")
-      .single();
-
-    if (orderErr) throw orderErr;
-
-    // Insert order items
-    const items = cart.map(item => ({
-      order_id:   order.id,
-      name:       item.name || item.productName || "Item",
-      price:      parseFloat(item.price) || 0,
-      quantity:   item.quantity || 1,
-      subtotal:   (parseFloat(item.price) || 0) * (item.quantity || 1),
-    }));
-
-    const { error: itemsErr } = await window.sb.from("order_items").insert(items);
-    if (itemsErr) console.warn("Order items insert error:", itemsErr.message);
-
-    // Clear cart
-    localStorage.removeItem("cart");
-
-    // Show confirmation
-    document.getElementById("orderRef").textContent = order.order_number;
-    document.getElementById("orderModal").classList.add("show");
-
-  } catch (err) {
-    console.error("Order submission error:", err);
-    alert("There was a problem submitting your order. Please try again or call us directly.");
-  } finally {
-    btn.textContent = originalText;
-    btn.disabled = false;
-  }
-});
 
 // Profile page functionality
 async function setupProfilePage() {
