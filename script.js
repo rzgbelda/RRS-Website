@@ -1430,6 +1430,11 @@ function setupMobileNav() {
 function setupLogin() {
   updateLoginUI();
 
+  // Capture ?redirect= param so we can bounce back after login
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectParam = urlParams.get("redirect");
+  if (redirectParam) sessionStorage.setItem("authRedirect", redirectParam);
+
   const loginForm = document.getElementById("loginForm");
 
   if (loginForm) {

@@ -486,28 +486,41 @@
 
                 </div>
 
-                <!-- Hidden legacy competitor section (accordion removed, now inline above) -->
-                <div id="competitorQuoteSection" style="display:none;"></div>
+                <!-- Items box -->
+                <div class="vq-items-section">
+                    <div class="vq-items-header">
+                        <div>
+                            <p class="vq-items-title">Products You Need Quoted</p>
+                            <p class="vq-items-sub">Add the products and case quantities you regularly order.</p>
+                        </div>
+                        <a href="/catalog" class="vq-catalog-btn" target="_blank">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            Browse Catalog
+                        </a>
+                    </div>
 
-                <!-- Products selected for volume quote -->
-                <div id="quoteBasketPanel" style="display:none;margin-bottom:20px;">
-                    <label style="font-weight:700;font-size:13px;color:#1e293b;display:block;margin-bottom:10px;">
-                        Products Requested for Volume Pricing
-                        <span style="font-weight:400;color:#64748b;margin-left:6px;">— edit quantities below</span>
-                    </label>
-                    <div id="quoteBasketItems"></div>
-                    <button type="button" id="clearQuoteBasket" style="margin-top:8px;font-size:12px;color:#e8621a;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">
-                        Clear all
+                    <div id="vqItemsList">
+                        <!-- rows added by JS -->
+                    </div>
+
+                    <button type="button" id="vqAddRow" class="vq-add-row-btn">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                        Add another product
                     </button>
                 </div>
 
-                <label class="notes-label">
-                    Additional Notes
-                </label>
+                <!-- Products from basket (AI match) -->
+                <div id="quoteBasketPanel" style="display:none;margin-bottom:20px;">
+                    <label style="font-weight:700;font-size:13px;color:#1e293b;display:block;margin-bottom:10px;">
+                        Products Added via AI Match
+                        <span style="font-weight:400;color:#64748b;margin-left:6px;">— edit quantities below</span>
+                    </label>
+                    <div id="quoteBasketItems"></div>
+                    <button type="button" id="clearQuoteBasket" style="margin-top:8px;font-size:12px;color:#e8621a;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Clear all</button>
+                </div>
 
-                <textarea id="qNotes"
-                    placeholder="Tell us anything else that will help us quote your business."
-                ></textarea>
+                <label class="notes-label">Additional Notes</label>
+                <textarea id="qNotes" placeholder="Tell us anything else that will help us quote your business."></textarea>
 
                 <div id="quoteFormMsg" style="display:none;margin-bottom:12px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;"></div>
 
@@ -816,6 +829,22 @@
 </div>
 <!-- ── End Contact Modal ──────────────────────────────────── -->
 
+<!-- ── Quote Success Modal ───────────────────────────────── -->
+<div id="quoteSuccessModal" style="display:none;position:fixed;inset:0;background:rgba(11,31,56,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:#fff;border-radius:20px;padding:48px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.2);">
+    <div style="width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
+      <svg width="36" height="36" fill="none" stroke="#16a34a" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h3 style="font-size:22px;font-weight:800;color:#0B1F38;margin:0 0 10px;">Request Sent!</h3>
+    <p style="font-size:15px;color:#64748b;line-height:1.6;margin:0 0 8px;">Your volume pricing request has been received. We'll review your products and quantities and send you a custom quote.</p>
+    <p style="font-size:13px;color:#94a3b8;margin:0 0 28px;">You can track the status in <strong style="color:#0B1F38;">My Account → Quotation Requests</strong>.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <a href="/account" style="background:#ED7226;color:#fff;font-size:14px;font-weight:800;padding:14px;border-radius:10px;text-decoration:none;display:block;">View My Quotation Requests</a>
+      <button onclick="document.getElementById('quoteSuccessModal').style.display='none';" style="background:none;border:1.5px solid #e2e8f0;color:#64748b;font-size:14px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer;">Close</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
 <!-- ── CMS: Load Hero & About content from Supabase ── -->
@@ -969,6 +998,43 @@
   // Poll for updates when quote buttons on the same page update the basket
   setInterval(renderBasketPanel, 800);
 
+  // ── Manual items rows ────────────────────────────────────────
+  function addVqRow(name = '', qty = 1) {
+    const row = document.createElement('div');
+    row.className = 'vq-item-row';
+    row.innerHTML = `
+      <input type="text" class="vq-item-name" placeholder="Product name or description" value="${name}">
+      <input type="number" class="vq-item-qty" min="1" value="${qty}" placeholder="Cases">
+      <button type="button" class="vq-remove-btn" title="Remove">×</button>
+    `;
+    row.querySelector('.vq-remove-btn').addEventListener('click', () => {
+      row.remove();
+      if (!document.querySelectorAll('.vq-item-row').length) addVqRow();
+    });
+    document.getElementById('vqItemsList').appendChild(row);
+  }
+
+  function initVqRows() {
+    document.getElementById('vqItemsList').innerHTML = '';
+    // Restore pending items or start with 2 blank rows
+    const pending = JSON.parse(localStorage.getItem('vq_pending') || 'null');
+    if (pending?.items?.length) {
+      pending.items.forEach(i => addVqRow(i.name, i.quantity));
+      // Restore other fields
+      if (pending.business_name) document.getElementById('qBusinessName').value = pending.business_name;
+      if (pending.customer_type) document.getElementById('qCustomerType').value = pending.customer_type;
+      if (pending.contact_name)  document.getElementById('qContactName').value  = pending.contact_name;
+      if (pending.email)         document.getElementById('qEmail').value         = pending.email;
+      if (pending.notes)         document.getElementById('qNotes').value         = pending.notes;
+      localStorage.removeItem('vq_pending');
+    } else {
+      addVqRow(); addVqRow();
+    }
+  }
+
+  document.getElementById('vqAddRow').addEventListener('click', () => addVqRow());
+  initVqRows();
+
   // ── Form submit ──────────────────────────────────────────────
   const form      = document.getElementById('quoteForm');
   const submitBtn = document.getElementById('quoteSubmitBtn');
@@ -976,6 +1042,23 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // ── Login gate ──────────────────────────────────────────────
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      // Save form state so we can restore after login
+      localStorage.setItem('vq_pending', JSON.stringify({
+        business_name: document.getElementById('qBusinessName').value.trim(),
+        customer_type: document.getElementById('qCustomerType').value.trim(),
+        contact_name:  document.getElementById('qContactName').value.trim(),
+        email:         document.getElementById('qEmail').value.trim(),
+        notes:         document.getElementById('qNotes').value.trim(),
+        items:         collectManualItems(),
+      }));
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.hash + '#business-pricing');
+      return;
+    }
+
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending…';
     msgEl.style.display = 'none';
@@ -984,34 +1067,32 @@
       let file_url  = null;
       let file_name = null;
 
-      // Upload file to Supabase Storage if one was selected
       if (selectedFile) {
         const ext  = selectedFile.name.split('.').pop();
         const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, selectedFile, {
-          contentType: selectedFile.type,
-          upsert: false,
-        });
+        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, selectedFile, { contentType: selectedFile.type, upsert: false });
         if (upErr) throw new Error('File upload failed: ' + upErr.message);
         const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
         file_url  = urlData.publicUrl;
         file_name = selectedFile.name;
       }
 
-      // Read current basket quantities (user may have edited them)
-      const basket = getBasket();
+      // Merge manual items + AI basket items
+      const manualItems = collectManualItems();
+      const basketItems = getBasket();
+      const allItems = [...manualItems, ...basketItems];
 
-      // Call edge function — saves to DB and sends email
       const res = await fetch(QUOTE_FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
         body: JSON.stringify({
-          business_name:  document.getElementById('qBusinessName').value.trim(),
-          customer_type:  document.getElementById('qCustomerType').value.trim(),
-          contact_name:   document.getElementById('qContactName').value.trim(),
-          email:          document.getElementById('qEmail').value.trim(),
-          notes:          document.getElementById('qNotes').value.trim(),
-          requested_items: basket,
+          business_name:   document.getElementById('qBusinessName').value.trim(),
+          customer_type:   document.getElementById('qCustomerType').value.trim(),
+          contact_name:    document.getElementById('qContactName').value.trim(),
+          email:           document.getElementById('qEmail').value.trim(),
+          notes:           document.getElementById('qNotes').value.trim(),
+          requested_items: allItems,
+          user_id:         session.user.id,
           file_url,
           file_name,
         }),
@@ -1020,21 +1101,29 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed.');
 
-      showMsg('Thank you! We received your volume pricing request and will be in touch within 1 business day.', true);
       form.reset();
       selectedFile = null;
-      uploadTitle.textContent = "Drop your competitor's quote here";
-      uploadBox.style.borderColor = '';
       saveBasket([]);
       renderBasketPanel();
+      initVqRows();
+      // Show success modal
+      const modal = document.getElementById('quoteSuccessModal');
+      modal.style.display = 'flex';
 
     } catch (err) {
       showMsg(err.message || 'Something went wrong. Please try again.', false);
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Get My Volume Price Quote';
+      submitBtn.textContent = 'Get My Volume Pricing';
     }
   });
+
+  function collectManualItems() {
+    return Array.from(document.querySelectorAll('.vq-item-row')).map(row => ({
+      name: row.querySelector('.vq-item-name').value.trim(),
+      quantity: parseInt(row.querySelector('.vq-item-qty').value) || 1,
+    })).filter(r => r.name);
+  }
 
   function showMsg(text, success) {
     msgEl.textContent = text;
