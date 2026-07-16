@@ -15,8 +15,7 @@
     }
   ],
   "redirects": [
-    { "source": "/profile",            "destination": "/account",              "permanent": true },
-    { "source": "/profile?tab=orders", "destination": "/account#orders",       "permanent": true }
+    { "source": "/profile", "destination": "/account", "permanent": true }
   ],
   "rewrites": [
     { "source": "/",               "destination": "/index.html" },
