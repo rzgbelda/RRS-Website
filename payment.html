@@ -5,6 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
+  <meta name="robots" content="noindex, nofollow" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
@@ -591,13 +592,24 @@
       });
     }
 
+    var _submitting = false;
     window.handlePaymentSubmit = function (e) {
       e.preventDefault();
+      if (_submitting) return; // double-submit protection
+
       var methodEl = document.querySelector('input[name="paymentMethod"]:checked');
       var method = methodEl ? methodEl.value : '';
       var btn = document.getElementById('submitOrderBtn');
       var errEl = document.getElementById('payment-error-msg');
       errEl.style.display = 'none';
+
+      // Empty cart guard
+      var cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
+      if (!cartItems.length) {
+        errEl.textContent = 'Your cart is empty. Please add products before submitting an order.';
+        errEl.style.display = 'block';
+        return;
+      }
 
       if (method === 'invoice' || method === 'po') {
         btn.disabled = true;
@@ -617,6 +629,7 @@
       var name = document.getElementById('cardholderName') ? document.getElementById('cardholderName').value.trim() : '';
       if (!name) { showError('Please enter the name on your card.'); return; }
 
+      _submitting = true;
       btn.disabled = true;
       document.getElementById('submitBtnText').style.display = 'none';
       document.getElementById('submitBtnLoading').style.display = 'inline';
@@ -632,6 +645,7 @@
           }
         }
       }).then(function(result) {
+        _submitting = false;
         btn.disabled = false;
         document.getElementById('submitBtnText').style.display = 'inline';
         document.getElementById('submitBtnLoading').style.display = 'none';

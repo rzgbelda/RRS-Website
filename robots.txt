@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /cart
+Disallow: /checkout
+Disallow: /payment
+Disallow: /order-confirmation
+Disallow: /profile
+Disallow: /wishlist
+Disallow: /api/
+
+Sitemap: https://www.roomreadysupply.com/sitemap.xml

@@ -2134,6 +2134,9 @@ async function submitContactForm(e) {
   e.preventDefault();
   if (!window.sb) return;
 
+  // Honeypot check — bots fill this field, humans leave it blank
+  if (document.getElementById("ciqHoneypot")?.value) return;
+
   const now = Date.now();
   if (now - _ciqLastSubmit < 30000) {
     showCiqError("Please wait before submitting again.");

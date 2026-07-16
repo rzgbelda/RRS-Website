@@ -4,7 +4,8 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Payment | Room Ready Supply</title>
+  <title>Checkout | Room Ready Supply</title>
+  <meta name="robots" content="noindex, nofollow" />
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
@@ -550,6 +551,9 @@ function saveCheckoutAndProceed() {
       </div>
 
       <div id="ciqError" class="ciq-error-msg" style="display:none"></div>
+
+      <!-- honeypot: bots fill this, humans don't see it -->
+      <input type="text" name="website" id="ciqHoneypot" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true" />
 
       <div class="ciq-footer">
         <button type="button" class="ciq-btn-secondary" onclick="closeContactModal()">Cancel</button>
