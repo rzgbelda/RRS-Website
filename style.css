@@ -4019,7 +4019,7 @@ span.flatpickr-weekday {
 
 .qty-control {
   display: grid;
-  grid-template-columns: 42px 1fr 42px 35px;
+  grid-template-columns: 42px 56px 42px 35px;
   align-items: center;
   height: 42px;
   margin-bottom: 18px;
@@ -4047,7 +4047,7 @@ span.flatpickr-weekday {
   color: #0B1F38;
   background: #fff;
   text-align: center;
-  width: 100%;
+  width: 56px;
   outline: none;
   -moz-appearance: textfield;
   padding: 0;
