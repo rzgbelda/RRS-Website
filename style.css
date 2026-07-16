@@ -4050,7 +4050,7 @@ span.flatpickr-weekday {
   font-family: inherit;
   color: #0B1F38;
   background: #fff;
-  text-align: center;
+  text-align: center !important;
   line-height: 42px;
   outline: none;
   -moz-appearance: textfield;
