@@ -1276,7 +1276,7 @@ padding-top: 20px;
 
 /* ── AI Teaser Section ───────────────────────────── */
 .ai-teaser-section {
-  background: linear-gradient(135deg, #0B1F38 0%, #0f2d50 100%);
+  background: linear-gradient(135deg, #0B1F38 0%, #1a3a5c 50%, #0f2d50 100%);
   padding: 56px 50px;
 }
 .ai-teaser-inner {
@@ -1314,9 +1314,10 @@ padding-top: 20px;
 .ai-teaser-title {
   font-size: 26px;
   font-weight: 900;
-  color: #fff;
+  color: #ffffff !important;
   line-height: 1.25;
   margin: 0 0 14px;
+  text-shadow: 0 1px 3px rgba(0,0,0,.3);
 }
 .ai-teaser-body {
   font-size: 14px;
