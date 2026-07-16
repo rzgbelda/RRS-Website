@@ -1203,18 +1203,20 @@
     const unmatched = data.unmatched || [];
     const supplier  = data.supplier_name ? `from <strong>${data.supplier_name}</strong>` : '';
 
-    competitorResHdr.innerHTML = `
-      <div style="padding:10px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;font-size:13px;color:#1e40af;">
-        AI found <strong>${currentMatches.length} matching product${currentMatches.length !== 1 ? 's' : ''}</strong>
-        ${supplier} in our catalog
-        ${unmatched.length ? ` and <strong>${unmatched.length} item${unmatched.length !== 1 ? 's' : ''}</strong> with no equivalent` : ''}.
-      </div>`;
+    const modal         = document.getElementById('aiResultsModal');
+    const modalTitle    = document.getElementById('aiResultsTitle');
+    const modalMatched  = document.getElementById('aiModalMatchedSection');
+    const modalMatchedL = document.getElementById('aiModalMatchedList');
+    const modalUnmatched  = document.getElementById('aiModalUnmatchedSection');
+    const modalUnmatchedL = document.getElementById('aiModalUnmatchedList');
+
+    modalTitle.innerHTML = `AI found <strong style="color:#ED7226">${currentMatches.length}</strong> matching product${currentMatches.length !== 1 ? 's' : ''}${supplier ? ' ' + supplier : ''} in our catalog`;
 
     // Render matched
     if (currentMatches.length > 0) {
-      matchedList.innerHTML = currentMatches.map((m, i) => `
+      modalMatchedL.innerHTML = currentMatches.map((m, i) => `
         <div class="competitor-match-row">
-          <input type="checkbox" id="cm_${i}" data-idx="${i}" checked>
+          <input type="checkbox" id="mcm_${i}" data-idx="${i}" checked>
           <div class="competitor-match-info">
             <div class="competitor-match-name">${m.rrs_name}</div>
             <div class="competitor-match-meta">
@@ -1226,30 +1228,30 @@
           </div>
           <span class="competitor-match-badge badge-${m.confidence || 'medium'}">${m.confidence || 'medium'}</span>
         </div>`).join('');
-      matchedSection.style.display = 'block';
+      modalMatched.style.display = 'block';
     } else {
-      matchedSection.style.display = 'none';
+      modalMatched.style.display = 'none';
     }
 
     // Render unmatched
     if (unmatched.length > 0) {
-      unmatchedList.innerHTML = unmatched.map(u => `
+      modalUnmatchedL.innerHTML = unmatched.map(u => `
         <div class="competitor-unmatched-row">
           <strong>${u.line_item}</strong>
           ${u.competitor_unit_price ? ` — $${Number(u.competitor_unit_price).toFixed(2)}` : ''}
           ${u.reason ? `<br><span style="color:#94a3b8;font-size:11px;">${u.reason}</span>` : ''}
         </div>`).join('');
-      unmatchedSection.style.display = 'block';
+      modalUnmatched.style.display = 'block';
     } else {
-      unmatchedSection.style.display = 'none';
+      modalUnmatched.style.display = 'none';
     }
 
-    competitorRes.style.display = 'block';
+    modal.style.display = 'block';
   }
 
-  addMatchedBtn.addEventListener('click', () => {
+  document.getElementById('aiModalAddBasketBtn').addEventListener('click', function() {
     const basket = getBasket();
-    const checkboxes = matchedList.querySelectorAll('input[type=checkbox]:checked');
+    const checkboxes = document.getElementById('aiModalMatchedList').querySelectorAll('input[type=checkbox]:checked');
     let added = 0;
     checkboxes.forEach(cb => {
       const idx = parseInt(cb.dataset.idx);
@@ -1270,13 +1272,14 @@
     });
     saveBasket(basket);
     renderBasketPanel();
-    addMatchedBtn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`;
-    addMatchedBtn.style.background = '#16a34a';
+    const btn = document.getElementById('aiModalAddBasketBtn');
+    btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`;
+    btn.style.background = '#16a34a';
     setTimeout(() => {
-      addMatchedBtn.textContent = 'Add Selected Matches to Quote Basket';
-      addMatchedBtn.style.background = '';
-    }, 2500);
-    // Scroll to basket
+      btn.textContent = 'Add Selected Matches to Quote Basket';
+      btn.style.background = '';
+      document.getElementById('aiResultsModal').style.display = 'none';
+    }, 1800);
     document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   });
 
@@ -1284,4 +1287,30 @@
 </script>
 <!-- ── End Quote Request Form ────────────────────────────────── -->
 
+<!-- AI Results Modal -->
+<div id="aiResultsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 16px;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="max-width:680px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;">
+    <!-- Header -->
+    <div style="background:#0B1F38;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">AI Price Matching</div>
+        <div id="aiResultsTitle" style="color:#fff;font-size:18px;font-weight:800;"></div>
+      </div>
+      <button onclick="document.getElementById('aiResultsModal').style.display='none'" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
+    </div>
+    <!-- Body -->
+    <div style="padding:24px;">
+      <div id="aiModalMatchedSection" style="display:none;margin-bottom:20px;">
+        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
+        <div id="aiModalMatchedList"></div>
+        <button type="button" id="aiModalAddBasketBtn" style="margin-top:14px;width:100%;padding:11px 18px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
+      </div>
+      <div id="aiModalUnmatchedSection" style="display:none;">
+        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
+        <div id="aiModalUnmatchedList"></div>
+        <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">These items aren't in our catalog yet. Mention them in the notes field below.</p>
+      </div>
+    </div>
+  </div>
+</div>
 </body>
