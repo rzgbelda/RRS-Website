@@ -4036,21 +4036,25 @@ span.flatpickr-weekday {
 
 .qty-control span,
 .qty-control input[type="number"] {
+  box-sizing: border-box;
   height: 42px;
+  width: 56px;
   border-top: 1px solid #d0d7df;
   border-bottom: 1px solid #d0d7df;
   border-right: 1px solid #d0d7df;
   border-left: none;
+  padding: 0;
+  margin: 0;
   font-weight: 800;
   font-size: 15px;
   font-family: inherit;
   color: #0B1F38;
   background: #fff;
   text-align: center;
-  width: 56px;
+  line-height: 42px;
   outline: none;
   -moz-appearance: textfield;
-  padding: 0;
+  display: block;
 }
 .qty-control input[type="number"]::-webkit-inner-spin-button,
 .qty-control input[type="number"]::-webkit-outer-spin-button {
