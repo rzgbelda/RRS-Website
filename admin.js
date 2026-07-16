@@ -7,10 +7,11 @@ window._adminRole = "admin"; // default; overwritten below
 
 async function loadWarpModeBadge() {
   try {
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
-    const res = await fetch("https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote", {
+    // Removed — Warp replaced by Estes Express
+    return;
+    const res = await fetch("", {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${SUPABASE_ANON_KEY}` },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "mode" }),
     });
     const { mode } = await res.json();
@@ -1437,7 +1438,9 @@ async function openOrderModal(id) {
   openModal("orderModal");
 }
 
-function showWarpConfirmDialog({ orderNumber, customer, business, shipTo, total, freightCost, carrier, isLive }) {
+function showWarpConfirmDialog() { return Promise.resolve(false); } // removed — use bookWithEstes
+
+function _showWarpConfirmDialogUnused({ orderNumber, customer, business, shipTo, total, freightCost, carrier, isLive }) {
   return new Promise((resolve) => {
     const existing = document.getElementById("warpConfirmOverlay");
     if (existing) existing.remove();
@@ -1493,6 +1496,10 @@ function showWarpConfirmDialog({ orderNumber, customer, business, shipTo, total,
 }
 
 async function approveAndBookWithWarp(orderId) {
+  return bookWithEstes(orderId); // Warp removed — Estes Express is the carrier
+}
+
+async function _approveAndBookWithWarpUnused(orderId) {
   const resultEl = document.getElementById("orderActionResult");
 
   // Fetch order details first for the confirmation dialog
