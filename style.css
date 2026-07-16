@@ -1196,7 +1196,7 @@ padding-top: 20px;
 /* HERO BAND */
 
 .pricing-hero-band {
-    background: #0B1F38;
+    background: linear-gradient(160deg, #071628 0%, #0B1F38 40%, #0e2845 100%);
     padding: 52px 50px 44px;
 }
 
@@ -1276,7 +1276,7 @@ padding-top: 20px;
 
 /* ── AI Teaser Section ───────────────────────────── */
 .ai-teaser-section {
-  background: linear-gradient(135deg, #0B1F38 0%, #1a3a5c 50%, #0f2d50 100%);
+  background: linear-gradient(160deg, #0e2845 0%, #0f2d50 50%, #0B1F38 100%);
   padding: 56px 50px;
 }
 .ai-teaser-inner {
@@ -1735,7 +1735,7 @@ padding-top: 20px;
 
 .ai-upload-card {
   flex: 1;
-  background: linear-gradient(160deg, #0f2640 0%, #0B1F38 100%);
+  background: linear-gradient(160deg, #1e3a52 0%, #16304a 100%);
   border-radius: 16px;
   padding: 20px;
   display: flex;
@@ -1743,7 +1743,8 @@ padding-top: 20px;
   gap: 14px;
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255,255,255,.08);
+  border: 1.5px solid rgba(237,114,38,.35);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 8px 32px rgba(0,0,0,.3);
 }
 
 /* Subtle dot grid */
@@ -1751,7 +1752,7 @@ padding-top: 20px;
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);
   background-size: 18px 18px;
   pointer-events: none;
 }
