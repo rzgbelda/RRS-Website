@@ -109,7 +109,7 @@
         </svg>
       </div>
       <h2>Order Summary</h2>
-      <div style="margin-left:auto;"><span class="status-paid"><span class="status-dot"></span>Payment Received</span></div>
+      <div style="margin-left:auto;" id="paymentStatusBadge"></div>
     </div>
     <div class="confirm-card-body">
       <div class="order-items" id="confirmItems">
@@ -221,6 +221,17 @@
 
   // Badge
   document.getElementById('confirmOrderBadge').textContent = 'Order #' + orderNum;
+
+  // Payment status badge — only show "Payment Received" for card payments
+  var paymentMethod = lastOrder.paymentMethod || 'card';
+  var badgeEl = document.getElementById('paymentStatusBadge');
+  if (paymentMethod === 'card') {
+    badgeEl.innerHTML = '<span class="status-paid"><span class="status-dot"></span>Payment Received</span>';
+  } else if (paymentMethod === 'invoice') {
+    badgeEl.innerHTML = '<span class="status-paid" style="background:#fffbeb;border-color:#fde68a;color:#92400e;"><span class="status-dot" style="background:#f59e0b;"></span>Invoice Requested</span>';
+  } else if (paymentMethod === 'po') {
+    badgeEl.innerHTML = '<span class="status-paid" style="background:#eff6ff;border-color:#bfdbfe;color:#1e40af;"><span class="status-dot" style="background:#3b82f6;"></span>PO Submitted</span>';
+  }
 
   // Items
   const items = lastOrder.items || [];

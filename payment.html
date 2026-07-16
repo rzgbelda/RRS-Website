@@ -645,6 +645,7 @@
           localStorage.setItem('rrs_last_order', JSON.stringify({
             orderNumber: orderNum,
             paymentIntentId: pi.id,
+            paymentMethod: 'card',
             total: window._orderTotal,
             items: window._orderItems,
             checkout: checkout
