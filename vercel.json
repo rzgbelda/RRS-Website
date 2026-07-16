@@ -1,5 +1,6 @@
 {
   "cleanUrls": true,
+  "$comment": "profile→account redirect added 2026-07-17",
   "headers": [
     {
       "source": "/(.*)\\.html",
