@@ -1,5 +1,19 @@
 {
   "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)\\.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    },
+    {
+      "source": "/(account|admin|cart|checkout|login|payment|catalog|product|profile|wishlist|reset-password|order-confirmation)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ],
   "rewrites": [
     { "source": "/",               "destination": "/index.html" },
     { "source": "/catalog",        "destination": "/catalog.html" },
