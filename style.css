@@ -1287,7 +1287,7 @@ padding-top: 20px;
   margin: 0 auto;
 }
 .ai-teaser-left { flex: 1; }
-.ai-teaser-right { flex: 0 0 220px; }
+.ai-teaser-right { flex: 0 0 300px; }
 
 .ai-teaser-pill {
   display: inline-flex;
