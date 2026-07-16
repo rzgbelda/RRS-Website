@@ -4015,6 +4015,7 @@ span.flatpickr-weekday {
   font-size: 14px;
   font-weight: 800;
   margin-bottom: 14px;
+  text-align: center;
 }
 
 .qty-control {
@@ -4024,7 +4025,8 @@ span.flatpickr-weekday {
   height: 42px;
   margin-bottom: 18px;
   width: fit-content;
-  margin-left: 0;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .qty-control button {
