@@ -819,7 +819,7 @@ function setupAddToCartButtons() {
       let quantity = 1;
 
       if (qtyValue && button.id === "productAddToCart") {
-        quantity = Number(qtyValue.textContent) || 1;
+        quantity = Math.max(1, parseInt(qtyValue.value || qtyValue.textContent) || 1);
       }
 
       const product = {
@@ -996,9 +996,10 @@ function setupProductQuantity() {
 
   if (!qtyValue || !plusQty || !minusQty || !productPriceEl || !addBtn) return;
 
-  function updateProductPagePrice() {
-    const qty = Number(qtyValue.textContent) || 1;
+  function getQty() { return Math.max(1, parseInt(qtyValue.value) || 1); }
 
+  function updateProductPagePrice() {
+    const qty = getQty();
     const item = {
       quantity: qty,
       price: addBtn.dataset.price,
@@ -1006,25 +1007,30 @@ function setupProductQuantity() {
       price2: addBtn.dataset.price2,
       price3: addBtn.dataset.price3
     };
-
-    const tierPrice = getTierPrice(item);
-
-    productPriceEl.textContent = `$${tierPrice.toFixed(2)}`;
+    productPriceEl.textContent = `$${getTierPrice(item).toFixed(2)}`;
   }
 
   plusQty.onclick = () => {
-    qtyValue.textContent = Number(qtyValue.textContent) + 1;
+    qtyValue.value = getQty() + 1;
     updateProductPagePrice();
   };
 
   minusQty.onclick = () => {
-    const currentQty = Number(qtyValue.textContent) || 1;
-
-    if (currentQty > 1) {
-      qtyValue.textContent = currentQty - 1;
-      updateProductPagePrice();
-    }
+    const q = getQty();
+    if (q > 1) { qtyValue.value = q - 1; updateProductPagePrice(); }
   };
+
+  qtyValue.addEventListener("input", () => {
+    let v = parseInt(qtyValue.value) || 1;
+    if (v < 1) v = 1;
+    qtyValue.value = v;
+    updateProductPagePrice();
+  });
+
+  qtyValue.addEventListener("blur", () => {
+    qtyValue.value = getQty();
+    updateProductPagePrice();
+  });
 
   updateProductPagePrice();
 }

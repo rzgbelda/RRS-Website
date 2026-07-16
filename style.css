@@ -4034,15 +4034,30 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
-.qty-control span {
+.qty-control span,
+.qty-control input[type="number"] {
   height: 42px;
   border-top: 1px solid #d0d7df;
   border-bottom: 1px solid #d0d7df;
   border-right: 1px solid #d0d7df;
+  border-left: none;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
+  font-size: 15px;
+  font-family: inherit;
+  color: #0B1F38;
+  background: #fff;
+  text-align: center;
+  width: 56px;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.qty-control input[type="number"]::-webkit-inner-spin-button,
+.qty-control input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .add-order-btn {
