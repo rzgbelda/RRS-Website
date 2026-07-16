@@ -1191,12 +1191,13 @@ padding-top: 20px;
 .pricing-left {
     display: flex;
     flex-direction: column;
+    background: #0B1F38;
 }
 
 /* HERO BAND */
 
 .pricing-hero-band {
-    background: linear-gradient(160deg, #071628 0%, #0B1F38 40%, #0e2845 100%);
+    background: transparent;
     padding: 52px 50px 44px;
 }
 
@@ -1276,7 +1277,7 @@ padding-top: 20px;
 
 /* ── AI Teaser Section ───────────────────────────── */
 .ai-teaser-section {
-  background: linear-gradient(160deg, #0e2845 0%, #0f2d50 50%, #0B1F38 100%);
+  background: transparent;
   padding: 56px 50px;
 }
 .ai-teaser-inner {
