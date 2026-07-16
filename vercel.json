@@ -14,6 +14,10 @@
       ]
     }
   ],
+  "redirects": [
+    { "source": "/profile",            "destination": "/account",              "permanent": true },
+    { "source": "/profile?tab=orders", "destination": "/account#orders",       "permanent": true }
+  ],
   "rewrites": [
     { "source": "/",               "destination": "/index.html" },
     { "source": "/catalog",        "destination": "/catalog.html" },
@@ -21,7 +25,6 @@
     { "source": "/cart",           "destination": "/cart.html" },
     { "source": "/checkout",       "destination": "/checkout.html" },
     { "source": "/login",          "destination": "/login.html" },
-    { "source": "/profile",        "destination": "/profile.html" },
     { "source": "/payment",        "destination": "/payment.html" },
     { "source": "/admin",          "destination": "/admin.html" },
     { "source": "/account",        "destination": "/account.html" },
