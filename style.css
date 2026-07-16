@@ -4019,13 +4019,12 @@ span.flatpickr-weekday {
 
 .qty-control {
   display: grid;
-  grid-template-columns: 42px 56px 42px 35px;
+  grid-template-columns: 42px 56px 42px;
   align-items: center;
   height: 42px;
   margin-bottom: 18px;
   width: fit-content;
-  margin-left: auto;
-  margin-right: auto;
+  margin-left: 0;
 }
 
 .qty-control button {
