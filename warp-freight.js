@@ -3,8 +3,8 @@
 // API key is stored securely in Supabase Edge Function — not exposed here
 
 const WARP_CONFIG = {
-  edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote',
-  parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/bright-service',
+  edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight',
+  parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/parcel-quote',
   origin: {
     street: '609 Washington St',
     city: 'Plymouth',
@@ -173,14 +173,16 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     return 'parcel';
   }
 
-  const pickup = nextBusinessDay();
+  const totalWeight = items.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
   const payload = {
-    origin_zip:      WARP_CONFIG.origin.zip,
-    destination_zip: destinationZip,
-    pickup_date:     pickup,
-    items,
+    action: 'quote',
+    payload: {
+      destination_zip: destinationZip,
+      weight_lbs: totalWeight,
+      ship_date: nextBusinessDay(),
+    },
   };
-  console.log('[Freight] LTL payload:', JSON.stringify(payload));
+  console.log('[Estes] LTL quote payload:', JSON.stringify(payload));
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
   try {
@@ -190,7 +192,7 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
       method:  'POST',
       headers: {
         'Content-Type':  'application/json',
-        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+        'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
       },
       body:   JSON.stringify(payload),
       signal: controller.signal,
@@ -198,44 +200,37 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     clearTimeout(timer);
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { console.error('[Freight] non-JSON:', text); data = null; }
-    if (!res.ok || !data) {
-      console.warn(`[Freight] attempt ${attempt} failed (status ${res.status})`);
+    try { data = JSON.parse(text); } catch(e) { console.error('[Estes] non-JSON:', text); data = null; }
+
+    if (!res.ok || !data || data.error) {
+      console.warn('[Estes] attempt ' + attempt + ' failed (' + res.status + '):', data?.error || text);
       if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
     }
 
-    let quotes = data.quotes || data.rates || null;
-    if (!quotes) {
-      if (Array.isArray(data)) quotes = data;
-      else if (data.quote_id || data.price_usd) quotes = [data];
-    }
-    if (!quotes) {
-      if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
-      return null;
-    }
-
-    quotes = quotes.map(q => ({
-      ...q,
-      total_charge: q.total_charge || q.price_usd || q.price || 0,
-      carrier_name: q.carrier_name || q.carrier || (q.mode ? 'Warp ' + q.mode.toUpperCase() : 'Warp LTL'),
-      transit_days: q.transit_days ?? q.transit_days_min ?? null,
-    }));
+    // estes-freight returns a single quote object — wrap in array
+    var quote = {
+      carrier_name:  data.carrier_name  || 'Estes Express',
+      total_charge:  data.total_charge  || 0,
+      transit_days:  data.transit_days  ?? null,
+      delivery_date: data.delivery_date ?? null,
+      quote_id:      data.quote_id      ?? null,
+      service_level: data.service_level ?? 'LTL',
+      test_mode:     data.test_mode     ?? false,
+    };
 
     const subtotal = getCartSubtotal();
-    if (subtotal > 0) {
-      const sane = quotes.filter(q => q.total_charge <= subtotal * QUOTE_SANITY_RATIO);
-      if (sane.length === 0) {
-        console.warn(`[Freight] All LTL quotes exceed ${QUOTE_SANITY_RATIO}× subtotal — flagging for review`);
-        return 'review';
-      }
-      quotes = sane;
+    if (subtotal > 0 && quote.total_charge > subtotal * QUOTE_SANITY_RATIO) {
+      console.warn('[Estes] Quote exceeds ' + QUOTE_SANITY_RATIO + '× subtotal — flagging for review');
+      return 'review';
     }
-    return quotes;
+
+    console.log('[Estes] rate received:', quote);
+    return [quote];
 
   } catch (e) {
-    const reason = e.name === 'AbortError' ? 'timeout' : e.message;
-    console.warn(`[Freight] attempt ${attempt} error: ${reason}`);
+    var reason = e.name === 'AbortError' ? 'timeout' : e.message;
+    console.warn('[Estes] attempt ' + attempt + ' error: ' + reason);
     if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
     return null;
   }
@@ -437,7 +432,7 @@ function renderQuotePanel(quotes, state) {
   panel.innerHTML = `
     <p class="fq-label">Select a shipping option:</p>
     <div class="fq-list">${rows}</div>
-    <p class="fq-note">Live shipping rates via UPS/FedEx and LTL carriers. Final pricing confirmed in your order.</p>`;
+    <p class="fq-note">Live rates via Shippo and Estes Express LTL. Final pricing confirmed in your order.</p>`;
 }
 
 function selectFreightQuote(jsonStr) {
