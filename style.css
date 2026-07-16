@@ -4041,18 +4041,16 @@ span.flatpickr-weekday {
   border-bottom: 1px solid #d0d7df;
   border-right: 1px solid #d0d7df;
   border-left: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   font-weight: 800;
   font-size: 15px;
   font-family: inherit;
   color: #0B1F38;
   background: #fff;
   text-align: center;
-  width: 56px;
+  width: 100%;
   outline: none;
   -moz-appearance: textfield;
+  padding: 0;
 }
 .qty-control input[type="number"]::-webkit-inner-spin-button,
 .qty-control input[type="number"]::-webkit-outer-spin-button {
