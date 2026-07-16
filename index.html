@@ -929,33 +929,6 @@
   // Poll for updates when quote buttons on the same page update the basket
   setInterval(renderBasketPanel, 800);
 
-  // ── File upload wiring ───────────────────────────────────────
-  const uploadBox    = document.getElementById('competitorDropZone');
-  const uploadInput  = document.getElementById('competitorFile');
-  const uploadTitle  = document.getElementById('competitorDropText');
-  let selectedFile   = null;
-
-  uploadInput.addEventListener('change', () => setFile(uploadInput.files[0]));
-
-  uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.classList.add('drag-over'); });
-  uploadBox.addEventListener('dragleave', () => uploadBox.classList.remove('drag-over'));
-  uploadBox.addEventListener('drop', e => {
-    e.preventDefault();
-    uploadBox.classList.remove('drag-over');
-    const f = e.dataTransfer.files[0];
-    if (f) setFile(f);
-  });
-
-  function setFile(f) {
-    if (!f) return;
-    if (f.size > 10 * 1024 * 1024) { showMsg('File must be under 10 MB.', false); return; }
-    selectedFile = f;
-    uploadTitle.textContent = f.name;
-    uploadBox.style.borderColor = '#e8621a';
-    const analyzeBtn = document.getElementById('analyzeCompetitorBtn');
-    if (analyzeBtn) analyzeBtn.disabled = false;
-  }
-
   // ── Form submit ──────────────────────────────────────────────
   const form      = document.getElementById('quoteForm');
   const submitBtn = document.getElementById('quoteSubmitBtn');
