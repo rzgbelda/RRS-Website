@@ -1309,7 +1309,7 @@ async function renderOrdersTable(filter) {
       <td>${escHtml(o.customer_name || "—")}</td>
       <td>${escHtml(o.business_name || "—")}</td>
       <td>${items.length} item${items.length !== 1 ? "s" : ""}</td>
-      <td>$${totalDollars}</td>`;
+      <td>$${totalDollars}</td>
       <td>${fmt(o.created_at)}</td>
       <td>
         <select onchange="updateOrderStatus('${o.id}', this.value)" class="a-select" style="font-size:12px;width:auto;min-width:130px">
