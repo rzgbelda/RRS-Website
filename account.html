@@ -494,7 +494,7 @@
         // Update email if changed
         const newEmail = document.getElementById("profileEmail").value.trim();
         if (newEmail && newEmail !== session.user.email) {
-          const { error: emailErr } = await window.sb.auth.updateUser({ email: newEmail });
+          const { error: emailErr } = await window.sb.auth.updateUser({ email: newEmail }, { emailRedirectTo: window.location.origin + '/account' });
           if (emailErr) { errorEl.textContent = "Email update failed: " + emailErr.message; errorEl.style.display = "block"; return; }
           successEl.textContent = "Profile saved! Check your new email address for a confirmation link.";
         } else {
