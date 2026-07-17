@@ -325,23 +325,159 @@
 
 </section>
 
-<section class="uq-section" id="business-pricing">
+<!-- ── Quote Hero ─────────────────────────────────────────────── -->
+<section class="qhero" id="business-pricing">
+    <div class="qhero-bg-shapes" aria-hidden="true">
+        <div class="qhero-shape qhero-shape-1"></div>
+        <div class="qhero-shape qhero-shape-2"></div>
+        <div class="qhero-shape qhero-shape-3"></div>
+    </div>
+    <div class="qhero-inner">
+        <div class="qhero-left qhero-fade-in">
+            <span class="qhero-eyebrow">VOLUME PRICING MADE SIMPLE</span>
+            <h2 class="qhero-heading">Request a <span class="qhero-accent">Custom Quote</span></h2>
+            <p class="qhero-body">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
+            <div class="qhero-ctas">
+                <a href="#uq-form" class="qhero-btn-primary" onclick="event.preventDefault();document.getElementById('uq-form').scrollIntoView({behavior:'smooth'})">
+                    Start My Quote
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                </a>
+                <a href="#uq-upload" class="qhero-btn-secondary" onclick="event.preventDefault();document.getElementById('uq-upload').scrollIntoView({behavior:'smooth'})">
+                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    Upload a Quote
+                </a>
+            </div>
+        </div>
 
-    <div class="uq-header">
-        <h2 class="uq-title">Request a Custom Quote</h2>
-        <p class="uq-subtitle">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
+        <!-- Animated AI matching illustration -->
+        <div class="qhero-right" aria-hidden="true">
+            <div class="aiv-scene">
+                <!-- Floating file card -->
+                <div class="aiv-file-card">
+                    <div class="aiv-file-icon-wrap">
+                        <svg width="18" height="18" fill="none" stroke="#ED7226" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                    </div>
+                    <div>
+                        <div class="aiv-file-name">Competitor Quote.pdf</div>
+                        <div class="aiv-file-meta">PDF · 245 KB</div>
+                    </div>
+                    <div class="aiv-file-check">✓</div>
+                </div>
+
+                <!-- Connector arrow -->
+                <div class="aiv-connector" aria-hidden="true">
+                    <svg width="60" height="60" viewBox="0 0 60 60" fill="none">
+                        <path d="M10 10 Q 30 30 50 50" stroke="#ED7226" stroke-width="2" stroke-dasharray="4 3" stroke-linecap="round" fill="none" class="aiv-arrow-path"/>
+                        <polygon points="46,54 54,46 58,58" fill="#ED7226" opacity="0.7"/>
+                    </svg>
+                </div>
+
+                <!-- AI processing panel -->
+                <div class="aiv-panel">
+                    <div class="aiv-panel-header">
+                        <span class="aiv-pulse-dot"></span>
+                        <span>AI Matching in progress…</span>
+                    </div>
+                    <div class="aiv-progress-track">
+                        <div class="aiv-progress-fill"></div>
+                    </div>
+                    <div class="aiv-products">
+                        <div class="aiv-product-row aiv-pr-1">
+                            <div class="aiv-product-thumb aiv-pt-blue"></div>
+                            <div class="aiv-product-info">
+                                <div class="aiv-product-name">Bath Tissue 2-Ply</div>
+                                <div class="aiv-product-sub">96 Rolls / Case</div>
+                            </div>
+                            <div class="aiv-product-check">✓</div>
+                        </div>
+                        <div class="aiv-product-row aiv-pr-2">
+                            <div class="aiv-product-thumb aiv-pt-green"></div>
+                            <div class="aiv-product-info">
+                                <div class="aiv-product-name">Hand Soap 800ml</div>
+                                <div class="aiv-product-sub">12 Units / Case</div>
+                            </div>
+                            <div class="aiv-product-check">✓</div>
+                        </div>
+                        <div class="aiv-product-row aiv-pr-3">
+                            <div class="aiv-product-thumb aiv-pt-orange"></div>
+                            <div class="aiv-product-info">
+                                <div class="aiv-product-name">Trash Liners 33 Gal</div>
+                                <div class="aiv-product-sub">100 ct / Case</div>
+                            </div>
+                            <div class="aiv-product-check">✓</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sparkles -->
+                <div class="aiv-sparkle aiv-sp-1">✦</div>
+                <div class="aiv-sparkle aiv-sp-2">✦</div>
+                <div class="aiv-sparkle aiv-sp-3">·</div>
+            </div>
+        </div>
     </div>
 
+    <!-- Feature benefit bar -->
+    <div class="qfeat-bar">
+        <div class="qfeat-item">
+            <div class="qfeat-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <div>
+                <div class="qfeat-title">AI Price Matching</div>
+                <div class="qfeat-sub">Upload and let our AI find the best matches</div>
+            </div>
+        </div>
+        <div class="qfeat-sep" aria-hidden="true"></div>
+        <div class="qfeat-item">
+            <div class="qfeat-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+            </div>
+            <div>
+                <div class="qfeat-title">Catalog Access</div>
+                <div class="qfeat-sub">Browse thousands of hospitality products</div>
+            </div>
+        </div>
+        <div class="qfeat-sep" aria-hidden="true"></div>
+        <div class="qfeat-item">
+            <div class="qfeat-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+            </div>
+            <div>
+                <div class="qfeat-title">Best Volume Pricing</div>
+                <div class="qfeat-sub">Competitive pricing for your business</div>
+            </div>
+        </div>
+        <div class="qfeat-sep" aria-hidden="true"></div>
+        <div class="qfeat-item">
+            <div class="qfeat-icon">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+                <div class="qfeat-title">Fast &amp; Easy</div>
+                <div class="qfeat-sub">Get your custom quote within 1 business day</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ── Quote Form ─────────────────────────────────────────────── -->
+<section class="uq-section" id="uq-form">
     <div class="uq-card">
         <form id="quoteForm">
 
             <!-- 1. Customer Information -->
-            <div class="uq-section-block">
-                <h3 class="uq-block-title">Customer Information</h3>
+            <div class="uq-section-block uq-reveal">
+                <div class="uq-section-label">
+                    <span class="uq-section-num">1</span>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    <span>Customer Information</span>
+                </div>
+                <p class="uq-section-hint">Your account details will be prefilled if you're logged in.</p>
                 <div class="uq-form-grid">
                     <div class="uq-field">
                         <label for="qBusinessName">Business Name</label>
-                        <input id="qBusinessName" type="text" placeholder="Enter your business name" required>
+                        <input id="qBusinessName" type="text" placeholder="Enter your business name" required autocomplete="organization">
                     </div>
                     <div class="uq-field">
                         <label for="qCustomerType">Customer Type</label>
@@ -361,13 +497,13 @@
                     </div>
                     <div class="uq-field">
                         <label for="qContactName">Contact Name</label>
-                        <input id="qContactName" type="text" placeholder="Your full name" required
+                        <input id="qContactName" type="text" placeholder="Your full name" required autocomplete="name"
                             oninput="this.value=this.value.replace(/[^a-zA-Z\s\-'.]/g,'')">
                         <span id="qContactNameErr" class="uq-field-err">Letters only — no numbers or special characters.</span>
                     </div>
                     <div class="uq-field">
                         <label for="qEmail">Email Address</label>
-                        <input id="qEmail" type="email" placeholder="you@business.com" required>
+                        <input id="qEmail" type="email" placeholder="you@business.com" required autocomplete="email">
                         <span id="qEmailErr" class="uq-field-err">Please enter a valid email address (must include @).</span>
                     </div>
                 </div>
@@ -376,12 +512,14 @@
             <div class="uq-divider"></div>
 
             <!-- 2. Products You Need Quoted -->
-            <div class="uq-section-block">
-                <div class="uq-block-header">
-                    <div>
-                        <h3 class="uq-block-title">Products You Need Quoted</h3>
-                        <p class="uq-block-sub">Add the products and case quantities you need. You can also type items not in our catalog.</p>
-                    </div>
+            <div class="uq-section-block uq-reveal">
+                <div class="uq-section-label">
+                    <span class="uq-section-num">2</span>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                    <span>Products You Need Quoted</span>
+                </div>
+                <div class="uq-products-header">
+                    <p class="uq-section-hint" style="margin:0">Add the products and case quantities you need. You can also type items not in our catalog.</p>
                     <a href="/catalog" class="uq-catalog-btn" target="_blank">
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
                         Browse Catalog
@@ -397,38 +535,65 @@
 
             <div class="uq-divider"></div>
 
-            <!-- 3. AI Upload -->
-            <div class="uq-section-block">
-                <h3 class="uq-block-title">Upload a Quote or Product List</h3>
-                <p class="uq-block-sub">Upload a competitor quote, invoice, or product list and our AI will match available products from the Room Ready Supply catalog.</p>
-
-                <div class="uq-drop-zone" id="competitorDropZone">
-                    <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-                    <svg width="32" height="32" fill="none" stroke="#ED7226" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    <p class="uq-drop-title" id="competitorDropText">Drop your file here</p>
-                    <p class="uq-drop-sub">or <span class="uq-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
-                    <p class="uq-drop-hint">PDF, JPG, PNG — Max 15 MB</p>
+            <!-- 3. Upload a Quote or Product List -->
+            <div class="uq-section-block uq-reveal" id="uq-upload">
+                <div class="uq-section-label">
+                    <span class="uq-section-num">3</span>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    <span>Upload a Quote or Product List</span>
+                    <span class="uq-optional-badge">Optional</span>
                 </div>
-
-                <button type="button" id="analyzeCompetitorBtn" class="uq-analyze-btn" disabled>
-                    <span id="analyzeCompetitorBtnText">
-                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                        Analyze with AI
-                    </span>
-                    <span id="analyzeCompetitorBtnLoading" style="display:none">
-                        <span class="competitor-spinner"></span> Analyzing…
-                    </span>
-                </button>
-                <div id="competitorError" class="uq-ai-error"></div>
-                <div id="aiMatchResult" class="uq-ai-result" style="display:none;"></div>
+                <div class="uq-upload-layout">
+                    <div class="uq-upload-main">
+                        <p class="uq-section-hint">Upload a competitor quote, invoice, or product list and our AI will match available products from the Room Ready Supply catalog.</p>
+                        <div class="uq-drop-zone" id="competitorDropZone" tabindex="0" role="button" aria-label="Upload file — click or drag and drop">
+                            <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" aria-hidden="true">
+                            <div class="uq-drop-icon">
+                                <svg width="36" height="36" fill="none" stroke="#ED7226" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                            </div>
+                            <p class="uq-drop-title" id="competitorDropText">Drop your file here</p>
+                            <p class="uq-drop-sub">or <span class="uq-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
+                            <p class="uq-drop-hint">PDF, JPG, PNG — Max 15 MB</p>
+                        </div>
+                        <button type="button" id="analyzeCompetitorBtn" class="uq-analyze-btn" disabled>
+                            <span id="analyzeCompetitorBtnText">
+                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                                Analyze with AI
+                            </span>
+                            <span id="analyzeCompetitorBtnLoading" style="display:none">
+                                <span class="competitor-spinner"></span> Analyzing…
+                            </span>
+                        </button>
+                        <div id="competitorError" class="uq-ai-error" role="alert"></div>
+                        <div id="aiMatchResult" class="uq-ai-result" style="display:none;" role="status" aria-live="polite"></div>
+                    </div>
+                    <div class="uq-upload-benefits" aria-hidden="true">
+                        <div class="uq-benefit-item">
+                            <svg width="16" height="16" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>AI matches products in our catalog</span>
+                        </div>
+                        <div class="uq-benefit-item">
+                            <svg width="16" height="16" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Saves you time and manual searching</span>
+                        </div>
+                        <div class="uq-benefit-item">
+                            <svg width="16" height="16" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+                            <span>Get the best prices for your business</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="uq-divider"></div>
 
             <!-- 4. Additional Notes -->
-            <div class="uq-section-block">
-                <h3 class="uq-block-title">Additional Notes</h3>
-                <textarea id="qNotes" class="uq-notes" placeholder="Add products, brands, specifications, case quantities, delivery requirements, or anything else that will help us prepare your quote."></textarea>
+            <div class="uq-section-block uq-reveal">
+                <div class="uq-section-label">
+                    <span class="uq-section-num">4</span>
+                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="3" y1="12" x2="9" y2="12"/><line x1="3" y1="8" x2="9" y2="8"/></svg>
+                    <span>Additional Notes</span>
+                </div>
+                <textarea id="qNotes" class="uq-notes" placeholder="Add products, brands, specifications, case quantities, delivery requirements, or anything else that will help us prepare your quote." aria-label="Additional notes"></textarea>
             </div>
 
             <div class="uq-divider"></div>
@@ -441,20 +606,20 @@
                 </label>
             </div>
 
-            <div id="quoteFormMsg" class="uq-form-msg" style="display:none;"></div>
+            <div id="quoteFormMsg" class="uq-form-msg" style="display:none;" role="alert" aria-live="polite"></div>
 
             <!-- Submit -->
-            <div class="uq-section-block uq-submit-block">
+            <div class="uq-submit-block">
                 <button type="submit" class="uq-submit-btn" id="quoteSubmitBtn">
                     Request My Custom Quote
-                    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    <svg class="uq-submit-arrow" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
                 <p class="uq-response-note">Typically responded within 1 business day</p>
+                <p class="uq-trust-note">No obligation. Our team will review your request and contact you directly.</p>
             </div>
 
         </form>
     </div>
-
 </section>
 
 <section class="about-section" id="about-us">
@@ -743,6 +908,21 @@
 
 <!-- Stripe verification code: odl381y -->
 <p style="text-align:center;font-size:11px;color:#94a3b8;padding:8px 0;margin:0;">Stripe verification: odl381y</p>
+
+<script>
+(function() {
+  // Scroll-reveal for .uq-reveal elements
+  if (!window.IntersectionObserver) return;
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('uq-revealed'); obs.unobserve(e.target); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.uq-reveal').forEach(el => obs.observe(el));
+
+  // Drop zone keyboard support
+  const dz = document.getElementById('competitorDropZone');
+  if (dz) dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('competitorFile').click(); } });
+})();
+</script>
 
 </body>
 </html>
