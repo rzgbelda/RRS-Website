@@ -536,96 +536,135 @@
         </div>`).join("");
     }
 
+    // Status display mapping (covers both admin-side and legacy values)
+    const QUOTE_STATUS = {
+      new:         { label: 'Submitted',    bg: '#f1f5f9', color: '#475569' },
+      pending:     { label: 'Submitted',    bg: '#f1f5f9', color: '#475569' },
+      reviewed:    { label: 'Under Review', bg: '#fef9c3', color: '#854d0e' },
+      in_progress: { label: 'Under Review', bg: '#fef9c3', color: '#854d0e' },
+      quoted:      { label: 'Quote Ready',  bg: '#dcfce7', color: '#166534' },
+      completed:   { label: 'Quote Ready',  bg: '#dcfce7', color: '#166534' },
+      closed:      { label: 'Closed',       bg: '#f1f5f9', color: '#475569' },
+      cancelled:   { label: 'Cancelled',    bg: '#fee2e2', color: '#991b1b' },
+    };
+
     async function loadQuoteRequests(userId, userEmail) {
       const list = document.getElementById("quoteRequestList");
-      list.innerHTML = `<div class="acc-loading">Loading…</div>`;
-      const { data: quotes, error } = await window.sb
-        .from("quote_requests")
-        .select("*")
-        .or(`user_id.eq.${userId},email.eq.${userEmail}`)
-        .order("created_at", { ascending: false });
 
-      if (error || !quotes?.length) {
+      // Loading skeleton
+      list.innerHTML = `
+        <div style="padding:8px 0" aria-label="Loading quotation requests" role="status">
+          ${[1,2].map(() => `
+            <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;margin-bottom:12px;">
+              <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+                <div style="flex:1">
+                  <div style="height:14px;border-radius:6px;background:linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;width:55%;margin-bottom:10px"></div>
+                  <div style="height:11px;border-radius:6px;background:linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;width:38%;margin-bottom:10px"></div>
+                  <div style="height:11px;border-radius:6px;background:linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;width:25%"></div>
+                </div>
+                <div style="height:26px;width:90px;border-radius:20px;background:linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%);background-size:200% 100%;animation:shimmer 1.4s infinite;flex-shrink:0"></div>
+              </div>
+            </div>`).join('')}
+        </div>
+        <style>@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}</style>`;
+
+      let quotes, error;
+      try {
+        ({ data: quotes, error } = await window.sb
+          .from("quote_requests")
+          .select("id,business_name,contact_name,email,customer_type,requested_items,status,quote_number,quote_items,valid_until,quoted_at,grand_total,customer_visible,notes,created_at,viewed_at")
+          .or(`user_id.eq.${userId},email.eq.${userEmail}`)
+          .order("created_at", { ascending: false }));
+      } catch (e) {
+        error = e;
+      }
+
+      if (error) {
+        console.error('[loadQuoteRequests]', error);
         list.innerHTML = `
-          <div class="acc-empty">
-            <div class="acc-empty-icon">📋</div>
-            <p style="font-weight:700;color:#0b2d52">No quotation requests yet</p>
-            <p><a href="/#business-pricing">Submit a volume pricing request</a> to get started.</p>
+          <div style="text-align:center;padding:40px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
+            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+            <p style="font-weight:700;color:#0B1F38;margin-bottom:6px">Unable to load quotation requests</p>
+            <p style="font-size:13px;color:#64748b;margin-bottom:16px">A connection error occurred. Please try again.</p>
+            <button onclick="loadQuoteRequests('${userId}','${userEmail}')"
+              style="background:#ED7226;color:#fff;border:none;padding:9px 20px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer">
+              Retry
+            </button>
           </div>`;
         return;
       }
 
-      const statusMeta = {
-        pending:     { label: 'Pending',     bg: '#fef9c3', color: '#854d0e' },
-        in_progress: { label: 'In Progress', bg: '#dbeafe', color: '#1e40af' },
-        completed:   { label: 'Completed',   bg: '#dcfce7', color: '#166534' },
-        cancelled:   { label: 'Cancelled',   bg: '#fee2e2', color: '#991b1b' },
-      };
+      if (!quotes?.length) {
+        list.innerHTML = `
+          <div style="text-align:center;padding:60px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
+            <div style="font-size:40px;margin-bottom:16px">📋</div>
+            <p style="font-weight:700;color:#0B1F38;font-size:16px;margin-bottom:8px">No quotation requests yet</p>
+            <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Request custom pricing and your quotations will appear here.</p>
+            <a href="/#uq-form" style="display:inline-block;background:#ED7226;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700">
+              Request a Custom Quote
+            </a>
+          </div>`;
+        return;
+      }
 
       list.innerHTML = quotes.map(q => {
-        const s = statusMeta[q.status] || statusMeta.pending;
-        const date = new Date(q.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-        const itemCount = Array.isArray(q.requested_items) ? q.requested_items.length : 0;
+        const s = QUOTE_STATUS[q.status] || QUOTE_STATUS.new;
+        const isReady = q.customer_visible && (q.status === 'quoted' || q.status === 'completed');
+        const requestDate = new Date(q.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        const quoteDate   = q.quoted_at ? new Date(q.quoted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+        const validUntil  = q.valid_until ? new Date(q.valid_until + 'T00:00:00').toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
+        const itemCount   = Array.isArray(q.quote_items) && q.quote_items.length
+                          ? q.quote_items.length
+                          : (Array.isArray(q.requested_items) ? q.requested_items.length : 0);
+        const total       = q.grand_total != null ? '$' + Number(q.grand_total).toFixed(2) : null;
+        const isExpired   = validUntil && new Date(q.valid_until) < new Date();
+
+        const displayStatus = isExpired && isReady
+          ? { label: 'Expired', bg: '#fee2e2', color: '#991b1b' }
+          : s;
+
         return `
-        <div class="order-card" style="cursor:${q.status==='completed'?'pointer':'default'}" onclick="showQuoteDetail(${JSON.stringify(JSON.stringify(q))})">
-          <div class="order-card-left">
-            <div class="order-num">${q.business_name || 'Volume Quote'}</div>
-            <div class="order-meta">${date}${itemCount ? ` · ${itemCount} product${itemCount!==1?'s':''}` : ''}</div>
-            ${q.status !== 'completed' ? `<div style="margin-top:6px;font-size:12px;color:#64748b;">We're reviewing your request and preparing your custom quote.</div>` : `<div style="margin-top:6px;font-size:12px;color:#16a34a;font-weight:700;">✓ Your quotation is ready — click to view</div>`}
+        <div style="background:#fff;border-radius:12px;border:1px solid #e2e8f0;padding:18px 20px;margin-bottom:12px;transition:box-shadow .15s" onmouseover="this.style.boxShadow='0 2px 12px rgba(0,0,0,.1)'" onmouseout="this.style.boxShadow=''">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:800;color:#0B1F38;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                ${q.quote_number ? `<span style="color:#ED7226;font-size:12px;font-weight:700;margin-right:8px">${q.quote_number}</span>` : ''}${q.business_name || 'Volume Quote'}
+              </div>
+              <div style="font-size:12px;color:#94a3b8;line-height:1.6">
+                Requested: ${requestDate}
+                ${quoteDate ? ` · Quoted: ${quoteDate}` : ''}
+                ${validUntil && !isExpired ? ` · <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
+                ${isExpired ? ` · <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
+              </div>
+              ${itemCount || total ? `
+              <div style="font-size:12px;color:#64748b;margin-top:4px">
+                ${itemCount ? `${itemCount} product${itemCount !== 1 ? 's' : ''}` : ''}
+                ${itemCount && total ? ' · ' : ''}
+                ${total ? `<strong style="color:#0B1F38">${total}</strong>` : ''}
+              </div>` : ''}
+            </div>
+            <span style="flex-shrink:0;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;background:${displayStatus.bg};color:${displayStatus.color}">
+              ${displayStatus.label}
+            </span>
           </div>
-          <div class="order-card-right">
-            <span class="order-status" style="background:${s.bg};color:${s.color}">${s.label}</span>
-          </div>
+          ${!isReady ? `
+          <div style="font-size:12px;color:#64748b;background:#f8fafc;border-radius:8px;padding:10px 12px">
+            We're reviewing your request and preparing your custom quote.
+          </div>` : `
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <a href="/quote-view.html?id=${q.id}"
+               style="display:inline-flex;align-items:center;gap:6px;background:#0B1F38;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              View Quote
+            </a>
+            <a href="/quote-view.html?id=${q.id}&print=1" target="_blank"
+               style="display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e2e8f0;color:#475569;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700;background:#fff">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Download PDF
+            </a>
+          </div>`}
         </div>`;
-      }).join("");
-    }
-
-    function showQuoteDetail(qJson) {
-      const q = JSON.parse(qJson);
-      const modal = document.getElementById("quoteDetailModal");
-      const body  = document.getElementById("quoteDetailBody");
-      const date  = new Date(q.created_at).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-
-      const statusMeta = {
-        pending:     { label: 'Pending Review', bg: '#fef9c3', color: '#854d0e' },
-        in_progress: { label: 'In Progress',    bg: '#dbeafe', color: '#1e40af' },
-        completed:   { label: 'Completed',      bg: '#dcfce7', color: '#166534' },
-        cancelled:   { label: 'Cancelled',      bg: '#fee2e2', color: '#991b1b' },
-      };
-      const s = statusMeta[q.status] || statusMeta.pending;
-
-      const items = Array.isArray(q.requested_items) && q.requested_items.length
-        ? `<div style="margin-bottom:20px;">
-            <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:0 0 10px;">Requested Items</p>
-            ${q.requested_items.map(i => `
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:#f8fafc;border-radius:8px;margin-bottom:6px;font-size:13px;">
-                <span style="font-weight:600;color:#1e293b;">${i.name || i.product_name || '—'}</span>
-                <span style="color:#64748b;">${i.quantity || i.qty || 1} case${(i.quantity||i.qty||1)!==1?'s':''}</span>
-              </div>`).join('')}
-           </div>` : '';
-
-      const quotation = q.quotation_details
-        ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:12px;padding:20px;margin-bottom:20px;">
-            <p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;margin:0 0 10px;">Your Custom Quotation</p>
-            <div style="font-size:14px;color:#1e293b;line-height:1.7;white-space:pre-line;">${q.quotation_details}</div>
-           </div>`
-        : `<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:16px;margin-bottom:20px;font-size:13px;color:#1e40af;">
-             We're reviewing your request and will have your custom quote ready shortly.
-           </div>`;
-
-      body.innerHTML = `
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #f0f2f5;">
-          <div>
-            <p style="font-size:15px;font-weight:800;color:#0B1F38;margin:0 0 4px;">${q.business_name || 'Volume Quote'}</p>
-            <p style="font-size:12px;color:#94a3b8;margin:0;">${date}</p>
-          </div>
-          <span style="padding:5px 14px;border-radius:20px;font-size:12px;font-weight:700;background:${s.bg};color:${s.color};">${s.label}</span>
-        </div>
-        ${quotation}
-        ${items}
-        ${q.notes ? `<div style="margin-bottom:20px;"><p style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b;margin:0 0 8px;">Your Notes</p><p style="font-size:13px;color:#1e293b;line-height:1.6;margin:0;">${q.notes}</p></div>` : ''}
-      `;
-      modal.style.display = 'flex';
+      }).join('');
     }
 
     async function loadAccountWishlist(userId) {

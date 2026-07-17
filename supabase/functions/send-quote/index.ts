@@ -207,12 +207,20 @@ serve(async (req) => {
       throw new Error(err.message || "Failed to send email");
     }
 
-    // Update status to quoted + save quote snapshot
+    // Compute totals for snapshot
+    const subtotal_amt = items.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0);
+
+    // Update status to quoted + save full quote snapshot for customer portal
     await sb.from("quote_requests").update({
-      status: "quoted",
-      quoted_at: new Date().toISOString(),
+      status:           "quoted",
+      quoted_at:        new Date().toISOString(),
       quote_number,
-      quote_items: items,
+      quote_items:      items,
+      valid_until:      valid_until ? valid_until.split("T")[0] : null,
+      quote_message:    message || null,
+      subtotal:         subtotal_amt,
+      grand_total:      subtotal_amt,
+      customer_visible: true,
     }).eq("id", quote_request_id);
 
     return new Response(JSON.stringify({ success: true, quote_number }), {

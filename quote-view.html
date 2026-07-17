@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quotation — Room Ready Supply</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+/* ── Reset ─────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+
+/* ── Top toolbar (hidden in print) ─────────────────────── */
+.qv-toolbar{
+  background:#0B1F38;
+  color:#fff;
+  padding:0 24px;
+  height:56px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  position:sticky;
+  top:0;
+  z-index:100;
+}
+.qv-toolbar-left{display:flex;align-items:center;gap:12px}
+.qv-back{
+  display:flex;align-items:center;gap:6px;
+  color:#94a3b8;font-size:13px;font-weight:500;
+  text-decoration:none;
+  border:1px solid #1e3a5f;border-radius:7px;
+  padding:6px 12px;transition:color .15s,border-color .15s;
+}
+.qv-back:hover{color:#fff;border-color:#ED7226}
+.qv-back svg{flex-shrink:0}
+.qv-toolbar-title{font-size:14px;font-weight:600;color:#e2e8f0}
+.qv-toolbar-right{display:flex;gap:10px}
+.qv-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:8px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  border:none;transition:opacity .15s;
+}
+.qv-btn:hover{opacity:.88}
+.qv-btn-primary{background:#ED7226;color:#fff}
+.qv-btn-secondary{background:transparent;color:#94a3b8;border:1px solid #1e3a5f}
+.qv-btn-secondary:hover{color:#fff;border-color:#ED7226}
+
+/* ── Page wrapper ───────────────────────────────────────── */
+.qv-page{max-width:740px;margin:40px auto;padding:0 16px 80px}
+
+/* ── States ─────────────────────────────────────────────── */
+.qv-state{
+  text-align:center;padding:80px 24px;
+  background:#fff;border-radius:16px;
+  box-shadow:0 1px 3px rgba(0,0,0,.08);
+}
+.qv-state h2{font-size:20px;font-weight:700;color:#0B1F38;margin-bottom:10px}
+.qv-state p{font-size:14px;color:#64748b;line-height:1.6;margin-bottom:20px}
+.qv-state-icon{font-size:40px;margin-bottom:16px}
+.qv-retry-btn{
+  background:#ED7226;color:#fff;border:none;
+  padding:10px 24px;border-radius:8px;font-size:14px;font-weight:600;
+  cursor:pointer;
+}
+.qv-preparing{
+  background:#eff6ff;border:1.5px solid #bfdbfe;
+  border-radius:12px;padding:20px;text-align:center;
+  font-size:14px;color:#1e40af;line-height:1.6;
+}
+
+/* ── Quotation document ─────────────────────────────────── */
+.qv-doc{
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 2px 8px rgba(0,0,0,.10);
+  overflow:hidden;
+}
+
+/* Header */
+.qv-header{
+  background:linear-gradient(135deg,#061524 0%,#0B1F38 60%,#0e2e52 100%);
+  padding:28px 36px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:16px;
+}
+.qv-logo{display:flex;align-items:center;gap:12px}
+.qv-logo-circle{
+  width:52px;height:52px;border-radius:50%;
+  background:#fff;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.qv-logo-circle img{width:40px;height:40px;object-fit:contain}
+.qv-logo-text{color:#fff;font-size:15px;font-weight:700;line-height:1.2}
+.qv-logo-sub{color:#93c5fd;font-size:12px;font-weight:400}
+.qv-header-right{text-align:right}
+.qv-doc-title{color:#fff;font-size:26px;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+.qv-doc-num{color:#ED7226;font-size:13px;font-weight:700;margin-top:4px}
+
+/* Orange accent bar */
+.qv-accent-bar{height:4px;background:linear-gradient(90deg,#ED7226,#f59e0b)}
+
+/* Meta row */
+.qv-meta-row{
+  display:grid;grid-template-columns:1fr 1fr 1fr;
+  padding:20px 36px;
+  border-bottom:1px solid #f0f2f5;
+  gap:12px;
+}
+.qv-meta-item{}
+.qv-meta-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:4px}
+.qv-meta-value{font-size:13px;font-weight:600;color:#1e293b}
+.qv-meta-value.accent{color:#ED7226}
+
+/* Bill To */
+.qv-bill-section{padding:20px 36px;border-bottom:1px solid #f0f2f5}
+.qv-section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#ED7226;margin-bottom:10px}
+.qv-bill-name{font-size:15px;font-weight:800;color:#0B1F38;margin-bottom:2px}
+.qv-bill-detail{font-size:13px;color:#475569;line-height:1.6}
+.qv-bill-type{display:inline-block;margin-top:4px;font-size:11px;font-weight:600;background:#f1f5f9;color:#475569;padding:2px 8px;border-radius:4px;text-transform:capitalize}
+
+/* Message */
+.qv-message-section{padding:20px 36px;border-bottom:1px solid #f0f2f5}
+.qv-message-box{
+  border-left:3px solid #ED7226;
+  padding:14px 18px;
+  background:#fffbf7;
+  border-radius:0 8px 8px 0;
+  font-size:13px;color:#374151;line-height:1.75;
+  white-space:pre-line;
+}
+
+/* Product table */
+.qv-table-section{padding:20px 36px;border-bottom:1px solid #f0f2f5}
+.qv-table{width:100%;border-collapse:collapse;font-size:13px}
+.qv-table thead tr{background:#0B1F38}
+.qv-table thead th{
+  padding:10px 14px;text-align:left;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#fff;
+}
+.qv-table thead th:last-child,.qv-table thead th:nth-child(3),.qv-table thead th:nth-child(4){text-align:right}
+.qv-table tbody tr{border-bottom:1px solid #f0f2f5}
+.qv-table tbody tr:last-child{border-bottom:none}
+.qv-table tbody td{padding:12px 14px;color:#1e293b;vertical-align:top}
+.qv-table tbody td:nth-child(3),.qv-table tbody td:nth-child(4),.qv-table tbody td.td-total{text-align:right}
+.qv-table tfoot tr{background:#0B1F38}
+.qv-table tfoot td{padding:14px 16px;font-weight:800;color:#f59e0b;font-size:15px}
+.qv-table tfoot td:last-child{text-align:right}
+
+/* Terms */
+.qv-terms-section{padding:20px 36px;border-bottom:1px solid #f0f2f5;background:#fafafa}
+.qv-terms-list{list-style:none;padding:0}
+.qv-terms-list li{
+  font-size:12px;color:#475569;line-height:1.6;padding:3px 0 3px 16px;position:relative;
+}
+.qv-terms-list li::before{content:"•";position:absolute;left:0;color:#ED7226;font-weight:700}
+
+/* Footer */
+.qv-footer{
+  padding:16px 36px;
+  display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+  background:#f8fafc;
+}
+.qv-footer-name{font-size:13px;font-weight:700;color:#0B1F38}
+.qv-footer-addr{font-size:12px;color:#64748b;margin-top:2px}
+.qv-footer-contact{text-align:right;font-size:12px;color:#64748b;line-height:1.7}
+.qv-footer-contact a{color:#ED7226;text-decoration:none}
+
+/* ── Print styles ───────────────────────────────────────── */
+@media print {
+  body{background:#fff}
+  .qv-toolbar{display:none!important}
+  .qv-page{margin:0;padding:0;max-width:100%}
+  .qv-doc{box-shadow:none;border-radius:0}
+  .qv-state{display:none}
+  @page{size:letter;margin:0.5in}
+  .qv-table{page-break-inside:auto}
+  .qv-table tr{page-break-inside:avoid}
+  .qv-table thead{display:table-header-group}
+  .qv-terms-section,.qv-footer{page-break-inside:avoid}
+}
+
+/* ── Responsive ─────────────────────────────────────────── */
+@media(max-width:600px){
+  .qv-header{padding:20px;flex-direction:column;align-items:flex-start;gap:12px}
+  .qv-header-right{text-align:left}
+  .qv-meta-row{grid-template-columns:1fr 1fr;padding:16px 20px}
+  .qv-bill-section,.qv-message-section,.qv-table-section,.qv-terms-section{padding:16px 20px}
+  .qv-table-section{overflow-x:auto}
+  .qv-footer{padding:16px 20px;flex-direction:column;align-items:flex-start}
+  .qv-footer-contact{text-align:left}
+  .qv-toolbar{padding:0 16px}
+  .qv-toolbar-title{display:none}
+  .qv-page{padding:0 0 60px}
+}
+
+/* Skeleton loading */
+.qv-skeleton{
+  background:linear-gradient(90deg,#e2e8f0 25%,#f8fafc 50%,#e2e8f0 75%);
+  background-size:200% 100%;
+  animation:shimmer 1.4s infinite;
+  border-radius:6px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+.qv-skel-line{height:14px;margin-bottom:10px}
+.qv-skel-line.wide{width:80%}
+.qv-skel-line.mid{width:55%}
+.qv-skel-line.narrow{width:35%}
+</style>
+</head>
+<body>
+
+<div class="qv-toolbar" id="qvToolbar">
+  <div class="qv-toolbar-left">
+    <a href="/account#quotes" class="qv-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      My Requests
+    </a>
+    <span class="qv-toolbar-title" id="qvToolbarTitle">Loading quote…</span>
+  </div>
+  <div class="qv-toolbar-right">
+    <button class="qv-btn qv-btn-secondary" id="qvContactBtn" onclick="window.location.href='/contact.html'" style="display:none">
+      Contact Us
+    </button>
+    <button class="qv-btn qv-btn-primary" id="qvPrintBtn" onclick="window.print()" style="display:none">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      Download PDF
+    </button>
+  </div>
+</div>
+
+<div class="qv-page">
+  <div id="qvContent">
+    <!-- Loading skeleton -->
+    <div class="qv-doc" id="qvSkeleton">
+      <div style="background:#0B1F38;padding:28px 36px;display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;gap:12px;align-items:center">
+          <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.1)"></div>
+          <div><div class="qv-skeleton qv-skel-line wide" style="width:140px"></div><div class="qv-skeleton qv-skel-line narrow" style="width:80px;margin-top:6px"></div></div>
+        </div>
+        <div style="text-align:right"><div class="qv-skeleton qv-skel-line" style="width:120px;margin-left:auto"></div><div class="qv-skeleton qv-skel-line narrow" style="width:90px;margin-left:auto;margin-top:6px"></div></div>
+      </div>
+      <div style="height:4px;background:#1e3a5f"></div>
+      <div style="padding:20px 36px">
+        <div class="qv-skeleton qv-skel-line wide"></div>
+        <div class="qv-skeleton qv-skel-line mid"></div>
+        <div class="qv-skeleton qv-skel-line narrow"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const SUPABASE_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjY2NjgsImV4cCI6MjA2NTM0MjY2OH0.r7B9UeVsIVL0HJlczKjbfHaFp0wC9ikFfBwbRs1_P9c';
+  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  const RRS = {
+    name:    'Room Ready Supply',
+    address: '609 Washington St, Plymouth, NC 27962',
+    phone:   '(252) 227-0073',
+    email:   'hello@roomreadysupply.com',
+    web:     'www.roomreadysupply.com',
+  };
+
+  function fmt(date) {
+    if (!date) return '—';
+    return new Date(date + (date.includes('T') ? '' : 'T00:00:00'))
+      .toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  }
+
+  function money(n) {
+    return '$' + Number(n || 0).toFixed(2);
+  }
+
+  function showError(msg, retryable) {
+    document.getElementById('qvContent').innerHTML = `
+      <div class="qv-state">
+        <div class="qv-state-icon">⚠️</div>
+        <h2>Unable to load quotation</h2>
+        <p>${msg}</p>
+        ${retryable ? `<button class="qv-retry-btn" onclick="location.reload()">Try Again</button>` : ''}
+      </div>`;
+  }
+
+  function renderDoc(q) {
+    const items   = Array.isArray(q.quote_items) ? q.quote_items : [];
+    const total   = q.grand_total != null ? q.grand_total
+                  : items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
+
+    const defaultMsg = `Dear ${q.contact_name || q.business_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
+    const message = q.quote_message || defaultMsg;
+
+    const itemRows = items.map((item, idx) => `
+      <tr>
+        <td style="color:#64748b;font-size:12px">${idx + 1}</td>
+        <td><strong>${item.name || item.product_name || '—'}</strong></td>
+        <td style="text-align:right">${item.quantity || 1}</td>
+        <td style="text-align:right">${money(item.unit_price)}</td>
+        <td style="text-align:right;font-weight:700">${money((item.quantity || 1) * item.unit_price)}</td>
+      </tr>`).join('');
+
+    const noItemsRow = items.length === 0
+      ? `<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic">No line items</td></tr>`
+      : '';
+
+    const validUntilFmt = fmt(q.valid_until);
+
+    document.getElementById('qvContent').innerHTML = `
+    <div class="qv-doc">
+      <!-- Header -->
+      <div class="qv-header">
+        <div class="qv-logo">
+          <div class="qv-logo-circle">
+            <img src="/RR logo.png" alt="RRS" onerror="this.parentElement.innerHTML='<span style=font-size:18px;font-weight:900;color:#0B1F38>RR</span>'">
+          </div>
+          <div>
+            <div class="qv-logo-text">${RRS.name}</div>
+            <div class="qv-logo-sub">Hospitality Supply Solutions</div>
+          </div>
+        </div>
+        <div class="qv-header-right">
+          <div class="qv-doc-title">Quotation</div>
+          <div class="qv-doc-num">${q.quote_number || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Accent bar -->
+      <div class="qv-accent-bar"></div>
+
+      <!-- Meta row -->
+      <div class="qv-meta-row">
+        <div class="qv-meta-item">
+          <div class="qv-meta-label">Quote Date</div>
+          <div class="qv-meta-value">${fmt(q.quoted_at || q.created_at)}</div>
+        </div>
+        <div class="qv-meta-item">
+          <div class="qv-meta-label">Valid Until</div>
+          <div class="qv-meta-value accent">${validUntilFmt}</div>
+        </div>
+        <div class="qv-meta-item">
+          <div class="qv-meta-label">Prepared For</div>
+          <div class="qv-meta-value">${q.business_name || '—'}</div>
+        </div>
+      </div>
+
+      <!-- Bill To -->
+      <div class="qv-bill-section">
+        <div class="qv-section-label">Bill To</div>
+        <div class="qv-bill-name">${q.business_name || '—'}</div>
+        <div class="qv-bill-detail">
+          ${q.contact_name ? q.contact_name + '<br>' : ''}
+          ${q.email || ''}
+        </div>
+        ${q.customer_type ? `<span class="qv-bill-type">${q.customer_type}</span>` : ''}
+      </div>
+
+      <!-- Message -->
+      <div class="qv-message-section">
+        <div class="qv-message-box">${message.replace(/\n/g, '<br>')}</div>
+      </div>
+
+      <!-- Product table -->
+      <div class="qv-table-section">
+        <table class="qv-table">
+          <thead>
+            <tr>
+              <th style="width:32px">#</th>
+              <th>Product</th>
+              <th style="width:110px;text-align:right">Qty (Cases)</th>
+              <th style="width:110px;text-align:right">Unit Price</th>
+              <th style="width:110px;text-align:right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemRows}
+            ${noItemsRow}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colspan="4" style="color:#fff;font-size:13px;font-weight:700;text-align:right;padding-right:8px">TOTAL</td>
+              <td style="color:#f59e0b;font-size:16px;font-weight:900;text-align:right">${money(total)}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Terms -->
+      <div class="qv-terms-section">
+        <div class="qv-section-label">Terms &amp; Conditions</div>
+        <ul class="qv-terms-list">
+          <li>Prices are per case and valid until ${validUntilFmt}.</li>
+          <li>Payment terms: Net 30 days upon credit approval.</li>
+          <li>Freight is additional unless otherwise noted.</li>
+          <li>Minimum order quantities may apply.</li>
+        </ul>
+      </div>
+
+      <!-- Footer -->
+      <div class="qv-footer">
+        <div>
+          <div class="qv-footer-name">${RRS.name}</div>
+          <div class="qv-footer-addr">${RRS.address}</div>
+        </div>
+        <div class="qv-footer-contact">
+          ${RRS.phone}<br>
+          <a href="mailto:${RRS.email}">${RRS.email}</a><br>
+          ${RRS.web}
+        </div>
+      </div>
+    </div>`;
+
+    document.getElementById('qvToolbarTitle').textContent = `Quotation ${q.quote_number || ''}`;
+    document.getElementById('qvPrintBtn').style.display = 'flex';
+    document.getElementById('qvContactBtn').style.display = 'flex';
+    document.title = `Quotation ${q.quote_number || ''} — Room Ready Supply`;
+  }
+
+  async function markViewed(id) {
+    await sb.from('quote_requests')
+      .update({ viewed_at: new Date().toISOString() })
+      .eq('id', id)
+      .is('viewed_at', null); // only set once
+  }
+
+  async function init() {
+    // Auth check
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      sessionStorage.setItem('authRedirect', location.href);
+      location.href = '/login.html';
+      return;
+    }
+
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    if (!id) {
+      showError('No quotation ID was provided in the URL.', false);
+      return;
+    }
+
+    try {
+      const { data: q, error } = await sb
+        .from('quote_requests')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !q) {
+        showError('This quotation could not be found.', true);
+        return;
+      }
+
+      // Authorization: must belong to this user
+      const user = session.user;
+      const owns = q.user_id === user.id || q.email?.toLowerCase() === user.email?.toLowerCase();
+      if (!owns) {
+        showError('You do not have permission to view this quotation.', false);
+        return;
+      }
+
+      // Not yet finalized
+      if (!q.customer_visible) {
+        document.getElementById('qvSkeleton').outerHTML = `
+          <div class="qv-preparing">
+            <strong>Your quotation is being prepared.</strong><br>
+            We're reviewing your request and will send your custom quote shortly.
+            Check back here or watch for an email from ${RRS.email}.
+          </div>`;
+        document.getElementById('qvToolbarTitle').textContent = 'Quote in Progress';
+        return;
+      }
+
+      renderDoc(q);
+      markViewed(id);
+      // Auto-print when opened via Download PDF link
+      if (params.get('print') === '1') {
+        setTimeout(() => window.print(), 600);
+      }
+
+    } catch (err) {
+      console.error('[quote-view]', err);
+      showError('A network error occurred. Please check your connection and try again.', true);
+    }
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
