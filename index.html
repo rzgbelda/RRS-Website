@@ -1032,7 +1032,7 @@
   }
 
   document.getElementById('vqAddRow').addEventListener('click', () => addVqRow());
-  document.getElementById('vqItemRows').addEventListener('input', () => {
+  document.getElementById('vqItemsList').addEventListener('input', () => {
     document.getElementById('vqItemsError').style.display = 'none';
   });
   initVqRows();
@@ -1333,12 +1333,10 @@
     });
     saveBasket(basket);
     renderBasketPanel();
-    const btn = document.getElementById('aiModalAddBasketBtn');
-    btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`;
-    btn.style.background = '#16a34a';
+    const btn = e.target.closest('#aiModalAddBasketBtn');
+    if (btn) { btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`; btn.style.background = '#16a34a'; }
     setTimeout(() => {
-      btn.textContent = 'Add Selected Matches to Quote Basket';
-      btn.style.background = '';
+      if (btn) { btn.textContent = 'Add Selected Matches to Quote Basket'; btn.style.background = ''; }
       document.getElementById('aiResultsModal').style.display = 'none';
     }, 1800);
     document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
