@@ -1588,6 +1588,7 @@ padding-top: 20px;
     margin-bottom: 6px;
 }
 
+.form-left select,
 .form-left input {
     width: 100%;
     height: 46px;
@@ -1601,6 +1602,7 @@ padding-top: 20px;
     box-sizing: border-box;
     transition: border-color .2s, background .2s, box-shadow .2s;
 }
+.form-left select:focus,
 .form-left input:focus {
     outline: none;
     border-color: #ED7226;

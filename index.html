@@ -440,17 +440,32 @@
 
                     <div class="form-left">
                         <label for="qCustomerType">Customer Type</label>
-                        <input id="qCustomerType" type="text" placeholder="Hotel, Motel, Restaurant, Facility…">
+                        <select id="qCustomerType" onchange="document.getElementById('qCustomerTypeOther').style.display=this.value==='Other'?'block':'none'">
+                            <option value="">— Select type —</option>
+                            <option>Hotel</option>
+                            <option>Motel</option>
+                            <option>Restaurant</option>
+                            <option>Facility / Janitorial</option>
+                            <option>Healthcare</option>
+                            <option>School / Education</option>
+                            <option>Office Building</option>
+                            <option>Retail Store</option>
+                            <option>Other</option>
+                        </select>
+                        <input id="qCustomerTypeOther" type="text" placeholder="Please specify…" style="display:none;margin-top:8px;">
                     </div>
 
                     <div class="form-left">
                         <label for="qContactName">Contact Name</label>
-                        <input id="qContactName" type="text" placeholder="Your name" required>
+                        <input id="qContactName" type="text" placeholder="Your name" required
+                            oninput="this.value=this.value.replace(/[^a-zA-Z\s\-'.]/g,'')">
+                        <span id="qContactNameErr" style="display:none;font-size:12px;color:#dc2626;margin-top:4px;">Letters only — no numbers or special characters.</span>
                     </div>
 
                     <div class="form-left">
                         <label for="qEmail">Email Address</label>
                         <input id="qEmail" type="email" placeholder="you@business.com" required>
+                        <span id="qEmailErr" style="display:none;font-size:12px;color:#dc2626;margin-top:4px;">Please enter a valid email address (must include @).</span>
                     </div>
 
                 </div>
@@ -1021,15 +1036,33 @@
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // ── Validate: at least one product with a name ──────────────
+    // ── Validate fields ─────────────────────────────────────────
+    let hasError = false;
+
+    // Contact name: letters only
+    const contactVal = document.getElementById('qContactName').value.trim();
+    const contactErr = document.getElementById('qContactNameErr');
+    if (contactVal && /[^a-zA-Z\s\-'.]/.test(contactVal)) {
+      contactErr.style.display = 'block'; hasError = true;
+    } else { contactErr.style.display = 'none'; }
+
+    // Email: must contain @
+    const emailVal = document.getElementById('qEmail').value.trim();
+    const emailErr = document.getElementById('qEmailErr');
+    if (emailVal && !emailVal.includes('@')) {
+      emailErr.style.display = 'block'; hasError = true;
+    } else { emailErr.style.display = 'none'; }
+
+    // Products: at least one filled
     const itemsError = document.getElementById('vqItemsError');
     const filledItems = collectManualItems().filter(i => i.name);
     if (!filledItems.length) {
       itemsError.style.display = 'block';
       document.querySelector('.vq-items-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      return;
-    }
-    itemsError.style.display = 'none';
+      hasError = true;
+    } else { itemsError.style.display = 'none'; }
+
+    if (hasError) return;
 
     // ── Login gate ──────────────────────────────────────────────
     const { data: { session } } = await sb.auth.getSession();
@@ -1037,7 +1070,7 @@
       // Save form state so we can restore after login
       localStorage.setItem('vq_pending', JSON.stringify({
         business_name: document.getElementById('qBusinessName').value.trim(),
-        customer_type: document.getElementById('qCustomerType').value.trim(),
+        customer_type: (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
         contact_name:  document.getElementById('qContactName').value.trim(),
         email:         document.getElementById('qEmail').value.trim(),
         notes:         document.getElementById('qNotes').value.trim(),
@@ -1075,7 +1108,7 @@
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
         body: JSON.stringify({
           business_name:   document.getElementById('qBusinessName').value.trim(),
-          customer_type:   document.getElementById('qCustomerType').value.trim(),
+          customer_type:   (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
           contact_name:    document.getElementById('qContactName').value.trim(),
           email:           document.getElementById('qEmail').value.trim(),
           notes:           document.getElementById('qNotes').value.trim(),
