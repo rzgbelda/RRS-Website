@@ -26,6 +26,7 @@ serve(async (req) => {
       file_url,
       file_name,
       user_id,
+      marketing_opt_in,
     } = body;
 
     // ── 1. Save to Supabase ──────────────────────────────────────────────────
@@ -33,15 +34,16 @@ serve(async (req) => {
     const { data: row, error: dbErr } = await sb
       .from("quote_requests")
       .insert({
-        user_id:         user_id         || null,
+        user_id:          user_id          || null,
         business_name,
-        customer_type:   customer_type   || null,
-        contact_name:    contact_name    || null,
+        customer_type:    customer_type    || null,
+        contact_name:     contact_name     || null,
         email,
-        notes:           notes           || null,
-        requested_items: requested_items || null,
-        file_url:        file_url        || null,
-        file_name:       file_name       || null,
+        notes:            notes            || null,
+        requested_items:  requested_items  || null,
+        file_url:         file_url         || null,
+        file_name:        file_name        || null,
+        marketing_opt_in: marketing_opt_in ?? true,
         status: "pending",
       })
       .select()

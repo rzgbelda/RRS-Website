@@ -2530,6 +2530,7 @@ async function _proceedWithRegistration() {
 
   // Upsert profile
   if (userId && window.sb) {
+    const marketingOptIn = document.getElementById('regMarketingOptIn')?.checked ?? true;
     await window.sb.from('profiles').upsert({
       id: userId,
       email,
@@ -2539,6 +2540,8 @@ async function _proceedWithRegistration() {
       role: 'customer',
       accepted_terms: true,
       accepted_terms_at: new Date().toISOString(),
+      marketing_opt_in: marketingOptIn,
+      marketing_opt_in_at: marketingOptIn ? new Date().toISOString() : null,
     }, { onConflict: 'id' });
 
     // Link to sub-distributor if applicable
