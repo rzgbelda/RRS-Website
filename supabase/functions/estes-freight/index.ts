@@ -1,14 +1,14 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 
 // ── Env vars (set in Supabase Dashboard → Settings → Edge Functions → Secrets) ──
-const ESTES_CLIENT_ID     = Deno.env.get("ESTES_CLIENT_ID")     ?? "";
-const ESTES_CLIENT_SECRET = Deno.env.get("ESTES_CLIENT_SECRET") ?? "";
-const ESTES_USERNAME      = Deno.env.get("ESTES_USERNAME")      ?? ""; // MyEstes username
-const ESTES_PASSWORD      = Deno.env.get("ESTES_PASSWORD")      ?? ""; // MyEstes password
-const ESTES_ACCOUNT       = Deno.env.get("ESTES_ACCOUNT")       ?? ""; // Estes account number
+// ESTES_API_KEY: generate once via: curl -u client-id:client-secret -X POST https://cloudapi.estes-express.com/v1/api-key
+// The POST response also returns a new client_secret — save that too but it's not needed here.
+const ESTES_API_KEY  = Deno.env.get("ESTES_API_KEY")  ?? ""; // lifetime API key from Estes POST
+const ESTES_USERNAME = Deno.env.get("ESTES_USERNAME")  ?? ""; // MyEstes username
+const ESTES_PASSWORD = Deno.env.get("ESTES_PASSWORD")  ?? ""; // MyEstes password
+const ESTES_ACCOUNT  = Deno.env.get("ESTES_ACCOUNT")   ?? ""; // Estes account number
 
-// Use UAT (test) until credentials verified in production
-const USE_TEST = Deno.env.get("ESTES_TEST_MODE") !== "false";
+const USE_TEST = Deno.env.get("ESTES_TEST_MODE") === "true";
 const BASE     = USE_TEST
   ? "https://uat-cloudapi.estes-express.com"
   : "https://cloudapi.estes-express.com";
