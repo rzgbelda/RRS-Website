@@ -27,25 +27,13 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ── Token cache (in-memory, per cold start) ─────────────────────────────────
-let cachedToken: string | null = null;
-let tokenExpiry = 0;
-
-async function getToken(): Promise<string> {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
-
-  // Exchange stored API key + MyEstes credentials for Bearer token
-  const authRes = await fetch(`${BASE}/v1/authenticate`, {
-    method: "POST",
-    headers: { "apiKey": ESTES_API_KEY, "Content-Type": "application/json" },
-    body: JSON.stringify({ username: ESTES_USERNAME, password: ESTES_PASSWORD }),
-  });
-  if (!authRes.ok) throw new Error(`Estes auth error: ${authRes.status}`);
-  const { access_token, expires_in } = await authRes.json();
-
-  cachedToken = access_token;
-  tokenExpiry = Date.now() + ((expires_in ?? 3600) - 60) * 1000;
-  return cachedToken!;
+// Estes uses the API key directly in an "apiKey" header — no token exchange needed
+function estesHeaders() {
+  return {
+    "apiKey":       ESTES_API_KEY,
+    "Content-Type": "application/json",
+    "Accept":       "application/json",
+  };
 }
 
 // ── Handlers ────────────────────────────────────────────────────────────────
@@ -56,8 +44,6 @@ async function handleQuote(payload: {
   weight_lbs: number;
   ship_date?: string; // YYYY-MM-DD
 }) {
-  const token = await getToken();
-
   const shipDate = payload.ship_date ?? nextBusinessDay();
 
   const body = {
@@ -87,10 +73,7 @@ async function handleQuote(payload: {
 
   const res = await fetch(`${BASE}/v1/rate-quotes`, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: estesHeaders(),
     body: JSON.stringify(body),
   });
 
@@ -132,7 +115,6 @@ async function handleBook(payload: {
   };
   items: Array<{ description: string; weight_lbs: number; quantity: number }>;
 }) {
-  const token = await getToken();
   const shipDate = payload.ship_date ?? nextBusinessDay();
 
   const body = {
@@ -180,10 +162,7 @@ async function handleBook(payload: {
 
   const res = await fetch(`${BASE}/v1/shipments`, {
     method: "POST",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
+    headers: estesHeaders(),
     body: JSON.stringify(body),
   });
 
