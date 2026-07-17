@@ -622,7 +622,7 @@
 
       list.innerHTML = quotes.map(q => {
         const s = QUOTE_STATUS[q.status] || QUOTE_STATUS.new;
-        const isReady = q.customer_visible && (q.status === 'quoted' || q.status === 'completed');
+        const isReady = (q.customer_visible || q.quote_number) && (q.status === 'quoted' || q.status === 'completed');
         const requestDate = new Date(q.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         const quoteDate   = q.quoted_at ? new Date(q.quoted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
         const validUntil  = q.valid_until ? new Date(q.valid_until + 'T00:00:00').toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
