@@ -312,7 +312,8 @@
               </div>
               <div class="acc-field full">
                 <label>Email Address</label>
-                <input type="email" id="profileEmail" placeholder="email@business.com" disabled>
+                <input type="email" id="profileEmail" placeholder="email@business.com">
+                <span style="font-size:11px;color:#94a3b8;margin-top:2px">Changing your email will send a confirmation link to the new address.</span>
               </div>
             </div>
             <div style="margin-top:20px">
@@ -479,6 +480,8 @@
         const successEl = document.getElementById("profileSuccess");
         const errorEl   = document.getElementById("profileError");
         successEl.style.display = "none"; errorEl.style.display = "none";
+
+        // Update profile fields
         const { error } = await window.sb.from("profiles").update({
           business_name: document.getElementById("profileBusiness").value.trim(),
           business_type: document.getElementById("profileBusinessType").value,
@@ -486,8 +489,18 @@
           phone:         document.getElementById("profilePhone").value.trim(),
           updated_at:    new Date().toISOString(),
         }).eq("id", session.user.id);
-        if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; }
-        else { successEl.textContent = "Profile saved successfully!"; successEl.style.display = "block"; }
+        if (error) { errorEl.textContent = error.message; errorEl.style.display = "block"; return; }
+
+        // Update email if changed
+        const newEmail = document.getElementById("profileEmail").value.trim();
+        if (newEmail && newEmail !== session.user.email) {
+          const { error: emailErr } = await window.sb.auth.updateUser({ email: newEmail });
+          if (emailErr) { errorEl.textContent = "Email update failed: " + emailErr.message; errorEl.style.display = "block"; return; }
+          successEl.textContent = "Profile saved! Check your new email address for a confirmation link.";
+        } else {
+          successEl.textContent = "Profile saved successfully!";
+        }
+        successEl.style.display = "block";
       });
 
       // Change password
