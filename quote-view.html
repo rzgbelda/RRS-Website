@@ -106,11 +106,17 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   display:grid;grid-template-columns:1fr 1fr 1fr;
   padding:20px 36px;
   border-bottom:1px solid #f0f2f5;
-  gap:12px;
+  gap:0;
 }
-.qv-meta-item{}
-.qv-meta-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:4px}
-.qv-meta-value{font-size:13px;font-weight:600;color:#1e293b}
+.qv-meta-item{
+  padding:0 20px 0 0;
+  margin-right:20px;
+  border-right:1px solid #e2e8f0;
+}
+.qv-meta-item:last-child{border-right:none;padding-left:20px;margin-right:0}
+.qv-meta-item:first-child{padding-left:0}
+.qv-meta-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:6px}
+.qv-meta-value{font-size:14px;font-weight:700;color:#1e293b;line-height:1.3}
 .qv-meta-value.accent{color:#ED7226}
 
 /* Bill To */
@@ -152,21 +158,23 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 .qv-terms-section{padding:20px 36px;border-bottom:1px solid #f0f2f5;background:#fafafa}
 .qv-terms-list{list-style:none;padding:0}
 .qv-terms-list li{
-  font-size:12px;color:#475569;line-height:1.6;padding:3px 0 3px 16px;position:relative;
+  font-size:12px;color:#1e293b;line-height:1.6;padding:3px 0 3px 16px;position:relative;
 }
 .qv-terms-list li::before{content:"•";position:absolute;left:0;color:#ED7226;font-weight:700}
 
 /* Footer */
 .qv-footer{
   padding:16px 36px;
-  display:flex;align-items:center;justify-content:space-between;
-  gap:12px;flex-wrap:wrap;
+  display:flex;align-items:flex-start;justify-content:space-between;
+  gap:24px;flex-wrap:wrap;
   background:#f8fafc;
+  border-top:1px solid #e2e8f0;
 }
+.qv-footer-left{flex:1;min-width:0}
 .qv-footer-name{font-size:13px;font-weight:700;color:#0B1F38}
-.qv-footer-addr{font-size:12px;color:#64748b;margin-top:2px}
-.qv-footer-contact{text-align:right;font-size:12px;color:#64748b;line-height:1.7}
-.qv-footer-contact a{color:#ED7226;text-decoration:none}
+.qv-footer-addr{font-size:12px;color:#64748b;margin-top:3px;line-height:1.5}
+.qv-footer-contact{flex-shrink:0;text-align:right;font-size:12px;color:#64748b;line-height:1.9}
+.qv-footer-contact a{color:#ED7226;text-decoration:none;display:block}
 
 /* ── Print styles ───────────────────────────────────────── */
 @media print {
@@ -315,7 +323,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <div class="qv-header">
         <div class="qv-logo">
           <div class="qv-logo-circle">
-            <img src="/RR logo.png" alt="RRS" onerror="this.parentElement.innerHTML='<span style=font-size:18px;font-weight:900;color:#0B1F38>RR</span>'">
+            <img src="/RR%20logo.png" alt="RRS" onerror="this.parentElement.innerHTML='<span style=font-size:18px;font-weight:900;color:#0B1F38>RR</span>'">
           </div>
           <div>
             <div class="qv-logo-text">${RRS.name}</div>
@@ -401,14 +409,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 
       <!-- Footer -->
       <div class="qv-footer">
-        <div>
+        <div class="qv-footer-left">
           <div class="qv-footer-name">${RRS.name}</div>
           <div class="qv-footer-addr">${RRS.address}</div>
         </div>
         <div class="qv-footer-contact">
-          ${RRS.phone}<br>
-          <a href="mailto:${RRS.email}">${RRS.email}</a><br>
-          ${RRS.web}
+          <span>${RRS.phone}</span>
+          <a href="mailto:${RRS.email}">${RRS.email}</a>
+          <span>${RRS.web}</span>
         </div>
       </div>
     </div>`;
@@ -463,7 +471,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       }
 
       // Not yet finalized
-      if (!q.customer_visible) {
+      if (!q.customer_visible && !q.quote_number) {
         document.getElementById('qvSkeleton').outerHTML = `
           <div class="qv-preparing">
             <strong>Your quotation is being prepared.</strong><br>
