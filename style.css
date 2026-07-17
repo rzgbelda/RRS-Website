@@ -8056,10 +8056,10 @@ button, a, [role="button"] { touch-action: manipulation; }
 .aiv-pr-2 { animation: aivRowFade .5s 1.9s ease both; }
 .aiv-pr-3 { animation: aivRowFade .5s 2.3s ease both; }
 @keyframes aivRowFade { to { opacity: 1; transform: translateY(0); } }
-.aiv-product-thumb { width: 28px; height: 28px; border-radius: 6px; flex-shrink: 0; }
-.aiv-pt-blue   { background: linear-gradient(135deg, #bfdbfe, #3b82f6); }
-.aiv-pt-green  { background: linear-gradient(135deg, #bbf7d0, #16a34a); }
-.aiv-pt-orange { background: linear-gradient(135deg, #fed7aa, #ED7226); }
+.aiv-product-thumb {
+  width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
+  object-fit: cover; background: #f1f5f9;
+}
 .aiv-product-info { flex: 1; min-width: 0; }
 .aiv-product-name {
   font-size: 11px; font-weight: 700; color: #0B1F38;
