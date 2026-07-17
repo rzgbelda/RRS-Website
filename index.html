@@ -325,97 +325,25 @@
 
 </section>
 
-<section class="pricing-section" id="business-pricing">
+<section class="uq-section" id="business-pricing">
 
-    <div class="pricing-card">
+    <div class="uq-header">
+        <h2 class="uq-title">Request a Custom Quote</h2>
+        <p class="uq-subtitle">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
+    </div>
 
-        <!-- LEFT SIDE -->
-        <div class="pricing-left">
+    <div class="uq-card">
+        <form id="quoteForm">
 
-
-            <!-- AI Teaser Section -->
-            <div class="ai-teaser-section">
-                <div class="ai-teaser-inner">
-                    <div class="ai-teaser-left">
-                        <div class="ai-teaser-pill">
-                            <span class="ai-teaser-dot"></span>
-                            AI Price Comparison — Free
-                        </div>
-                        <h3 class="ai-teaser-title">Find Out If You're Overpaying Your Distributor — In 60 Seconds</h3>
-                        <p class="ai-teaser-body">Most hospitality businesses overpay by 15–30% without knowing it. Upload your current distributor's invoice or product list and our AI will match every line item to our catalog and show you side-by-side pricing instantly. No sales call. No waiting. Just the truth.</p>
-                        <ul class="ai-teaser-bullets">
-                            <li>✓ Works with PDF, JPG, or PNG invoices</li>
-                            <li>✓ Matches products across different brands</li>
-                            <li>✓ Results in under a minute</li>
-                        </ul>
-                    </div>
-                    <div class="ai-teaser-right">
-                        <div class="ai-upload-card" id="aiUploadCard">
-                            <div class="ai-upload-badge">
-                                <span class="ai-badge-dot"></span>
-                                AI Price Matching
-                            </div>
-                            <div class="ai-try-row">
-                                <div class="ai-try-arrow">
-                                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>
-                                </div>
-                                <span class="ai-try-label">Try it!</span>
-                            </div>
-                            <div class="ai-drop-zone" id="competitorDropZone">
-                                <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-                                <div class="ai-drop-icon">
-                                    <svg width="30" height="30" fill="none" stroke="#ED7226" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                                </div>
-                                <p class="ai-drop-title" id="competitorDropText">Drop your competitor's quote here</p>
-                                <p class="ai-drop-sub">or <span class="ai-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
-                                <p class="ai-drop-hint">PDF, JPG, PNG — Max 10MB</p>
-                            </div>
-                            <p class="ai-upload-desc">Already have a quote from another supplier? Upload it and let our AI find matching products in our catalog — even across different brands — so you can compare pricing in minutes, not days.</p>
-                            <button type="button" id="analyzeCompetitorBtn" class="ai-analyze-btn" disabled>
-                                <span id="analyzeCompetitorBtnText">
-                                    <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                    Analyze with AI
-                                </span>
-                                <span id="analyzeCompetitorBtnLoading" style="display:none">
-                                    <span class="competitor-spinner"></span> Analyzing…
-                                </span>
-                            </button>
-                            <div id="competitorResults" style="display:none;margin-top:16px;">
-                                <div id="competitorResultsHeader" style="margin-bottom:12px;"></div>
-                                <div id="competitorMatchedSection" style="display:none;">
-                                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
-                                    <div id="competitorMatchedList"></div>
-                                    <button type="button" id="addMatchedToBasketBtn" style="margin-top:10px;padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
-                                </div>
-                                <div id="competitorUnmatchedSection" style="display:none;margin-top:14px;">
-                                    <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
-                                    <div id="competitorUnmatchedList"></div>
-                                    <p style="margin:6px 0 0;font-size:11px;color:#94a3b8;">These items aren't currently in our catalog. You can mention them in the notes below.</p>
-                                </div>
-                            </div>
-                            <div id="competitorError" style="display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:13px;color:#dc2626;"></div>
-                            <input type="file" id="qFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- White form body -->
-            <div class="pricing-form-body">
-
-            <h3>Request a Custom Quote</h3>
-            <p class="pricing-form-subtitle">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
-
-            <form class="pricing-form" id="quoteForm">
-
-                <div class="form-grid">
-
-                    <div class="form-left">
+            <!-- 1. Customer Information -->
+            <div class="uq-section-block">
+                <h3 class="uq-block-title">Customer Information</h3>
+                <div class="uq-form-grid">
+                    <div class="uq-field">
                         <label for="qBusinessName">Business Name</label>
-                        <input id="qBusinessName" type="text" placeholder="Enter business name" required>
+                        <input id="qBusinessName" type="text" placeholder="Enter your business name" required>
                     </div>
-
-                    <div class="form-left">
+                    <div class="uq-field">
                         <label for="qCustomerType">Customer Type</label>
                         <select id="qCustomerType" onchange="document.getElementById('qCustomerTypeOther').style.display=this.value==='Other'?'block':'none'">
                             <option value="">— Select type —</option>
@@ -431,90 +359,100 @@
                         </select>
                         <input id="qCustomerTypeOther" type="text" placeholder="Please specify…" style="display:none;margin-top:8px;">
                     </div>
-
-                    <div class="form-left">
+                    <div class="uq-field">
                         <label for="qContactName">Contact Name</label>
-                        <input id="qContactName" type="text" placeholder="Your name" required
+                        <input id="qContactName" type="text" placeholder="Your full name" required
                             oninput="this.value=this.value.replace(/[^a-zA-Z\s\-'.]/g,'')">
-                        <span id="qContactNameErr" style="display:none;font-size:12px;color:#dc2626;margin-top:4px;">Letters only — no numbers or special characters.</span>
+                        <span id="qContactNameErr" class="uq-field-err">Letters only — no numbers or special characters.</span>
                     </div>
-
-                    <div class="form-left">
+                    <div class="uq-field">
                         <label for="qEmail">Email Address</label>
                         <input id="qEmail" type="email" placeholder="you@business.com" required>
-                        <span id="qEmailErr" style="display:none;font-size:12px;color:#dc2626;margin-top:4px;">Please enter a valid email address (must include @).</span>
+                        <span id="qEmailErr" class="uq-field-err">Please enter a valid email address (must include @).</span>
                     </div>
+                </div>
+            </div>
 
+            <div class="uq-divider"></div>
+
+            <!-- 2. Products You Need Quoted -->
+            <div class="uq-section-block">
+                <div class="uq-block-header">
+                    <div>
+                        <h3 class="uq-block-title">Products You Need Quoted</h3>
+                        <p class="uq-block-sub">Add the products and case quantities you need. You can also type items not in our catalog.</p>
+                    </div>
+                    <a href="/catalog" class="uq-catalog-btn" target="_blank">
+                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                        Browse Catalog
+                    </a>
+                </div>
+                <div id="vqItemsList"></div>
+                <button type="button" id="vqAddRow" class="uq-add-row-btn">
+                    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    Add another product
+                </button>
+                <p id="vqItemsError" class="uq-items-error">⚠ Please add at least one product before requesting a quote.</p>
+            </div>
+
+            <div class="uq-divider"></div>
+
+            <!-- 3. AI Upload -->
+            <div class="uq-section-block">
+                <h3 class="uq-block-title">Upload a Quote or Product List</h3>
+                <p class="uq-block-sub">Upload a competitor quote, invoice, or product list and our AI will match available products from the Room Ready Supply catalog.</p>
+
+                <div class="uq-drop-zone" id="competitorDropZone">
+                    <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none">
+                    <svg width="32" height="32" fill="none" stroke="#ED7226" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+                    <p class="uq-drop-title" id="competitorDropText">Drop your file here</p>
+                    <p class="uq-drop-sub">or <span class="uq-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
+                    <p class="uq-drop-hint">PDF, JPG, PNG — Max 15 MB</p>
                 </div>
 
-                <!-- Items box -->
-                <div class="vq-items-section">
-                    <div class="vq-items-header">
-                        <div>
-                            <p class="vq-items-title">Products You Need Quoted</p>
-                            <p class="vq-items-sub">Add the products and case quantities you regularly order.</p>
-                        </div>
-                        <a href="/catalog" class="vq-catalog-btn" target="_blank">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
-                            Browse Catalog
-                        </a>
-                    </div>
-
-                    <div id="vqItemsList">
-                        <!-- rows added by JS -->
-                    </div>
-
-                    <button type="button" id="vqAddRow" class="vq-add-row-btn">
-                        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-                        Add another product
-                    </button>
-                    <p id="vqItemsError" style="display:none;margin:10px 0 0;font-size:13px;font-weight:600;color:#dc2626;">
-                        ⚠ Please add at least one product before requesting a quote.
-                    </p>
-                </div>
-
-                <!-- Products from basket (AI match) -->
-                <div id="quoteBasketPanel" style="display:none;margin-bottom:20px;">
-                    <label style="font-weight:700;font-size:13px;color:#1e293b;display:block;margin-bottom:10px;">
-                        Products Added via AI Match
-                        <span style="font-weight:400;color:#64748b;margin-left:6px;">— edit quantities below</span>
-                    </label>
-                    <div id="quoteBasketItems"></div>
-                    <button type="button" id="clearQuoteBasket" style="margin-top:8px;font-size:12px;color:#e8621a;background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;">Clear all</button>
-                </div>
-
-                <label class="notes-label">Additional Notes</label>
-                <textarea id="qNotes" placeholder="Tell us anything else that will help us quote your business."></textarea>
-
-                <div id="quoteFormMsg" style="display:none;margin-bottom:12px;padding:12px 16px;border-radius:8px;font-size:14px;font-weight:600;"></div>
-
-                <!-- Marketing opt-in -->
-                <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer;margin-bottom:16px;padding:12px 14px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;">
-                    <input type="checkbox" id="qMarketingOptIn" checked style="margin-top:3px;accent-color:#ED7226;width:16px;height:16px;flex-shrink:0;">
-                    <span style="font-size:13px;color:#374151;line-height:1.5;">
-                        Yes, I'd like to receive exclusive deals, restocking reminders, and special pricing offers from Room Ready Supply.
-                        <span style="color:#94a3b8;">(You can unsubscribe at any time.)</span>
+                <button type="button" id="analyzeCompetitorBtn" class="uq-analyze-btn" disabled>
+                    <span id="analyzeCompetitorBtnText">
+                        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        Analyze with AI
                     </span>
-                </label>
+                    <span id="analyzeCompetitorBtnLoading" style="display:none">
+                        <span class="competitor-spinner"></span> Analyzing…
+                    </span>
+                </button>
+                <div id="competitorError" class="uq-ai-error"></div>
+                <div id="aiMatchResult" class="uq-ai-result" style="display:none;"></div>
+            </div>
 
-                <button type="submit" class="quote-btn" id="quoteSubmitBtn">
+            <div class="uq-divider"></div>
+
+            <!-- 4. Additional Notes -->
+            <div class="uq-section-block">
+                <h3 class="uq-block-title">Additional Notes</h3>
+                <textarea id="qNotes" class="uq-notes" placeholder="Add products, brands, specifications, case quantities, delivery requirements, or anything else that will help us prepare your quote."></textarea>
+            </div>
+
+            <div class="uq-divider"></div>
+
+            <!-- Marketing opt-in -->
+            <div class="uq-section-block">
+                <label class="uq-optin-label">
+                    <input type="checkbox" id="qMarketingOptIn" checked>
+                    <span>Yes, I'd like to receive exclusive deals, restocking reminders, and special pricing offers from Room Ready Supply. <span class="uq-optin-note">(You can unsubscribe at any time.)</span></span>
+                </label>
+            </div>
+
+            <div id="quoteFormMsg" class="uq-form-msg" style="display:none;"></div>
+
+            <!-- Submit -->
+            <div class="uq-section-block uq-submit-block">
+                <button type="submit" class="uq-submit-btn" id="quoteSubmitBtn">
                     Request My Custom Quote
                     <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
+                <p class="uq-response-note">Typically responded within 1 business day</p>
+            </div>
 
-                <p class="quote-response-note">Typically responded within 1 business day</p>
-
-            </form>
-
-            </div><!-- /pricing-form-body -->
-
-        </div>
-
-        <!-- RIGHT SIDE IMAGE -->
-        <div class="pricing-image">
-            <img src="banner4.png" alt="Business Pricing">
-        </div>
-
+        </form>
     </div>
 
 </section>
@@ -802,46 +740,6 @@
 </div>
 <!-- ── End Contact Modal ──────────────────────────────────── -->
 
-<!-- AI Results Modal -->
-<div id="aiResultsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 16px;" onclick="if(event.target===this)this.style.display='none'">
-  <div style="max-width:680px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;">
-    <div style="background:#0B1F38;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">AI Price Matching</div>
-        <div id="aiResultsTitle" style="color:#fff;font-size:18px;font-weight:800;"></div>
-      </div>
-      <button onclick="document.getElementById('aiResultsModal').style.display='none'" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
-    </div>
-    <div style="padding:24px;">
-      <div id="aiModalMatchedSection" style="display:none;margin-bottom:20px;">
-        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
-        <div id="aiModalMatchedList"></div>
-        <button type="button" id="aiModalAddBasketBtn" style="margin-top:14px;width:100%;padding:11px 18px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
-      </div>
-      <div id="aiModalUnmatchedSection" style="display:none;">
-        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
-        <div id="aiModalUnmatchedList"></div>
-        <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">These items aren't in our catalog yet. Mention them in the notes field below.</p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ── Quote Success Modal ───────────────────────────────── -->
-<div id="quoteSuccessModal" style="display:none;position:fixed;inset:0;background:rgba(11,31,56,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;">
-  <div style="background:#fff;border-radius:20px;padding:48px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.2);">
-    <div style="width:72px;height:72px;background:#f0fdf4;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;">
-      <svg width="36" height="36" fill="none" stroke="#16a34a" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-    </div>
-    <h3 style="font-size:22px;font-weight:800;color:#0B1F38;margin:0 0 10px;">Request Sent!</h3>
-    <p style="font-size:15px;color:#64748b;line-height:1.6;margin:0 0 8px;">Your volume pricing request has been received. We'll review your products and quantities and send you a custom quote.</p>
-    <p style="font-size:13px;color:#94a3b8;margin:0 0 28px;">You can track the status in <strong style="color:#0B1F38;">My Account → Quotation Requests</strong>.</p>
-    <div style="display:flex;flex-direction:column;gap:10px;">
-      <a href="/account" style="background:#ED7226;color:#fff;font-size:14px;font-weight:800;padding:14px;border-radius:10px;text-decoration:none;display:block;">View My Quotation Requests</a>
-      <button onclick="document.getElementById('quoteSuccessModal').style.display='none';" style="background:none;border:1.5px solid #e2e8f0;color:#64748b;font-size:14px;font-weight:600;padding:13px;border-radius:10px;cursor:pointer;">Close</button>
-    </div>
-  </div>
-</div>
 
 <!-- Stripe verification code: odl381y -->
 <p style="text-align:center;font-size:11px;color:#94a3b8;padding:8px 0;margin:0;">Stripe verification: odl381y</p>
@@ -935,77 +833,26 @@
   const SUPABASE_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co';
   const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
   const QUOTE_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/quote-request';
+  const MATCH_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/match-competitor-quote';
   const BUCKET        = 'quote-files';
 
   const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-  // ── Quote basket rendering ───────────────────────────────────
-  function getBasket() {
-    try { return JSON.parse(localStorage.getItem('quoteBasket') || '[]'); } catch { return []; }
-  }
-  function saveBasket(b) { localStorage.setItem('quoteBasket', JSON.stringify(b)); }
+  // ── Unified product list ─────────────────────────────────────
+  // Each item: { name, quantity, source: 'manual'|'ai' }
+  // AI-matched items are inserted as rows in the same vqItemsList.
 
-  function renderBasketPanel() {
-    const panel     = document.getElementById('quoteBasketPanel');
-    const container = document.getElementById('quoteBasketItems');
-    const badge     = document.getElementById('quoteBadge');
-    const basket    = getBasket();
-
-    if (badge) { badge.textContent = basket.length; badge.style.display = basket.length > 0 ? 'flex' : 'none'; }
-    if (!panel || !container) return;
-
-    if (basket.length === 0) { panel.style.display = 'none'; return; }
-    panel.style.display = 'block';
-
-    container.innerHTML = basket.map((item, idx) => `
-      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;margin-bottom:6px;">
-        <img src="${item.image||'/blanket.png'}" onerror="this.src='/blanket.png'" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;">
-        <span style="flex:1;font-size:13px;font-weight:600;color:#1e293b;line-height:1.3;">${item.name}</span>
-        <label style="font-size:12px;color:#64748b;flex-shrink:0;">Qty (cases):</label>
-        <input type="number" min="1" value="${item.quantity}" data-idx="${idx}"
-          class="basket-qty-input"
-          style="width:60px;padding:4px 6px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;text-align:center;">
-        <button type="button" data-idx="${idx}" class="basket-remove-btn"
-          style="background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0 2px;line-height:1;" title="Remove">×</button>
-      </div>
-    `).join('');
-
-    container.querySelectorAll('.basket-qty-input').forEach(input => {
-      input.addEventListener('change', () => {
-        const b = getBasket();
-        const i = parseInt(input.dataset.idx);
-        b[i].quantity = Math.max(1, parseInt(input.value) || 1);
-        saveBasket(b);
-      });
-    });
-    container.querySelectorAll('.basket-remove-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const b = getBasket();
-        b.splice(parseInt(btn.dataset.idx), 1);
-        saveBasket(b);
-        renderBasketPanel();
-      });
-    });
-  }
-
-  document.getElementById('clearQuoteBasket')?.addEventListener('click', () => {
-    saveBasket([]);
-    renderBasketPanel();
-  });
-
-  // Render on load + whenever basket changes
-  renderBasketPanel();
-  window.addEventListener('storage', e => { if (e.key === 'quoteBasket') renderBasketPanel(); });
-  // Poll for updates when quote buttons on the same page update the basket
-  setInterval(renderBasketPanel, 800);
-
-  // ── Manual items rows ────────────────────────────────────────
-  function addVqRow(name = '', qty = 1) {
+  function addVqRow(name = '', qty = 1, source = 'manual') {
     const row = document.createElement('div');
     row.className = 'vq-item-row';
+    row.dataset.source = source;
+    const sourceBadge = source === 'ai'
+      ? `<span class="vq-source-badge vq-badge-ai">AI Matched</span>`
+      : '';
     row.innerHTML = `
-      <input type="text" class="vq-item-name" placeholder="Product name or description" value="${name}">
+      <input type="text" class="vq-item-name" placeholder="Product name or description" value="${name.replace(/"/g,'&quot;')}">
       <input type="number" class="vq-item-qty" min="1" value="${qty}" placeholder="Cases">
+      ${sourceBadge}
       <button type="button" class="vq-remove-btn" title="Remove">×</button>
     `;
     row.querySelector('.vq-remove-btn').addEventListener('click', () => {
@@ -1017,11 +864,9 @@
 
   function initVqRows() {
     document.getElementById('vqItemsList').innerHTML = '';
-    // Restore pending items or start with 2 blank rows
     const pending = JSON.parse(localStorage.getItem('vq_pending') || 'null');
     if (pending?.items?.length) {
-      pending.items.forEach(i => addVqRow(i.name, i.quantity));
-      // Restore other fields
+      pending.items.forEach(i => addVqRow(i.name, i.quantity, i.source || 'manual'));
       if (pending.business_name) document.getElementById('qBusinessName').value = pending.business_name;
       if (pending.customer_type) document.getElementById('qCustomerType').value = pending.customer_type;
       if (pending.contact_name)  document.getElementById('qContactName').value  = pending.contact_name;
@@ -1033,174 +878,46 @@
     }
   }
 
+  function collectAllItems() {
+    return Array.from(document.querySelectorAll('.vq-item-row')).map(row => ({
+      name:     row.querySelector('.vq-item-name').value.trim(),
+      quantity: parseInt(row.querySelector('.vq-item-qty').value) || 1,
+      source:   row.dataset.source || 'manual',
+    })).filter(r => r.name);
+  }
+
   document.getElementById('vqAddRow').addEventListener('click', () => addVqRow());
   document.getElementById('vqItemsList').addEventListener('input', () => {
     document.getElementById('vqItemsError').style.display = 'none';
   });
   initVqRows();
 
-  // ── Auto-populate fields for logged-in users ─────────────────
+  // ── Auto-populate for logged-in users ────────────────────────
   (async () => {
     const { data: { session } } = await sb.auth.getSession();
     if (!session) return;
-    const userId = session.user.id;
-    const userEmail = session.user.email;
-    const { data: profile } = await sb.from('profiles').select('business_name, contact_name').eq('id', userId).single();
-    const pending = localStorage.getItem('vq_pending');
-    if (!pending) {
+    const { data: profile } = await sb.from('profiles').select('business_name, contact_name').eq('id', session.user.id).single();
+    if (!localStorage.getItem('vq_pending')) {
       if (profile?.business_name) document.getElementById('qBusinessName').value = profile.business_name;
       if (profile?.contact_name)  document.getElementById('qContactName').value  = profile.contact_name;
-      if (userEmail)               document.getElementById('qEmail').value         = userEmail;
+      if (session.user.email)     document.getElementById('qEmail').value         = session.user.email;
     }
   })();
 
-  // ── Form submit ──────────────────────────────────────────────
-  const form      = document.getElementById('quoteForm');
-  const submitBtn = document.getElementById('quoteSubmitBtn');
-  const msgEl     = document.getElementById('quoteFormMsg');
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // ── Validate fields ─────────────────────────────────────────
-    let hasError = false;
-
-    // Contact name: letters only
-    const contactVal = document.getElementById('qContactName').value.trim();
-    const contactErr = document.getElementById('qContactNameErr');
-    if (contactVal && /[^a-zA-Z\s\-'.]/.test(contactVal)) {
-      contactErr.style.display = 'block'; hasError = true;
-    } else { contactErr.style.display = 'none'; }
-
-    // Email: must contain @
-    const emailVal = document.getElementById('qEmail').value.trim();
-    const emailErr = document.getElementById('qEmailErr');
-    if (emailVal && !emailVal.includes('@')) {
-      emailErr.style.display = 'block'; hasError = true;
-    } else { emailErr.style.display = 'none'; }
-
-    // Products: at least one filled
-    const itemsError = document.getElementById('vqItemsError');
-    const filledItems = collectManualItems().filter(i => i.name);
-    if (!filledItems.length) {
-      itemsError.style.display = 'block';
-      document.querySelector('.vq-items-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
-      hasError = true;
-    } else { itemsError.style.display = 'none'; }
-
-    if (hasError) return;
-
-    // ── Login gate ──────────────────────────────────────────────
-    const { data: { session } } = await sb.auth.getSession();
-    if (!session) {
-      // Save form state so we can restore after login
-      localStorage.setItem('vq_pending', JSON.stringify({
-        business_name: document.getElementById('qBusinessName').value.trim(),
-        customer_type:      (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
-        contact_name:       document.getElementById('qContactName').value.trim(),
-        email:              document.getElementById('qEmail').value.trim(),
-        notes:              document.getElementById('qNotes').value.trim(),
-        marketing_opt_in:   document.getElementById('qMarketingOptIn')?.checked ?? true,
-        items:              collectManualItems(),
-      }));
-      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + window.location.hash + '#business-pricing');
-      return;
-    }
-
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Sending…';
-    msgEl.style.display = 'none';
-
-    try {
-      let file_url  = null;
-      let file_name = null;
-
-      if (selectedFile) {
-        const ext  = selectedFile.name.split('.').pop();
-        const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await sb.storage.from(BUCKET).upload(path, selectedFile, { contentType: selectedFile.type, upsert: false });
-        if (upErr) throw new Error('File upload failed: ' + upErr.message);
-        const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
-        file_url  = urlData.publicUrl;
-        file_name = selectedFile.name;
-      }
-
-      // Merge manual items + AI basket items
-      const manualItems = collectManualItems();
-      const basketItems = getBasket();
-      const allItems = [...manualItems, ...basketItems];
-
-      const res = await fetch(QUOTE_FN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({
-          business_name:   document.getElementById('qBusinessName').value.trim(),
-          customer_type:    (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
-          contact_name:     document.getElementById('qContactName').value.trim(),
-          email:            document.getElementById('qEmail').value.trim(),
-          notes:            document.getElementById('qNotes').value.trim(),
-          marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
-          requested_items:  allItems,
-          user_id:          session.user.id,
-          file_url,
-          file_name,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Submission failed.');
-
-      form.reset();
-      selectedFile = null;
-      saveBasket([]);
-      localStorage.removeItem('quoteBasket');
-      window.location.href = '/account#quotes';
-
-    } catch (err) {
-      showMsg(err.message || 'Something went wrong. Please try again.', false);
-    } finally {
-      submitBtn.disabled = false;
-      submitBtn.textContent = 'Request My Custom Quote';
-    }
-  });
-
-  function collectManualItems() {
-    return Array.from(document.querySelectorAll('.vq-item-row')).map(row => ({
-      name: row.querySelector('.vq-item-name').value.trim(),
-      quantity: parseInt(row.querySelector('.vq-item-qty').value) || 1,
-    })).filter(r => r.name);
-  }
-
-  function showMsg(text, success) {
-    msgEl.textContent = text;
-    msgEl.style.display = 'block';
-    msgEl.style.background = success ? '#d1fae5' : '#fee2e2';
-    msgEl.style.color       = success ? '#065f46' : '#991b1b';
-    msgEl.style.border      = success ? '1px solid #6ee7b7' : '1px solid #fca5a5';
-  }
-
-  // ── Competitor Quote Upload ──────────────────────────────────
-  const MATCH_FN_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/match-competitor-quote';
-
-  const competitorDrop   = document.getElementById('competitorDropZone');
-  const competitorInput  = document.getElementById('competitorFile');
+  // ── AI Upload ────────────────────────────────────────────────
+  const competitorDrop  = document.getElementById('competitorDropZone');
+  const competitorInput = document.getElementById('competitorFile');
   const competitorDropTx = document.getElementById('competitorDropText');
-  const analyzeBtn       = document.getElementById('analyzeCompetitorBtn');
-  const analyzeBtnTxt    = document.getElementById('analyzeCompetitorBtnText');
-  const analyzeBtnLoad   = document.getElementById('analyzeCompetitorBtnLoading');
-  const competitorRes    = document.getElementById('competitorResults');
-  const competitorResHdr = document.getElementById('competitorResultsHeader');
-  const matchedSection   = document.getElementById('competitorMatchedSection');
-  const matchedList      = document.getElementById('competitorMatchedList');
-  const unmatchedSection = document.getElementById('competitorUnmatchedSection');
-  const unmatchedList    = document.getElementById('competitorUnmatchedList');
-  const addMatchedBtn    = document.getElementById('addMatchedToBasketBtn');
-  const competitorErr    = document.getElementById('competitorError');
+  const analyzeBtn      = document.getElementById('analyzeCompetitorBtn');
+  const analyzeBtnTxt   = document.getElementById('analyzeCompetitorBtnText');
+  const analyzeBtnLoad  = document.getElementById('analyzeCompetitorBtnLoading');
+  const competitorErr   = document.getElementById('competitorError');
+  const aiMatchResult   = document.getElementById('aiMatchResult');
 
-  let competitorFileObj  = null;
-  let currentMatches     = [];
+  let competitorFileObj = null;
+  let aiUploadedUrl     = null;
+  let aiUploadedName    = null;
 
-  // Drag & drop
   competitorDrop.addEventListener('click', () => competitorInput.click());
   competitorDrop.addEventListener('dragover', e => { e.preventDefault(); competitorDrop.classList.add('dragover'); });
   competitorDrop.addEventListener('dragleave', () => competitorDrop.classList.remove('dragover'));
@@ -1215,23 +932,20 @@
   });
 
   function setCompetitorFile(f) {
-    const allowed = ['application/pdf','image/jpeg','image/jpg','image/png'];
-    if (!allowed.includes(f.type) && !f.name.match(/\.(pdf|jpg|jpeg|png)$/i)) {
+    competitorErr.style.display = 'none';
+    if (!f.name.match(/\.(pdf|jpg|jpeg|png)$/i)) {
       competitorErr.textContent = 'Please upload a PDF, JPG, or PNG file.';
-      competitorErr.style.display = 'block';
-      return;
+      competitorErr.style.display = 'block'; return;
     }
     if (f.size > 15 * 1024 * 1024) {
       competitorErr.textContent = 'File must be under 15 MB.';
-      competitorErr.style.display = 'block';
-      return;
+      competitorErr.style.display = 'block'; return;
     }
-    competitorErr.style.display = 'none';
     competitorFileObj = f;
     competitorDrop.classList.add('has-file');
-    competitorDropTx.innerHTML = `<strong style="color:#16a34a">✓ ${f.name}</strong> &nbsp;<span style="color:#94a3b8;font-size:11px;">Click to change</span>`;
+    competitorDropTx.innerHTML = `<strong style="color:#16a34a">✓ ${f.name}</strong> <span style="color:#94a3b8;font-size:11px;">Click to change</span>`;
     analyzeBtn.disabled = false;
-    competitorRes.style.display = 'none';
+    aiMatchResult.style.display = 'none';
   }
 
   analyzeBtn.addEventListener('click', async () => {
@@ -1240,28 +954,26 @@
     analyzeBtnTxt.style.display = 'none';
     analyzeBtnLoad.style.display = 'inline';
     competitorErr.style.display = 'none';
-    competitorRes.style.display = 'none';
+    aiMatchResult.style.display = 'none';
 
     try {
-      // Upload file to Supabase Storage first
       const ext  = competitorFileObj.name.split('.').pop();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, competitorFileObj, {
-        contentType: competitorFileObj.type, upsert: false,
-      });
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, competitorFileObj, { contentType: competitorFileObj.type, upsert: false });
       if (upErr) throw new Error('Upload failed: ' + upErr.message);
       const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
+      aiUploadedUrl  = urlData.publicUrl;
+      aiUploadedName = competitorFileObj.name;
 
-      // Call match edge function
       const res = await fetch(MATCH_FN_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ file_url: urlData.publicUrl, file_name: competitorFileObj.name }),
+        body: JSON.stringify({ file_url: aiUploadedUrl, file_name: aiUploadedName }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'AI matching failed');
 
-      renderCompetitorResults(data);
+      injectAiResults(data);
     } catch (err) {
       competitorErr.textContent = err.message || 'Something went wrong. Please try again.';
       competitorErr.style.display = 'block';
@@ -1272,50 +984,136 @@
     }
   });
 
-  function renderCompetitorResults(data) {
-    currentMatches = data.matches || [];
+  function injectAiResults(data) {
+    const matches   = data.matches   || [];
     const unmatched = data.unmatched || [];
-    const supplier  = data.supplier_name ? ` from <strong>${data.supplier_name}</strong>` : '';
-
-    // Auto-add all matched products to the quote basket
-    const basket = getBasket();
+    const supplier  = data.supplier_name || '';
     let added = 0;
-    currentMatches.forEach(m => {
-      const existing = basket.find(b => b.id === m.rrs_id);
+
+    matches.forEach(m => {
+      // Deduplicate: if same product name already exists as a row, merge qty
+      const existing = Array.from(document.querySelectorAll('.vq-item-row')).find(row => {
+        const nameEl = row.querySelector('.vq-item-name');
+        return nameEl && nameEl.value.trim().toLowerCase() === (m.rrs_name || '').trim().toLowerCase();
+      });
       if (existing) {
-        existing.qty = (existing.qty || 1) + (m.competitor_qty || 1);
+        const qtyEl = existing.querySelector('.vq-item-qty');
+        qtyEl.value = (parseInt(qtyEl.value) || 1) + (parseInt(m.competitor_qty) || 1);
       } else {
-        basket.push({ id: m.rrs_id, name: m.rrs_name, qty: m.competitor_qty || 1, price: m.rrs_price || 0 });
+        // Remove the trailing blank row if it's empty
+        const rows = document.querySelectorAll('.vq-item-row');
+        const lastRow = rows[rows.length - 1];
+        if (lastRow && lastRow.querySelector('.vq-item-name').value.trim() === '') lastRow.remove();
+        addVqRow(m.rrs_name || m.line_item, m.competitor_qty || 1, 'ai');
+        added++;
       }
-      added++;
     });
-    saveBasket(basket);
-    renderBasketPanel();
 
-    // Show inline confirmation near the AI upload area
-    let inlineMsg = document.getElementById('aiInlineResult');
-    if (!inlineMsg) {
-      inlineMsg = document.createElement('div');
-      inlineMsg.id = 'aiInlineResult';
-      inlineMsg.style.cssText = 'margin-top:12px;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:600;';
-      document.getElementById('aiUploadCard').after(inlineMsg);
-    }
+    const supplierLabel = supplier ? ` from <strong>${supplier}</strong>` : '';
     if (added > 0) {
-      inlineMsg.style.background = '#dcfce7';
-      inlineMsg.style.color = '#166534';
-      inlineMsg.innerHTML = `✓ AI matched <strong>${added}</strong> product${added !== 1 ? 's' : ''}${supplier} — added to your quote basket below.`
-        + (unmatched.length ? ` <span style="color:#64748b;font-weight:400;">${unmatched.length} item${unmatched.length !== 1 ? 's' : ''} not matched.</span>` : '');
+      aiMatchResult.style.display = 'block';
+      aiMatchResult.className = 'uq-ai-result uq-ai-result--success';
+      aiMatchResult.innerHTML = `✓ AI matched <strong>${added}</strong> product${added !== 1 ? 's' : ''}${supplierLabel} and added ${added !== 1 ? 'them' : 'it'} to your product list.`
+        + (unmatched.length ? ` <span class="uq-ai-unmatched">${unmatched.length} item${unmatched.length !== 1 ? 's' : ''} could not be matched — add them manually in the notes.</span>` : '');
     } else {
-      inlineMsg.style.background = '#fef9c3';
-      inlineMsg.style.color = '#713f12';
-      inlineMsg.innerHTML = `No catalog matches found${supplier}.` + (unmatched.length ? ` Try adding items manually below.` : '');
+      aiMatchResult.style.display = 'block';
+      aiMatchResult.className = 'uq-ai-result uq-ai-result--warn';
+      aiMatchResult.innerHTML = `No catalog matches found${supplierLabel}. Try adding items manually above or describe them in the notes.`;
     }
 
-    // Scroll to basket panel
-    setTimeout(() => {
-      document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 200);
+    // Scroll to product list
+    setTimeout(() => document.getElementById('vqItemsList').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
   }
+
+  // ── Form submit ──────────────────────────────────────────────
+  const form      = document.getElementById('quoteForm');
+  const submitBtn = document.getElementById('quoteSubmitBtn');
+  const msgEl     = document.getElementById('quoteFormMsg');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    let hasError = false;
+
+    const contactVal = document.getElementById('qContactName').value.trim();
+    const contactErr = document.getElementById('qContactNameErr');
+    if (contactVal && /[^a-zA-Z\s\-'.]/.test(contactVal)) {
+      contactErr.style.display = 'block'; hasError = true;
+    } else { contactErr.style.display = 'none'; }
+
+    const emailVal = document.getElementById('qEmail').value.trim();
+    const emailErr = document.getElementById('qEmailErr');
+    if (emailVal && !emailVal.includes('@')) {
+      emailErr.style.display = 'block'; hasError = true;
+    } else { emailErr.style.display = 'none'; }
+
+    const allItems = collectAllItems();
+    const itemsError = document.getElementById('vqItemsError');
+    if (!allItems.length) {
+      itemsError.style.display = 'block';
+      document.getElementById('vqItemsList').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      hasError = true;
+    } else { itemsError.style.display = 'none'; }
+
+    if (hasError) return;
+
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) {
+      localStorage.setItem('vq_pending', JSON.stringify({
+        business_name:  document.getElementById('qBusinessName').value.trim(),
+        customer_type:  (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
+        contact_name:   document.getElementById('qContactName').value.trim(),
+        email:          document.getElementById('qEmail').value.trim(),
+        notes:          document.getElementById('qNotes').value.trim(),
+        marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
+        items: allItems,
+      }));
+      window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + '#business-pricing');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = 'Sending…';
+    msgEl.style.display = 'none';
+
+    try {
+      // If an AI file was uploaded, use its URL; otherwise upload the file if manually attached
+      let file_url  = aiUploadedUrl  || null;
+      let file_name = aiUploadedName || null;
+
+      const res = await fetch(QUOTE_FN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+        body: JSON.stringify({
+          business_name:    document.getElementById('qBusinessName').value.trim(),
+          customer_type:    (()=>{ const s=document.getElementById('qCustomerType'); return s.value==='Other'?document.getElementById('qCustomerTypeOther').value.trim():s.value; })(),
+          contact_name:     document.getElementById('qContactName').value.trim(),
+          email:            document.getElementById('qEmail').value.trim(),
+          notes:            document.getElementById('qNotes').value.trim(),
+          marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
+          requested_items:  allItems,
+          user_id:          session.user.id,
+          file_url,
+          file_name,
+        }),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Submission failed.');
+
+      localStorage.removeItem('quoteBasket');
+      window.location.href = '/account#quotes';
+
+    } catch (err) {
+      msgEl.textContent = err.message || 'Something went wrong. Please try again.';
+      msgEl.style.display = 'block';
+      msgEl.style.background = '#fee2e2';
+      msgEl.style.color = '#991b1b';
+      msgEl.style.border = '1px solid #fca5a5';
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = 'Request My Custom Quote <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+    }
+  });
 
 })();
 </script>
