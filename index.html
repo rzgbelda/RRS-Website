@@ -1045,6 +1045,8 @@
   function initVqRows() {
     document.getElementById('vqItemsList').innerHTML = '';
     const pending = JSON.parse(localStorage.getItem('vq_pending') || 'null');
+    const basket  = JSON.parse(localStorage.getItem('quoteBasket') || '[]');
+
     if (pending?.items?.length) {
       pending.items.forEach(i => addVqRow(i.name, i.quantity, i.source || 'manual'));
       if (pending.business_name) document.getElementById('qBusinessName').value = pending.business_name;
@@ -1053,6 +1055,21 @@
       if (pending.email)         document.getElementById('qEmail').value         = pending.email;
       if (pending.notes)         document.getElementById('qNotes').value         = pending.notes;
       localStorage.removeItem('vq_pending');
+      // Also inject any catalog basket items not already in the pending list
+      basket.forEach(item => {
+        const already = Array.from(document.querySelectorAll('.vq-item-name'))
+          .some(el => el.value.trim().toLowerCase() === item.name.trim().toLowerCase());
+        if (!already) addVqRow(item.name, item.quantity || 1, 'catalog');
+      });
+      if (basket.length) localStorage.removeItem('quoteBasket');
+    } else if (basket.length) {
+      basket.forEach(item => addVqRow(item.name, item.quantity || 1, 'catalog'));
+      localStorage.removeItem('quoteBasket');
+      // Scroll to the form after a brief paint delay
+      setTimeout(() => {
+        const form = document.getElementById('uq-form');
+        if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     } else {
       addVqRow(); addVqRow();
     }
