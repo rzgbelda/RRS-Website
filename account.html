@@ -238,7 +238,7 @@
       <div class="acc-avatar" id="accAvatar">RR</div>
       <div class="acc-hero-info">
         <h1 id="accHeroName">Welcome Back</h1>
-        <p id="accHeroEmail">Loadingâ€¦</p>
+        <p id="accHeroEmail">Loading&hellip;</p>
       </div>
       <div class="acc-hero-badge" id="accHeroBadge">Business Account</div>
     </div>
@@ -295,7 +295,7 @@
               <div class="acc-field">
                 <label>Business Type</label>
                 <select id="profileBusinessType">
-                  <option value="">Select typeâ€¦</option>
+                  <option value="">Select type&hellip;</option>
                   <option>Hotel</option><option>Motel</option><option>Short-Term Rental</option>
                   <option>Cleaning Company</option><option>Restaurant</option>
                   <option>Campground</option><option>RV Park</option>
@@ -332,7 +332,7 @@
             </div>
           </div>
           <div class="order-list" id="orderList">
-            <div class="acc-loading">Loading ordersâ€¦</div>
+            <div class="acc-loading">Loading orders&hellip;</div>
           </div>
         </div>
       </div>
@@ -347,7 +347,7 @@
             </div>
             <a href="/wishlist" style="font-size:13px;font-weight:600;color:#ED7226;text-decoration:none">View all â†’</a>
           </div>
-          <div id="accountWishlist"><div class="acc-loading">Loading wishlistâ€¦</div></div>
+          <div id="accountWishlist"><div class="acc-loading">Loading wishlist&hellip;</div></div>
         </div>
       </div>
 
@@ -508,7 +508,7 @@
 
     async function loadOrders(userId, userEmail) {
       const list = document.getElementById("orderList");
-      list.innerHTML = `<div class="acc-loading">Loading ordersâ€¦</div>`;
+      list.innerHTML = `<div class="acc-loading">Loading orders&hellip;</div>`;
       const { data: orders, error } = await window.sb
         .from("orders")
         .select("*, order_items(*)")
@@ -669,7 +669,7 @@
 
     async function loadAccountWishlist(userId) {
       const container = document.getElementById("accountWishlist");
-      container.innerHTML = `<div class="acc-loading">Loading wishlistâ€¦</div>`;
+      container.innerHTML = `<div class="acc-loading">Loading wishlist&hellip;</div>`;
       const { data: wishlist } = await window.sb.from("wishlists").select("id").eq("user_id", userId).single();
       if (!wishlist) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">ðŸ¤</div><p>Your wishlist is empty.</p></div>`; return; }
       const { data: items } = await window.sb
@@ -692,4 +692,5 @@
   </script>
 </body>
 </html>
+
 
