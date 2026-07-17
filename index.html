@@ -476,6 +476,9 @@
                         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                         Add another product
                     </button>
+                    <p id="vqItemsError" style="display:none;margin:10px 0 0;font-size:13px;font-weight:600;color:#dc2626;">
+                        ⚠ Please add at least one product before requesting a quote.
+                    </p>
                 </div>
 
                 <!-- Products from basket (AI match) -->
@@ -1005,6 +1008,9 @@
   }
 
   document.getElementById('vqAddRow').addEventListener('click', () => addVqRow());
+  document.getElementById('vqItemRows').addEventListener('input', () => {
+    document.getElementById('vqItemsError').style.display = 'none';
+  });
   initVqRows();
 
   // ── Form submit ──────────────────────────────────────────────
@@ -1014,6 +1020,16 @@
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
+
+    // ── Validate: at least one product with a name ──────────────
+    const itemsError = document.getElementById('vqItemsError');
+    const filledItems = collectManualItems().filter(i => i.name);
+    if (!filledItems.length) {
+      itemsError.style.display = 'block';
+      document.querySelector('.vq-items-section').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    itemsError.style.display = 'none';
 
     // ── Login gate ──────────────────────────────────────────────
     const { data: { session } } = await sb.auth.getSession();
