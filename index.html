@@ -27,7 +27,7 @@
     <nav class="nav-links">
       <a href="/">Home</a>
       <a href="/catalog">Catalog</a>
-      <a href="/#how-it-works">How it Works</a>
+      
       <a href="/#reorder-header">Reorder Program</a>
       <a href="/#business-pricing">Volume Pricing</a>
       <a href="/#about-us">About Us</a>
@@ -57,10 +57,6 @@
 </div>
       </div>
 
-      <a href="/#business-pricing" class="quote-basket-icon" title="View volume pricing request" id="quoteBasketNav">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6"/><path d="M9 16h4"/></svg>
-        <span id="quoteBadge" class="quote-badge" style="display:none;">0</span>
-      </a>
 
       <div class="cart-container">
         <a href="/cart">
@@ -76,7 +72,7 @@
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
     <a href="/catalog">Catalog</a>
-    <a href="/#how-it-works">How it Works</a>
+    
     <a href="/#reorder-header">Reorder Program</a>
     <a href="/#business-pricing">Volume Pricing</a>
     <a href="/#about-us">About Us</a>
@@ -230,7 +226,7 @@
           <div class="step-icon"><img src="file.svg" alt="Submit your supply order request"></div>
         </div>
         <h3>Submit</h3>
-        <p>Enter your quantities and send your order request in minutes. No account required to start.</p>
+        <p>Enter your quantities and send your order request in minutes.</p>
       </div>
 
       <div class="step-connector" aria-hidden="true"></div>
@@ -317,7 +313,7 @@
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
         <button class="choose-schedule-btn">
           <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          Set Up Auto-Reorder
+          Set Up Auto-Order at Checkout
         </button>
       </a>
 
@@ -336,25 +332,6 @@
         <!-- LEFT SIDE -->
         <div class="pricing-left">
 
-            <!-- Dark hero band -->
-            <div class="pricing-hero-band">
-
-                <span class="pricing-eyebrow">Business &amp; Volume Pricing</span>
-
-                <h2>Get Better Pricing on the Supplies You Already Buy</h2>
-
-                <p class="pricing-intro">
-                    Tell us what your property or business regularly orders — or upload a recent invoice or product list. We'll review it and put together custom pricing based on your products, quantities, and ordering frequency.
-                </p>
-
-                <div class="pricing-benefit-badges">
-                    <span class="pbadge"><img src="pricetag.png" alt="">Competitive Case Pricing</span>
-                    <span class="pbadge"><img src="hospitality.png" alt="">Hospitality Focused</span>
-                    <span class="pbadge"><img src="pin.png" alt="">Local Support</span>
-                    <span class="pbadge"><img src="reorder.png" alt="">Easy Reorder Program</span>
-                </div>
-
-            </div>
 
             <!-- AI Teaser Section -->
             <div class="ai-teaser-section">
@@ -426,8 +403,8 @@
             <!-- White form body -->
             <div class="pricing-form-body">
 
-            <h3>Tell Us What You Buy</h3>
-            <p class="pricing-form-subtitle">Complete the form or upload a recent invoice to receive customized pricing for your business.</p>
+            <h3>Request a Custom Quote</h3>
+            <p class="pricing-form-subtitle">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
 
             <form class="pricing-form" id="quoteForm">
 
@@ -1062,6 +1039,21 @@
   });
   initVqRows();
 
+  // ── Auto-populate fields for logged-in users ─────────────────
+  (async () => {
+    const { data: { session } } = await sb.auth.getSession();
+    if (!session) return;
+    const userId = session.user.id;
+    const userEmail = session.user.email;
+    const { data: profile } = await sb.from('profiles').select('business_name, contact_name').eq('id', userId).single();
+    const pending = localStorage.getItem('vq_pending');
+    if (!pending) {
+      if (profile?.business_name) document.getElementById('qBusinessName').value = profile.business_name;
+      if (profile?.contact_name)  document.getElementById('qContactName').value  = profile.contact_name;
+      if (userEmail)               document.getElementById('qEmail').value         = userEmail;
+    }
+  })();
+
   // ── Form submit ──────────────────────────────────────────────
   const form      = document.getElementById('quoteForm');
   const submitBtn = document.getElementById('quoteSubmitBtn');
@@ -1161,11 +1153,8 @@
       form.reset();
       selectedFile = null;
       saveBasket([]);
-      renderBasketPanel();
-      initVqRows();
-      // Show success modal
-      const modal = document.getElementById('quoteSuccessModal');
-      modal.style.display = 'flex';
+      localStorage.removeItem('quoteBasket');
+      window.location.href = '/account#quotes';
 
     } catch (err) {
       showMsg(err.message || 'Something went wrong. Please try again.', false);
@@ -1286,87 +1275,47 @@
   function renderCompetitorResults(data) {
     currentMatches = data.matches || [];
     const unmatched = data.unmatched || [];
-    const supplier  = data.supplier_name ? `from <strong>${data.supplier_name}</strong>` : '';
+    const supplier  = data.supplier_name ? ` from <strong>${data.supplier_name}</strong>` : '';
 
-    const modal         = document.getElementById('aiResultsModal');
-    const modalTitle    = document.getElementById('aiResultsTitle');
-    const modalMatched  = document.getElementById('aiModalMatchedSection');
-    const modalMatchedL = document.getElementById('aiModalMatchedList');
-    const modalUnmatched  = document.getElementById('aiModalUnmatchedSection');
-    const modalUnmatchedL = document.getElementById('aiModalUnmatchedList');
-
-    modalTitle.innerHTML = `AI found <strong style="color:#ED7226">${currentMatches.length}</strong> matching product${currentMatches.length !== 1 ? 's' : ''}${supplier ? ' ' + supplier : ''} in our catalog`;
-
-    // Render matched
-    if (currentMatches.length > 0) {
-      modalMatchedL.innerHTML = currentMatches.map((m, i) => `
-        <div class="competitor-match-row">
-          <input type="checkbox" id="mcm_${i}" data-idx="${i}" checked>
-          <div class="competitor-match-info">
-            <div class="competitor-match-name">${m.rrs_name}</div>
-            <div class="competitor-match-meta">
-              Their item: <em>${m.line_item}</em>
-              ${m.competitor_unit_price ? ` &nbsp;·&nbsp; Their price: $${Number(m.competitor_unit_price).toFixed(2)}` : ''}
-              ${m.rrs_price ? ` &nbsp;·&nbsp; <span style="color:#e8621a;font-weight:700;">Our price: $${Number(m.rrs_price).toFixed(2)}</span>` : ''}
-            </div>
-            <div class="competitor-match-reason">${m.match_reason || ''}</div>
-          </div>
-          <span class="competitor-match-badge badge-${m.confidence || 'medium'}">${m.confidence || 'medium'}</span>
-        </div>`).join('');
-      modalMatched.style.display = 'block';
-    } else {
-      modalMatched.style.display = 'none';
-    }
-
-    // Render unmatched
-    if (unmatched.length > 0) {
-      modalUnmatchedL.innerHTML = unmatched.map(u => `
-        <div class="competitor-unmatched-row">
-          <strong>${u.line_item}</strong>
-          ${u.competitor_unit_price ? ` — $${Number(u.competitor_unit_price).toFixed(2)}` : ''}
-          ${u.reason ? `<br><span style="color:#94a3b8;font-size:11px;">${u.reason}</span>` : ''}
-        </div>`).join('');
-      modalUnmatched.style.display = 'block';
-    } else {
-      modalUnmatched.style.display = 'none';
-    }
-
-    modal.style.display = 'block';
-  }
-
-  document.getElementById('aiModalAddBasketBtn').addEventListener('click', function(e) {
+    // Auto-add all matched products to the quote basket
     const basket = getBasket();
-    const checkboxes = document.getElementById('aiModalMatchedList').querySelectorAll('input[type=checkbox]:checked');
     let added = 0;
-    checkboxes.forEach(cb => {
-      const idx = parseInt(cb.dataset.idx);
-      const match = currentMatches[idx];
-      if (!match) return;
-      const existing = basket.find(b => b.id === match.rrs_id);
+    currentMatches.forEach(m => {
+      const existing = basket.find(b => b.id === m.rrs_id);
       if (existing) {
-        existing.qty = (existing.qty || 1) + (match.competitor_qty || 1);
+        existing.qty = (existing.qty || 1) + (m.competitor_qty || 1);
       } else {
-        basket.push({
-          id:    match.rrs_id,
-          name:  match.rrs_name,
-          qty:   match.competitor_qty || 1,
-          price: match.rrs_price || 0,
-        });
+        basket.push({ id: m.rrs_id, name: m.rrs_name, qty: m.competitor_qty || 1, price: m.rrs_price || 0 });
       }
       added++;
     });
     saveBasket(basket);
     renderBasketPanel();
-    const btn = document.getElementById('aiModalAddBasketBtn');
-    btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`;
-    btn.style.background = '#16a34a';
+
+    // Show inline confirmation near the AI upload area
+    let inlineMsg = document.getElementById('aiInlineResult');
+    if (!inlineMsg) {
+      inlineMsg = document.createElement('div');
+      inlineMsg.id = 'aiInlineResult';
+      inlineMsg.style.cssText = 'margin-top:12px;padding:12px 16px;border-radius:10px;font-size:14px;font-weight:600;';
+      document.getElementById('aiUploadCard').after(inlineMsg);
+    }
+    if (added > 0) {
+      inlineMsg.style.background = '#dcfce7';
+      inlineMsg.style.color = '#166534';
+      inlineMsg.innerHTML = `✓ AI matched <strong>${added}</strong> product${added !== 1 ? 's' : ''}${supplier} — added to your quote basket below.`
+        + (unmatched.length ? ` <span style="color:#64748b;font-weight:400;">${unmatched.length} item${unmatched.length !== 1 ? 's' : ''} not matched.</span>` : '');
+    } else {
+      inlineMsg.style.background = '#fef9c3';
+      inlineMsg.style.color = '#713f12';
+      inlineMsg.innerHTML = `No catalog matches found${supplier}.` + (unmatched.length ? ` Try adding items manually below.` : '');
+    }
+
+    // Scroll to basket panel
     setTimeout(() => {
-      btn.textContent = 'Add Selected Matches to Quote Basket';
-      btn.style.background = '';
-      document.getElementById('aiResultsModal').style.display = 'none';
-    }, 1800);
-    document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  });
+      document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 200);
+  }
 
 })();
 </script>
