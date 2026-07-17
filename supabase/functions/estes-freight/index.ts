@@ -34,28 +34,17 @@ let tokenExpiry = 0;
 async function getToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
 
-  // Step 1: Exchange Client ID + Secret for API Key
-  const keyRes = await fetch(`${BASE}/v1/api-key`, {
-    method: "POST",
-    headers: {
-      "Authorization": "Basic " + btoa(`${ESTES_CLIENT_ID}:${ESTES_CLIENT_SECRET}`),
-      "Content-Type": "application/json",
-    },
-  });
-  if (!keyRes.ok) throw new Error(`Estes API key error: ${keyRes.status}`);
-  const { apiKey } = await keyRes.json();
-
-  // Step 2: Exchange API Key + MyEstes credentials for Bearer token
+  // Exchange stored API key + MyEstes credentials for Bearer token
   const authRes = await fetch(`${BASE}/v1/authenticate`, {
     method: "POST",
-    headers: { "apiKey": apiKey, "Content-Type": "application/json" },
+    headers: { "apiKey": ESTES_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ username: ESTES_USERNAME, password: ESTES_PASSWORD }),
   });
   if (!authRes.ok) throw new Error(`Estes auth error: ${authRes.status}`);
   const { access_token, expires_in } = await authRes.json();
 
   cachedToken = access_token;
-  tokenExpiry = Date.now() + ((expires_in ?? 3600) - 60) * 1000; // expire 1 min early
+  tokenExpiry = Date.now() + ((expires_in ?? 3600) - 60) * 1000;
   return cachedToken!;
 }
 
