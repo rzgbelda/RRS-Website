@@ -825,6 +825,31 @@
 </div>
 <!-- ── End Contact Modal ──────────────────────────────────── -->
 
+<!-- AI Results Modal -->
+<div id="aiResultsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 16px;" onclick="if(event.target===this)this.style.display='none'">
+  <div style="max-width:680px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;">
+    <div style="background:#0B1F38;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">AI Price Matching</div>
+        <div id="aiResultsTitle" style="color:#fff;font-size:18px;font-weight:800;"></div>
+      </div>
+      <button onclick="document.getElementById('aiResultsModal').style.display='none'" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
+    </div>
+    <div style="padding:24px;">
+      <div id="aiModalMatchedSection" style="display:none;margin-bottom:20px;">
+        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
+        <div id="aiModalMatchedList"></div>
+        <button type="button" id="aiModalAddBasketBtn" style="margin-top:14px;width:100%;padding:11px 18px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
+      </div>
+      <div id="aiModalUnmatchedSection" style="display:none;">
+        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
+        <div id="aiModalUnmatchedList"></div>
+        <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">These items aren't in our catalog yet. Mention them in the notes field below.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ── Quote Success Modal ───────────────────────────────── -->
 <div id="quoteSuccessModal" style="display:none;position:fixed;inset:0;background:rgba(11,31,56,.6);z-index:9999;display:none;align-items:center;justify-content:center;padding:20px;">
   <div style="background:#fff;border-radius:20px;padding:48px 40px;max-width:440px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.2);">
@@ -1309,8 +1334,7 @@
     modal.style.display = 'block';
   }
 
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest || !e.target.closest('#aiModalAddBasketBtn')) return;
+  document.getElementById('aiModalAddBasketBtn').addEventListener('click', function(e) {
     const basket = getBasket();
     const checkboxes = document.getElementById('aiModalMatchedList').querySelectorAll('input[type=checkbox]:checked');
     let added = 0;
@@ -1333,10 +1357,12 @@
     });
     saveBasket(basket);
     renderBasketPanel();
-    const btn = e.target.closest('#aiModalAddBasketBtn');
-    if (btn) { btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`; btn.style.background = '#16a34a'; }
+    const btn = document.getElementById('aiModalAddBasketBtn');
+    btn.textContent = `✓ ${added} product${added !== 1 ? 's' : ''} added to basket!`;
+    btn.style.background = '#16a34a';
     setTimeout(() => {
-      if (btn) { btn.textContent = 'Add Selected Matches to Quote Basket'; btn.style.background = ''; }
+      btn.textContent = 'Add Selected Matches to Quote Basket';
+      btn.style.background = '';
       document.getElementById('aiResultsModal').style.display = 'none';
     }, 1800);
     document.getElementById('quoteBasketPanel')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -1346,30 +1372,4 @@
 </script>
 <!-- ── End Quote Request Form ────────────────────────────────── -->
 
-<!-- AI Results Modal -->
-<div id="aiResultsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);overflow-y:auto;padding:20px 16px;" onclick="if(event.target===this)this.style.display='none'">
-  <div style="max-width:680px;margin:40px auto;background:#fff;border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.35);overflow:hidden;">
-    <!-- Header -->
-    <div style="background:#0B1F38;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
-      <div>
-        <div style="color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin-bottom:4px;">AI Price Matching</div>
-        <div id="aiResultsTitle" style="color:#fff;font-size:18px;font-weight:800;"></div>
-      </div>
-      <button onclick="document.getElementById('aiResultsModal').style.display='none'" style="background:rgba(255,255,255,.12);border:none;color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;">&times;</button>
-    </div>
-    <!-- Body -->
-    <div style="padding:24px;">
-      <div id="aiModalMatchedSection" style="display:none;margin-bottom:20px;">
-        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#16a34a;">✓ Matched Products</p>
-        <div id="aiModalMatchedList"></div>
-        <button type="button" id="aiModalAddBasketBtn" style="margin-top:14px;width:100%;padding:11px 18px;background:#ED7226;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">Add Selected Matches to Quote Basket</button>
-      </div>
-      <div id="aiModalUnmatchedSection" style="display:none;">
-        <p style="margin:0 0 10px;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;color:#dc2626;">✗ No Match Found</p>
-        <div id="aiModalUnmatchedList"></div>
-        <p style="margin:8px 0 0;font-size:11px;color:#94a3b8;">These items aren't in our catalog yet. Mention them in the notes field below.</p>
-      </div>
-    </div>
-  </div>
-</div>
 </body>
