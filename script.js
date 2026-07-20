@@ -951,13 +951,14 @@ function setupQuoteButtons() {
       const alreadyIn = basket.find(i => i.itemNumber === item.itemNumber);
       if (alreadyIn) {
         showVpToast(`"${item.name}" is already in your Volume Pricing List.`, "warn");
-        scrollToNewVpItem(item.itemNumber);
+        requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
         return;
       }
       basket.push(item);
       saveQuoteBasket(basket);
       updateQuoteBadge();
-      scrollToNewVpItem(item.itemNumber);
+      // Wait for browser to paint the updated panel before scrolling
+      requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
       showVpToast(`"${item.name}" added to your Volume Pricing List.`);
       btn.textContent = "✓ Added";
       btn.style.background = "#16a34a";
