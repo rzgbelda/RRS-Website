@@ -34,7 +34,7 @@ let tokenExpiry = 0;
 async function getToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
 
-  const authRes = await fetch(`${BASE}/v1/authenticate`, {
+  const authRes = await fetch(`${BASE}/authenticate`, {
     method: "POST",
     headers: { "apiKey": ESTES_API_KEY, "Content-Type": "application/json" },
     body: JSON.stringify({ username: ESTES_USERNAME, password: ESTES_PASSWORD }),
