@@ -110,12 +110,14 @@ async function handleQuote(payload: {
     body: JSON.stringify(body),
   });
 
-  const data = await res.json();
-  console.log("[estes-freight] quote response status:", res.status);
+  const rawQuote = await res.text();
+  console.log("[estes-freight] quote response status:", res.status, "body:", rawQuote.slice(0, 500));
 
   if (!res.ok) {
-    throw new Error(data?.errors?.[0]?.message ?? data?.message ?? `Rate quote failed (${res.status})`);
+    const data = JSON.parse(rawQuote);
+    throw new Error(data?.errors?.[0]?.message ?? data?.message ?? `Rate quote failed (${res.status}) — ${rawQuote.slice(0, 300)}`);
   }
+  const data = JSON.parse(rawQuote);
 
   // Response is an array of service level quotes
   const quotes: any[] = Array.isArray(data) ? data : [data];
