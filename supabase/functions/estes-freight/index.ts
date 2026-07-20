@@ -82,30 +82,41 @@ async function handleQuote(payload: {
   const shipDate = payload.ship_date ?? nextBusinessDay();
 
   const body = {
-    requestedShipDate: shipDate,
-    serviceLevels: [{ code: "LTL" }],
-    payor: {
-      payorRole:    "Shipper",
-      paymentTerms: "Prepaid",
-      accountCode:  ESTES_ACCOUNT,
+    quoteRequest: {
+      shipDate:      shipDate,
+      serviceLevels: ["LTL"],
     },
-    shipper: {
-      city:        ORIGIN.city,
-      stateProvince:   ORIGIN.state,
-      postalCode:  ORIGIN.zip,
-      countryCode: "US",
+    payment: {
+      account: ESTES_ACCOUNT,
+      payor:   "Shipper",
+      terms:   "Prepaid",
     },
-    consignee: {
-      city:        payload.destination_city ?? "",
-      stateProvince:   payload.destination_state ?? "",
-      postalCode:  payload.destination_zip,
-      countryCode: "US",
+    origin: {
+      address: {
+        city:          ORIGIN.city,
+        stateProvince: ORIGIN.state,
+        postalCode:    ORIGIN.zip,
+        country:       "US",
+      },
     },
-    commodities: [{
-      weight:         Math.ceil(payload.weight_lbs),
-      freightClass:   70,  // NMFC class 70 typical for hospitality supplies
-      handlingUnits:  1,
-    }],
+    destination: {
+      address: {
+        city:          payload.destination_city ?? "",
+        stateProvince: payload.destination_state ?? "",
+        postalCode:    payload.destination_zip,
+        country:       "US",
+      },
+    },
+    commodity: {
+      handlingUnits: [{
+        weight:    Math.ceil(payload.weight_lbs),
+        count:     1,
+        lineItems: [{
+          weight:         Math.ceil(payload.weight_lbs),
+          classification: 70,
+        }],
+      }],
+    },
   };
 
   console.log("[estes-freight] quote body:", JSON.stringify(body));
