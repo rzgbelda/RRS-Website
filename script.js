@@ -339,6 +339,8 @@ function renderVariantCard(variants) {
     priceBy: vv.priceBy || "",
     slug: vv.slug,
     variantLabel: vv.variantLabel || vv.size || "",
+    colorGroup:   vv.colorGroup  || "",
+    colorLabel:   vv.colorLabel  || "",
   }));
 
   const escapedJson = JSON.stringify(variantsData)
