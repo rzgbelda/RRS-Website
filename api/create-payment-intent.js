@@ -14,7 +14,10 @@ module.exports = async (req, res) => {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
+  const rawKey = process.env.STRIPE_SECRET_KEY || '';
+  const stripeKey = rawKey.trim().replace(/[\r\n\t]/g, '');
+  console.log('[stripe] key prefix:', stripeKey.slice(0, 12), 'length:', stripeKey.length);
+  const stripe = Stripe(stripeKey);
 
   try {
     const { amount, currency = 'usd', metadata = {} } = req.body;
