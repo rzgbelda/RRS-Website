@@ -344,9 +344,23 @@ function renderVariantCard(variants) {
   const escapedJson = JSON.stringify(variantsData)
     .replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
-  const pillsHtml = variants.map((vv, i) =>
-    `<button class="variant-pill${i === 0 ? " active" : ""}" onclick="selectVariant(this,${i})">${vv.variantLabel || vv.size || "Option " + (i + 1)}</button>`
-  ).join("");
+  // Deduplicate by variantLabel — when color variants exist, show one pill per size
+  // and append color label only when there are multiple colors per size
+  const hasColors = variants.some(vv => vv.colorLabel);
+  const seenLabels = new Map(); // variantLabel -> first index
+  variants.forEach((vv, i) => {
+    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+    if (!seenLabels.has(label)) seenLabels.set(label, i);
+  });
+  const dedupedVariants = variants.filter((vv, i) => {
+    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+    return seenLabels.get(label) === i;
+  });
+  const pillsHtml = dedupedVariants.map((vv, i) => {
+    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+    const colorBadge = hasColors && vv.colorLabel ? ` <span style="font-size:10px;opacity:.7;">· ${vv.colorLabel}</span>` : "";
+    return `<button class="variant-pill${i === 0 ? " active" : ""}" onclick="selectVariant(this,${variants.indexOf(vv)})">${label}${colorBadge}</button>`;
+  }).join("");
 
   return `
     <div class="product-card"
