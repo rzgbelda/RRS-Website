@@ -41,13 +41,21 @@ async function getToken(): Promise<string> {
   });
 
   const text = await authRes.text();
-  console.log("[estes-freight] authenticate status:", authRes.status, text.slice(0, 300));
+  console.log("[estes-freight] authenticate status:", authRes.status, "body:", text.slice(0, 500));
 
-  if (!authRes.ok) throw new Error(`Estes auth error: ${authRes.status} — ${text.slice(0, 200)}`);
-  const { access_token, expires_in } = JSON.parse(text);
+  if (!authRes.ok) throw new Error(`Estes auth error: ${authRes.status} — ${text.slice(0, 300)}`);
 
-  cachedToken = access_token;
-  tokenExpiry = Date.now() + ((expires_in ?? 3600) - 60) * 1000;
+  const parsed = JSON.parse(text);
+  // Estes may return access_token, token, or accessToken
+  const token = parsed.access_token ?? parsed.token ?? parsed.accessToken ?? null;
+  const expiresIn = parsed.expires_in ?? parsed.expiresIn ?? 3600;
+
+  console.log("[estes-freight] token fields:", Object.keys(parsed), "token present:", !!token);
+
+  if (!token) throw new Error(`Estes auth: no token in response — ${text.slice(0, 300)}`);
+
+  cachedToken = token;
+  tokenExpiry = Date.now() + (expiresIn - 60) * 1000;
   return cachedToken!;
 }
 
