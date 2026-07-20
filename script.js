@@ -100,6 +100,8 @@ function parseCSV(csvText) {
 
       productFamily: values[15]?.trim() || "",
       variantLabel:  values[16]?.trim() || "",
+      colorGroup:    values[23]?.trim() || "",
+      colorLabel:    values[24]?.trim() || "",
 
       sellByEach: values[17]?.trim() || "",
       priceBy:    values[18]?.trim() || "",
@@ -738,18 +740,40 @@ function injectProductVariantSelector(variants, activeProduct) {
 
   injectVariantCSS();
 
-  const pillsHtml = variants.map(v =>
+  // Size pills — only show unique sizes (exclude color duplicates from same size)
+  const sizeVariants = variants.filter(v => !v.colorGroup || v.colorLabel === (activeProduct.colorLabel || "Tan") || !activeProduct.colorLabel);
+  const pillsHtml = sizeVariants.map(v =>
     `<button class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}"
              data-slug="${v.slug}"
              onclick="switchProductVariant('${v.slug}')"
      >${v.variantLabel || v.size || v.name}</button>`
   ).join("");
 
+  // Color pills — find siblings with same colorGroup
+  let colorHtml = "";
+  if (activeProduct.colorGroup) {
+    const colorSiblings = allProducts.filter(p => p.colorGroup === activeProduct.colorGroup);
+    if (colorSiblings.length > 1) {
+      const colorPills = colorSiblings.map(p =>
+        `<button class="variant-pill color-pill${p.itemNumber === activeProduct.itemNumber ? " active" : ""}"
+                 data-slug="${p.slug}"
+                 onclick="switchProductVariant('${p.slug}')"
+                 title="${p.colorLabel}"
+         >${p.colorLabel}</button>`
+      ).join("");
+      colorHtml = `
+        <div class="variant-option-label" style="margin-top:12px;">Select Color</div>
+        <div class="variant-selector">${colorPills}</div>
+      `;
+    }
+  }
+
   const selector = document.createElement("div");
   selector.id = "product-variant-selector";
   selector.innerHTML = `
     <div class="variant-option-label">Select Option</div>
     <div class="variant-selector">${pillsHtml}</div>
+    ${colorHtml}
   `;
 
   const descEl = document.getElementById("productDescription");
@@ -757,13 +781,27 @@ function injectProductVariantSelector(variants, activeProduct) {
 }
 
 function switchProductVariant(slug) {
-  const product = allProducts.find(p => p.slug === slug || p.itemNumber === slug);
+  let product = allProducts.find(p => p.slug === slug || p.itemNumber === slug);
   if (!product) return;
 
-  history.pushState(null, "", "/product?item=" + encodeURIComponent(slug));
+  // When switching size, preserve the current color if possible
+  const currentActive = allProducts.find(p =>
+    document.querySelector(`#product-variant-selector .variant-pill.active[data-slug="${p.slug}"]`)
+  );
+  if (currentActive && currentActive.colorLabel && product.colorGroup !== currentActive.colorGroup) {
+    // User clicked a size pill — find the same color in the target size's colorGroup
+    const sameColorMatch = allProducts.find(p =>
+      p.productFamily === product.productFamily &&
+      p.variantLabel === product.variantLabel &&
+      p.colorLabel === currentActive.colorLabel
+    );
+    if (sameColorMatch) product = sameColorMatch;
+  }
+
+  history.pushState(null, "", "/product?item=" + encodeURIComponent(product.slug || product.itemNumber));
 
   document.querySelectorAll("#product-variant-selector .variant-pill").forEach(p => {
-    p.classList.toggle("active", p.dataset.slug === slug);
+    p.classList.toggle("active", p.dataset.slug === (product.slug || product.itemNumber));
   });
 
   populateProductPage(product);
