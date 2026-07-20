@@ -62,6 +62,7 @@ async function getToken(): Promise<string> {
 function estesHeaders(token: string) {
   return {
     "Authorization": `Bearer ${token}`,
+    "apiKey":        ESTES_API_KEY,
     "Content-Type":  "application/json",
     "Accept":        "application/json",
   };
