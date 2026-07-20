@@ -141,16 +141,14 @@ async function handleQuote(payload: {
   const q = quotes[0];
   console.log("[estes-freight] quote[0] keys:", Object.keys(q ?? {}), "charges:", JSON.stringify(q?.charges ?? q?.pricing ?? q?.rate ?? "none"));
 
-  // Estes charge fields vary — check common paths
-  const charges = q?.charges ?? q?.pricing ?? q?.rate ?? {};
-  const totalCharge =
-    Number(charges?.total ?? charges?.totalCharges ?? charges?.totalCharge ??
-           q?.totalCharges ?? q?.totalCharge ?? q?.total ?? 0);
+  // Estes response fields confirmed from logs
+  const quoteRate = q?.quoteRate ?? {};
+  console.log("[estes-freight] quoteRate:", JSON.stringify(quoteRate), "transitDetails:", JSON.stringify(q?.transitDetails), "dates:", JSON.stringify(q?.dates));
+  const totalCharge = Number(quoteRate?.total ?? quoteRate?.totalCharges ?? quoteRate?.netCharge ?? quoteRate?.amount ?? 0);
 
-  // Transit / delivery
   const dates = q?.dates ?? {};
-  const transitDays  = q?.transitDays ?? q?.transit ?? dates?.transitDays ?? null;
-  const deliveryDate = q?.deliveryDate ?? dates?.delivery ?? dates?.deliveryDate ?? null;
+  const transitDays  = q?.transitDetails?.transitDays ?? q?.transitDetails?.days ?? dates?.transitDays ?? null;
+  const deliveryDate = dates?.delivery ?? dates?.deliveryDate ?? dates?.estimatedDelivery ?? null;
 
   return {
     carrier_name:   "Estes Express",
