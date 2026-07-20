@@ -104,7 +104,7 @@ async function handleQuote(payload: {
 
   console.log("[estes-freight] quote body:", JSON.stringify(body));
 
-  const res = await fetch(`${BASE}/v1/rate-quotes`, {
+  const res = await fetch(`${BASE}/v1.0/rate-quotes`, {
     method: "POST",
     headers: estesHeaders(token),
     body: JSON.stringify(body),
