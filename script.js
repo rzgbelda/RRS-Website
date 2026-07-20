@@ -344,10 +344,9 @@ function renderVariantCard(variants) {
   const escapedJson = JSON.stringify(variantsData)
     .replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
-  // Deduplicate by variantLabel — when color variants exist, show one pill per size
-  // and append color label only when there are multiple colors per size
+  // Size pills: deduplicate by variantLabel, keep only the first (default/Tan) per size
   const hasColors = variants.some(vv => vv.colorLabel);
-  const seenLabels = new Map(); // variantLabel -> first index
+  const seenLabels = new Map();
   variants.forEach((vv, i) => {
     const label = vv.variantLabel || vv.size || "Option " + (i + 1);
     if (!seenLabels.has(label)) seenLabels.set(label, i);
@@ -358,9 +357,18 @@ function renderVariantCard(variants) {
   });
   const pillsHtml = dedupedVariants.map((vv, i) => {
     const label = vv.variantLabel || vv.size || "Option " + (i + 1);
-    const colorBadge = hasColors && vv.colorLabel ? ` <span style="font-size:10px;opacity:.7;">· ${vv.colorLabel}</span>` : "";
-    return `<button class="variant-pill${i === 0 ? " active" : ""}" onclick="selectVariant(this,${variants.indexOf(vv)})">${label}${colorBadge}</button>`;
+    return `<button class="variant-pill${i === 0 ? " active" : ""}" data-vidx="${variants.indexOf(vv)}" onclick="selectVariant(this)">${label}</button>`;
   }).join("");
+
+  // Color pills: show unique colors (using first size's color variants as reference)
+  let colorPillsHtml = "";
+  if (hasColors) {
+    const firstSize = dedupedVariants[0];
+    const colorOptions = variants.filter(vv => vv.variantLabel === firstSize.variantLabel);
+    colorPillsHtml = colorOptions.map((vv, i) =>
+      `<button class="variant-pill color-pill${i === 0 ? " active" : ""}" data-vidx="${variants.indexOf(vv)}" onclick="selectVariantColor(this)">${vv.colorLabel}</button>`
+    ).join("");
+  }
 
   return `
     <div class="product-card"
@@ -372,6 +380,7 @@ function renderVariantCard(variants) {
       <div class="product-content">
         <h3>${v.productFamily || v.name}</h3>
         <div class="variant-selector">${pillsHtml}</div>
+        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:6px;">${colorPillsHtml}</div>` : ""}
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
@@ -415,13 +424,15 @@ function renderVariantCard(variants) {
     </div>`;
 }
 
-function selectVariant(pillEl, idx) {
+function selectVariant(pillEl, legacyIdx) {
   const card = pillEl.closest(".product-card");
   const variants = JSON.parse(card.dataset.variants);
+  // Use data-vidx if present (color-aware dedup), fallback to legacy numeric arg
+  const idx = pillEl.dataset.vidx !== undefined ? parseInt(pillEl.dataset.vidx) : (legacyIdx ?? 0);
   const v = variants[idx];
 
-  card.querySelectorAll(".variant-pill").forEach((p, i) => {
-    p.classList.toggle("active", i === idx);
+  card.querySelectorAll(".variant-pill:not(.color-pill)").forEach(p => {
+    p.classList.toggle("active", p === pillEl);
   });
 
   const displayPrice = cleanPrice(v.price);
@@ -464,6 +475,39 @@ function selectVariant(pillEl, idx) {
     qBtn.dataset.name  = v.name;
     qBtn.dataset.image = v.image;
   }
+}
+
+// Switches color while keeping the current active size
+function selectVariantColor(pillEl) {
+  const card = pillEl.closest(".product-card");
+  const variants = JSON.parse(card.dataset.variants);
+  const clickedColor = variants[parseInt(pillEl.dataset.vidx)];
+  if (!clickedColor) return;
+
+  // Find the currently active size pill
+  const activeSizePill = card.querySelector(".variant-pill:not(.color-pill).active");
+  const activeSizeIdx = activeSizePill ? parseInt(activeSizePill.dataset.vidx) : 0;
+  const activeSize = variants[activeSizeIdx];
+
+  // Find variant matching current size + clicked color
+  const target = variants.find(vv =>
+    vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === clickedColor.colorLabel
+  ) || clickedColor;
+
+  // Update color pills active state
+  card.querySelectorAll(".color-pill").forEach(p => {
+    p.classList.toggle("active", p === pillEl);
+  });
+
+  // Update image and card data
+  const img = card.querySelector(".product-image img");
+  if (img) img.src = target.image;
+  card.dataset.url = "/product?item=" + encodeURIComponent(target.slug);
+
+  const btn = card.querySelector(".add-btn");
+  if (btn) { btn.dataset.item = target.itemNumber; btn.dataset.name = target.name; btn.dataset.image = target.image; }
+  const qBtn = card.querySelector(".quote-add-btn");
+  if (qBtn) { qBtn.dataset.item = target.itemNumber; qBtn.dataset.name = target.name; qBtn.dataset.image = target.image; }
 }
 
 function renderProducts(products) {
