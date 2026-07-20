@@ -908,7 +908,9 @@ function renderVpBasketPanel(basket) {
 function scrollToNewVpItem(itemNumber) {
   const listEl = document.getElementById("vpBasketItems");
   if (!listEl) return;
-  const newLi = listEl.querySelector(`[data-item-key="${CSS.escape(itemNumber)}"]`);
+  // Find by iterating — avoids CSS.escape edge cases with special chars in item numbers
+  const newLi = Array.from(listEl.querySelectorAll("[data-item-key]"))
+    .find(el => el.dataset.itemKey === itemNumber);
   if (!newLi) return;
   // Scroll only the internal list container — not the page
   newLi.scrollIntoView({ behavior: "smooth", block: "nearest" });
