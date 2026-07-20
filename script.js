@@ -483,29 +483,27 @@ function selectVariant(pillEl, legacyIdx) {
 function selectVariantColor(pillEl) {
   const card = pillEl.closest(".product-card");
   const variants = JSON.parse(card.dataset.variants);
-  const clickedColor = variants[parseInt(pillEl.dataset.vidx)];
-  if (!clickedColor) return;
-
-  // Find the currently active size pill
-  const activeSizePill = card.querySelector(".variant-pill:not(.color-pill).active");
-  const activeSizeIdx = activeSizePill ? parseInt(activeSizePill.dataset.vidx) : 0;
-  const activeSize = variants[activeSizeIdx];
-
-  // Find variant matching current size + clicked color
-  const target = variants.find(vv =>
-    vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === clickedColor.colorLabel
-  ) || clickedColor;
+  const colorVariant = variants[parseInt(pillEl.dataset.vidx)];
+  if (!colorVariant) return;
 
   // Update color pills active state
   card.querySelectorAll(".color-pill").forEach(p => {
     p.classList.toggle("active", p === pillEl);
   });
 
-  // Update image and card data
+  // All variants of the same color share the same image — just swap it
   const img = card.querySelector(".product-image img");
-  if (img) img.src = target.image;
-  card.dataset.url = "/product?item=" + encodeURIComponent(target.slug);
+  if (img) img.src = colorVariant.image;
 
+  // Update the product link to go to the color variant of the current active size
+  const activeSizePill = card.querySelector(".variant-pill:not(.color-pill).active");
+  const activeSizeIdx = activeSizePill ? parseInt(activeSizePill.dataset.vidx) : 0;
+  const activeSize = variants[activeSizeIdx];
+  const target = variants.find(vv =>
+    vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === colorVariant.colorLabel
+  ) || colorVariant;
+
+  card.dataset.url = "/product?item=" + encodeURIComponent(target.slug);
   const btn = card.querySelector(".add-btn");
   if (btn) { btn.dataset.item = target.itemNumber; btn.dataset.name = target.name; btn.dataset.image = target.image; }
   const qBtn = card.querySelector(".quote-add-btn");
