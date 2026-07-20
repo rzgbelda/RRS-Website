@@ -87,17 +87,17 @@ async function handleQuote(payload: {
     payor: {
       payorRole:    "Shipper",
       paymentTerms: "Prepaid",
-      accountCode:  ESTES_ACCOUNT.replace(/^[A-Za-z]+/, ""),
+      accountCode:  ESTES_ACCOUNT,
     },
     shipper: {
       city:        ORIGIN.city,
-      stateCode:   ORIGIN.state,
+      stateProvince:   ORIGIN.state,
       postalCode:  ORIGIN.zip,
       countryCode: "US",
     },
     consignee: {
       city:        payload.destination_city ?? "",
-      stateCode:   payload.destination_state ?? "",
+      stateProvince:   payload.destination_state ?? "",
       postalCode:  payload.destination_zip,
       countryCode: "US",
     },
@@ -167,7 +167,7 @@ async function handleBook(payload: {
       address: {
         street:     ORIGIN.street,
         city:       ORIGIN.city,
-        stateCode:  ORIGIN.state,
+        stateProvince:  ORIGIN.state,
         postalCode: ORIGIN.zip,
         countryCode:"US",
       },
@@ -178,7 +178,7 @@ async function handleBook(payload: {
       address: {
         street:      payload.destination.street,
         city:        payload.destination.city,
-        stateCode:   payload.destination.state,
+        stateProvince:   payload.destination.state,
         postalCode:  payload.destination.zip,
         countryCode: "US",
       },
