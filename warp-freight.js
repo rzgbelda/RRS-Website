@@ -173,7 +173,6 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     return 'parcel';
   }
 
-  const totalWeight = items.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
   const payload = {
     action: 'quote',
     payload: {
