@@ -34,6 +34,8 @@ let tokenExpiry = 0;
 async function getToken(): Promise<string> {
   if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
 
+  console.log("[estes-freight] apiKey prefix:", ESTES_API_KEY.slice(0, 8), "length:", ESTES_API_KEY.length);
+
   const authRes = await fetch(`${BASE}/authenticate`, {
     method: "POST",
     headers: { "apiKey": ESTES_API_KEY, "Content-Type": "application/json" },
