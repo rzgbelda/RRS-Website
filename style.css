@@ -2306,7 +2306,7 @@ textarea:focus {
   background: #fff;
 }
 
-/* Sticky column wrapper — both filter card and VP basket travel together */
+/* Sticky column: sticks to viewport, filter scrolls internally, VP basket always visible */
 .catalog-sidebar-col {
   position: sticky;
   top: 90px;
@@ -2315,7 +2315,6 @@ textarea:focus {
   flex-direction: column;
   gap: 16px;
   max-height: calc(100vh - 110px);
-  overflow-y: auto;
 }
 
 .filter-sidebar {
@@ -2324,6 +2323,13 @@ textarea:focus {
   border-radius: 18px;
   padding: 20px 18px 22px;
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
+  /* flex: 1 + min-height: 0 allows overflow-y: auto to work inside a flex parent */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.vp-basket-panel {
   flex-shrink: 0;
 }
 
