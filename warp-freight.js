@@ -270,6 +270,9 @@ function initFreightQuoting() {
   zipInput.addEventListener('input', maybeQuote);
   cityInput?.addEventListener('blur', maybeQuote);
   stateInput?.addEventListener('change', maybeQuote);
+
+  // Trigger immediately if ZIP is already filled (autofill / saved form data)
+  maybeQuote();
 }
 
 function getCartSubtotal() {
