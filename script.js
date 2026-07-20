@@ -1133,6 +1133,39 @@ function setupProductQuantity() {
 
   if (!qtyValue || !plusQty || !minusQty || !productPriceEl || !addBtn) return;
 
+  // Wire up "Add to Reorder Program" button on product page
+  const reorderBtn = document.querySelector(".reorder-program-btn");
+  if (reorderBtn) {
+    reorderBtn.onclick = e => {
+      e.preventDefault();
+      const qty = Math.max(1, parseInt(qtyValue.value) || 1);
+      const product = {
+        itemNumber: addBtn.dataset.item || "",
+        name:        addBtn.dataset.name || "",
+        description: addBtn.dataset.description || "",
+        price:       cleanPrice(addBtn.dataset.price),
+        price1:      cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
+        price2:      cleanPrice(addBtn.dataset.price2) || cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
+        price3:      cleanPrice(addBtn.dataset.price3) || cleanPrice(addBtn.dataset.price2) || cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
+        image:       addBtn.dataset.image || "",
+        quantity:    qty,
+        reorder:     "Monthly",
+      };
+      if (!product.name) return;
+      let cart = getCart();
+      const existing = cart.find(i => i.itemNumber === product.itemNumber);
+      if (existing) {
+        existing.quantity += qty;
+        existing.reorder = existing.reorder || "Monthly";
+      } else {
+        cart.push(product);
+      }
+      saveCart(cart);
+      updateCartBadge();
+      window.location.href = "/cart";
+    };
+  }
+
   function getQty() { return Math.max(1, parseInt(qtyValue.value) || 1); }
 
   function updateProductPagePrice() {
