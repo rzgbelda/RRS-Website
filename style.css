@@ -2300,7 +2300,7 @@ textarea:focus {
 
 .catalog-main {
   display: grid;
-  grid-template-columns: 245px 1fr;
+  grid-template-columns: 245px minmax(0, 1fr);
   gap: 28px;
   padding: 45px 20px 80px;
   background: #fff;
@@ -2582,12 +2582,6 @@ textarea:focus {
 }
 .vp-toast--warn { background: #92400e; }
 .vp-toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-.catalog-main {
-  display: grid;
-  grid-template-columns: 245px minmax(0, 1fr);
-  gap: 28px;
-}
 
 .catalog-products {
   display: grid;
@@ -6345,7 +6339,8 @@ span.flatpickr-weekday {
 }
 
 /* ── Prevent any horizontal overflow globally ── */
-html, body { max-width: 100%; overflow-x: hidden; }
+/* overflow-x: clip (not hidden) — clip doesn't create a scroll container, so position:sticky works */
+html, body { max-width: 100%; overflow-x: clip; }
 
 /* ── Touch-friendly minimum tap targets ── */
 @media (max-width: 768px) {
