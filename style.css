@@ -2306,17 +2306,25 @@ textarea:focus {
   background: #fff;
 }
 
+/* Sticky column wrapper — both filter card and VP basket travel together */
+.catalog-sidebar-col {
+  position: sticky;
+  top: 90px;
+  align-self: start;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: calc(100vh - 110px);
+  overflow-y: auto;
+}
+
 .filter-sidebar {
   background: #fff;
   border: 1px solid #eaeff7;
   border-radius: 18px;
   padding: 20px 18px 22px;
-  height: fit-content;
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
-  position: sticky;
-  top: 90px;
-  max-height: calc(100vh - 110px);
-  overflow-y: auto;
+  flex-shrink: 0;
 }
 
 .filter-search {
@@ -2430,7 +2438,6 @@ textarea:focus {
 /* VOLUME PRICING BASKET PANEL (catalog sidebar) */
 
 .vp-basket-panel {
-  margin-top: 24px;
   border-radius: 14px;
   overflow: hidden;
   border: 1.5px solid #e2e8f0;

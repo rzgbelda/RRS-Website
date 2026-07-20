@@ -92,30 +92,32 @@
 
   <section class="catalog-main">
 
-    <aside class="filter-sidebar">
-      <div class="filter-search">
-        <span>⌕</span>
-        <input type="text" id="search-input" placeholder="Search products...">
-      </div>
+    <div class="catalog-sidebar-col">
+      <aside class="filter-sidebar">
+        <div class="filter-search">
+          <span>⌕</span>
+          <input type="text" id="search-input" placeholder="Search products...">
+        </div>
 
-      <h3>Filter by Category</h3>
+        <h3>Filter by Category</h3>
 
-      <div class="filter-list">
-        <label><input type="checkbox" class="category-filter" value="a-z">A-Z</label>
-        <label><input type="checkbox" class="category-filter" value="toilet-paper">Toilet Paper</label>
-        <label><input type="checkbox" class="category-filter" value="paper-towels">Paper Towels</label>
-        <label><input type="checkbox" class="category-filter" value="trash-liners">Trash Liners</label>
-        <label><input type="checkbox" class="category-filter" value="cleaning-chemicals">Cleaning Chemicals</label>
-        <label><input type="checkbox" class="category-filter" value="hand-soap">Hand Soap</label>
-        <label><input type="checkbox" class="category-filter" value="laundry-supplies">Laundry Supplies</label>
-        <label><input type="checkbox" class="category-filter" value="dishwashing-supplies">Dishwashing Supplies</label>
-        <label><input type="checkbox" class="category-filter" value="guest-room-supplies">Guest Room Supplies</label>
-        <label><input type="checkbox" class="category-filter" value="towels-linens">Towels and Linens</label>
-        <label><input type="checkbox" class="category-filter" value="food-service">Food Service Supplies</label>
-        <label><input type="checkbox" class="category-filter" value="facility-supplies">Facility Supplies</label>
-      </div>
+        <div class="filter-list">
+          <label><input type="checkbox" class="category-filter" value="a-z">A-Z</label>
+          <label><input type="checkbox" class="category-filter" value="toilet-paper">Toilet Paper</label>
+          <label><input type="checkbox" class="category-filter" value="paper-towels">Paper Towels</label>
+          <label><input type="checkbox" class="category-filter" value="trash-liners">Trash Liners</label>
+          <label><input type="checkbox" class="category-filter" value="cleaning-chemicals">Cleaning Chemicals</label>
+          <label><input type="checkbox" class="category-filter" value="hand-soap">Hand Soap</label>
+          <label><input type="checkbox" class="category-filter" value="laundry-supplies">Laundry Supplies</label>
+          <label><input type="checkbox" class="category-filter" value="dishwashing-supplies">Dishwashing Supplies</label>
+          <label><input type="checkbox" class="category-filter" value="guest-room-supplies">Guest Room Supplies</label>
+          <label><input type="checkbox" class="category-filter" value="towels-linens">Towels and Linens</label>
+          <label><input type="checkbox" class="category-filter" value="food-service">Food Service Supplies</label>
+          <label><input type="checkbox" class="category-filter" value="facility-supplies">Facility Supplies</label>
+        </div>
+      </aside>
 
-      <!-- Volume Pricing Basket Panel -->
+      <!-- Volume Pricing Basket Panel — sibling of filter, always visible -->
       <div class="vp-basket-panel" id="vpBasketPanel" style="display:none;">
         <div class="vp-basket-header">
           <svg width="15" height="15" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
@@ -127,8 +129,7 @@
           Get Volume Pricing →
         </a>
       </div>
-
-    </aside>
+    </div>
 
     <section class="catalog-products" id="products-grid">
       <!-- Product cards will load here from JavaScript -->
