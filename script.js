@@ -888,7 +888,7 @@ function renderVpBasketPanel(basket) {
   if (countEl) countEl.textContent = basket.length;
 
   listEl.innerHTML = basket.map((item, idx) => `
-    <li class="vp-basket-item">
+    <li class="vp-basket-item" data-item-key="${item.itemNumber}">
       <img src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'">
       <span class="vp-basket-item-name">${item.name}</span>
       <button class="vp-basket-remove" data-idx="${idx}" title="Remove">×</button>
@@ -905,6 +905,33 @@ function renderVpBasketPanel(basket) {
   });
 }
 
+function scrollToNewVpItem(itemNumber) {
+  const listEl = document.getElementById("vpBasketItems");
+  if (!listEl) return;
+  const newLi = listEl.querySelector(`[data-item-key="${CSS.escape(itemNumber)}"]`);
+  if (!newLi) return;
+  // Scroll only the internal list container — not the page
+  newLi.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  newLi.classList.add("vp-basket-item--new");
+  newLi.addEventListener("animationend", () => newLi.classList.remove("vp-basket-item--new"), { once: true });
+}
+
+function showVpToast(msg, type) {
+  let toast = document.getElementById("vpToast");
+  if (!toast) {
+    toast = document.createElement("div");
+    toast.id = "vpToast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    document.body.appendChild(toast);
+  }
+  toast.className = "vp-toast" + (type === "warn" ? " vp-toast--warn" : "");
+  toast.textContent = msg;
+  toast.classList.add("vp-toast--visible");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => toast.classList.remove("vp-toast--visible"), 2800);
+}
+
 function setupQuoteButtons() {
   renderVpBasketPanel(getQuoteBasket());
   document.querySelectorAll(".quote-add-btn").forEach(btn => {
@@ -919,18 +946,20 @@ function setupQuoteButtons() {
       };
       if (!item.name) return;
       const basket = getQuoteBasket();
-      if (!basket.find(i => i.itemNumber === item.itemNumber)) {
-        basket.push(item);
-        saveQuoteBasket(basket);
+      const alreadyIn = basket.find(i => i.itemNumber === item.itemNumber);
+      if (alreadyIn) {
+        showVpToast(`"${item.name}" is already in your Volume Pricing List.`, "warn");
+        scrollToNewVpItem(item.itemNumber);
+        return;
       }
+      basket.push(item);
+      saveQuoteBasket(basket);
       updateQuoteBadge();
+      scrollToNewVpItem(item.itemNumber);
+      showVpToast(`"${item.name}" added to your Volume Pricing List.`);
       btn.textContent = "✓ Added";
       btn.style.background = "#16a34a";
       setTimeout(() => { btn.textContent = "Get Volume Price"; btn.style.background = ""; }, 1800);
-
-      // Scroll to the form and highlight it
-      const section = document.getElementById("business-pricing");
-      if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     };
   });
 }

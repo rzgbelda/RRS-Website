@@ -2531,6 +2531,43 @@ textarea:focus {
 
 .vp-basket-cta:hover { background: #f07828; }
 
+@keyframes vpItemHighlight {
+  0%   { background: #fff7ed; box-shadow: inset 0 0 0 2px #ED7226; }
+  70%  { background: #fff7ed; box-shadow: inset 0 0 0 2px #ED7226; }
+  100% { background: transparent; box-shadow: inset 0 0 0 0px transparent; }
+}
+.vp-basket-item--new {
+  animation: vpItemHighlight 1.8s ease-out forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vp-basket-item--new { animation: none; background: #fff7ed; }
+}
+
+/* VP toast */
+.vp-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(12px);
+  background: #0B1F38;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 10px 18px;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18);
+  white-space: nowrap;
+  max-width: calc(100vw - 32px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s, transform .2s;
+  z-index: 9999;
+}
+.vp-toast--warn { background: #92400e; }
+.vp-toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
 .catalog-main {
   display: grid;
   grid-template-columns: 245px minmax(0, 1fr);
