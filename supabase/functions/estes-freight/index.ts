@@ -128,7 +128,7 @@ async function handleQuote(payload: {
   });
 
   const rawQuote = await res.text();
-  console.log("[estes-freight] quote response status:", res.status, "body:", rawQuote.slice(0, 500));
+  console.log("[estes-freight] quote response status:", res.status, "body:", rawQuote.slice(0, 2000));
 
   if (!res.ok) {
     const data = JSON.parse(rawQuote);
@@ -136,17 +136,29 @@ async function handleQuote(payload: {
   }
   const data = JSON.parse(rawQuote);
 
-  // Response is an array of service level quotes
-  const quotes: any[] = Array.isArray(data) ? data : [data];
+  // Estes returns { data: [ { serviceLevelId, quoteId, charges: {...}, ... } ] }
+  const quotes: any[] = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : [data]);
   const q = quotes[0];
+  console.log("[estes-freight] quote[0] keys:", Object.keys(q ?? {}), "charges:", JSON.stringify(q?.charges ?? q?.pricing ?? q?.rate ?? "none"));
+
+  // Estes charge fields vary — check common paths
+  const charges = q?.charges ?? q?.pricing ?? q?.rate ?? {};
+  const totalCharge =
+    Number(charges?.total ?? charges?.totalCharges ?? charges?.totalCharge ??
+           q?.totalCharges ?? q?.totalCharge ?? q?.total ?? 0);
+
+  // Transit / delivery
+  const dates = q?.dates ?? {};
+  const transitDays  = q?.transitDays ?? q?.transit ?? dates?.transitDays ?? null;
+  const deliveryDate = q?.deliveryDate ?? dates?.delivery ?? dates?.deliveryDate ?? null;
 
   return {
     carrier_name:   "Estes Express",
-    total_charge:   Number(q?.totalCharges ?? q?.totalCharge ?? 0),
-    transit_days:   q?.transitDays ?? null,
-    delivery_date:  q?.deliveryDate ?? null,
+    total_charge:   totalCharge,
+    transit_days:   transitDays,
+    delivery_date:  deliveryDate,
     quote_id:       q?.quoteId ?? null,
-    service_level:  q?.serviceLevel?.description ?? "LTL",
+    service_level:  q?.serviceLevelText ?? q?.serviceLevel?.description ?? "LTL Standard Transit",
     ship_date:      shipDate,
     test_mode:      USE_TEST,
   };
