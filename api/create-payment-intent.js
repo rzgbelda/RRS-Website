@@ -1,4 +1,11 @@
-const Stripe = require('stripe');
+let Stripe;
+try { Stripe = require('stripe'); } catch(e) {
+  module.exports = async (req, res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.status(500).json({ error: 'stripe module not found: ' + e.message });
+  };
+  return;
+}
 
 module.exports = async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
