@@ -87,13 +87,17 @@ async function handleQuote(payload: {
     payor: {
       payorRole:    "Shipper",
       paymentTerms: "Prepaid",
-      accountCode:  ESTES_ACCOUNT,
+      accountCode:  ESTES_ACCOUNT.replace(/^[A-Za-z]+/, ""),
     },
     shipper: {
+      city:        ORIGIN.city,
+      stateCode:   ORIGIN.state,
       postalCode:  ORIGIN.zip,
       countryCode: "US",
     },
     consignee: {
+      city:        payload.destination_city ?? "",
+      stateCode:   payload.destination_state ?? "",
       postalCode:  payload.destination_zip,
       countryCode: "US",
     },
