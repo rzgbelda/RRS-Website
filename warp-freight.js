@@ -290,9 +290,12 @@ async function triggerQuote(zip) {
     return;
   }
 
-  // Free shipping for orders $500+ — temporarily disabled to test Warp LTL rates
-  // const subtotal = getCartSubtotal();
-  // if (subtotal >= 500) { ... }
+  // Free shipping for orders $1,500+
+  const subtotal = getCartSubtotal();
+  if (subtotal >= 1500) {
+    renderQuotePanel(null, 'free-shipping');
+    return;
+  }
 
   // Determine weight to choose parcel vs LTL
   const freightItems = buildFreightItems(cartItems);
@@ -361,6 +364,21 @@ function renderQuotePanel(quotes, state) {
 
   if (state === 'empty-cart') {
     panel.innerHTML = `<p class="fq-hint">Add products to your order to see shipping rates.</p>`;
+    return;
+  }
+
+  if (state === 'free-shipping') {
+    _selectedQuote = { total_charge: 0, carrier_name: 'Free Shipping', transit_days: null };
+    localStorage.setItem('rrs_freight_quote', JSON.stringify(_selectedQuote));
+    panel.innerHTML = `
+      <div style="display:flex;align-items:flex-start;gap:10px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
+        <span style="font-size:18px;">🎉</span>
+        <div>
+          <strong style="color:#15803d;font-size:14px;">Free Shipping</strong>
+          <p style="color:#166534;font-size:12px;margin:2px 0 0;">Your order qualifies for free shipping!</p>
+        </div>
+      </div>`;
+    if (shippingEl) shippingEl.textContent = 'Free';
     return;
   }
 
