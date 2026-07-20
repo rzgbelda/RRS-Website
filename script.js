@@ -429,9 +429,18 @@ function renderVariantCard(variants) {
 function selectVariant(pillEl, legacyIdx) {
   const card = pillEl.closest(".product-card");
   const variants = JSON.parse(card.dataset.variants);
-  // Use data-vidx if present (color-aware dedup), fallback to legacy numeric arg
   const idx = pillEl.dataset.vidx !== undefined ? parseInt(pillEl.dataset.vidx) : (legacyIdx ?? 0);
-  const v = variants[idx];
+  let v = variants[idx];
+
+  // If a color is actively selected, find the matching size+color variant
+  const activeColorPill = card.querySelector(".color-pill.active");
+  if (activeColorPill && v.colorLabel) {
+    const activeColorVariant = variants[parseInt(activeColorPill.dataset.vidx)];
+    const matched = variants.find(vv =>
+      vv.variantLabel === v.variantLabel && vv.colorLabel === activeColorVariant?.colorLabel
+    );
+    if (matched) v = matched;
+  }
 
   card.querySelectorAll(".variant-pill:not(.color-pill)").forEach(p => {
     p.classList.toggle("active", p === pillEl);
