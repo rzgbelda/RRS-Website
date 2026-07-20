@@ -2311,10 +2311,27 @@ textarea:focus {
   border: 1px solid #eaeff7;
   border-radius: 18px;
   padding: 20px 18px 22px;
-  height: fit-content;
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
   position: sticky;
   top: 90px;
+  max-height: calc(100vh - 110px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Filter list scrolls internally so VP basket stays visible */
+.filter-list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.filter-sidebar > h3 { flex-shrink: 0; }
+.filter-sidebar > .filter-search { flex-shrink: 0; }
+
+.vp-basket-panel {
+  flex-shrink: 0;
 }
 
 .filter-search {
