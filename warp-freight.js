@@ -4,7 +4,7 @@
 
 const WARP_CONFIG = {
   edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight',
-  parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/parcel-quote',
+  parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/bright-service',
   origin: {
     street: '609 Washington St',
     city: 'Plymouth',
