@@ -663,13 +663,13 @@
             items: window._orderItems,
             checkout: checkout
           };
-          // Save order to Supabase
+          // Save order to Supabase then save referral if code present
           if (window.sb) {
-            var user = null;
-            window.sb.auth.getUser().then(function(r){ user = r.data?.user; });
-            window.sb.from('orders').insert({
+            var userRes = await window.sb.auth.getUser();
+            var userId = userRes.data?.user?.id || null;
+            var orderInsert = await window.sb.from('orders').insert({
               order_number: orderNum,
-              user_id: user ? user.id : null,
+              user_id: userId,
               customer_name: checkout.contact || '',
               customer_email: checkout.email || '',
               business_name: checkout.business || '',
@@ -682,7 +682,25 @@
               status: 'pending',
               order_type: checkout.orderType || 'one_time',
               notes: checkout.notes || '',
-            }).then(function(r){ if (r.error) console.error('[order] save error:', r.error.message); });
+            }).select('id').single();
+            if (orderInsert.error) {
+              console.error('[order] save error:', orderInsert.error.message);
+            } else if (checkout.referral) {
+              // Look up sub-distributor by referral code and save to order_referrals
+              var sdRes = await window.sb.from('sub_distributors')
+                .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
+              if (sdRes.data) {
+                var commissionAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
+                await window.sb.from('order_referrals').insert({
+                  order_id: orderInsert.data.id,
+                  referral_code: checkout.referral.toUpperCase(),
+                  sub_distributor_id: sdRes.data.id,
+                  commission_pct: sdRes.data.commission_pct,
+                  commission_amount: commissionAmt,
+                  source: 'checkout',
+                });
+              }
+            }
           }
           localStorage.removeItem('cart');
           localStorage.setItem('rrs_last_order', JSON.stringify(lastOrderData));

@@ -2338,6 +2338,7 @@ function openSdModal(sd) {
     '</div>' +
     '<div style="padding:16px 28px;border-top:1px solid #f0f4fa;display:flex;justify-content:flex-end;gap:10px;">' +
       '<button onclick="closeSdModal()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;">Cancel</button>' +
+      (sd ? '<button onclick="createSdLogin()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f0f4ff;color:#3b5bdb;cursor:pointer;font-size:13px;font-weight:600;">Create Login</button>' : '') +
       '<button onclick="saveSdDistributor()" style="padding:10px 20px;border:none;border-radius:9px;background:#f58220;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Save Sub-Distributor</button>' +
     '</div>' +
   '</div>';
@@ -2353,6 +2354,33 @@ function generateSdCode() {
   var name = document.getElementById('sdName').value.trim();
   var prefix = name ? name.replace(/\s+/g,'').toUpperCase().slice(0,4) : 'SD';
   document.getElementById('sdCode').value = prefix + Math.floor(1000 + Math.random() * 9000);
+}
+
+async function createSdLogin() {
+  var id    = document.getElementById('sdEditId').value;
+  var name  = document.getElementById('sdName').value.trim();
+  var email = document.getElementById('sdEmail').value.trim();
+  var errEl = document.getElementById('sdModalError');
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+
+  if (!email) return showErr('Email is required to create a login.');
+  var password = prompt('Set a temporary password for ' + email + ':');
+  if (!password) return;
+  if (password.length < 8) return showErr('Password must be at least 8 characters.');
+
+  try {
+    var res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/create-subdist-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.sb.supabaseKey },
+      body: JSON.stringify({ email, password, name, sub_distributor_id: id }),
+    });
+    var data = await res.json();
+    if (data.error) return showErr('Error: ' + data.error);
+    errEl.style.display = 'none';
+    showToast('Login created for ' + email + '. They can now sign in to the admin portal.');
+  } catch(e) {
+    showErr('Failed to create login: ' + e.message);
+  }
 }
 
 async function saveSdDistributor() {
