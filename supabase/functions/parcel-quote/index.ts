@@ -71,6 +71,7 @@ serve(async (req) => {
 
     const data = await res.json();
     console.log("[parcel-quote] Shippo status:", res.status);
+    console.log("[parcel-quote] Shippo response:", JSON.stringify(data).slice(0, 3000));
 
     if (!res.ok) {
       return new Response(JSON.stringify({ error: data }), {
