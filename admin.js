@@ -236,11 +236,11 @@ async function renderDashboardTab() {
     window.sb.from("orders").select("*",          { count:"exact", head:true }).eq("status", "pending"),
     window.sb.from("profiles").select("*",        { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("inventory").select("*, products(name, category_name)").in("status",["out_of_stock","low_stock"]),
-    window.sb.from("orders").select("order_number, customer_name, business_name, amount_total, status, created_at").order("created_at",{ascending:false}).limit(6),
-    window.sb.from("orders").select("amount_total, status").neq("status", "cancelled"),
+    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(6),
+    window.sb.from("orders").select("total, status").neq("status", "cancelled"),
   ]);
 
-  const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.amount_total || 0), 0) / 100;
+  const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
 
   setEl("statRevenue",    "$" + revenue.toLocaleString("en-US", {minimumFractionDigits:2, maximumFractionDigits:2}));
   setEl("statProducts",   prodCount  ?? 0);
@@ -256,7 +256,7 @@ async function renderDashboardTab() {
 
   const ro = document.getElementById("recentOrdersBody");
   if (ro) ro.innerHTML = (recentOrders || []).map(o => {
-    const totalDollars = o.amount_total ? '$' + (o.amount_total / 100).toFixed(2) : '—';
+    const totalDollars = o.total ? '$' + Number(o.total).toFixed(2) : '—';
     return `
     <tr>
       <td><strong>${escHtml(o.order_number || "—")}</strong></td>
@@ -295,7 +295,7 @@ async function loadTrendChart(mode, btnEl) {
   let labels = [], revenueData = [], ordersData = [];
 
   // Fetch all orders with created_at, total, and status
-  const { data: orders } = await window.sb.from("orders").select("created_at, amount_total, status");
+  const { data: orders } = await window.sb.from("orders").select("created_at, total, status");
   const rows = orders || [];
   let cancelledData = [];
 
@@ -1302,7 +1302,7 @@ async function renderOrdersTable(filter) {
 
   tbody.innerHTML = (orders || []).map(o => {
     const items = Array.isArray(o.items) ? o.items : (typeof o.items === "string" ? JSON.parse(o.items || "[]") : []);
-    const totalDollars = o.amount_total ? (o.amount_total / 100).toFixed(2) : "0.00";
+    const totalDollars = o.total ? Number(o.total).toFixed(2) : "0.00";
     return `
     <tr>
       <td><strong>${escHtml(o.order_number)}</strong></td>
