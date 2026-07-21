@@ -172,6 +172,7 @@ function bindSdButtons() {
       case 'btnCloseEmpX':     closeEmpModal();      break;
       case 'btnSaveEmp':       saveEmployee();       break;
       case 'btnGenSdCode':     generateSdCode();     break;
+      case 'btnSdCreateLogin': createSdLogin();      break;
       case 'btnGenEmpCode':    generateEmpCode();    break;
     }
   });
@@ -2308,42 +2309,27 @@ function filterSdTable(q) {
 // ── Sub-Distributor Modal ─────────────────────────────────────
 
 function closeSdModal() {
-  var m = document.getElementById('sdModalDynamic');
-  if (m) m.remove();
+  var m = document.getElementById('sdModal');
+  if (m) m.style.display = 'none';
+  var loginBtn = document.getElementById('btnSdCreateLogin');
+  if (loginBtn) loginBtn.style.display = 'none';
 }
 
 function openSdModal(sd) {
-  closeSdModal();
-  var overlay = document.createElement('div');
-  overlay.id = 'sdModalDynamic';
-  overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:999999;display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;';
-  overlay.innerHTML = '<div style="background:#fff;border-radius:16px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,0.3);">' +
-    '<div style="padding:22px 28px 16px;border-bottom:1px solid #f0f4fa;display:flex;justify-content:space-between;align-items:center;">' +
-      '<h3 style="margin:0;font-size:17px;font-weight:800;color:#0d1f38;">' + (sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor') + '</h3>' +
-      '<button onclick="closeSdModal()" style="border:none;background:#f3f6fb;border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;color:#666;">✕</button>' +
-    '</div>' +
-    '<div style="padding:22px 28px;">' +
-      '<input type="hidden" id="sdEditId" value="' + (sd ? sd.id : '') + '">' +
-      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Name *</label><input id="sdName" type="text" placeholder="ABC Distribution" value="' + (sd ? esc(sd.name) : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Contact Person</label><input id="sdContact" type="text" placeholder="John Smith" value="' + (sd ? esc(sd.contact_person||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Email</label><input id="sdEmail" type="email" placeholder="john@abc.com" value="' + (sd ? esc(sd.email||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Phone</label><input id="sdPhone" type="text" placeholder="(555) 000-0000" value="' + (sd ? esc(sd.phone||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Referral Code *</label><div style="display:flex;gap:8px;"><input id="sdCode" type="text" placeholder="ABC2024" value="' + (sd ? esc(sd.referral_code) : '') + '" style="flex:1;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;text-transform:uppercase;box-sizing:border-box;"><button type="button" onclick="generateSdCode()" style="padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f8fafd;cursor:pointer;font-size:12px;white-space:nowrap;">Auto-Gen</button></div></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Commission %</label><input id="sdCommission" type="number" placeholder="0" min="0" max="100" step="0.01" value="' + (sd ? sd.commission_pct : '0') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Status</label><select id="sdStatus" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"><option value="active"' + (sd && sd.status==='active'?' selected':'') + '>Active</option><option value="inactive"' + (sd && sd.status==='inactive'?' selected':'') + '>Inactive</option></select></div>' +
-        '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Notes</label><input id="sdNotes" type="text" placeholder="Optional notes" value="' + (sd ? esc(sd.notes||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
-      '</div>' +
-      '<div id="sdModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:12px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>' +
-    '</div>' +
-    '<div style="padding:16px 28px;border-top:1px solid #f0f4fa;display:flex;justify-content:flex-end;gap:10px;">' +
-      '<button onclick="closeSdModal()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#fff;cursor:pointer;font-size:13px;font-weight:600;">Cancel</button>' +
-      (sd ? '<button onclick="createSdLogin()" style="padding:10px 20px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f0f4ff;color:#3b5bdb;cursor:pointer;font-size:13px;font-weight:600;">Create Login</button>' : '') +
-      '<button onclick="saveSdDistributor()" style="padding:10px 20px;border:none;border-radius:9px;background:#f58220;color:#fff;cursor:pointer;font-size:13px;font-weight:700;">Save Sub-Distributor</button>' +
-    '</div>' +
-  '</div>';
-  overlay.addEventListener('click', function(e) { if (e.target === overlay) closeSdModal(); });
-  document.body.appendChild(overlay);
+  document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
+  document.getElementById('sdEditId').value   = sd ? sd.id : '';
+  document.getElementById('sdName').value     = sd ? (sd.name || '') : '';
+  document.getElementById('sdContact').value  = sd ? (sd.contact_person || '') : '';
+  document.getElementById('sdEmail').value    = sd ? (sd.email || '') : '';
+  document.getElementById('sdPhone').value    = sd ? (sd.phone || '') : '';
+  document.getElementById('sdCode').value     = sd ? (sd.referral_code || '') : '';
+  document.getElementById('sdCommission').value = sd ? (sd.commission_pct || '0') : '0';
+  document.getElementById('sdStatus').value   = sd ? (sd.status || 'active') : 'active';
+  document.getElementById('sdNotes').value    = sd ? (sd.notes || '') : '';
+  document.getElementById('sdModalError').style.display = 'none';
+  var loginBtn = document.getElementById('btnSdCreateLogin');
+  if (loginBtn) loginBtn.style.display = sd ? 'inline-flex' : 'none';
+  document.getElementById('sdModal').style.display = 'flex';
 }
 
 function editSd(jsonStr) {
