@@ -655,15 +655,37 @@
         var pi = result.paymentIntent;
         if (pi.status === 'succeeded' || pi.status === 'requires_capture') {
           var orderNum = window._orderNumber || ('RRS-' + Date.now());
-          localStorage.removeItem('cart');
-          localStorage.setItem('rrs_last_order', JSON.stringify({
+          var lastOrderData = {
             orderNumber: orderNum,
             paymentIntentId: pi.id,
             paymentMethod: 'card',
             total: window._orderTotal,
             items: window._orderItems,
             checkout: checkout
-          }));
+          };
+          // Save order to Supabase
+          if (window.sb) {
+            var user = null;
+            window.sb.auth.getUser().then(function(r){ user = r.data?.user; });
+            window.sb.from('orders').insert({
+              order_number: orderNum,
+              user_id: user ? user.id : null,
+              customer_name: checkout.contact || '',
+              customer_email: checkout.email || '',
+              business_name: checkout.business || '',
+              phone: checkout.phone || '',
+              shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+              subtotal: window._orderSubtotal || window._orderTotal,
+              total: window._orderTotal,
+              payment_method: 'card',
+              payment_status: pi.status === 'succeeded' ? 'paid' : 'authorized',
+              status: 'pending',
+              order_type: checkout.orderType || 'one_time',
+              notes: checkout.notes || '',
+            }).then(function(r){ if (r.error) console.error('[order] save error:', r.error.message); });
+          }
+          localStorage.removeItem('cart');
+          localStorage.setItem('rrs_last_order', JSON.stringify(lastOrderData));
           window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
         }
       });
