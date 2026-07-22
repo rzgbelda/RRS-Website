@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -13,8 +13,8 @@
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
     <div class="top-contact">
-      <span>☎ (252) 227-0073</span>
-      <span>✉ hello@roomreadysupply.com</span>
+      <span>? (252) 227-0073</span>
+      <span>? sales@roomreadysupply.com</span>
     </div>
   </div>
 
@@ -75,7 +75,7 @@
     <a href="/#business-pricing">Volume Pricing</a>
     <a href="/#about-us">About Us</a>
     <a href="/#about-us">Contact</a>
-    <a href="/cart">🛒 My Cart</a>
+    <a href="/cart">?? My Cart</a>
   </nav>
 
   <main class="profile-page">
@@ -113,7 +113,7 @@
         <div class="profile-panel active" id="account">
   <div class="profile-panel-head">
     <h2>Account Details</h2>
-    <button class="edit-profile-btn" data-edit="account">✎ Edit</button>
+    <button class="edit-profile-btn" data-edit="account">? Edit</button>
   </div>
 
   <div class="profile-grid editable-grid" id="accountGrid">
@@ -173,7 +173,7 @@
         <div class="profile-panel" id="delivery">
   <div class="profile-panel-head">
     <h2>Delivery Information</h2>
-    <button class="edit-profile-btn" data-edit="delivery">✎ Edit</button>
+    <button class="edit-profile-btn" data-edit="delivery">? Edit</button>
   </div>
 
   <div class="profile-grid editable-grid" id="deliveryGrid">
@@ -254,7 +254,7 @@
                   <li id="rule-upper"> <span class="rule-dot"></span> At least 1 uppercase letter</li>
                   <li id="rule-lower"> <span class="rule-dot"></span> At least 1 lowercase letter</li>
                   <li id="rule-num">   <span class="rule-dot"></span> At least 1 number</li>
-                  <li id="rule-spec">  <span class="rule-dot"></span> At least 1 special character (!@#$…)</li>
+                  <li id="rule-spec">  <span class="rule-dot"></span> At least 1 special character (!@#$�)</li>
                 </ul>
               </div>
 
@@ -375,7 +375,7 @@
   </style>
 
   <script>
-    // ── Eye toggle ──────────────────────────────────────────────
+    // -- Eye toggle ----------------------------------------------
     document.querySelectorAll('.sec-eye').forEach(btn => {
       btn.addEventListener('click', () => {
         const input = document.getElementById(btn.dataset.target);
@@ -386,7 +386,7 @@
       });
     });
 
-    // ── Password strength ───────────────────────────────────────
+    // -- Password strength ---------------------------------------
     const RULES = [
       { id: 'rule-len',   test: v => v.length >= 8 },
       { id: 'rule-upper', test: v => /[A-Z]/.test(v) },
@@ -410,7 +410,7 @@
       });
     }
 
-    // ── Form submission ─────────────────────────────────────────
+    // -- Form submission -----------------------------------------
     document.getElementById('securityForm').addEventListener('submit', async e => {
       e.preventDefault();
 
@@ -432,7 +432,7 @@
 
       alertEl.style.display = 'none';
 
-      // — Client-side validation —
+      // � Client-side validation �
       if (!currentPw) { showAlert('Please enter your current password.', 'error'); return; }
       if (newPw === currentPw) { showAlert('New password must be different from your current password.', 'error'); return; }
 
@@ -448,9 +448,9 @@
       }
       if (newPw !== confirmPw) { showAlert('New password and confirmation do not match.', 'error'); return; }
 
-      // — Loading state —
+      // � Loading state �
       submitBtn.disabled = true;
-      btnText.textContent = 'Updating…';
+      btnText.textContent = 'Updating�';
       spinner.style.display = '';
 
       try {
@@ -471,7 +471,7 @@
         const { error: updateError } = await window.sb.auth.updateUser({ password: newPw });
         if (updateError) throw updateError;
 
-        // — Success —
+        // � Success �
         showAlert('Password updated successfully! Please use your new password next time you log in.', 'success');
         document.getElementById('securityForm').reset();
         updatePasswordStrength('');
@@ -491,7 +491,7 @@
   <script src="script.js"></script>
 </body>
 </html>
-<!-- ── Floating Catalog QR Widget ───────────────────────────── -->
+<!-- -- Floating Catalog QR Widget ----------------------------- -->
 <div id="catalogQR" style="position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
   <div id="catalogQRPanel" style="display:none;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);border:1.5px solid #f0f0f0;text-align:center;width:180px;">
     <img src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https%3A%2F%2Fwww.roomreadysupply.com%2FRoom_Ready_Supply_Catalog.pdf&color=0d2c50&bgcolor=ffffff" width="144" height="144" alt="Scan to download catalog" style="border-radius:8px;display:block;margin:0 auto;">
@@ -527,10 +527,10 @@
     }
   });
 </script>
-<!-- ── End Floating Catalog QR Widget ───────────────────────── -->
+<!-- -- End Floating Catalog QR Widget ------------------------- -->
 
 
-<!-- ── Contact Us Modal ───────────────────────────────────── -->
+<!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">
   <div class="ciq-modal">
 
@@ -565,7 +565,7 @@
         <div class="ciq-field">
           <label class="ciq-label">Business Type <span class="ciq-req">*</span></label>
           <select id="ciqBizType" class="ciq-input">
-            <option value="">Select type…</option>
+            <option value="">Select type�</option>
             <option>Hotel</option>
             <option>Motel</option>
             <option>Short-Term Rental</option>
@@ -611,7 +611,7 @@
         <div class="ciq-field">
           <label class="ciq-label">State <span class="ciq-req">*</span></label>
           <select id="ciqState" class="ciq-input">
-            <option value="">Select state…</option>
+            <option value="">Select state�</option>
             <option>AL</option><option>AK</option><option>AZ</option><option>AR</option><option>CA</option>
             <option>CO</option><option>CT</option><option>DE</option><option>FL</option><option>GA</option>
             <option>HI</option><option>ID</option><option>IL</option><option>IN</option><option>IA</option>
@@ -648,7 +648,7 @@
         <div class="ciq-field">
           <label class="ciq-label">Estimated Monthly Volume</label>
           <select id="ciqVolume" class="ciq-input">
-            <option value="">Select range…</option>
+            <option value="">Select range�</option>
             <option>Under $500</option>
             <option>$500 - $2,000</option>
             <option>$2,000 - $5,000</option>
@@ -658,7 +658,7 @@
         <div class="ciq-field">
           <label class="ciq-label">Preferred Contact Method</label>
           <select id="ciqContactMethod" class="ciq-input">
-            <option value="">Select…</option>
+            <option value="">Select�</option>
             <option>Email</option>
             <option>Phone</option>
           </select>
@@ -667,14 +667,14 @@
 
       <div class="ciq-field" style="margin-bottom:20px">
         <label class="ciq-label">Message / Additional Requirements</label>
-        <textarea id="ciqMessage" class="ciq-input ciq-textarea" placeholder="Tell us more about what you need…"></textarea>
+        <textarea id="ciqMessage" class="ciq-input ciq-textarea" placeholder="Tell us more about what you need�"></textarea>
       </div>
 
       <div class="ciq-field" style="margin-bottom:24px">
         <label class="ciq-label">Attach a File <span class="ciq-hint">Product list, PO, or requirements doc</span></label>
         <label class="ciq-file-label" id="ciqFileLabel">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-          <span id="ciqFileName">Choose file…</span>
+          <span id="ciqFileName">Choose file�</span>
           <input type="file" id="ciqFile" accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg" style="display:none" onchange="updateFileName(this)">
         </label>
       </div>
@@ -692,5 +692,5 @@
     </form>
   </div>
 </div>
-<!-- ── End Contact Modal ──────────────────────────────────── -->
+<!-- -- End Contact Modal ------------------------------------ -->
 </body>

@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Wishlist â€” Room Ready Supply</title>
+  <title>Wishlist — Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     .wishlist-page { max-width:1100px; margin:60px auto; padding:0 24px; }
@@ -55,7 +55,7 @@
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
     <div class="top-contact">
       <span>(252) 227-0073</span>
-      <span>hello@roomreadysupply.com</span>
+      <span>sales@roomreadysupply.com</span>
     </div>
   </div>
 
@@ -99,7 +99,7 @@
   <div class="wishlist-page">
     <h1>My Wishlist</h1>
     <p class="subtitle">Items you've saved for later.</p>
-    <div id="wishlistContent"><div class="wishlist-loading">Loadingâ€¦</div></div>
+    <div id="wishlistContent"><div class="wishlist-loading">Loading…</div></div>
   </div>
 
   <div class="wishlist-toast" id="wishlistToast"></div>
@@ -153,7 +153,7 @@
                   <span class="price">$${Number(p.price).toFixed(2)}</span>
                   <div class="wishlist-card-actions">
                     <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'blanket.png'}')">Add to Order</button>
-                    <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">âœ•</button>
+                    <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">✕</button>
                   </div>
                 </div>
               </div>`;

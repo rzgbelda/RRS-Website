@@ -1,4 +1,4 @@
-﻿<!-- v2 -->
+<!-- v2 -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -9,10 +9,10 @@
   <title>My Account &mdash; Room Ready Supply</title>
   <link rel="stylesheet" href="style.css" />
   <style>
-    /* â”€â”€ Page shell â”€â”€ */
+    /* ── Page shell ── */
     .acc-page { background:#f4f6fb; min-height:100vh; }
 
-    /* â”€â”€ Hero banner â”€â”€ */
+    /* ── Hero banner ── */
     .acc-hero {
       background: linear-gradient(135deg, #0b2d52 0%, #1a4a7a 60%, #ED7226 100%);
       padding: 48px 32px 80px;
@@ -47,7 +47,7 @@
       white-space:nowrap;
     }
 
-    /* â”€â”€ Layout â”€â”€ */
+    /* ── Layout ── */
     .acc-layout {
       max-width:1100px; margin:-48px auto 60px;
       padding:0 24px;
@@ -57,7 +57,7 @@
       position:relative; z-index:1;
     }
 
-    /* â”€â”€ Sidebar â”€â”€ */
+    /* ── Sidebar ── */
     .acc-sidebar {
       background:#fff;
       border-radius:16px;
@@ -79,12 +79,12 @@
     .acc-nav-item svg { width:18px; height:18px; flex-shrink:0; }
     .acc-nav-divider { height:1px; background:#f0f2f5; margin:6px 8px; }
 
-    /* â”€â”€ Main panel â”€â”€ */
+    /* ── Main panel ── */
     .acc-main { display:flex; flex-direction:column; gap:20px; }
     .acc-panel { display:none; flex-direction:column; gap:20px; }
     .acc-panel.active { display:flex; }
 
-    /* â”€â”€ Cards â”€â”€ */
+    /* ── Cards ── */
     .acc-card {
       background:#fff;
       border-radius:16px;
@@ -99,7 +99,7 @@
     .acc-card-title { font-size:16px; font-weight:700; color:#0b2d52; display:flex; align-items:center; gap:10px; }
     .acc-card-title svg { color:#ED7226; width:20px; height:20px; }
 
-    /* â”€â”€ Form â”€â”€ */
+    /* ── Form ── */
     .acc-form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
     .acc-field { display:flex; flex-direction:column; gap:6px; }
     .acc-field label { font-size:12px; font-weight:700; color:#8a9ab0; text-transform:uppercase; letter-spacing:.05em; }
@@ -118,7 +118,7 @@
     .acc-field input:disabled { background:#f8fafc; color:#aaa; cursor:not-allowed; }
     .acc-field.full { grid-column:1/-1; }
 
-    /* â”€â”€ Buttons â”€â”€ */
+    /* ── Buttons ── */
     .acc-btn-primary {
       background:linear-gradient(135deg,#ED7226,#f0924a);
       color:#fff; border:none; border-radius:10px;
@@ -128,12 +128,12 @@
     }
     .acc-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(237,114,38,.4); }
 
-    /* â”€â”€ Alerts â”€â”€ */
+    /* ── Alerts ── */
     .acc-alert { border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:4px; display:none; }
     .acc-alert-success { background:#f0fdf4; border:1px solid #86efac; color:#16a34a; }
     .acc-alert-error   { background:#fef2f2; border:1px solid #fca5a5; color:#dc2626; }
 
-    /* â”€â”€ Order cards â”€â”€ */
+    /* ── Order cards ── */
     .order-list { display:flex; flex-direction:column; gap:12px; }
     .order-card {
       border:1.5px solid #e8ecf2; border-radius:12px; padding:20px 24px;
@@ -154,14 +154,14 @@
     .status-delivered  { background:#d4edda; color:#155724; }
     .status-cancelled  { background:#f8d7da; color:#721c24; }
 
-    /* â”€â”€ Empty / loading states â”€â”€ */
+    /* ── Empty / loading states ── */
     .acc-empty { text-align:center; padding:48px 0; }
     .acc-empty-icon { font-size:40px; margin-bottom:12px; }
     .acc-empty p  { color:#8a9ab0; font-size:14px; margin:4px 0; }
     .acc-empty a  { color:#ED7226; font-weight:700; text-decoration:none; }
     .acc-loading  { text-align:center; padding:40px; color:#8a9ab0; font-size:14px; }
 
-    /* â”€â”€ Wishlist grid â”€â”€ */
+    /* ── Wishlist grid ── */
     .wishlist-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:14px; }
     .wishlist-item { border:1.5px solid #e8ecf2; border-radius:12px; padding:14px; text-align:center; transition:.18s; }
     .wishlist-item:hover { border-color:#ED7226; box-shadow:0 4px 14px rgba(237,114,38,.1); }
@@ -169,7 +169,7 @@
     .wishlist-item .wi-name { font-size:12px; font-weight:600; color:#0b2d52; margin:8px 0 2px; }
     .wishlist-item .wi-price{ font-size:13px; font-weight:800; color:#ED7226; }
 
-    /* â”€â”€ Responsive â”€â”€ */
+    /* ── Responsive ── */
     @media (max-width:900px) {
       .acc-layout { grid-template-columns:1fr; margin-top:-32px; }
       .acc-sidebar { position:static; display:flex; flex-wrap:wrap; gap:4px; padding:12px; }
@@ -194,7 +194,7 @@
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
     <div class="top-contact">
       <span>(252) 227-0073</span>
-      <span>hello@roomreadysupply.com</span>
+      <span>sales@roomreadysupply.com</span>
     </div>
   </div>
 
@@ -346,7 +346,7 @@
               <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
               My Wishlist
             </div>
-            <a href="/wishlist" style="font-size:13px;font-weight:600;color:#ED7226;text-decoration:none">View all â†’</a>
+            <a href="/wishlist" style="font-size:13px;font-weight:600;color:#ED7226;text-decoration:none">View all →</a>
           </div>
           <div id="accountWishlist"><div class="acc-loading">Loading wishlist&hellip;</div></div>
         </div>
@@ -362,7 +362,7 @@
             </div>
             <a href="/#business-pricing" style="font-size:13px;font-weight:700;color:#ED7226;text-decoration:none">+ New Request</a>
           </div>
-          <div id="quoteRequestList"><div class="acc-loading">Loading…</div></div>
+          <div id="quoteRequestList"><div class="acc-loading">Loading�</div></div>
         </div>
 
         <!-- Quote detail modal -->
@@ -370,7 +370,7 @@
           <div style="background:#fff;border-radius:20px;padding:36px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
               <h3 style="font-size:18px;font-weight:800;color:#0B1F38;margin:0">Quotation Details</h3>
-              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">×</button>
+              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">�</button>
             </div>
             <div id="quoteDetailBody"></div>
           </div>
@@ -411,7 +411,7 @@
 
   <!-- Not logged in -->
   <div id="notLoggedIn" style="display:none;text-align:center;padding:100px 24px">
-    <div style="font-size:48px;margin-bottom:16px">ðŸ”’</div>
+    <div style="font-size:48px;margin-bottom:16px">🔒</div>
     <h2 style="color:#0b2d52;margin-bottom:8px">Please sign in to view your account</h2>
     <p style="color:#8a9ab0;margin:0 0 28px">You need to be logged in to access your account page.</p>
     <a href="/login" class="acc-btn-primary" style="display:inline-block;text-decoration:none">Sign In</a>
@@ -530,7 +530,7 @@
       if (error || !orders?.length) {
         list.innerHTML = `
           <div class="acc-empty">
-            <div class="acc-empty-icon">ðŸ“¦</div>
+            <div class="acc-empty-icon">📦</div>
             <p style="font-weight:700;color:#0b2d52">No orders yet</p>
             <p><a href="/catalog">Browse our catalog</a> to place your first order.</p>
           </div>`;
@@ -540,7 +540,7 @@
         <div class="order-card">
           <div class="order-card-left">
             <div class="order-num">${o.order_number}</div>
-            <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} Â· ${o.order_items?.length || 0} item(s) Â· ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
+            <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
           </div>
           <div class="order-card-right">
             <div class="order-total">$${Number(o.total).toFixed(2)}</div>
@@ -596,7 +596,7 @@
         console.error('[loadQuoteRequests]', error);
         list.innerHTML = `
           <div style="text-align:center;padding:40px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
-            <div style="font-size:32px;margin-bottom:12px">⚠️</div>
+            <div style="font-size:32px;margin-bottom:12px">??</div>
             <p style="font-weight:700;color:#0B1F38;margin-bottom:6px">Unable to load quotation requests</p>
             <p style="font-size:13px;color:#64748b;margin-bottom:16px">A connection error occurred. Please try again.</p>
             <button onclick="loadQuoteRequests('${userId}','${userEmail}')"
@@ -610,7 +610,7 @@
       if (!quotes?.length) {
         list.innerHTML = `
           <div style="text-align:center;padding:60px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
-            <div style="font-size:40px;margin-bottom:16px">📋</div>
+            <div style="font-size:40px;margin-bottom:16px">??</div>
             <p style="font-weight:700;color:#0B1F38;font-size:16px;margin-bottom:8px">No quotation requests yet</p>
             <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Request custom pricing and your quotations will appear here.</p>
             <a href="/#uq-form" style="display:inline-block;background:#ED7226;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700">
@@ -645,14 +645,14 @@
               </div>
               <div style="font-size:12px;color:#94a3b8;line-height:1.6">
                 Requested: ${requestDate}
-                ${quoteDate ? ` · Quoted: ${quoteDate}` : ''}
-                ${validUntil && !isExpired ? ` · <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
-                ${isExpired ? ` · <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
+                ${quoteDate ? ` � Quoted: ${quoteDate}` : ''}
+                ${validUntil && !isExpired ? ` � <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
+                ${isExpired ? ` � <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
               </div>
               ${itemCount || total ? `
               <div style="font-size:12px;color:#64748b;margin-top:4px">
                 ${itemCount ? `${itemCount} product${itemCount !== 1 ? 's' : ''}` : ''}
-                ${itemCount && total ? ' · ' : ''}
+                ${itemCount && total ? ' � ' : ''}
                 ${total ? `<strong style="color:#0B1F38">${total}</strong>` : ''}
               </div>` : ''}
             </div>
@@ -684,13 +684,13 @@
       const container = document.getElementById("accountWishlist");
       container.innerHTML = `<div class="acc-loading">Loading wishlist&hellip;</div>`;
       const { data: wishlist } = await window.sb.from("wishlists").select("id").eq("user_id", userId).single();
-      if (!wishlist) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">ðŸ¤</div><p>Your wishlist is empty.</p></div>`; return; }
+      if (!wishlist) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">🤍</div><p>Your wishlist is empty.</p></div>`; return; }
       const { data: items } = await window.sb
         .from("wishlist_items")
         .select("*, products(id, name, price, image_url)")
         .eq("wishlist_id", wishlist.id)
         .limit(6);
-      if (!items?.length) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">ðŸ¤</div><p>Your wishlist is empty.</p></div>`; return; }
+      if (!items?.length) { container.innerHTML = `<div class="acc-empty"><div class="acc-empty-icon">🤍</div><p>Your wishlist is empty.</p></div>`; return; }
       container.innerHTML = `<div class="wishlist-grid">
         ${items.map(i => {
           const p = i.products;
