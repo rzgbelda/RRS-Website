@@ -371,7 +371,7 @@
             </div>
             <a href="/#business-pricing" style="font-size:13px;font-weight:700;color:#ED7226;text-decoration:none">+ New Request</a>
           </div>
-          <div id="quoteRequestList"><div class="acc-loading">Loading�</div></div>
+          <div id="quoteRequestList"><div class="acc-loading">Loading...</div></div>
         </div>
 
         <!-- Quote detail modal -->
@@ -379,7 +379,7 @@
           <div style="background:#fff;border-radius:20px;padding:36px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
               <h3 style="font-size:18px;font-weight:800;color:#0B1F38;margin:0">Quotation Details</h3>
-              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">�</button>
+              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">...</button>
             </div>
             <div id="quoteDetailBody"></div>
           </div>
@@ -605,7 +605,7 @@
         console.error('[loadQuoteRequests]', error);
         list.innerHTML = `
           <div style="text-align:center;padding:40px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
-            <div style="font-size:32px;margin-bottom:12px">??</div>
+            <div style="font-size:32px;margin-bottom:12px">&#9888;</div>
             <p style="font-weight:700;color:#0B1F38;margin-bottom:6px">Unable to load quotation requests</p>
             <p style="font-size:13px;color:#64748b;margin-bottom:16px">A connection error occurred. Please try again.</p>
             <button onclick="loadQuoteRequests('${userId}','${userEmail}')"
@@ -619,7 +619,7 @@
       if (!quotes?.length) {
         list.innerHTML = `
           <div style="text-align:center;padding:60px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
-            <div style="font-size:40px;margin-bottom:16px">??</div>
+            <div style="font-size:40px;margin-bottom:16px">&#128203;</div>
             <p style="font-weight:700;color:#0B1F38;font-size:16px;margin-bottom:8px">No quotation requests yet</p>
             <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Request custom pricing and your quotations will appear here.</p>
             <a href="/#uq-form" style="display:inline-block;background:#ED7226;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700">
@@ -654,14 +654,14 @@
               </div>
               <div style="font-size:12px;color:#94a3b8;line-height:1.6">
                 Requested: ${requestDate}
-                ${quoteDate ? ` � Quoted: ${quoteDate}` : ''}
-                ${validUntil && !isExpired ? ` � <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
-                ${isExpired ? ` � <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
+                ${quoteDate ? ` &mdash; Quoted: ${quoteDate}` : ''}
+                ${validUntil && !isExpired ? ` ... <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
+                ${isExpired ? ` ... <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
               </div>
               ${itemCount || total ? `
               <div style="font-size:12px;color:#64748b;margin-top:4px">
                 ${itemCount ? `${itemCount} product${itemCount !== 1 ? 's' : ''}` : ''}
-                ${itemCount && total ? ' � ' : ''}
+                ${itemCount && total ? ' &mdash; ' : ''}
                 ${total ? `<strong style="color:#0B1F38">${total}</strong>` : ''}
               </div>` : ''}
             </div>

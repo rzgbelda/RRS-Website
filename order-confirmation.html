@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Order Confirmed — Room Ready Supply</title>
+  <title>Order Confirmed  &mdash;  Room Ready Supply</title>
   <link rel="icon" href="/favicon.ico" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -84,7 +84,7 @@
     <img src="/RR logo.png" alt="Room Ready Supply" onerror="this.style.display='none'">
     <span>Room Ready Supply</span>
   </a>
-  <a href="/" class="nav-home">? Back to Home</a>
+  <a href="/" class="nav-home">&#8592; Back to Home</a>
 </nav>
 
 <section class="confirm-hero">
@@ -95,7 +95,7 @@
   </div>
   <h1>Order Confirmed!</h1>
   <p>Thank you for your order. We've received it and our team will begin processing right away.</p>
-  <div class="order-badge" id="confirmOrderBadge">Order #—</div>
+  <div class="order-badge" id="confirmOrderBadge">Order #...</div>
 </section>
 
 <div class="confirm-body">
@@ -113,13 +113,13 @@
     </div>
     <div class="confirm-card-body">
       <div class="order-items" id="confirmItems">
-        <p style="color:#94a3b8;font-size:14px;">Loading order…</p>
+        <p style="color:#94a3b8;font-size:14px;">Loading order...</p>
       </div>
       <div style="margin-top:18px;border-top:2px solid #f1f5f9;padding-top:14px;">
-        <div class="totals-row"><span>Subtotal</span><span id="confSubtotal">—</span></div>
-        <div class="totals-row"><span>Tax (7%)</span><span id="confTax">—</span></div>
+        <div class="totals-row"><span>Subtotal</span><span id="confSubtotal">...</span></div>
+        <div class="totals-row"><span>Tax (7%)</span><span id="confTax">...</span></div>
         <div class="totals-row"><span>Shipping</span><span style="color:#64748b;font-size:13px;">Freight quote to follow</span></div>
-        <div class="totals-row total"><span>Total Charged</span><span id="confTotal">—</span></div>
+        <div class="totals-row total"><span>Total Charged</span><span id="confTotal">...</span></div>
       </div>
     </div>
   </div>
@@ -138,23 +138,23 @@
       <div class="info-grid" id="deliveryInfo">
         <div class="info-block">
           <label>Contact</label>
-          <p id="confContact">—</p>
+          <p id="confContact">...</p>
         </div>
         <div class="info-block">
           <label>Business</label>
-          <p id="confBusiness">—</p>
+          <p id="confBusiness">...</p>
         </div>
         <div class="info-block">
           <label>Email</label>
-          <p id="confEmail">—</p>
+          <p id="confEmail">...</p>
         </div>
         <div class="info-block">
           <label>Phone</label>
-          <p id="confPhone">—</p>
+          <p id="confPhone">...</p>
         </div>
         <div class="info-block" style="grid-column:1/-1">
           <label>Shipping Address</label>
-          <p id="confAddress">—</p>
+          <p id="confAddress">...</p>
         </div>
       </div>
     </div>
@@ -176,7 +176,7 @@
           <div class="step-num">1</div>
           <div class="step-text">
             <strong>Order Processing</strong>
-            <p>Our team reviews your order and confirms product availability — typically within a few hours.</p>
+            <p>Our team reviews your order and confirms product availability &mdash; typically within a few hours.</p>
           </div>
         </div>
         <div class="next-step">
@@ -206,7 +206,7 @@
 
   <!-- Actions -->
   <div class="confirm-actions">
-    <a href="/catalog" class="btn-primary">Continue Shopping ?</a>
+    <a href="/catalog" class="btn-primary">Continue Shopping &#8594;</a>
     <a href="/" class="btn-secondary">Back to Home</a>
   </div>
 
@@ -222,7 +222,7 @@
   // Badge
   document.getElementById('confirmOrderBadge').textContent = 'Order #' + orderNum;
 
-  // Payment status badge — only show "Payment Received" for card payments
+  // Payment status badge &mdash; only show "Payment Received" for card payments
   var paymentMethod = lastOrder.paymentMethod || 'card';
   var badgeEl = document.getElementById('paymentStatusBadge');
   if (paymentMethod === 'card') {
@@ -261,12 +261,12 @@
 
   // Delivery info
   const checkout = lastOrder.checkout || {};
-  document.getElementById('confContact').textContent = checkout.contact || '—';
-  document.getElementById('confBusiness').textContent = checkout.business || '—';
-  document.getElementById('confEmail').textContent = checkout.email || '—';
-  document.getElementById('confPhone').textContent = checkout.phone || '—';
+  document.getElementById('confContact').textContent = checkout.contact || '...';
+  document.getElementById('confBusiness').textContent = checkout.business || '...';
+  document.getElementById('confEmail').textContent = checkout.email || '...';
+  document.getElementById('confPhone').textContent = checkout.phone || '...';
   const addr = [checkout.street, checkout.city, checkout.state, checkout.zip].filter(Boolean).join(', ');
-  document.getElementById('confAddress').textContent = addr || '—';
+  document.getElementById('confAddress').textContent = addr || '...';
 })();
 </script>
 </body>
