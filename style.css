@@ -6125,29 +6125,91 @@ span.flatpickr-weekday {
   .nav-icons { gap: 8px; }
 }
 
-/* ── Catalog: stack sidebar above product grid on mobile ── */
+/* ── Catalog: mobile filter drawer ── */
+.catalog-filter-toggle-btn,
+.filter-close-btn { display: none; }
+.filter-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+}
+.filter-backdrop.active { display: block; }
+
 @media (max-width: 768px) {
   .catalog-main {
     grid-template-columns: 1fr;
     padding: 24px 16px 60px;
-    gap: 20px;
+    gap: 0;
+  }
+  /* Sidebar becomes a fixed left drawer */
+  .catalog-sidebar-col {
+    position: fixed;
+    top: 0;
+    left: -100%;
+    bottom: 0;
+    width: min(300px, 85vw);
+    z-index: 10000;
+    overflow-y: auto;
+    background: #fff;
+    box-shadow: 4px 0 24px rgba(0,0,0,0.2);
+    transition: left 0.3s ease;
+    align-self: unset;
+    padding-bottom: 40px;
+    display: flex;
+    flex-direction: column;
+  }
+  .catalog-sidebar-col.filter-open { left: 0; }
+  /* Close button inside drawer */
+  .filter-close-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    border-bottom: 1px solid #e4eaf3;
+    color: #1e3a5f;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 18px 16px 14px;
+    cursor: pointer;
+    width: 100%;
+    flex-shrink: 0;
   }
   .filter-sidebar {
     width: 100%;
-    border-radius: 14px;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
     position: static;
+    flex: 1;
   }
   .filter-list {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 4px 12px;
   }
+  /* Filter toggle button (above product grid) */
+  .catalog-filter-toggle-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1.5px solid #dde4ee;
+    border-radius: 10px;
+    padding: 10px 18px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #1e3a5f;
+    cursor: pointer;
+    width: 100%;
+    margin-bottom: 16px;
+  }
+  .catalog-products-col { min-width: 0; }
 }
 @media (max-width: 480px) {
-  .filter-sidebar { border-radius: 12px; }
-  .filter-list {
-    grid-template-columns: 1fr;
-  }
+  .filter-list { grid-template-columns: 1fr; }
   .catalog-products {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 16px;

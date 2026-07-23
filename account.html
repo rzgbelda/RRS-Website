@@ -226,11 +226,20 @@
         <a href="/cart"><img src="hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
-      <button class="hamburger-btn" id="hamburgerBtn" aria-label="Open navigation menu">
+      <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
         <span></span><span></span><span></span>
       </button>
     </div>
   </header>
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+    <a href="/">Home</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/#reorder-header">Reorder Program</a>
+    <a href="/#business-pricing">Volume Pricing</a>
+    <a href="/#about-us">About Us</a>
+    <a href="/#about-us">Contact</a>
+    <a href="/cart">ðŸ›’ My Cart</a>
+  </nav>
 
   <!-- Hero -->
   <div class="acc-hero" id="accHero" style="display:none">
@@ -362,7 +371,7 @@
             </div>
             <a href="/#business-pricing" style="font-size:13px;font-weight:700;color:#ED7226;text-decoration:none">+ New Request</a>
           </div>
-          <div id="quoteRequestList"><div class="acc-loading">Loading…</div></div>
+          <div id="quoteRequestList"><div class="acc-loading">Loadingï¿½</div></div>
         </div>
 
         <!-- Quote detail modal -->
@@ -370,7 +379,7 @@
           <div style="background:#fff;border-radius:20px;padding:36px;max-width:560px;width:100%;max-height:90vh;overflow-y:auto;box-shadow:0 24px 64px rgba(0,0,0,.2);">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;">
               <h3 style="font-size:18px;font-weight:800;color:#0B1F38;margin:0">Quotation Details</h3>
-              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">×</button>
+              <button onclick="document.getElementById('quoteDetailModal').style.display='none';" style="background:none;border:none;font-size:24px;color:#94a3b8;cursor:pointer;line-height:1;">ï¿½</button>
             </div>
             <div id="quoteDetailBody"></div>
           </div>
@@ -645,14 +654,14 @@
               </div>
               <div style="font-size:12px;color:#94a3b8;line-height:1.6">
                 Requested: ${requestDate}
-                ${quoteDate ? ` · Quoted: ${quoteDate}` : ''}
-                ${validUntil && !isExpired ? ` · <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
-                ${isExpired ? ` · <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
+                ${quoteDate ? ` ï¿½ Quoted: ${quoteDate}` : ''}
+                ${validUntil && !isExpired ? ` ï¿½ <span style="color:#854d0e;font-weight:600">Valid until ${validUntil}</span>` : ''}
+                ${isExpired ? ` ï¿½ <span style="color:#991b1b;font-weight:600">Expired ${validUntil}</span>` : ''}
               </div>
               ${itemCount || total ? `
               <div style="font-size:12px;color:#64748b;margin-top:4px">
                 ${itemCount ? `${itemCount} product${itemCount !== 1 ? 's' : ''}` : ''}
-                ${itemCount && total ? ' · ' : ''}
+                ${itemCount && total ? ' ï¿½ ' : ''}
                 ${total ? `<strong style="color:#0B1F38">${total}</strong>` : ''}
               </div>` : ''}
             </div>

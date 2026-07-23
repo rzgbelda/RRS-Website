@@ -90,9 +90,15 @@
     </div>
   </section>
 
+  <div class="filter-backdrop" id="filterBackdrop"></div>
+
   <section class="catalog-main">
 
-    <div class="catalog-sidebar-col">
+    <div class="catalog-sidebar-col" id="catalogSidebarCol">
+      <button class="filter-close-btn" id="filterCloseBtn" aria-label="Close filters">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        Close Filters
+      </button>
       <aside class="filter-sidebar">
         <div class="filter-search">
           <span>?</span>
@@ -131,12 +137,39 @@
       </div>
     </div>
 
-    <section class="catalog-products" id="products-grid">
-      <!-- Product cards will load here from JavaScript -->
-    </section>
+    <div class="catalog-products-col">
+      <button class="catalog-filter-toggle-btn" id="filterToggleBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="16" y2="12"/><line x1="11" y1="18" x2="13" y2="18"/></svg>
+        Filters
+      </button>
+      <section class="catalog-products" id="products-grid">
+        <!-- Product cards will load here from JavaScript -->
+      </section>
+    </div>
 
   </section>
 
+  <script>
+    (function () {
+      var sidebar = document.getElementById('catalogSidebarCol');
+      var backdrop = document.getElementById('filterBackdrop');
+      var toggleBtn = document.getElementById('filterToggleBtn');
+      var closeBtn = document.getElementById('filterCloseBtn');
+      function openFilter() {
+        sidebar.classList.add('filter-open');
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+      function closeFilter() {
+        sidebar.classList.remove('filter-open');
+        backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+      }
+      if (toggleBtn) toggleBtn.addEventListener('click', openFilter);
+      if (closeBtn) closeBtn.addEventListener('click', closeFilter);
+      if (backdrop) backdrop.addEventListener('click', closeFilter);
+    })();
+  </script>
   <script src="script.js"></script>
 
 </body>
