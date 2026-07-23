@@ -1065,7 +1065,7 @@ function setupQuoteButtons() {
       // Wait for browser to paint the updated panel before scrolling
       requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
       showVpToast(`"${item.name}" added to your Volume Pricing List.`);
-      btn.textContent = "? Added";
+      btn.textContent = "âœ“ Added";
       btn.style.background = "#16a34a";
       setTimeout(() => { btn.textContent = "Get Volume Price"; btn.style.background = ""; }, 1800);
     };
@@ -2579,7 +2579,7 @@ async function validateRegCode() {
   if (sd) {
     _regValidatedDistributor = { id: sd.id, name: sd.name, commission_pct: sd.commission_pct, employee_id: null };
     statusEl.style.color = '#22c55e';
-    statusEl.textContent = '? Valid code — ' + sd.name;
+    statusEl.textContent = 'âœ“ Valid code — ' + sd.name;
     if (nameEl) nameEl.value = sd.name;
     if (nameRow) nameRow.style.display = 'block';
     return;
@@ -2602,14 +2602,14 @@ async function validateRegCode() {
       employee_id: emp.id,
     };
     statusEl.style.color = '#22c55e';
-    statusEl.textContent = '? Valid code — ' + emp.name + ' (' + sdName + ')';
+    statusEl.textContent = 'âœ“ Valid code — ' + emp.name + ' (' + sdName + ')';
     if (nameEl) nameEl.value = sdName;
     if (nameRow) nameRow.style.display = 'block';
     return;
   }
 
   statusEl.style.color = '#ef4444';
-  statusEl.textContent = '? Invalid or inactive referral code.';
+  statusEl.textContent = 'âœ• Invalid or inactive referral code.';
   if (nameRow) nameRow.style.display = 'none';
 }
 
@@ -2761,7 +2761,7 @@ async function validateReferralCode(code) {
 
   if (sd) {
     _checkoutReferral = { sub_distributor_id: sd.id, employee_id: null, commission_pct: sd.commission_pct, name: sd.name };
-    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '? Applied — ' + sd.name; }
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied — ' + sd.name; }
     return;
   }
 
@@ -2779,11 +2779,11 @@ async function validateReferralCode(code) {
       commission_pct: emp.sub_distributors ? emp.sub_distributors.commission_pct : 0,
       name: emp.name + ' (' + (emp.sub_distributors ? emp.sub_distributors.name : '') + ')',
     };
-    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '? Applied — ' + _checkoutReferral.name; }
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied — ' + _checkoutReferral.name; }
     return;
   }
 
-  if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = '? Invalid or inactive referral code.'; }
+  if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = 'âœ• Invalid or inactive referral code.'; }
 }
 
 async function autoFillReferralCode() {
