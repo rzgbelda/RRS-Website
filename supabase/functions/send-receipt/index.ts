@@ -31,33 +31,59 @@ async function generatePDF(order: any): Promise<Uint8Array> {
   const reg  = await doc.embedFont(StandardFonts.Helvetica);
 
   // ── Header bar ────────────────────────────────────────────────
-  page.drawRectangle({ x: 0, y: H - 90, width: W, height: 90, color: NAVY });
+  page.drawRectangle({ x: 0, y: H - 100, width: W, height: 100, color: NAVY });
 
-  page.drawText("ROOM READY SUPPLY", {
-    x: 40, y: H - 38, size: 16, font: bold, color: ORANGE,
-  });
-  page.drawText("Your Order Receipt", {
-    x: 40, y: H - 56, size: 10, font: reg, color: WHITE,
-  });
-  page.drawText("sales@roomreadysupply.com  ·  (252) 227-0073", {
-    x: 40, y: H - 72, size: 8.5, font: reg, color: rgb(0.6, 0.72, 0.84),
-  });
+  // Try to embed logo from live site
+  let logoImage = null;
+  try {
+    const logoRes = await fetch("https://www.roomreadysupply.com/RRS_LOGO_White.png");
+    if (logoRes.ok) {
+      const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
+      logoImage = await doc.embedPng(logoBytes);
+    }
+  } catch (_) { /* fall back to text */ }
+
+  if (logoImage) {
+    // Draw logo — scale to fit in header (square logo, fit in 72x72)
+    const logoDims = logoImage.scale(72 / logoImage.width);
+    page.drawImage(logoImage, {
+      x: 30, y: H - 90, width: logoDims.width, height: logoDims.height,
+    });
+    // Text to the right of logo
+    page.drawText("Your Order Receipt", {
+      x: 112, y: H - 52, size: 10, font: reg, color: WHITE,
+    });
+    page.drawText("sales@roomreadysupply.com  ·  (252) 227-0073", {
+      x: 112, y: H - 68, size: 8.5, font: reg, color: rgb(0.6, 0.72, 0.84),
+    });
+  } else {
+    // Text-only fallback
+    page.drawText("ROOM READY SUPPLY", {
+      x: 40, y: H - 38, size: 16, font: bold, color: ORANGE,
+    });
+    page.drawText("Your Order Receipt", {
+      x: 40, y: H - 56, size: 10, font: reg, color: WHITE,
+    });
+    page.drawText("sales@roomreadysupply.com  ·  (252) 227-0073", {
+      x: 40, y: H - 72, size: 8.5, font: reg, color: rgb(0.6, 0.72, 0.84),
+    });
+  }
 
   const dateStr = new Date(order.created_at || Date.now()).toLocaleDateString("en-US", {
     year: "numeric", month: "long", day: "numeric",
   });
   page.drawText(`Order #${order.order_number}`, {
-    x: W - 210, y: H - 38, size: 12, font: bold, color: WHITE,
+    x: W - 210, y: H - 42, size: 12, font: bold, color: WHITE,
   });
   page.drawText(dateStr, {
-    x: W - 210, y: H - 56, size: 9, font: reg, color: rgb(0.65, 0.76, 0.87),
+    x: W - 210, y: H - 60, size: 9, font: reg, color: rgb(0.65, 0.76, 0.87),
   });
 
   // Orange accent bar
-  page.drawRectangle({ x: 0, y: H - 93, width: W, height: 3, color: ORANGE });
+  page.drawRectangle({ x: 0, y: H - 103, width: W, height: 3, color: ORANGE });
 
   // ── Customer / shipping info ───────────────────────────────────
-  let y = H - 120;
+  let y = H - 130;
   const LX = 40;
   const RX = 320;
 
