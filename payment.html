@@ -726,9 +726,53 @@
             if (orderInsert.error) {
               console.error('[order] save error:', orderInsert.error.message);
             } else {
-              // Auto-purchase shipping label for confirmed card payments
+              // Auto-purchase shipping label or BOL for confirmed card payments
               var freightQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
-              if (freightQuote.service_token) {
+              var isEstesFreight = (freightQuote.carrier_name || '').toLowerCase().includes('estes');
+
+              // Estes LTL freight — auto-create BOL
+              if (isEstesFreight) {
+                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
+                  },
+                  body: JSON.stringify({
+                    action: 'book',
+                    payload: {
+                      order_number: orderNum,
+                      quote_id: freightQuote.quote_id || null,
+                      destination: {
+                        name:   checkout.contact || checkout.business || 'Customer',
+                        street: checkout.street || '',
+                        city:   checkout.city   || '',
+                        state:  checkout.state  || '',
+                        zip:    checkout.zip    || '',
+                        phone:  (checkout.phone || '').replace(/\D/g, ''),
+                      },
+                      items: (window._orderItems || []).map(function(i) {
+                        return { description: i.name || 'Hospitality Supply', weight_lbs: 20, quantity: i.quantity || 1 };
+                      }),
+                    },
+                  }),
+                }).then(function(r) { return r.json(); }).then(function(bolData) {
+                  if (bolData.bol_number || bolData.pro_number) {
+                    console.log('[bol] created — BOL:', bolData.bol_number, 'PRO:', bolData.pro_number);
+                    window.sb.from('orders').update({
+                      bol_number: bolData.bol_number || null,
+                      pro_number: bolData.pro_number || null,
+                      bol_created_at: new Date().toISOString(),
+                      status: 'processing',
+                    }).eq('id', orderInsert.data.id).then(function() {});
+                  } else {
+                    console.warn('[bol] creation failed:', bolData.error);
+                  }
+                }).catch(function(err) { console.error('[bol] fetch error:', err); });
+              }
+
+              // Shippo parcel — auto-purchase label
+              if (!isEstesFreight && freightQuote.service_token) {
                 fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/purchase-label', {
                   method: 'POST',
                   headers: {
