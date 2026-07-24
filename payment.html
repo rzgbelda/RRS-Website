@@ -725,20 +725,52 @@
             }).select('id').single();
             if (orderInsert.error) {
               console.error('[order] save error:', orderInsert.error.message);
-            } else if (checkout.referral) {
-              // Look up sub-distributor by referral code and save to order_referrals
-              var sdRes = await window.sb.from('sub_distributors')
-                .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
-              if (sdRes.data) {
-                var commissionAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
-                await window.sb.from('order_referrals').insert({
-                  order_id: orderInsert.data.id,
-                  referral_code: checkout.referral.toUpperCase(),
-                  sub_distributor_id: sdRes.data.id,
-                  commission_pct: sdRes.data.commission_pct,
-                  commission_amount: commissionAmt,
-                  source: 'checkout',
+            } else {
+              // Auto-purchase shipping label for confirmed card payments
+              var freightQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
+              if (freightQuote.service_token) {
+                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/purchase-label', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
+                  },
+                  body: JSON.stringify({
+                    order_id:      orderInsert.data.id,
+                    service_token: freightQuote.service_token,
+                    carrier_name:  freightQuote.carrier_name || '',
+                    items: (window._orderItems || []).map(function(i) { return { name: i.name, itemNumber: i.itemNumber || '', quantity: i.quantity || 1 }; }),
+                    customer_name: checkout.contact || checkout.business || '',
+                    street: checkout.street || '',
+                    city:   checkout.city   || '',
+                    state:  checkout.state  || '',
+                    zip:    checkout.zip    || '',
+                  }),
+                }).then(function(r) { return r.json(); }).then(function(labelData) {
+                  if (labelData.tracking_number) {
+                    console.log('[label] purchased:', labelData.tracking_number);
+                  } else {
+                    console.warn('[label] purchase failed:', labelData.error);
+                  }
+                }).catch(function(err) {
+                  console.error('[label] fetch error:', err);
                 });
+              }
+              if (checkout.referral) {
+                // Look up sub-distributor by referral code and save to order_referrals
+                var sdRes = await window.sb.from('sub_distributors')
+                  .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
+                if (sdRes.data) {
+                  var commissionAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
+                  await window.sb.from('order_referrals').insert({
+                    order_id: orderInsert.data.id,
+                    referral_code: checkout.referral.toUpperCase(),
+                    sub_distributor_id: sdRes.data.id,
+                    commission_pct: sdRes.data.commission_pct,
+                    commission_amount: commissionAmt,
+                    source: 'checkout',
+                  });
+                }
               }
             }
           }
