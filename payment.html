@@ -764,8 +764,10 @@
                   body: JSON.stringify({
                     action: 'book',
                     payload: {
-                      order_number: orderNum,
-                      quote_id: freightQuote.quote_id || null,
+                      order_number:   orderNum,
+                      quote_id:       freightQuote.quote_id || null,
+                      customer_email: checkout.email || '',
+                      customer_name:  checkout.contact || checkout.business || '',
                       destination: {
                         name:   checkout.contact || checkout.business || 'Customer',
                         street: checkout.street || '',

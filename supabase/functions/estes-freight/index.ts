@@ -7,6 +7,7 @@ const ESTES_API_KEY  = Deno.env.get("ESTES_API_KEY")  ?? ""; // lifetime API key
 const ESTES_USERNAME = Deno.env.get("ESTES_USERNAME")  ?? ""; // MyEstes username
 const ESTES_PASSWORD = Deno.env.get("ESTES_PASSWORD")  ?? ""; // MyEstes password
 const ESTES_ACCOUNT  = Deno.env.get("ESTES_ACCOUNT")   ?? ""; // Estes account number
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")  ?? "";
 
 const USE_TEST = Deno.env.get("ESTES_TEST_MODE") === "true";
 const BASE     = USE_TEST
@@ -158,10 +159,77 @@ async function handleQuote(payload: {
   };
 }
 
+async function sendFreightShippingEmail(opts: {
+  customer_email: string;
+  customer_name:  string;
+  order_number:   string;
+  bol_number:     string;
+  pro_number:     string;
+}) {
+  const trackLink = `https://www.estes-express.com/myestes/tracking/shipment?type=PRO&value=${opts.pro_number}`;
+  const html = `
+  <div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#1e293b;">
+    <div style="background:#0B1F38;padding:28px 32px 22px;border-radius:12px 12px 0 0;">
+      <p style="color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin:0 0 6px;">Room Ready Supply</p>
+      <h1 style="color:#fff;font-size:22px;margin:0 0 4px;">Your Freight Is On Its Way!</h1>
+      <p style="color:rgba(255,255,255,.55);font-size:13px;margin:0;">Order #${opts.order_number}</p>
+    </div>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;padding:28px 32px;">
+      <p style="font-size:14.5px;color:#334155;line-height:1.6;margin:0 0 20px;">
+        Hi ${opts.customer_name || "there"},<br><br>
+        Your freight shipment has been booked with <strong>Estes Express</strong>. Use the PRO number below to track your delivery.
+      </p>
+
+      <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin-bottom:24px;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:8px 0;color:#64748b;font-weight:600;">Carrier</td>
+            <td style="padding:8px 0;text-align:right;font-weight:700;color:#0B1F38;">Estes Express</td>
+          </tr>
+          <tr style="border-bottom:1px solid #f1f5f9;">
+            <td style="padding:8px 0;color:#64748b;font-weight:600;">BOL Number</td>
+            <td style="padding:8px 0;text-align:right;font-weight:700;color:#0B1F38;font-family:monospace;">${opts.bol_number}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#64748b;font-weight:600;">PRO (Tracking) Number</td>
+            <td style="padding:8px 0;text-align:right;font-weight:700;color:#0B1F38;font-family:monospace;">${opts.pro_number}</td>
+          </tr>
+        </table>
+      </div>
+
+      <a href="${trackLink}" style="display:block;text-align:center;background:#ED7226;color:#fff;font-weight:700;font-size:14px;text-decoration:none;padding:14px 24px;border-radius:8px;margin-bottom:24px;">
+        Track My Freight &rarr;
+      </a>
+
+      <p style="font-size:13px;color:#64748b;margin:0 0 16px;">
+        <strong>What to expect:</strong> Estes will contact you to schedule delivery. If you need a liftgate or have a specific delivery window, call Estes at <strong>1-866-378-3748</strong> and reference your PRO number.
+      </p>
+
+      <p style="font-size:13px;color:#94a3b8;margin:0;">
+        Questions? Email us at <a href="mailto:sales@roomreadysupply.com" style="color:#0B1F38;font-weight:600;">sales@roomreadysupply.com</a>
+        or call <strong>(252) 227-0073</strong>.
+      </p>
+    </div>
+  </div>`;
+
+  await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from:    "Room Ready Supply <orders@roomreadysupply.com>",
+      to:      [opts.customer_email],
+      subject: `Your freight order #${opts.order_number} is booked — PRO #${opts.pro_number}`,
+      html,
+    }),
+  });
+}
+
 async function handleBook(payload: {
-  order_number:  string;
-  quote_id?:     string;
-  ship_date?:    string;
+  order_number:   string;
+  quote_id?:      string;
+  ship_date?:     string;
+  customer_email?: string;
+  customer_name?:  string;
   destination: {
     name:    string;
     street:  string;
@@ -232,11 +300,21 @@ async function handleBook(payload: {
     throw new Error(data?.errors?.[0]?.message ?? data?.message ?? `BOL creation failed (${res.status})`);
   }
 
-  return {
-    bol_number: String(data?.bolNumber ?? data?.proNumber ?? data?.id ?? ""),
-    pro_number: String(data?.proNumber ?? ""),
-    test_mode:  USE_TEST,
-  };
+  const bol_number = String(data?.bolNumber ?? data?.proNumber ?? data?.id ?? "");
+  const pro_number = String(data?.proNumber ?? "");
+
+  // Send shipping confirmation email if customer email was provided
+  if (payload.customer_email && pro_number) {
+    sendFreightShippingEmail({
+      customer_email: payload.customer_email,
+      customer_name:  payload.customer_name || payload.destination.name || "",
+      order_number:   payload.order_number,
+      bol_number,
+      pro_number,
+    }).catch((err) => console.error("[estes-freight] shipping email error:", err));
+  }
+
+  return { bol_number, pro_number, test_mode: USE_TEST };
 }
 
 // ── Utilities ────────────────────────────────────────────────────────────────
