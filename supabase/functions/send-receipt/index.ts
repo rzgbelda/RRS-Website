@@ -138,20 +138,16 @@ async function generatePDF(order: any): Promise<Uint8Array> {
   const total    = Number(order.total    || 0);
   const tax      = Math.max(0, total - subtotal);
 
-  const totRows = [
-    { label: "Subtotal", value: `$${subtotal.toFixed(2)}`, isBold: false },
-    { label: "Tax (7%)", value: `$${tax.toFixed(2)}`,      isBold: false },
-  ];
-  for (const row of totRows) {
-    page.drawText(row.label, { x: 400, y, size: 9.5, font: reg,  color: GRAY  });
-    page.drawText(row.value, { x: 498, y, size: 9.5, font: bold, color: BLACK });
-    y -= 15;
-  }
-  y -= 4;
-  page.drawRectangle({ x: 380, y: y - 6, width: W - 420, height: 24, color: NAVY });
-  page.drawText("TOTAL",           { x: 400, y: y + 3, size: 10.5, font: bold, color: WHITE  });
-  page.drawText(`$${total.toFixed(2)}`, { x: 490, y: y + 3, size: 10.5, font: bold, color: ORANGE });
-  y -= 34;
+  page.drawText("Subtotal", { x: 400, y, size: 9.5, font: reg,  color: GRAY  });
+  page.drawText(`$${subtotal.toFixed(2)}`, { x: 498, y, size: 9.5, font: bold, color: BLACK });
+  y -= 18;
+  page.drawText("Tax (7%)", { x: 400, y, size: 9.5, font: reg,  color: GRAY  });
+  page.drawText(`$${tax.toFixed(2)}`, { x: 498, y, size: 9.5, font: bold, color: BLACK });
+  y -= 20;
+  page.drawRectangle({ x: 380, y: y - 6, width: W - 420, height: 26, color: NAVY });
+  page.drawText("TOTAL",           { x: 400, y: y + 4, size: 10.5, font: bold, color: WHITE  });
+  page.drawText(`$${total.toFixed(2)}`, { x: 490, y: y + 4, size: 10.5, font: bold, color: ORANGE });
+  y -= 36;
 
   // ── Shipping / tracking info ────────────────────────────────────
   if (order.tracking_number || order.bol_number || order.pro_number) {
