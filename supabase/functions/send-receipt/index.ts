@@ -174,7 +174,7 @@ async function generatePDF(order: any): Promise<Uint8Array> {
   y -= 18;
   page.drawText("Tax (7%)", { x: 400, y, size: 9.5, font: reg,  color: GRAY  });
   page.drawText(`$${tax.toFixed(2)}`, { x: 498, y, size: 9.5, font: bold, color: BLACK });
-  y -= 20;
+  y -= 34;
   page.drawRectangle({ x: 380, y: y - 6, width: W - 420, height: 26, color: NAVY });
   page.drawText("TOTAL",           { x: 400, y: y + 4, size: 10.5, font: bold, color: WHITE  });
   page.drawText(`$${total.toFixed(2)}`, { x: 490, y: y + 4, size: 10.5, font: bold, color: ORANGE });
