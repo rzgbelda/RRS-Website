@@ -653,6 +653,29 @@
                 });
               }
             }
+            // Send receipt email
+            if (checkout.email) {
+              fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
+                },
+                body: JSON.stringify({
+                  order_number:   orderNum,
+                  customer_name:  checkout.contact  || checkout.business || '',
+                  customer_email: checkout.email,
+                  business_name:  checkout.business || '',
+                  phone:          checkout.phone    || '',
+                  shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                  subtotal:       window._orderSubtotal || window._orderTotal,
+                  total:          window._orderTotal,
+                  payment_method: method,
+                  items:          window._orderItems || [],
+                  created_at:     new Date().toISOString(),
+                }),
+              }).catch(function(err) { console.error('[receipt] send error:', err); });
+            }
           } catch(e) { console.error('[invoice order] save error:', e); }
         }
         localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
@@ -799,6 +822,29 @@
                 }).catch(function(err) {
                   console.error('[label] fetch error:', err);
                 });
+              }
+              // Send receipt email for card payments
+              if (checkout.email) {
+                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
+                  },
+                  body: JSON.stringify({
+                    order_number:   orderNum,
+                    customer_name:  checkout.contact  || checkout.business || '',
+                    customer_email: checkout.email,
+                    business_name:  checkout.business || '',
+                    phone:          checkout.phone    || '',
+                    shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                    subtotal:       window._orderSubtotal || window._orderTotal,
+                    total:          window._orderTotal,
+                    payment_method: 'card',
+                    items:          window._orderItems || [],
+                    created_at:     new Date().toISOString(),
+                  }),
+                }).catch(function(err) { console.error('[receipt] send error:', err); });
               }
               if (checkout.referral) {
                 // Look up sub-distributor by referral code and save to order_referrals
