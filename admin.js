@@ -1319,8 +1319,10 @@ async function renderOrdersTable(filter) {
           ).join("")}
         </select>
       </td>
-      <td style="display:flex;gap:6px;align-items:center;">
+      <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button>
+        ${o.label_url ? `<a href="${escHtml(o.label_url)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#0B1F38;color:#fff;text-decoration:none;">&#128438; Label</a>` : ""}
+        ${o.pro_number ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;">&#128666; BOL</a>` : ""}
       </td>
     </tr>`;
   }).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
@@ -1435,6 +1437,26 @@ async function openOrderModal(id) {
       </tbody>
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
+    ${(o.label_url || o.tracking_number || o.bol_number || o.pro_number) ? `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:12px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Shipping</h4>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+      ${o.label_url ? `<a href="${escHtml(o.label_url)}" target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:7px;background:#0B1F38;color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;">
+        &#128438; Print Shipping Label
+      </a>` : ""}
+      ${o.tracking_number ? `<span style="font-size:13px;color:#334155;">
+        Tracking: <a href="${o.tracking_url ? escHtml(o.tracking_url) : `https://www.fedex.com/fedextrack/?trknbr=${escHtml(o.tracking_number)}`}" target="_blank" rel="noopener"
+          style="font-weight:700;color:#0B1F38;text-decoration:underline;">${escHtml(o.tracking_number)}</a>
+        &nbsp;<span style="color:#94a3b8;font-size:11px;">(${escHtml(o.shipping_carrier || "Carrier")})</span>
+      </span>` : ""}
+      ${o.bol_number ? `<span style="font-size:13px;color:#334155;">BOL: <strong>${escHtml(o.bol_number)}</strong></span>` : ""}
+      ${o.pro_number ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener"
+        style="display:inline-flex;align-items:center;gap:7px;background:#1d4ed8;color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;">
+        &#128666; Track on Estes &rarr;
+      </a>
+      <span style="font-size:13px;color:#334155;">PRO: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
+    </div>` : ""}
     <div id="orderActionResult" style="margin-top:14px;display:none;"></div>`;
   openModal("orderModal");
 }
