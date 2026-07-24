@@ -1457,8 +1457,71 @@ async function openOrderModal(id) {
       </a>
       <span style="font-size:13px;color:#334155;">PRO: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
     </div>` : ""}
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Resend Receipt</h4>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <input id="resendEmailInput" type="email" placeholder="Enter email address"
+        value="${escHtml(o.customer_email || '')}"
+        style="flex:1;min-width:200px;padding:9px 13px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:13px;outline:none;">
+      <button onclick="resendReceipt('${o.id}')"
+        style="background:#ED7226;color:#fff;border:none;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        &#9993; Send Receipt
+      </button>
+    </div>
+    <div id="resendResult" style="margin-top:8px;font-size:12.5px;display:none;"></div>
     <div id="orderActionResult" style="margin-top:14px;display:none;"></div>`;
   openModal("orderModal");
+}
+
+async function resendReceipt(orderId) {
+  const email = document.getElementById('resendEmailInput')?.value.trim();
+  const resultEl = document.getElementById('resendResult');
+  if (!email) { resultEl.style.display='block'; resultEl.style.color='#dc2626'; resultEl.textContent='Please enter an email address.'; return; }
+
+  const btn = document.querySelector('[onclick="resendReceipt(\'' + orderId + '\')"]');
+  if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+
+  const { data: o } = await window.sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
+  if (!o) { if (btn) { btn.disabled=false; btn.textContent='✉ Send Receipt'; } return; }
+
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  try {
+    const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON}` },
+      body: JSON.stringify({
+        order_number:     o.order_number,
+        customer_name:    o.customer_name  || '',
+        customer_email:   email,
+        business_name:    o.business_name  || '',
+        phone:            o.phone          || '',
+        shipping_address: o.shipping_address || {},
+        subtotal:         o.subtotal       || o.total,
+        total:            o.total,
+        payment_method:   o.payment_method || '',
+        items:            o.order_items    || [],
+        created_at:       o.created_at,
+        tracking_number:  o.tracking_number || null,
+        shipping_carrier: o.shipping_carrier || null,
+        bol_number:       o.bol_number     || null,
+        pro_number:       o.pro_number     || null,
+      }),
+    });
+    const data = await res.json();
+    resultEl.style.display = 'block';
+    if (data.success) {
+      resultEl.style.color = '#15803d';
+      resultEl.textContent = `✓ Receipt sent to ${email}`;
+    } else {
+      resultEl.style.color = '#dc2626';
+      resultEl.textContent = `Failed: ${data.error || 'Unknown error'}`;
+    }
+  } catch(err) {
+    resultEl.style.display = 'block';
+    resultEl.style.color = '#dc2626';
+    resultEl.textContent = `Error: ${err.message}`;
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '&#9993; Send Receipt'; }
 }
 
 function showWarpConfirmDialog() { return Promise.resolve(false); } // removed — use bookWithEstes
