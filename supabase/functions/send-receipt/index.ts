@@ -33,13 +33,18 @@ async function generatePDF(order: any): Promise<Uint8Array> {
   // ── Header bar ────────────────────────────────────────────────
   page.drawRectangle({ x: 0, y: H - 100, width: W, height: 100, color: NAVY });
 
-  // Try to embed logo from live site
+  // Try to embed logo — fetch with timeout, skip if too large for pdf-lib
   let logoImage = null;
   try {
-    const logoRes = await fetch("https://www.roomreadysupply.com/RRS_LOGO_White.png");
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const logoRes = await fetch("https://www.roomreadysupply.com/RRS_LOGO_White_small.png", { signal: controller.signal });
+    clearTimeout(timer);
     if (logoRes.ok) {
       const logoBytes = new Uint8Array(await logoRes.arrayBuffer());
-      logoImage = await doc.embedPng(logoBytes);
+      if (logoBytes.length < 300000) { // skip if over 300KB to avoid pdf-lib stack overflow
+        logoImage = await doc.embedPng(logoBytes);
+      }
     }
   } catch (_) { /* fall back to text */ }
 
