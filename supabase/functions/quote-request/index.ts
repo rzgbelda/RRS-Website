@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const RESEND_API_KEY   = Deno.env.get("RESEND_API_KEY")   ?? "";
-const NOTIFY_EMAIL     = Deno.env.get("QUOTE_NOTIFY_EMAIL") ?? "shiroesxz@gmail.com";
+const NOTIFY_EMAIL     = Deno.env.get("QUOTE_NOTIFY_EMAIL") ?? "sales@roomreadysupply.com";
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")     ?? "";
 const SUPABASE_SERVICE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 

@@ -738,6 +738,8 @@
 
 
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <script src="script.js"></script>
 
@@ -1005,16 +1007,12 @@
 <!-- -- End Floating Catalog QR Widget ------------------------- -->
 
 <!-- -- Quote Request Form -------------------------------------- -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script>
 (function () {
-  const SUPABASE_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
   const QUOTE_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/quote-request';
   const MATCH_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/match-competitor-quote';
   const BUCKET        = 'quote-files';
-
-  const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const sb = window.sb;
 
   // -- Unified product list -------------------------------------
   // Each item: { name, quantity, source: 'manual'|'ai' }

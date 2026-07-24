@@ -222,7 +222,7 @@ function injectVariantCSS() {
       box-shadow: 0 2px 6px rgba(10, 50, 30, 0.22);
     }
 
-    /* -- Product page pills — larger, with a header label -- */
+    /* -- Product page pills ï¿½ larger, with a header label -- */
     #product-variant-selector {
       margin: 16px 0 20px;
     }
@@ -500,7 +500,7 @@ function selectVariantColor(pillEl) {
     p.classList.toggle("active", p === pillEl);
   });
 
-  // All variants of the same color share the same image — just swap it
+  // All variants of the same color share the same image ï¿½ just swap it
   const img = card.querySelector(".product-image img");
   if (img) img.src = colorVariant.image;
 
@@ -629,7 +629,7 @@ function applyFilters() {
       if (!haystack.includes(keyword)) return false;
     }
 
-    // Category match — product must match at least one checked category
+    // Category match ï¿½ product must match at least one checked category
     if (catFilters.length > 0) {
       const haystack = (product.name + ' ' + product.description + ' ' + product.overview).toLowerCase();
       const matches = catFilters.some(cat => {
@@ -672,12 +672,12 @@ function buildSeoTitle(p) {
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
   const matStr    = matMatch  ? matMatch[1].trim()  : "";
   const suffix    = matStr  ? ` (${matStr})` : "";
-  const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
+  const cleanName = p.name.replace(/\s*[ï¿½ï¿½-]\s*Wholesale Pricing.*$/i, "").trim();
   // Only prepend size if the name doesn't already start with it
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const nameAlreadyHasSize = sizeStr && norm(cleanName).startsWith(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : "";
-  return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
+  return `${prefix}${cleanName} ï¿½ Wholesale Pricing for Hotels & Motels${suffix}`;
 }
 
 function populateProductPage(product) {
@@ -686,7 +686,7 @@ function populateProductPage(product) {
   const seoTitle = buildSeoTitle(product);
   const metaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
-    (product.overview || "").length > 155 ? "…" : ""
+    (product.overview || "").length > 155 ? "ï¿½" : ""
   );
   const pageUrl = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
 
@@ -754,7 +754,7 @@ function populateProductPage(product) {
       tbody.appendChild(wRow);
     }
     if (product.length || product.width || product.height) {
-      const dims = [product.length, product.width, product.height].filter(Boolean).join('" × ') + '"';
+      const dims = [product.length, product.width, product.height].filter(Boolean).join('" ï¿½ ') + '"';
       const dRow = document.createElement("tr");
       dRow.id = "specDimRow";
       dRow.innerHTML = `<td>Dimensions (in)</td><td>${dims}</td>`;
@@ -774,7 +774,7 @@ function populateProductPage(product) {
     tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
   }
 
-  const altText = product.size ? `${product.name} – ${product.size}` : product.name;
+  const altText = product.size ? `${product.name} ï¿½ ${product.size}` : product.name;
   const mainImage = document.getElementById("mainProductImage");
   const thumbImage = document.getElementById("thumbImage");
   if (mainImage) { mainImage.src = product.image; mainImage.alt = altText; }
@@ -807,7 +807,7 @@ function injectProductVariantSelector(variants, activeProduct) {
 
   injectVariantCSS();
 
-  // Size pills — only show unique sizes (exclude color duplicates from same size)
+  // Size pills ï¿½ only show unique sizes (exclude color duplicates from same size)
   const sizeVariants = variants.filter(v => !v.colorGroup || v.colorLabel === (activeProduct.colorLabel || "Tan") || !activeProduct.colorLabel);
   const pillsHtml = sizeVariants.map(v =>
     `<button class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}"
@@ -816,7 +816,7 @@ function injectProductVariantSelector(variants, activeProduct) {
      >${v.variantLabel || v.size || v.name}</button>`
   ).join("");
 
-  // Color pills — find siblings with same colorGroup
+  // Color pills ï¿½ find siblings with same colorGroup
   let colorHtml = "";
   if (activeProduct.colorGroup) {
     const colorSiblings = allProducts.filter(p => p.colorGroup === activeProduct.colorGroup);
@@ -856,7 +856,7 @@ function switchProductVariant(slug) {
     document.querySelector(`#product-variant-selector .variant-pill.active[data-slug="${p.slug}"]`)
   );
   if (currentActive && currentActive.colorLabel && product.colorGroup !== currentActive.colorGroup) {
-    // User clicked a size pill — find the same color in the target size's colorGroup
+    // User clicked a size pill ï¿½ find the same color in the target size's colorGroup
     const sameColorMatch = allProducts.find(p =>
       p.productFamily === product.productFamily &&
       p.variantLabel === product.variantLabel &&
@@ -996,7 +996,7 @@ function renderVpBasketPanel(basket) {
     <li class="vp-basket-item" data-item-key="${item.itemNumber}">
       <img src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'">
       <span class="vp-basket-item-name">${item.name}</span>
-      <button class="vp-basket-remove" data-idx="${idx}" title="Remove">×</button>
+      <button class="vp-basket-remove" data-idx="${idx}" title="Remove">ï¿½</button>
     </li>
   `).join('');
 
@@ -1013,11 +1013,11 @@ function renderVpBasketPanel(basket) {
 function scrollToNewVpItem(itemNumber) {
   const listEl = document.getElementById("vpBasketItems");
   if (!listEl) return;
-  // Find by iterating — avoids CSS.escape edge cases with special chars in item numbers
+  // Find by iterating ï¿½ avoids CSS.escape edge cases with special chars in item numbers
   const newLi = Array.from(listEl.querySelectorAll("[data-item-key]"))
     .find(el => el.dataset.itemKey === itemNumber);
   if (!newLi) return;
-  // Scroll only the internal list container — not the page
+  // Scroll only the internal list container ï¿½ not the page
   newLi.scrollIntoView({ behavior: "smooth", block: "nearest" });
   newLi.classList.add("vp-basket-item--new");
   newLi.addEventListener("animationend", () => newLi.classList.remove("vp-basket-item--new"), { once: true });
@@ -1509,7 +1509,7 @@ function loadCheckoutProducts() {
         <div class="summary-item-row">
           <div>
             <h4>${item.name}</h4>
-            <p>Qty: ${qty} × $${price.toFixed(2)}</p>
+            <p>Qty: ${qty} ï¿½ $${price.toFixed(2)}</p>
             <p>Reorder: <strong>${reorderValue}${customDatesText}</strong></p>
           </div>
 
@@ -1620,7 +1620,7 @@ function setupLogin() {
       // Try Supabase auth if available, otherwise fallback
       if (window.sb) {
         const submitBtn = loginForm.querySelector("button[type=submit], .signin-btn");
-        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing in…"; }
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Signing inï¿½"; }
 
         const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
 
@@ -1667,7 +1667,8 @@ function setupLogin() {
   const logoutBtn = document.getElementById("logout-btn");
 
   if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
+    logoutBtn.addEventListener("click", async () => {
+      if (window.sb) await window.sb.auth.signOut();
       localStorage.removeItem("loggedIn");
       updateLoginUI();
       updateCartBadge();
@@ -1678,7 +1679,7 @@ function setupLogin() {
 
 // Redirect guests to login, saving their intended destination
 function requireAuth(dest) {
-  if (localStorage.getItem("loggedIn") === "true") return true; // logged in — follow link normally
+  if (localStorage.getItem("loggedIn") === "true") return true; // logged in ï¿½ follow link normally
   sessionStorage.setItem("authRedirect", dest || window.location.href);
   window.location.href = "/login";
   return false; // prevent default link navigation
@@ -2004,7 +2005,7 @@ function loadPaymentSummary() {
 
         <div>
           <h4>${item.name}</h4>
-          <p>Qty: ${qty} × $${price.toFixed(2)}</p>
+          <p>Qty: ${qty} ï¿½ $${price.toFixed(2)}</p>
         </div>
 
         <strong>$${total.toFixed(2)}</strong>
@@ -2027,7 +2028,7 @@ function loadPaymentSummary() {
     if (savedQuote && shippingCostEl) {
       shippingCost = parseFloat(savedQuote.total_charge || savedQuote.price || 0);
       const carrier = savedQuote.carrier_name || savedQuote.carrier || 'Freight';
-      const transit = savedQuote.transit_days ? ` · ${savedQuote.transit_days} days` : '';
+      const transit = savedQuote.transit_days ? ` ï¿½ ${savedQuote.transit_days} days` : '';
       shippingCostEl.textContent = `$${shippingCost.toFixed(2)}`;
       if (shippingLabelEl) shippingLabelEl.textContent = `Shipping (${carrier}${transit})`;
     }
@@ -2167,7 +2168,7 @@ async function setupProfilePage() {
   const orderHistoryList = document.getElementById("orderHistoryList");
 
   if (orderHistoryList) {
-    orderHistoryList.innerHTML = `<p style="color:#888;font-size:14px;">Loading orders…</p>`;
+    orderHistoryList.innerHTML = `<p style="color:#888;font-size:14px;">Loading ordersï¿½</p>`;
     try {
       const { data: { session } } = await window.sb.auth.getSession();
       if (session?.user?.id) {
@@ -2182,7 +2183,7 @@ async function setupProfilePage() {
         if (sbOrders && sbOrders.length > 0) {
           orderHistoryList.innerHTML = sbOrders.map(o => {
             const date = new Date(o.created_at).toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
-            const total = o.total ? `$${parseFloat(o.total).toFixed(2)}` : (o.subtotal ? `$${parseFloat(o.subtotal).toFixed(2)}` : "—");
+            const total = o.total ? `$${parseFloat(o.total).toFixed(2)}` : (o.subtotal ? `$${parseFloat(o.subtotal).toFixed(2)}` : "ï¿½");
             const status = (o.status || "pending").charAt(0).toUpperCase() + (o.status || "pending").slice(1);
             return `
               <div class="order-card">
@@ -2206,7 +2207,8 @@ async function setupProfilePage() {
   const logoutProfileBtn = document.getElementById("logoutProfileBtn");
 
   if (logoutProfileBtn) {
-    logoutProfileBtn.addEventListener("click", () => {
+    logoutProfileBtn.addEventListener("click", async () => {
+      if (window.sb) await window.sb.auth.signOut();
       localStorage.removeItem("loggedIn");
       window.location.href = "/login";
     });
@@ -2282,7 +2284,7 @@ function openContactModal() {
   document.getElementById("ciqSuccess").style.display = "none";
   document.getElementById("ciqForm").style.display = "";
   document.getElementById("ciqError").style.display = "none";
-  document.getElementById("ciqFileName").textContent = "Choose file…";
+  document.getElementById("ciqFileName").textContent = "Choose fileï¿½";
   document.querySelectorAll(".ciq-error-field").forEach(el => el.classList.remove("ciq-error-field"));
 }
 
@@ -2305,17 +2307,17 @@ document.addEventListener("keydown", function(e) {
 
 function updateFileName(input) {
   const label = document.getElementById("ciqFileName");
-  if (label) label.textContent = input.files[0]?.name || "Choose file…";
+  if (label) label.textContent = input.files[0]?.name || "Choose fileï¿½";
 }
 
-// Throttle — prevent resubmission within 30s
+// Throttle ï¿½ prevent resubmission within 30s
 let _ciqLastSubmit = 0;
 
 async function submitContactForm(e) {
   e.preventDefault();
   if (!window.sb) return;
 
-  // Honeypot check — bots fill this field, humans leave it blank
+  // Honeypot check ï¿½ bots fill this field, humans leave it blank
   if (document.getElementById("ciqHoneypot")?.value) return;
 
   const now = Date.now();
@@ -2367,7 +2369,7 @@ async function submitContactForm(e) {
 
   // -- Set loading state --
   const btn = document.getElementById("ciqSubmitBtn");
-  document.getElementById("ciqBtnText").textContent = "Sending…";
+  document.getElementById("ciqBtnText").textContent = "Sendingï¿½";
   document.getElementById("ciqSpinner").style.display = "inline-block";
   btn.disabled = true;
   document.getElementById("ciqError").style.display = "none";
@@ -2566,7 +2568,7 @@ async function validateRegCode() {
   if (!code || !statusEl) return;
   if (!window.sb) { statusEl.style.color = '#888'; statusEl.textContent = 'Validation unavailable.'; return; }
 
-  statusEl.style.color = '#888'; statusEl.textContent = 'Checking code…';
+  statusEl.style.color = '#888'; statusEl.textContent = 'Checking codeï¿½';
 
   // Check sub-distributor codes first
   const { data: sd } = await window.sb
@@ -2579,7 +2581,7 @@ async function validateRegCode() {
   if (sd) {
     _regValidatedDistributor = { id: sd.id, name: sd.name, commission_pct: sd.commission_pct, employee_id: null };
     statusEl.style.color = '#22c55e';
-    statusEl.textContent = 'âœ“ Valid code — ' + sd.name;
+    statusEl.textContent = 'âœ“ Valid code ï¿½ ' + sd.name;
     if (nameEl) nameEl.value = sd.name;
     if (nameRow) nameRow.style.display = 'block';
     return;
@@ -2602,7 +2604,7 @@ async function validateRegCode() {
       employee_id: emp.id,
     };
     statusEl.style.color = '#22c55e';
-    statusEl.textContent = 'âœ“ Valid code — ' + emp.name + ' (' + sdName + ')';
+    statusEl.textContent = 'âœ“ Valid code ï¿½ ' + emp.name + ' (' + sdName + ')';
     if (nameEl) nameEl.value = sdName;
     if (nameRow) nameRow.style.display = 'block';
     return;
@@ -2639,7 +2641,7 @@ function submitRegistration() {
   if (!password)  return showErr('Please enter a password.');
   if (password.length < 6) return showErr('Password must be at least 6 characters.');
   if (password !== confirm) return showErr('Passwords do not match.');
-  // All fields valid — show consent modal
+  // All fields valid ï¿½ show consent modal
   showConsentModal();
 }
 
@@ -2676,7 +2678,7 @@ async function _proceedWithRegistration() {
   if (!window.sb) return showErr('Registration service unavailable. Please try again.');
 
   const btn = document.querySelector('#reg-step-1 button[onclick="submitRegistration()"]');
-  if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating accountï¿½'; }
 
   const { data: authData, error: authErr } = await window.sb.auth.signUp({
     email,
@@ -2731,7 +2733,7 @@ async function _proceedWithRegistration() {
 }
 
 /* =========================
-   REFERRAL CODE — CHECKOUT
+   REFERRAL CODE ï¿½ CHECKOUT
 ========================= */
 
 let _checkoutReferral = null; // { sub_distributor_id, employee_id, commission_pct, name }
@@ -2750,7 +2752,7 @@ async function validateReferralCode(code) {
   if (!code) { if (statusEl) statusEl.textContent = ''; return; }
   if (!window.sb) { if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Validation unavailable.'; } return; }
 
-  if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Checking…'; }
+  if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Checkingï¿½'; }
 
   const { data: sd } = await window.sb
     .from('sub_distributors')
@@ -2761,7 +2763,7 @@ async function validateReferralCode(code) {
 
   if (sd) {
     _checkoutReferral = { sub_distributor_id: sd.id, employee_id: null, commission_pct: sd.commission_pct, name: sd.name };
-    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied — ' + sd.name; }
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied ï¿½ ' + sd.name; }
     return;
   }
 
@@ -2779,7 +2781,7 @@ async function validateReferralCode(code) {
       commission_pct: emp.sub_distributors ? emp.sub_distributors.commission_pct : 0,
       name: emp.name + ' (' + (emp.sub_distributors ? emp.sub_distributors.name : '') + ')',
     };
-    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied — ' + _checkoutReferral.name; }
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = 'âœ“ Applied ï¿½ ' + _checkoutReferral.name; }
     return;
   }
 
