@@ -295,6 +295,92 @@ function saveSeoApiKey() {
   if (typeof showToast === "function") showToast(val ? "API key saved." : "API key cleared.");
 }
 
+/* ── Google Search Console — real keyword & traffic data ──── */
+const GSC_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/search-console";
+const GSC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+
+async function loadSearchConsole() {
+  const host = document.getElementById("seoGscBody");
+  const btn  = document.getElementById("seoGscBtn");
+  if (!host) return;
+
+  if (btn) { btn.disabled = true; btn.textContent = "Refreshing…"; }
+  host.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Loading search performance…</p>';
+
+  try {
+    const res = await fetch(GSC_ENDPOINT, {
+      method: "POST",
+      headers: { "Authorization": "Bearer " + GSC_ANON_KEY, "Content-Type": "application/json" },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+
+    window._gscResults = data;
+
+    const t = data.totals || { clicks: 0, impressions: 0, ctr: 0, avg_position: 0 };
+    const pct = (n) => (n * 100).toFixed(1) + "%";
+
+    const statsHtml = '' +
+      '<div class="a-stats-grid" style="margin-bottom:20px;">' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Clicks (28d)</p><p class="a-stat-value">' + t.clicks + '</p></div></div>' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Impressions (28d)</p><p class="a-stat-value">' + t.impressions + '</p></div></div>' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Avg. CTR</p><p class="a-stat-value">' + pct(t.ctr) + '</p></div></div>' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Avg. Position</p><p class="a-stat-value">' + (t.avg_position ? t.avg_position.toFixed(1) : "—") + '</p></div></div>' +
+      '</div>';
+
+    if (!data.queries || data.queries.length === 0) {
+      host.innerHTML = statsHtml +
+        '<div style="padding:16px 18px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;text-align:center;">' +
+          '<p style="color:#64748b;font-size:13px;margin:0;">No search data yet.</p>' +
+          '<p style="color:#94a3b8;font-size:12px;margin:6px 0 0;">Search Console needs a few days after verification to start reporting real queries. Check back soon.</p>' +
+        '</div>';
+      if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
+      return;
+    }
+
+    const queryRows = data.queries.map(q => '' +
+      '<tr>' +
+        '<td>' + escHtml(q.query) + '</td>' +
+        '<td>' + q.clicks + '</td>' +
+        '<td>' + q.impressions + '</td>' +
+        '<td>' + pct(q.ctr) + '</td>' +
+        '<td>' + q.position.toFixed(1) + '</td>' +
+      '</tr>').join("");
+
+    const pageRows = (data.pages || []).map(p => {
+      const short = p.page.replace("https://www.roomreadysupply.com", "") || "/";
+      return '' +
+        '<tr>' +
+          '<td><a href="' + escHtml(p.page) + '" target="_blank" style="color:#0b2d52;">' + escHtml(short) + '</a></td>' +
+          '<td>' + p.clicks + '</td>' +
+          '<td>' + p.impressions + '</td>' +
+          '<td>' + p.position.toFixed(1) + '</td>' +
+        '</tr>';
+    }).join("");
+
+    host.innerHTML = statsHtml +
+      '<h4 style="font-size:13px;color:#0b2d52;margin:0 0 10px;">Top Search Queries</h4>' +
+      '<table class="a-table" style="margin-bottom:24px;">' +
+        '<thead><tr><th>Query</th><th>Clicks</th><th>Impressions</th><th>CTR</th><th>Avg. Pos</th></tr></thead>' +
+        '<tbody>' + queryRows + '</tbody>' +
+      '</table>' +
+      '<h4 style="font-size:13px;color:#0b2d52;margin:0 0 10px;">Top Pages</h4>' +
+      '<table class="a-table">' +
+        '<thead><tr><th>Page</th><th>Clicks</th><th>Impressions</th><th>Avg. Pos</th></tr></thead>' +
+        '<tbody>' + (pageRows || '<tr><td colspan="4" class="a-empty">No page data yet.</td></tr>') + '</tbody>' +
+      '</table>';
+
+  } catch (err) {
+    host.innerHTML =
+      '<div style="padding:14px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;">' +
+        '<p style="color:#b91c1c;font-size:13px;margin:0 0 6px;font-weight:600;">Could not load Search Console data</p>' +
+        '<p style="color:#7f1d1d;font-size:12px;margin:0;">' + escHtml(err.message) + '</p>' +
+      '</div>';
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = "Refresh"; }
+}
+
 /* ── Render the SEO tab ────────────────────────────────────── */
 function renderSeoTab() {
   const panel = document.getElementById("tab-seo");
@@ -338,8 +424,18 @@ function renderSeoTab() {
           seoApiKeyFieldHtml() +
         '</div>' +
       '</div>' +
+    '</div>' +
+
+    '<div class="a-card" style="margin-top:24px;">' +
+      '<div class="a-card-header"><h3>Search Performance</h3>' +
+        '<button id="seoGscBtn" class="a-btn-sm" onclick="loadSearchConsole()">Refresh</button>' +
+      '</div>' +
+      '<div style="padding:16px 18px;" id="seoGscBody">' +
+        '<p style="color:#94a3b8;font-size:13px;">Loading search performance…</p>' +
+      '</div>' +
     '</div>';
 
   runSeoAudit();
   loadSeoSitemap();
+  loadSearchConsole();
 }
