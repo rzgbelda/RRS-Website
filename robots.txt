@@ -9,4 +9,6 @@ Disallow: /profile
 Disallow: /wishlist
 Disallow: /api/
 
+Sitemap: https://www.roomreadysupply.com/sitemap-index.xml
 Sitemap: https://www.roomreadysupply.com/sitemap.xml
+Sitemap: https://www.roomreadysupply.com/sitemap-products.xml

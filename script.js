@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       setupProductQuantity();
       setupAddToCartButtons();
+      applyCatalogSearchParam();
     })
     .catch(error => {
       console.error("Error loading products.csv:", error);
@@ -650,6 +651,17 @@ function applyFilters() {
   }
 
   renderProducts(filtered);
+}
+
+// Pre-fill catalog search from ?search= URL param (powers schema.org SearchAction)
+function applyCatalogSearchParam() {
+  const input = document.getElementById('search-input');
+  if (!input) return;
+  const term = new URLSearchParams(window.location.search).get('search');
+  if (term) {
+    input.value = term;
+    applyFilters();
+  }
 }
 
 // Replace old search listener with unified filter handler

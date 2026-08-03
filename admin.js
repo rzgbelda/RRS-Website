@@ -107,7 +107,7 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings"];
+const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo"];
 
 function resetRoleRestrictions() {
   // Restore all hidden nav items (needed when switching accounts without full page reload)
@@ -195,7 +195,7 @@ function switchTab(tab) {
   document.getElementById("adminPageTitle").textContent =
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
-      "manage-hero":"Hero Section", "manage-about":"About Section",
+      seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
@@ -204,6 +204,7 @@ function switchTab(tab) {
   if (tab === "orders")           renderOrdersTable();
   if (tab === "users")            renderUsersTable();
   if (tab === "reports")          renderReportsTab();
+  if (tab === "seo")              renderSeoTab();
   if (tab === "manage-hero")      loadHeroSection();
   if (tab === "manage-about")     loadAboutSection();
   if (tab === "sub-distributors") renderSubDistributorsTab();
