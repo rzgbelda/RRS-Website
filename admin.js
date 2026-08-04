@@ -2109,7 +2109,7 @@ async function loadHeroSection() {
   setVal("heroDescription",  c.description  || "");
   setVal("heroBtnPrimary",   c.btnPrimary   || "Shop Catalog");
   setVal("heroBtnSecondary", c.btnSecondary || "Request Business Pricing");
-  setVal("heroBannerUrl",    c.bannerUrl    || "assets/img/banner1.png");
+  setVal("heroBannerUrl",    c.bannerUrl    || "assets/img/banner1.jpg");
   const img = document.getElementById("heroBannerImg");
   if (img && c.bannerUrl) img.src = c.bannerUrl;
 }
@@ -2174,7 +2174,7 @@ async function loadAboutSection() {
     setVal("aboutP1",        c.p1        || "");
     setVal("aboutP2",        c.p2        || "");
     setVal("aboutP3",        c.p3        || "");
-    setVal("aboutBannerUrl", c.bannerUrl || "assets/img/banner3.png");
+    setVal("aboutBannerUrl", c.bannerUrl || "assets/img/banner3.jpg");
     const img = document.getElementById("aboutBannerImg");
     if (img && c.bannerUrl) img.src = c.bannerUrl;
     if (c.features) _aboutFeatures = c.features;

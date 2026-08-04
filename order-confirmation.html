@@ -81,7 +81,7 @@
 
 <nav class="nav">
   <a href="/" class="nav-logo">
-    <img src="/assets/img/RR logo.png" alt="Room Ready Supply" onerror="this.style.display='none'">
+    <img width="634" height="192" src="/assets/img/RR logo.png" alt="Room Ready Supply" onerror="this.style.display='none'">
     <span>Room Ready Supply</span>
   </a>
   <a href="/" class="nav-home">&#8592; Back to Home</a>
@@ -241,7 +241,7 @@
       const price = parseFloat(item.price) || 0;
       const qty = parseInt(item.quantity) || 1;
       return '<div class="order-item">' +
-        '<img class="item-thumb" src="' + (item.image || '/assets/img/product-placeholder.svg') + '" onerror="this.onerror=null;this.src=\'/assets/img/product-placeholder.svg\'" alt="">' +
+        '<img class="item-thumb" src="' + (item.image || '/assets/img/product-placeholder.svg') + '" onerror="this.onerror=null;this.src=\'/assets/img/product-placeholder.svg\'" alt="" loading="lazy">' +
         '<div class="item-info"><div class="item-name">' + item.name + '</div>' +
         '<div class="item-sub">Qty: ' + qty + (item.itemNumber ? ' &bull; #' + item.itemNumber : '') + '</div></div>' +
         '<div class="item-price">$' + (price * qty).toFixed(2) + '</div>' +
