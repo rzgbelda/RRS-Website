@@ -1120,7 +1120,7 @@
       <input type="text" class="vq-item-name" placeholder="Product name or description" value="${name.replace(/"/g,'&quot;')}">
       <input type="number" class="vq-item-qty" min="1" value="${qty}" placeholder="Cases">
       ${sourceBadge}
-      <button type="button" class="vq-remove-btn" title="Remove">...</button>
+      <button type="button" class="vq-remove-btn" title="Remove">✕</button>
     `;
     row.querySelector('.vq-remove-btn').addEventListener('click', () => {
       row.remove();
