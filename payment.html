@@ -617,82 +617,104 @@
         document.getElementById('submitBtnLoading').style.display = 'inline';
         var orderNum = window._orderNumber || ('RRS-' + Date.now());
         var checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-        // Save order to database before clearing cart
-        if (window.sb) {
-          try {
-            var userRes = await window.sb.auth.getUser();
-            var userId = userRes.data?.user?.id || null;
-            var orderInsert = await window.sb.from('orders').insert({
-              order_number: orderNum,
-              user_id: userId,
-              customer_name: checkout.contact || '',
-              customer_email: checkout.email || '',
-              business_name: checkout.business || '',
-              phone: checkout.phone || '',
-              shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-              subtotal: window._orderSubtotal || window._orderTotal,
-              total: window._orderTotal,
-              payment_method: method,
-              payment_status: 'pending_invoice',
-              status: 'pending',
-              order_type: checkout.orderType || 'one_time',
-              notes: checkout.notes || '',
-            }).select('id').single();
-            if (!orderInsert.error && orderInsert.data) {
-              var invItems = (window._orderItems || []).map(function (i) {
-                var p = parseFloat(i.price) || 0;
-                var q = parseInt(i.quantity) || 1;
-                return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
-              });
-              if (invItems.length) {
-                var itemsRes = await window.sb.from('order_items').insert(invItems);
-                if (itemsRes.error) console.error('[order_items] save error:', itemsRes.error.message);
-              }
-            }
-            if (!orderInsert.error && checkout.referral) {
-              var sdRes = await window.sb.from('sub_distributors')
-                .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
-              if (sdRes.data) {
-                var commAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
-                await window.sb.from('order_referrals').insert({
-                  order_id: orderInsert.data.id,
-                  referral_code: checkout.referral.toUpperCase(),
-                  sub_distributor_id: sdRes.data.id,
-                  commission_pct: sdRes.data.commission_pct,
-                  commission_amount: commAmt,
-                  source: 'checkout',
-                });
-              }
-            }
-            // Send receipt email
-            if (checkout.email) {
-              fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
-                },
-                body: JSON.stringify({
-                  order_number:   orderNum,
-                  customer_name:  checkout.contact  || checkout.business || '',
-                  customer_email: checkout.email,
-                  business_name:  checkout.business || '',
-                  phone:          checkout.phone    || '',
-                  shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-                  subtotal:       window._orderSubtotal || window._orderTotal,
-                  total:          window._orderTotal,
-                  payment_method: method,
-                  items:          window._orderItems || [],
-                  created_at:     new Date().toISOString(),
-                }),
-              }).catch(function(err) { console.error('[receipt] send error:', err); });
-            }
-          } catch(e) { console.error('[invoice order] save error:', e); }
+
+        if (!window.sb) {
+          btn.disabled = false;
+          document.getElementById('submitBtnText').style.display = 'inline';
+          document.getElementById('submitBtnLoading').style.display = 'none';
+          showError('Could not connect to place your order. Please refresh the page and try again, or call (252) 227-0073.');
+          return;
         }
-        localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
-        document.getElementById('orderRef').textContent = orderNum;
-        document.getElementById('orderModal').style.display = 'flex';
-        localStorage.removeItem('cart');
+
+        try {
+          var userRes = await window.sb.auth.getUser();
+          var userId = userRes.data?.user?.id || null;
+          var orderInsert = await window.sb.from('orders').insert({
+            order_number: orderNum,
+            user_id: userId,
+            customer_name: checkout.contact || '',
+            customer_email: checkout.email || '',
+            business_name: checkout.business || checkout.contact || 'N/A',
+            phone: checkout.phone || '',
+            shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+            subtotal: window._orderSubtotal || window._orderTotal,
+            total: window._orderTotal,
+            payment_method: method,
+            payment_status: 'pending_invoice',
+            status: 'pending',
+            order_type: checkout.orderType || 'one_time',
+            notes: checkout.notes || '',
+          }).select('id').single();
+
+          if (orderInsert.error || !orderInsert.data) {
+            console.error('[invoice order] save error:', orderInsert.error && orderInsert.error.message);
+            btn.disabled = false;
+            document.getElementById('submitBtnText').style.display = 'inline';
+            document.getElementById('submitBtnLoading').style.display = 'none';
+            showError('We could not submit your order (reference ' + orderNum + '). Your cart has not been cleared — please try again, or call (252) 227-0073 or email sales@roomreadysupply.com for help.');
+            return;
+          }
+
+          var invItems = (window._orderItems || []).map(function (i) {
+            var p = parseFloat(i.price) || 0;
+            var q = parseInt(i.quantity) || 1;
+            return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
+          });
+          if (invItems.length) {
+            var itemsRes = await window.sb.from('order_items').insert(invItems);
+            if (itemsRes.error) console.error('[order_items] save error:', itemsRes.error.message);
+          }
+
+          if (checkout.referral) {
+            var sdRes = await window.sb.from('sub_distributors')
+              .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
+            if (sdRes.data) {
+              var commAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
+              await window.sb.from('order_referrals').insert({
+                order_id: orderInsert.data.id,
+                referral_code: checkout.referral.toUpperCase(),
+                sub_distributor_id: sdRes.data.id,
+                commission_pct: sdRes.data.commission_pct,
+                commission_amount: commAmt,
+                source: 'checkout',
+              });
+            }
+          }
+          // Send receipt email
+          if (checkout.email) {
+            fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY',
+              },
+              body: JSON.stringify({
+                order_number:   orderNum,
+                customer_name:  checkout.contact  || checkout.business || '',
+                customer_email: checkout.email,
+                business_name:  checkout.business || '',
+                phone:          checkout.phone    || '',
+                shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                subtotal:       window._orderSubtotal || window._orderTotal,
+                total:          window._orderTotal,
+                payment_method: method,
+                items:          window._orderItems || [],
+                created_at:     new Date().toISOString(),
+              }),
+            }).catch(function(err) { console.error('[receipt] send error:', err); });
+          }
+
+          localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
+          document.getElementById('orderRef').textContent = orderNum;
+          document.getElementById('orderModal').style.display = 'flex';
+          localStorage.removeItem('cart');
+        } catch(e) {
+          console.error('[invoice order] unexpected error:', e);
+          btn.disabled = false;
+          document.getElementById('submitBtnText').style.display = 'inline';
+          document.getElementById('submitBtnLoading').style.display = 'none';
+          showError('Something went wrong submitting your order (reference ' + orderNum + '). Your cart has not been cleared — please try again, or call (252) 227-0073 for help.');
+        }
         return;
       }
 
@@ -746,7 +768,7 @@
               user_id: userId,
               customer_name: checkout.contact || '',
               customer_email: checkout.email || '',
-              business_name: checkout.business || '',
+              business_name: checkout.business || checkout.contact || 'N/A',
               phone: checkout.phone || '',
               shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
               subtotal: window._orderSubtotal || window._orderTotal,
@@ -759,6 +781,11 @@
             }).select('id').single();
             if (orderInsert.error) {
               console.error('[order] save error:', orderInsert.error.message);
+              btn.disabled = false;
+              document.getElementById('submitBtnText').style.display = 'inline';
+              document.getElementById('submitBtnLoading').style.display = 'none';
+              showError('Your card was charged successfully, but we hit a problem recording your order (reference ' + orderNum + ', payment ' + pi.id + '). Please call (252) 227-0073 or email sales@roomreadysupply.com right away so we can confirm your order manually — do not submit payment again.');
+              return;
             } else {
               var cardItems = (window._orderItems || []).map(function (i) {
                 var p = parseFloat(i.price) || 0;
