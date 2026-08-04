@@ -1429,12 +1429,12 @@ async function openOrderModal(id) {
         <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Subtotal</th>
       </tr></thead>
       <tbody>
-        ${(o.order_items || []).map(i => `<tr style="border-top:1px solid #f0f4fa">
-          <td style="padding:9px 12px">${escHtml(i.name)}</td>
-          <td style="text-align:center;padding:9px 8px">${i.quantity}</td>
-          <td style="text-align:right;padding:9px 8px">$${Number(i.price).toFixed(2)}</td>
-          <td style="text-align:right;padding:9px 8px;font-weight:600">$${Number(i.subtotal).toFixed(2)}</td>
-        </tr>`).join("")}
+        ${(o.order_items || []).map(i => { const price = Number(i.price ?? i.price_per_case ?? 0); const qty = Number(i.quantity ?? 1); return `<tr style="border-top:1px solid #f0f4fa">
+          <td style="padding:9px 12px">${escHtml(i.name || i.product_name || "Product")}</td>
+          <td style="text-align:center;padding:9px 8px">${qty}</td>
+          <td style="text-align:right;padding:9px 8px">$${price.toFixed(2)}</td>
+          <td style="text-align:right;padding:9px 8px;font-weight:600">$${(price * qty).toFixed(2)}</td>
+        </tr>`; }).join("")}
       </tbody>
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
@@ -1626,7 +1626,7 @@ async function _approveAndBookWithWarpUnused(orderId) {
       contact_email: order?.customer_email || "",
     },
     items: (order?.order_items || []).map(i => ({
-      description: i.name, quantity: i.quantity,
+      description: i.name || i.product_name || "Product", quantity: i.quantity,
       weight_lbs: 20, length_in: 14, width_in: 12, height_in: 10, freight_class: "70",
     })),
   };
@@ -1841,7 +1841,7 @@ async function bookWithEstes(orderId) {
         email:  order?.customer_email || "",
       },
       items: items.map(i => ({
-        description: i.name,
+        description: i.name || i.product_name || "Product",
         quantity:    i.quantity,
         weight_lbs:  i.quantity * (i.weight_lbs || 40),
       })),

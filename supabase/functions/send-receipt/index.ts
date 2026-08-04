@@ -151,7 +151,7 @@ async function generatePDF(order: any): Promise<Uint8Array> {
     }
     const name     = truncate(item.name || item.product_name || "Product", 46);
     const qty      = Number(item.quantity || item.qty || 1);
-    const price    = Number(item.price || item.unit_price || 0);
+    const price    = Number(item.price || item.unit_price || item.price_per_case || 0);
     const subtotal = Number(item.subtotal || (price * qty));
     page.drawText(name,                  { x: 50,  y, size: 9, font: reg,  color: BLACK });
     page.drawText(String(qty),           { x: 378, y, size: 9, font: reg,  color: BLACK });

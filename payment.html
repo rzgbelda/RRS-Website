@@ -642,7 +642,7 @@
               var invItems = (window._orderItems || []).map(function (i) {
                 var p = parseFloat(i.price) || 0;
                 var q = parseInt(i.quantity) || 1;
-                return { order_id: orderInsert.data.id, name: i.name || 'Product', price: p, quantity: q, subtotal: p * q };
+                return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
               });
               if (invItems.length) {
                 var itemsRes = await window.sb.from('order_items').insert(invItems);
@@ -763,7 +763,7 @@
               var cardItems = (window._orderItems || []).map(function (i) {
                 var p = parseFloat(i.price) || 0;
                 var q = parseInt(i.quantity) || 1;
-                return { order_id: orderInsert.data.id, name: i.name || 'Product', price: p, quantity: q, subtotal: p * q };
+                return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
               });
               if (cardItems.length) {
                 var cardItemsRes = await window.sb.from('order_items').insert(cardItems);
