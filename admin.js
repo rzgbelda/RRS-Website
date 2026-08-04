@@ -435,7 +435,7 @@ async function renderProductsTable(filter) {
           style="width:16px;height:16px;cursor:pointer;accent-color:#ED7226"
           onchange="updateBulkBar()">
       </td>
-      <td><img src="${escHtml(p.image_url || "assets/img/blanket.png")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='assets/img/blanket.png'"></td>
+      <td><img src="${escHtml(p.image_url || "assets/img/product-placeholder.svg")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='assets/img/product-placeholder.svg'"></td>
       <td>
         <strong>${escHtml(p.name)}</strong>
         ${p.sku ? `<br><small style="color:#aaa">SKU: ${escHtml(p.sku)}</small>` : ""}
@@ -511,7 +511,7 @@ function openAddProduct() {
   document.getElementById("productForm")?.reset();
   document.getElementById("editProductId").value = "";
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = "assets/img/blanket.png";
+  if (prev) prev.src = "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
   openModal("productModal");
 }
@@ -543,14 +543,14 @@ async function openEditProduct(id) {
   setChk("prodFeatured",   !!p.is_featured);
   setChk("prodActive",     !!p.is_active);
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = p.image_url || "assets/img/blanket.png";
+  if (prev) prev.src = p.image_url || "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
   openModal("productModal");
 }
 
 document.getElementById("prodImage")?.addEventListener("input", e => {
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = e.target.value || "assets/img/blanket.png";
+  if (prev) prev.src = e.target.value || "assets/img/product-placeholder.svg";
 });
 
 async function saveProduct() {

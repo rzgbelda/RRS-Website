@@ -153,12 +153,12 @@
             const p = i.products;
             return `
               <div class="wishlist-card" id="wl-item-${i.id}">
-                <img class="wishlist-card-img" src="${p.image_url || 'assets/img/blanket.png'}" alt="${p.name}" onerror="this.src='assets/img/blanket.png'">
+                <img class="wishlist-card-img" src="${p.image_url || 'assets/img/product-placeholder.svg'}" alt="${p.name}" onerror="this.src='assets/img/product-placeholder.svg'">
                 <div class="wishlist-card-body">
                   <h3>${p.name}</h3>
                   <span class="price">$${Number(p.price).toFixed(2)}</span>
                   <div class="wishlist-card-actions">
-                    <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'assets/img/blanket.png'}')">Add to Order</button>
+                    <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'assets/img/product-placeholder.svg'}')">Add to Order</button>
                     <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">✕</button>
                   </div>
                 </div>

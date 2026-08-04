@@ -229,7 +229,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <span class="qv-toolbar-title" id="qvToolbarTitle">Loading quote…</span>
   </div>
   <div class="qv-toolbar-right">
-    <button class="qv-btn qv-btn-secondary" id="qvContactBtn" onclick="window.location.href='/contact.html'" style="display:none">
+    <button class="qv-btn qv-btn-secondary" id="qvContactBtn" style="display:none">
       Contact Us
     </button>
     <button class="qv-btn qv-btn-primary" id="qvPrintBtn" onclick="window.print()" style="display:none">
@@ -423,7 +423,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
 
     document.getElementById('qvToolbarTitle').textContent = `Quotation ${q.quote_number || ''}`;
     document.getElementById('qvPrintBtn').style.display = 'flex';
-    document.getElementById('qvContactBtn').style.display = 'flex';
+
+    const qvContact = document.getElementById('qvContactBtn');
+    qvContact.style.display = 'flex';
+    qvContact.onclick = function () {
+      const subject = encodeURIComponent(
+        q.quote_number ? `Question about Quotation ${q.quote_number}` : 'Question about my quotation'
+      );
+      window.location.href = `mailto:${RRS.email}?subject=${subject}`;
+    };
+
     document.title = `Quotation ${q.quote_number || ''} — Room Ready Supply`;
   }
 

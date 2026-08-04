@@ -273,7 +273,7 @@ function renderSingleCard(product) {
   return `
     <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
-        <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/blanket.png'">
+        <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
         <h3>${product.name}</h3>
@@ -378,7 +378,7 @@ function renderVariantCard(variants) {
          data-url="/product?item=${encodeURIComponent(v.slug)}"
          data-variants="${escapedJson}">
       <div class="product-image">
-        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/blanket.png'">
+        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
         <h3>${v.productFamily || v.name}</h3>
@@ -1865,7 +1865,7 @@ function showFeaturedProducts() {
       <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
 
         <div class="product-image">
-          <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/blanket.png'">
+          <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
         </div>
 
         <h3>${product.name}</h3>

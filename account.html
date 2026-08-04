@@ -704,7 +704,7 @@
         ${items.map(i => {
           const p = i.products;
           return `<div class="wishlist-item">
-            <img src="${p.image_url || 'assets/img/blanket.png'}" alt="${p.name}" onerror="this.src='assets/img/blanket.png'">
+            <img src="${p.image_url || 'assets/img/product-placeholder.svg'}" alt="${p.name}" onerror="this.src='assets/img/product-placeholder.svg'">
             <p class="wi-name">${p.name}</p>
             <p class="wi-price">$${Number(p.price).toFixed(2)}</p>
           </div>`;
