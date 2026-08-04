@@ -32,6 +32,11 @@
       "permanent": true
     },
     {
+      "source": "/fleece-blanket-blue.png",
+      "destination": "/assets/img/fleece-blanket-blue.png",
+      "permanent": true
+    },
+    {
       "source": "/aiv-soap.jpg",
       "destination": "/assets/img/aiv-soap.jpg",
       "permanent": true
