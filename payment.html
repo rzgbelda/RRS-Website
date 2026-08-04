@@ -638,6 +638,17 @@
               order_type: checkout.orderType || 'one_time',
               notes: checkout.notes || '',
             }).select('id').single();
+            if (!orderInsert.error && orderInsert.data) {
+              var invItems = (window._orderItems || []).map(function (i) {
+                var p = parseFloat(i.price) || 0;
+                var q = parseInt(i.quantity) || 1;
+                return { order_id: orderInsert.data.id, name: i.name || 'Product', price: p, quantity: q, subtotal: p * q };
+              });
+              if (invItems.length) {
+                var itemsRes = await window.sb.from('order_items').insert(invItems);
+                if (itemsRes.error) console.error('[order_items] save error:', itemsRes.error.message);
+              }
+            }
             if (!orderInsert.error && checkout.referral) {
               var sdRes = await window.sb.from('sub_distributors')
                 .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
@@ -749,6 +760,15 @@
             if (orderInsert.error) {
               console.error('[order] save error:', orderInsert.error.message);
             } else {
+              var cardItems = (window._orderItems || []).map(function (i) {
+                var p = parseFloat(i.price) || 0;
+                var q = parseInt(i.quantity) || 1;
+                return { order_id: orderInsert.data.id, name: i.name || 'Product', price: p, quantity: q, subtotal: p * q };
+              });
+              if (cardItems.length) {
+                var cardItemsRes = await window.sb.from('order_items').insert(cardItems);
+                if (cardItemsRes.error) console.error('[order_items] save error:', cardItemsRes.error.message);
+              }
               // Auto-purchase shipping label or BOL for confirmed card payments
               var freightQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
               var isEstesFreight = (freightQuote.carrier_name || '').toLowerCase().includes('estes');
