@@ -4,30 +4,308 @@
     {
       "source": "/(.*)\\.html",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     },
     {
       "source": "/(account|admin|cart|checkout|login|payment|catalog|product|profile|wishlist|reset-password|order-confirmation)",
       "headers": [
-        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
       ]
     }
   ],
   "redirects": [
-    { "source": "/profile", "destination": "/account", "permanent": true }
+    {
+      "source": "/profile",
+      "destination": "/account",
+      "permanent": true
+    },
+    {
+      "source": "/aiv-liners.jpg",
+      "destination": "/assets/img/aiv-liners.jpg",
+      "permanent": true
+    },
+    {
+      "source": "/aiv-soap.jpg",
+      "destination": "/assets/img/aiv-soap.jpg",
+      "permanent": true
+    },
+    {
+      "source": "/aiv-tissue.jpg",
+      "destination": "/assets/img/aiv-tissue.jpg",
+      "permanent": true
+    },
+    {
+      "source": "/au1.svg",
+      "destination": "/assets/icons/au1.svg",
+      "permanent": true
+    },
+    {
+      "source": "/au2.svg",
+      "destination": "/assets/icons/au2.svg",
+      "permanent": true
+    },
+    {
+      "source": "/au3.svg",
+      "destination": "/assets/icons/au3.svg",
+      "permanent": true
+    },
+    {
+      "source": "/banner1.png",
+      "destination": "/assets/img/banner1.png",
+      "permanent": true
+    },
+    {
+      "source": "/banner3.png",
+      "destination": "/assets/img/banner3.png",
+      "permanent": true
+    },
+    {
+      "source": "/blanket.png",
+      "destination": "/assets/img/blanket.png",
+      "permanent": true
+    },
+    {
+      "source": "/box.svg",
+      "destination": "/assets/icons/box.svg",
+      "permanent": true
+    },
+    {
+      "source": "/box2.svg",
+      "destination": "/assets/icons/box2.svg",
+      "permanent": true
+    },
+    {
+      "source": "/box3.svg",
+      "destination": "/assets/icons/box3.svg",
+      "permanent": true
+    },
+    {
+      "source": "/browseandbuild.png",
+      "destination": "/assets/img/browseandbuild.png",
+      "permanent": true
+    },
+    {
+      "source": "/businesspricing.png",
+      "destination": "/assets/img/businesspricing.png",
+      "permanent": true
+    },
+    {
+      "source": "/calendar.svg",
+      "destination": "/assets/icons/calendar.svg",
+      "permanent": true
+    },
+    {
+      "source": "/Campgrounds.png",
+      "destination": "/assets/img/Campgrounds.png",
+      "permanent": true
+    },
+    {
+      "source": "/Cart.png",
+      "destination": "/assets/img/Cart.png",
+      "permanent": true
+    },
+    {
+      "source": "/check.svg",
+      "destination": "/assets/icons/check.svg",
+      "permanent": true
+    },
+    {
+      "source": "/CleaningCompany.png",
+      "destination": "/assets/img/CleaningCompany.png",
+      "permanent": true
+    },
+    {
+      "source": "/cs.svg",
+      "destination": "/assets/icons/cs.svg",
+      "permanent": true
+    },
+    {
+      "source": "/easyreordering.png",
+      "destination": "/assets/img/easyreordering.png",
+      "permanent": true
+    },
+    {
+      "source": "/email-line-1.svg",
+      "destination": "/assets/icons/email-line-1.svg",
+      "permanent": true
+    },
+    {
+      "source": "/eye-line.svg",
+      "destination": "/assets/icons/eye-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/eye-off-line.svg",
+      "destination": "/assets/icons/eye-off-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/Facilities.png",
+      "destination": "/assets/img/Facilities.png",
+      "permanent": true
+    },
+    {
+      "source": "/file-list-3-line.svg",
+      "destination": "/assets/icons/file-list-3-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/file.svg",
+      "destination": "/assets/icons/file.svg",
+      "permanent": true
+    },
+    {
+      "source": "/fs.svg",
+      "destination": "/assets/icons/fs.svg",
+      "permanent": true
+    },
+    {
+      "source": "/hallway.png",
+      "destination": "/assets/img/hallway.png",
+      "permanent": true
+    },
+    {
+      "source": "/hl1.svg",
+      "destination": "/assets/icons/hl1.svg",
+      "permanent": true
+    },
+    {
+      "source": "/hl2.svg",
+      "destination": "/assets/icons/hl2.svg",
+      "permanent": true
+    },
+    {
+      "source": "/hl3.svg",
+      "destination": "/assets/icons/hl3.svg",
+      "permanent": true
+    },
+    {
+      "source": "/Hotel.png",
+      "destination": "/assets/img/Hotel.png",
+      "permanent": true
+    },
+    {
+      "source": "/lock-line.svg",
+      "destination": "/assets/icons/lock-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/mail-line.svg",
+      "destination": "/assets/icons/mail-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/Motel.png",
+      "destination": "/assets/img/Motel.png",
+      "permanent": true
+    },
+    {
+      "source": "/orderhistory.png",
+      "destination": "/assets/img/orderhistory.png",
+      "permanent": true
+    },
+    {
+      "source": "/pack.svg",
+      "destination": "/assets/icons/pack.svg",
+      "permanent": true
+    },
+    {
+      "source": "/phone-line.svg",
+      "destination": "/assets/icons/phone-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/Restaurant.png",
+      "destination": "/assets/img/Restaurant.png",
+      "permanent": true
+    },
+    {
+      "source": "/RR logo.png",
+      "destination": "/assets/img/RR logo.png",
+      "permanent": true
+    },
+    {
+      "source": "/RRS_LOGO_White.png",
+      "destination": "/assets/brand/RRS_LOGO_White.png",
+      "permanent": true
+    },
+    {
+      "source": "/RV.png",
+      "destination": "/assets/img/RV.png",
+      "permanent": true
+    },
+    {
+      "source": "/secure.svg",
+      "destination": "/assets/icons/secure.svg",
+      "permanent": true
+    },
+    {
+      "source": "/ShortTermRental.png",
+      "destination": "/assets/img/ShortTermRental.png",
+      "permanent": true
+    },
+    {
+      "source": "/time-line.svg",
+      "destination": "/assets/icons/time-line.svg",
+      "permanent": true
+    },
+    {
+      "source": "/trash.svg",
+      "destination": "/assets/icons/trash.svg",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    { "source": "/",               "destination": "/index.html" },
-    { "source": "/catalog",        "destination": "/catalog.html" },
-    { "source": "/product",        "destination": "/product.html" },
-    { "source": "/cart",           "destination": "/cart.html" },
-    { "source": "/checkout",       "destination": "/checkout.html" },
-    { "source": "/login",          "destination": "/login.html" },
-    { "source": "/payment",        "destination": "/payment.html" },
-    { "source": "/admin",          "destination": "/admin.html" },
-    { "source": "/account",        "destination": "/account.html" },
-    { "source": "/wishlist",       "destination": "/wishlist.html" },
-    { "source": "/reset-password", "destination": "/reset-password.html" }
+    {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/catalog",
+      "destination": "/catalog.html"
+    },
+    {
+      "source": "/product",
+      "destination": "/product.html"
+    },
+    {
+      "source": "/cart",
+      "destination": "/cart.html"
+    },
+    {
+      "source": "/checkout",
+      "destination": "/checkout.html"
+    },
+    {
+      "source": "/login",
+      "destination": "/login.html"
+    },
+    {
+      "source": "/payment",
+      "destination": "/payment.html"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin.html"
+    },
+    {
+      "source": "/account",
+      "destination": "/account.html"
+    },
+    {
+      "source": "/wishlist",
+      "destination": "/wishlist.html"
+    },
+    {
+      "source": "/reset-password",
+      "destination": "/reset-password.html"
+    }
   ]
 }

@@ -199,7 +199,7 @@
   </div>
 
   <header class="navbar">
-    <a href="/" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
+    <a href="/" class="logo"><img src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></a>
     <nav class="nav-links">
       <a href="/">Home</a>
       <a href="/catalog">Catalog</a>
@@ -210,10 +210,10 @@
       <a href="/#about-us">Contact</a>
     </nav>
     <div class="nav-icons">
-      <a href="/catalog"><img src="hl1.svg" alt="Search"></a>
+      <a href="/catalog"><img src="assets/icons/hl1.svg" alt="Search"></a>
       <a href="/login" class="guest-only login-nav-btn">Login</a>
       <div class="logged-in-only account-dropdown">
-        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
+        <button class="account-btn"><img src="assets/icons/hl2.svg" alt="Account"></button>
         <div class="dropdown-menu">
           <a href="/account">My Account</a>
           <a href="/account#orders">Order History</a>
@@ -223,7 +223,7 @@
         </div>
       </div>
       <div class="cart-container">
-        <a href="/cart"><img src="hl3.svg" alt="Cart"></a>
+        <a href="/cart"><img src="assets/icons/hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
       <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
@@ -704,7 +704,7 @@
         ${items.map(i => {
           const p = i.products;
           return `<div class="wishlist-item">
-            <img src="${p.image_url || 'blanket.png'}" alt="${p.name}" onerror="this.src='blanket.png'">
+            <img src="${p.image_url || 'assets/img/blanket.png'}" alt="${p.name}" onerror="this.src='assets/img/blanket.png'">
             <p class="wi-name">${p.name}</p>
             <p class="wi-price">$${Number(p.price).toFixed(2)}</p>
           </div>`;

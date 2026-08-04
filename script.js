@@ -273,18 +273,18 @@ function renderSingleCard(product) {
   return `
     <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
-        <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
+        <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/blanket.png'">
       </div>
       <div class="product-content">
         <h3>${product.name}</h3>
         <p class="product-description">${product.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
-            <img src="box.svg" alt="">
+            <img src="assets/icons/box.svg" alt="">
             <span>Case Qty: ${product.caseQty || ""}</span>
           </div>
           <div class="detail-item">
-            <img src="pack.svg" alt="">
+            <img src="assets/icons/pack.svg" alt="">
             <span>Pack Size: ${product.size || ""}</span>
           </div>
         </div>
@@ -378,7 +378,7 @@ function renderVariantCard(variants) {
          data-url="/product?item=${encodeURIComponent(v.slug)}"
          data-variants="${escapedJson}">
       <div class="product-image">
-        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/blanket.png'">
+        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/blanket.png'">
       </div>
       <div class="product-content">
         <h3>${v.productFamily || v.name}</h3>
@@ -387,11 +387,11 @@ function renderVariantCard(variants) {
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
-            <img src="box.svg" alt="">
+            <img src="assets/icons/box.svg" alt="">
             <span>Case Qty: ${v.caseQty || ""}</span>
           </div>
           <div class="detail-item">
-            <img src="pack.svg" alt="">
+            <img src="assets/icons/pack.svg" alt="">
             <span>Pack Size: ${v.size || ""}</span>
           </div>
         </div>
@@ -1290,7 +1290,7 @@ function loadCartPage() {
     type="button"
     title="Select custom dates"
   >
-    <img src="calendar.svg" alt="Calendar">
+    <img src="assets/icons/calendar.svg" alt="Calendar">
   </button>
 
 </div>
@@ -1298,7 +1298,7 @@ function loadCartPage() {
 <span class="item-total">$${itemTotal.toFixed(2)}</span>
 
 <button class="trash-btn" data-index="${index}">
-  <img src="trash.svg" alt="Delete">
+  <img src="assets/icons/trash.svg" alt="Delete">
 </button>
       </div>
     `;
@@ -1768,7 +1768,7 @@ function setupPasswordToggle() {
     const isPassword = passwordInput.type === "password";
 
     passwordInput.type = isPassword ? "text" : "password";
-    togglePassword.src = isPassword ? "eye-line.svg" : "eye-off-line.svg";
+    togglePassword.src = isPassword ? "assets/icons/eye-line.svg" : "assets/icons/eye-off-line.svg";
   });
 }
 
@@ -1865,7 +1865,7 @@ function showFeaturedProducts() {
       <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
 
         <div class="product-image">
-          <img src="${product.image}" alt="${product.name}" onerror="this.src='/blanket.png'">
+          <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/blanket.png'">
         </div>
 
         <h3>${product.name}</h3>
@@ -1874,12 +1874,12 @@ function showFeaturedProducts() {
 
         <div class="product-meta">
           <div class="meta-item">
-            <img src="box.svg" alt="">
+            <img src="assets/icons/box.svg" alt="">
             <span>Case Qty: ${product.caseQty || ""}</span>
           </div>
 
           <div class="meta-item">
-            <img src="pack.svg" alt="">
+            <img src="assets/icons/pack.svg" alt="">
             <span>Pack Size: ${product.size || ""}</span>
           </div>
         </div>
@@ -1904,7 +1904,7 @@ function showFeaturedProducts() {
           data-price3="${cleanPrice(product.price3)}"
           data-image="${product.image}"
         >
-          <img src="Cart.png" alt="">
+          <img src="assets/img/Cart.png" alt="">
           ADD TO CART
         </button>
 

@@ -60,7 +60,7 @@
   </div>
 
   <header class="navbar">
-    <a href="/" class="logo"><img src="RR logo.png" alt="Room Ready Supply Logo" /></a>
+    <a href="/" class="logo"><img src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></a>
     <nav class="nav-links">
       <a href="/">Home</a>
       <a href="/catalog">Catalog</a>
@@ -71,10 +71,10 @@
       <a href="/#about-us">Contact</a>
     </nav>
     <div class="nav-icons">
-      <a href="/catalog"><img src="hl1.svg" alt="Search"></a>
+      <a href="/catalog"><img src="assets/icons/hl1.svg" alt="Search"></a>
       <a href="/login" class="guest-only login-nav-btn">Login</a>
       <div class="logged-in-only account-dropdown">
-        <button class="account-btn"><img src="hl2.svg" alt="Account"></button>
+        <button class="account-btn"><img src="assets/icons/hl2.svg" alt="Account"></button>
         <div class="dropdown-menu">
           <a href="/account">My Account</a>
           <a href="/account#orders">Order History</a>
@@ -84,7 +84,7 @@
         </div>
       </div>
       <div class="cart-container">
-        <a href="/cart"><img src="hl3.svg" alt="Cart"></a>
+        <a href="/cart"><img src="assets/icons/hl3.svg" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
       <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
@@ -153,12 +153,12 @@
             const p = i.products;
             return `
               <div class="wishlist-card" id="wl-item-${i.id}">
-                <img class="wishlist-card-img" src="${p.image_url || 'blanket.png'}" alt="${p.name}" onerror="this.src='blanket.png'">
+                <img class="wishlist-card-img" src="${p.image_url || 'assets/img/blanket.png'}" alt="${p.name}" onerror="this.src='assets/img/blanket.png'">
                 <div class="wishlist-card-body">
                   <h3>${p.name}</h3>
                   <span class="price">$${Number(p.price).toFixed(2)}</span>
                   <div class="wishlist-card-actions">
-                    <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'blanket.png'}')">Add to Order</button>
+                    <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'assets/img/blanket.png'}')">Add to Order</button>
                     <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">✕</button>
                   </div>
                 </div>

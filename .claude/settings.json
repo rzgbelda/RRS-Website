@@ -23,7 +23,8 @@
       "PowerShell(git -C \"C:\\\\Users\\\\rguti\\\\OneDrive\\\\Documents\\\\RRS-Website\" add admin.html admin.js)",
       "PowerShell(Select-String -Path \"C:\\\\Users\\\\rguti\\\\OneDrive\\\\Documents\\\\RRS-Website\\\\index.html\" -Pattern \"catalog|reorder|Shop|auto-reorder\" -CaseSensitive:$false)",
       "PowerShell(head -30)",
-      "Bash(curl -s -X POST \"https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjY2NjgsImV4cCI6MjA2NTM0MjY2OH0.r7B9UeVsIVL0HJlczKjbfHaFp0wC9ikFfBwbRs1_P9c\" -d \"{\\\\\"action\\\\\":\\\\\"quote\\\\\",\\\\\"payload\\\\\":{\\\\\"destination_zip\\\\\":\\\\\"10001\\\\\",\\\\\"weight_lbs\\\\\":500}}\")"
+      "Bash(curl -s -X POST \"https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjY2NjgsImV4cCI6MjA2NTM0MjY2OH0.r7B9UeVsIVL0HJlczKjbfHaFp0wC9ikFfBwbRs1_P9c\" -d \"{\\\\\"action\\\\\":\\\\\"quote\\\\\",\\\\\"payload\\\\\":{\\\\\"destination_zip\\\\\":\\\\\"10001\\\\\",\\\\\"weight_lbs\\\\\":500}}\")",
+      "PowerShell(node \"C:\\\\Users\\\\rguti\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rguti-OneDrive-Documents-RRS-Website\\\\afe0e8d6-34c1-40ac-ad77-89b816de6cc4\\\\scratchpad\\\\baseline-live.js\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"

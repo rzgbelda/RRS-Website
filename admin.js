@@ -435,7 +435,7 @@ async function renderProductsTable(filter) {
           style="width:16px;height:16px;cursor:pointer;accent-color:#ED7226"
           onchange="updateBulkBar()">
       </td>
-      <td><img src="${escHtml(p.image_url || "blanket.png")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='blanket.png'"></td>
+      <td><img src="${escHtml(p.image_url || "assets/img/blanket.png")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='assets/img/blanket.png'"></td>
       <td>
         <strong>${escHtml(p.name)}</strong>
         ${p.sku ? `<br><small style="color:#aaa">SKU: ${escHtml(p.sku)}</small>` : ""}
@@ -511,7 +511,7 @@ function openAddProduct() {
   document.getElementById("productForm")?.reset();
   document.getElementById("editProductId").value = "";
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = "blanket.png";
+  if (prev) prev.src = "assets/img/blanket.png";
   document.getElementById("productFormError").style.display = "none";
   openModal("productModal");
 }
@@ -543,14 +543,14 @@ async function openEditProduct(id) {
   setChk("prodFeatured",   !!p.is_featured);
   setChk("prodActive",     !!p.is_active);
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = p.image_url || "blanket.png";
+  if (prev) prev.src = p.image_url || "assets/img/blanket.png";
   document.getElementById("productFormError").style.display = "none";
   openModal("productModal");
 }
 
 document.getElementById("prodImage")?.addEventListener("input", e => {
   const prev = document.getElementById("prodImagePreview");
-  if (prev) prev.src = e.target.value || "blanket.png";
+  if (prev) prev.src = e.target.value || "assets/img/blanket.png";
 });
 
 async function saveProduct() {
@@ -2109,7 +2109,7 @@ async function loadHeroSection() {
   setVal("heroDescription",  c.description  || "");
   setVal("heroBtnPrimary",   c.btnPrimary   || "Shop Catalog");
   setVal("heroBtnSecondary", c.btnSecondary || "Request Business Pricing");
-  setVal("heroBannerUrl",    c.bannerUrl    || "banner1.png");
+  setVal("heroBannerUrl",    c.bannerUrl    || "assets/img/banner1.png");
   const img = document.getElementById("heroBannerImg");
   if (img && c.bannerUrl) img.src = c.bannerUrl;
 }
@@ -2158,9 +2158,9 @@ function previewHeroBanner(input) {
 ═══════════════════════════════════════════════════════════ */
 
 const _defaultAboutFeatures = [
-  { icon: "au1.svg", title: "Everyday Essentials",      desc: "Quality products for hospitality, rentals, cleaning teams, restaurants, and facilities." },
-  { icon: "au2.svg", title: "Simple Business Ordering", desc: "Everyday essentials and simple ordering support for repeat buyers." },
-  { icon: "au3.svg", title: "Reorder Made Easy",        desc: "Set reorder reminders or recurring schedules with approval before processing." },
+  { icon: "assets/icons/au1.svg", title: "Everyday Essentials",      desc: "Quality products for hospitality, rentals, cleaning teams, restaurants, and facilities." },
+  { icon: "assets/icons/au2.svg", title: "Simple Business Ordering", desc: "Everyday essentials and simple ordering support for repeat buyers." },
+  { icon: "assets/icons/au3.svg", title: "Reorder Made Easy",        desc: "Set reorder reminders or recurring schedules with approval before processing." },
 ];
 
 let _aboutFeatures = JSON.parse(JSON.stringify(_defaultAboutFeatures));
@@ -2174,7 +2174,7 @@ async function loadAboutSection() {
     setVal("aboutP1",        c.p1        || "");
     setVal("aboutP2",        c.p2        || "");
     setVal("aboutP3",        c.p3        || "");
-    setVal("aboutBannerUrl", c.bannerUrl || "banner3.png");
+    setVal("aboutBannerUrl", c.bannerUrl || "assets/img/banner3.png");
     const img = document.getElementById("aboutBannerImg");
     if (img && c.bannerUrl) img.src = c.bannerUrl;
     if (c.features) _aboutFeatures = c.features;
@@ -2195,7 +2195,7 @@ function renderAboutFeatures() {
         style="background:#fee2e2;color:#ef4444;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;">✕</button>
     </div>
   `).join("") + `
-    <button onclick="_aboutFeatures.push({icon:'au1.svg',title:'',desc:''});renderAboutFeatures()"
+    <button onclick="_aboutFeatures.push({icon:'assets/icons/au1.svg',title:'',desc:''});renderAboutFeatures()"
       style="margin-top:4px;padding:8px 16px;background:#f0f7ff;color:#1a4a8a;border:1.5px dashed #1a4a8a;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">+ Add Feature</button>
   `;
 }
