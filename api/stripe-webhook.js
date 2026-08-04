@@ -68,61 +68,94 @@ module.exports = async (req, res) => {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
+    // Columns must match the live orders table. It has no amount_total,
+    // currency, items, tax_amount, po_number, stripe_* or shipping_status
+    // columns -- inserting those made this handler fail every time.
+    const totalDollars = (pi.amount || 0) / 100;
+    const taxDollars   = meta.tax_amount ? parseInt(meta.tax_amount) / 100 : 0;
+
     const orderData = {
-      order_number: meta.order_number || `RRS-${Date.now()}`,
-      status: 'paid',
+      order_number:   meta.order_number || `RRS-${Date.now()}`,
+      status:         'pending',
       payment_status: 'paid',
-      stripe_payment_intent_id: pi.id,
-      stripe_charge_id: pi.latest_charge || null,
-      amount_total: pi.amount,
-      currency: pi.currency,
-      customer_name: meta.customer_name || null,
+      payment_method: 'card',
+      customer_name:  meta.customer_name  || null,
       customer_email: meta.customer_email || null,
-      business_name: meta.business_name || null,
-      phone: meta.phone || null,
+      business_name:  meta.business_name || meta.customer_name || 'N/A',
+      phone:          meta.phone || null,
       shipping_address: meta.shipping_address ? JSON.parse(meta.shipping_address) : null,
-      items: meta.items ? JSON.parse(meta.items) : [],
-      notes: meta.notes || null,
-      order_type: meta.order_type || 'one_time',
-      referral_code: meta.referral_code || null,
-      sub_distributor: meta.sub_distributor || null,
-      tax_amount: meta.tax_amount ? parseInt(meta.tax_amount) : 0,
-      shipping_cost: null, // pending freight quote
-      shipping_status: 'awaiting_freight_quote',
-      po_number: meta.po_number || null,
+      subtotal:       Math.max(0, totalDollars - taxDollars),
+      total:          totalDollars,
+      notes:          meta.notes || null,
+      order_type:     meta.order_type || 'one_time',
     };
 
     const parsedItems = meta.items ? JSON.parse(meta.items) : [];
-    const { error } = await supabase.from('orders').insert(orderData);
+
+    // The browser already inserts this order client-side on a successful
+    // charge. This handler exists as the safety net for when it does not
+    // (customer closes the tab, connection drops). Upserting on
+    // order_number means it records the order if it is missing and is a
+    // no-op if the browser already got there -- never a duplicate.
+    const { data: upserted, error } = await supabase
+      .from('orders')
+      .upsert(orderData, { onConflict: 'order_number', ignoreDuplicates: true })
+      .select('id');
+
     if (error) {
-      console.error('Supabase insert error:', error);
+      console.error('Supabase upsert error:', error);
     } else {
-      const emailOrder = { ...orderData, items: parsedItems };
-      const shippingAddr = orderData.shipping_address || {};
+      const createdHere = Array.isArray(upserted) && upserted.length > 0;
+      console.log('[webhook]', orderData.order_number, createdHere ? 'recorded (browser did not)' : 'already recorded by browser');
 
-      // Run all post-order tasks in parallel — failures log but don't block
-      Promise.all([
-        // Customer confirmation email
-        orderData.customer_email
-          ? sendCustomerConfirmation(emailOrder).catch(function (e) { console.error('Customer email failed:', e.message); })
-          : Promise.resolve(),
+      // Only write line items for an order this handler actually created.
+      if (createdHere && parsedItems.length) {
+        const itemRows = parsedItems.map(function (i) {
+          return {
+            order_id:       upserted[0].id,
+            product_name:   i.name || 'Product',
+            price_per_case: parseFloat(i.price) || 0,
+            quantity:       parseInt(i.qty || i.quantity) || 1,
+          };
+        });
+        const itemsRes = await supabase.from('order_items').insert(itemRows);
+        if (itemsRes.error) console.error('order_items insert error:', itemsRes.error.message);
+      }
 
-        // Internal alert email
-        sendInternalAlert(emailOrder).catch(function (e) { console.error('Internal alert email failed:', e.message); }),
+      // Everything below is fallback work. When the browser completed
+      // normally it has already sent the receipt and booked freight, so
+      // repeating it here would double-send email and -- more expensively --
+      // book a second Estes BOL against the same order. Only run when this
+      // handler was the one that had to record the order.
+      if (createdHere) {
+        const emailOrder = { ...orderData, items: parsedItems, amount_total: pi.amount };
+        const shippingAddr = orderData.shipping_address || {};
 
-        // Auto-book Estes LTL shipment if we have a full shipping address
-        (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip)
-          ? bookEstesShipment(orderData.order_number, shippingAddr, parsedItems, meta.estes_quote_id || null)
-              .then(function (bol) {
-                if (bol) {
-                  return supabase.from('orders')
-                    .update({ bol_number: bol.bol_number, pro_number: bol.pro_number, shipping_status: 'booked' })
-                    .eq('order_number', orderData.order_number);
-                }
-              })
-              .catch(function (e) { console.error('Estes booking failed:', e.message); })
-          : Promise.resolve(),
-      ]);
+        Promise.all([
+          orderData.customer_email
+            ? sendCustomerConfirmation(emailOrder).catch(function (e) { console.error('Customer email failed:', e.message); })
+            : Promise.resolve(),
+
+          sendInternalAlert(emailOrder).catch(function (e) { console.error('Internal alert email failed:', e.message); }),
+
+          (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip)
+            ? bookEstesShipment(orderData.order_number, shippingAddr, parsedItems, meta.estes_quote_id || null)
+                .then(function (bol) {
+                  if (bol) {
+                    return supabase.from('orders')
+                      .update({
+                        bol_number:     bol.bol_number,
+                        pro_number:     bol.pro_number,
+                        bol_created_at: new Date().toISOString(),
+                        status:         'processing',
+                      })
+                      .eq('order_number', orderData.order_number);
+                  }
+                })
+                .catch(function (e) { console.error('Estes booking failed:', e.message); })
+            : Promise.resolve(),
+        ]);
+      }
     }
   }
 

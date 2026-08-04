@@ -1,6 +1,18 @@
 const { Resend } = require('resend');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Resend's constructor throws when the API key is missing. Building it at
+// module load meant a missing RESEND_API_KEY crashed this file on import --
+// which also took down stripe-webhook.js, since it requires this module.
+// Build it lazily instead so a missing key only degrades email, and never
+// prevents an order from being recorded.
+let _resend = null;
+function getResend() {
+  if (_resend) return _resend;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set');
+  _resend = new Resend(key);
+  return _resend;
+}
 
 const BRAND = {
   navy: '#0B1F38',
@@ -139,7 +151,7 @@ function internalAlertHtml(order) {
 }
 
 async function sendCustomerConfirmation(order) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: 'Room Ready Supply <orders@roomreadysupply.com>',
     to: order.customer_email,
     subject: 'Order Confirmed — ' + order.order_number,
@@ -148,7 +160,7 @@ async function sendCustomerConfirmation(order) {
 }
 
 async function sendInternalAlert(order) {
-  return resend.emails.send({
+  return getResend().emails.send({
     from: 'Room Ready Supply Orders <orders@roomreadysupply.com>',
     to: process.env.INTERNAL_ALERT_EMAIL || 'eric@roomreadysupply.com',
     subject: '[New Order] ' + order.order_number + ' — ' + formatCurrency(order.amount_total || 0),
