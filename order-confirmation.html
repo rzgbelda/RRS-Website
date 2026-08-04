@@ -241,7 +241,7 @@
       const price = parseFloat(item.price) || 0;
       const qty = parseInt(item.quantity) || 1;
       return '<div class="order-item">' +
-        '<img class="item-thumb" src="' + (item.image || '/images/placeholder.png') + '" onerror="this.src=\'/images/placeholder.png\'" alt="">' +
+        '<img class="item-thumb" src="' + (item.image || '/assets/img/product-placeholder.svg') + '" onerror="this.onerror=null;this.src=\'/assets/img/product-placeholder.svg\'" alt="">' +
         '<div class="item-info"><div class="item-name">' + item.name + '</div>' +
         '<div class="item-sub">Qty: ' + qty + (item.itemNumber ? ' &bull; #' + item.itemNumber : '') + '</div></div>' +
         '<div class="item-price">$' + (price * qty).toFixed(2) + '</div>' +

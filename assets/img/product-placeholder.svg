@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="8 8 48 48" width="64" height="64" role="img" aria-label="Product image unavailable">
+  <!-- right face -->
+  <path d="M32 32 L50 24 L50 42 L32 50 Z" fill="#F1F5F9"/>
+  <!-- left face -->
+  <path d="M32 32 L14 24 L14 42 L32 50 Z" fill="#DEE5ED"/>
+  <!-- top face -->
+  <path d="M32 14 L50 24 L32 32 L14 24 Z" fill="#EAF0F6"/>
+  <!-- carton tape -->
+  <path d="M23 19 L41 29" stroke="#ED7226" stroke-width="2.4" stroke-linecap="round" opacity=".85"/>
+  <!-- outline -->
+  <path d="M32 14 L50 24 L50 42 L32 50 L14 42 L14 24 Z" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M14 24 L32 32 L50 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M32 32 L32 50" stroke="#94A3B8" stroke-width="2" stroke-linecap="round"/>
+</svg>
