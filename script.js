@@ -1008,7 +1008,7 @@ function renderVpBasketPanel(basket) {
     <li class="vp-basket-item" data-item-key="${item.itemNumber}">
       <img src="${item.image || ''}" alt="${item.name}" onerror="this.style.display='none'">
       <span class="vp-basket-item-name">${item.name}</span>
-      <button class="vp-basket-remove" data-idx="${idx}" title="Remove">�</button>
+      <button class="vp-basket-remove" data-idx="${idx}" title="Remove">✕</button>
     </li>
   `).join('');
 
