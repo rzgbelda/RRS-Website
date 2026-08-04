@@ -575,7 +575,15 @@
             business_name: checkout.business || '',
             phone: checkout.phone || '',
             shipping_address: JSON.stringify({ street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip }),
-            items: JSON.stringify((window._orderItems || []).map(function (i) { return { name: i.name, qty: i.quantity, price: i.price, itemNumber: i.itemNumber }; })),
+            // Stripe caps each metadata value at 500 characters. A full item
+            // list blows past that on any order with more than a handful of
+            // products (one real order hit 1832 chars and failed outright,
+            // silently breaking card payment for that customer). The item
+            // list is not needed here: the browser writes it directly to
+            // order_items in Supabase right after a successful charge, and
+            // the receipt email is sent with full item detail separately.
+            // Metadata only needs enough to identify the order.
+            items_count: String((window._orderItems || []).length),
             notes: checkout.notes || '',
             order_type: checkout.orderType || 'one_time',
             referral_code: checkout.referral || '',

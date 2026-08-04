@@ -90,7 +90,16 @@ module.exports = async (req, res) => {
       order_type:     meta.order_type || 'one_time',
     };
 
-    const parsedItems = meta.items ? JSON.parse(meta.items) : [];
+    // Item detail no longer travels through Stripe metadata (it blew past
+    // the 500-char per-field cap on any order with more than a handful of
+    // products). The browser writes items directly to order_items right
+    // after charge success, so in the normal case this handler is a no-op
+    // and never needed them. If this handler had to record the order itself
+    // (browser died mid-flow), there is no item detail to recover here --
+    // items_count is a hint only. The customer's receipt email still carries
+    // full item detail as a fallback for manual reconciliation.
+    const parsedItems = [];
+    const expectedItemCount = parseInt(meta.items_count) || 0;
 
     // The browser already inserts this order client-side on a successful
     // charge. This handler exists as the safety net for when it does not
@@ -106,21 +115,8 @@ module.exports = async (req, res) => {
       console.error('Supabase upsert error:', error);
     } else {
       const createdHere = Array.isArray(upserted) && upserted.length > 0;
-      console.log('[webhook]', orderData.order_number, createdHere ? 'recorded (browser did not)' : 'already recorded by browser');
-
-      // Only write line items for an order this handler actually created.
-      if (createdHere && parsedItems.length) {
-        const itemRows = parsedItems.map(function (i) {
-          return {
-            order_id:       upserted[0].id,
-            product_name:   i.name || 'Product',
-            price_per_case: parseFloat(i.price) || 0,
-            quantity:       parseInt(i.qty || i.quantity) || 1,
-          };
-        });
-        const itemsRes = await supabase.from('order_items').insert(itemRows);
-        if (itemsRes.error) console.error('order_items insert error:', itemsRes.error.message);
-      }
+      console.log('[webhook]', orderData.order_number, createdHere ? 'recorded (browser did not)' : 'already recorded by browser',
+        createdHere ? `(expected ${expectedItemCount} items, none recoverable from metadata -- see receipt email)` : '');
 
       // Everything below is fallback work. When the browser completed
       // normally it has already sent the receipt and booked freight, so
@@ -138,7 +134,12 @@ module.exports = async (req, res) => {
 
           sendInternalAlert(emailOrder).catch(function (e) { console.error('Internal alert email failed:', e.message); }),
 
-          (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip)
+          // No item detail survives to this fallback path (see note above),
+          // and freight can't be booked sensibly with an empty commodity
+          // list, so skip auto-booking rather than send Estes a bogus
+          // zero-item request. Staff can book manually from the admin panel
+          // -- this only triggers in the rare case the browser died mid-flow.
+          (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip && parsedItems.length)
             ? bookEstesShipment(orderData.order_number, shippingAddr, parsedItems, meta.estes_quote_id || null)
                 .then(function (bol) {
                   if (bol) {
