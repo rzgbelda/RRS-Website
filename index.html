@@ -1084,6 +1084,31 @@
   // Each item: { name, quantity, source: 'manual'|'ai' }
   // AI-matched items are inserted as rows in the same vqItemsList.
 
+  // -- Persist in-progress form state -----------------------------
+  // Without this, navigating to /catalog and back (e.g. "Browse Catalog")
+  // reloads this page, and initVqRows() below rebuilds vqItemsList from
+  // scratch -- silently discarding anything the customer had already
+  // typed or added. Saved on every change, restored on load, cleared
+  // once the quote is actually submitted.
+  const VQ_STATE_KEY = 'vq_form_state';
+
+  function saveVqFormState() {
+    const items = Array.from(document.querySelectorAll('.vq-item-row')).map(row => ({
+      name:     row.querySelector('.vq-item-name').value,
+      quantity: row.querySelector('.vq-item-qty').value,
+      source:   row.dataset.source || 'manual',
+    }));
+    localStorage.setItem(VQ_STATE_KEY, JSON.stringify({
+      items,
+      business_name:       document.getElementById('qBusinessName')?.value || '',
+      customer_type:       document.getElementById('qCustomerType')?.value || '',
+      customer_type_other: document.getElementById('qCustomerTypeOther')?.value || '',
+      contact_name:        document.getElementById('qContactName')?.value  || '',
+      email:                document.getElementById('qEmail')?.value        || '',
+      notes:                document.getElementById('qNotes')?.value        || '',
+    }));
+  }
+
   function addVqRow(name = '', qty = 1, source = 'manual') {
     const row = document.createElement('div');
     row.className = 'vq-item-row';
@@ -1100,6 +1125,7 @@
     row.querySelector('.vq-remove-btn').addEventListener('click', () => {
       row.remove();
       if (!document.querySelectorAll('.vq-item-row').length) addVqRow();
+      saveVqFormState();
     });
     document.getElementById('vqItemsList').appendChild(row);
   }
@@ -1107,6 +1133,7 @@
   function initVqRows() {
     document.getElementById('vqItemsList').innerHTML = '';
     const pending = JSON.parse(localStorage.getItem('vq_pending') || 'null');
+    const saved   = JSON.parse(localStorage.getItem(VQ_STATE_KEY) || 'null');
     const basket  = JSON.parse(localStorage.getItem('quoteBasket') || '[]');
 
     if (pending?.items?.length) {
@@ -1124,9 +1151,30 @@
         if (!already) addVqRow(item.name, item.quantity || 1, 'catalog');
       });
       if (basket.length) localStorage.removeItem('quoteBasket');
+    } else if (saved?.items?.length) {
+      // Restore whatever the customer had already built up in this form...
+      saved.items.forEach(i => addVqRow(i.name, i.quantity, i.source || 'manual'));
+      if (saved.business_name) document.getElementById('qBusinessName').value = saved.business_name;
+      if (saved.customer_type) document.getElementById('qCustomerType').value = saved.customer_type;
+      if (saved.customer_type === 'Other') {
+        const otherEl = document.getElementById('qCustomerTypeOther');
+        otherEl.style.display = 'block';
+        otherEl.value = saved.customer_type_other || '';
+      }
+      if (saved.contact_name)  document.getElementById('qContactName').value  = saved.contact_name;
+      if (saved.email)         document.getElementById('qEmail').value         = saved.email;
+      if (saved.notes)         document.getElementById('qNotes').value         = saved.notes;
+      // ...then merge in anything newly added to the catalog basket since.
+      basket.forEach(item => {
+        const already = Array.from(document.querySelectorAll('.vq-item-name'))
+          .some(el => el.value.trim().toLowerCase() === item.name.trim().toLowerCase());
+        if (!already) addVqRow(item.name, item.quantity || 1, 'catalog');
+      });
+      if (basket.length) { localStorage.removeItem('quoteBasket'); saveVqFormState(); }
     } else if (basket.length) {
       basket.forEach(item => addVqRow(item.name, item.quantity || 1, 'catalog'));
       localStorage.removeItem('quoteBasket');
+      saveVqFormState();
       // Scroll to the form after a brief paint delay
       setTimeout(() => {
         const form = document.getElementById('uq-form');
@@ -1145,9 +1193,14 @@
     })).filter(r => r.name);
   }
 
-  document.getElementById('vqAddRow').addEventListener('click', () => addVqRow());
+  document.getElementById('vqAddRow').addEventListener('click', () => { addVqRow(); saveVqFormState(); });
   document.getElementById('vqItemsList').addEventListener('input', () => {
     document.getElementById('vqItemsError').style.display = 'none';
+    saveVqFormState();
+  });
+  ['qBusinessName', 'qCustomerType', 'qCustomerTypeOther', 'qContactName', 'qEmail', 'qNotes'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', saveVqFormState);
+    document.getElementById(id)?.addEventListener('change', saveVqFormState);
   });
   initVqRows();
 
@@ -1360,6 +1413,7 @@
       if (!res.ok) throw new Error(result.error || 'Submission failed.');
 
       localStorage.removeItem('quoteBasket');
+      localStorage.removeItem(VQ_STATE_KEY);
       window.location.href = '/account#quotes';
 
     } catch (err) {
