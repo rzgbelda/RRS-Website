@@ -2,6 +2,15 @@ const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
 const { sendCustomerConfirmation, sendInternalAlert } = require('./send-emails');
 
+function getRawBody(req) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    req.on('data', (chunk) => chunks.push(chunk));
+    req.on('end', () => resolve(Buffer.concat(chunks)));
+    req.on('error', reject);
+  });
+}
+
 const SUPABASE_FUNCTIONS_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -53,7 +62,8 @@ module.exports = async (req, res) => {
 
   let event;
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+    const rawBody = await getRawBody(req);
+    event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature error:', err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -162,3 +172,15 @@ module.exports = async (req, res) => {
 
   res.status(200).json({ received: true });
 };
+
+// Stripe signature verification needs the raw, unparsed request body --
+// Vercel parses JSON automatically by default, which silently replaces the
+// exact bytes Stripe signed with a re-serialized object. This was confirmed
+// live: a correctly-signed test request came back with Stripe's own
+// "Webhook payload must be provided as a string or Buffer... Payload was
+// provided as a parsed JavaScript object instead" error, meaning every real
+// webhook Stripe ever sent to this endpoint would have failed the same way.
+// Must be set on module.exports.config AFTER the handler assignment above --
+// setting it before gets wiped out when module.exports is reassigned to the
+// handler function.
+module.exports.config = { api: { bodyParser: false } };
