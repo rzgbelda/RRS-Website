@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fetch("/products.csv")
     .then(response => response.text())
     .then(csvText => {
-      allProducts = parseCSV(csvText);
+      allProducts = parseCSV(csvText).filter(isSellable);
 
       const prioritized = allProducts.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
       renderProducts(prioritized);
@@ -148,6 +148,21 @@ function cleanPrice(price) {
       .replace(",", "")
       .trim()
   ) || 0;
+}
+
+/**
+ * A product is only shown if it carries a price we can actually charge.
+ * Rows awaiting supplier cost (all four price columns blank) would otherwise
+ * render as $0.00 and be addable to the cart, letting someone check out for
+ * nothing. Filtering at the single point where the catalog is parsed keeps
+ * them out of the grid, product pages, featured rail, and search at once.
+ * The rows stay in products.csv -- they reappear automatically once priced.
+ */
+function isSellable(p) {
+  return cleanPrice(p.price)  > 0 ||
+         cleanPrice(p.price1) > 0 ||
+         cleanPrice(p.price2) > 0 ||
+         cleanPrice(p.price3) > 0;
 }
 
 function getTierPrice(item) {

@@ -38,6 +38,14 @@ for (let i = 1; i < rows.length; i++) {
   const itemNumber = (v[1] || '').trim();
   if (!name && !itemNumber) continue;
 
+  // Skip unpriced rows. The storefront hides these (see isSellable in
+  // script.js), so submitting them to Google would advertise pages that
+  // show nothing buyable. They return to the sitemap once priced.
+  const priced = [11, 12, 13, 14].some(function (c) {
+    return parseFloat(String(v[c] || '').replace(/[^0-9.]/g, '')) > 0;
+  });
+  if (!priced) continue;
+
   const slug = slugify(itemNumber || name);
   if (!slug || seen.has(slug)) continue;
   seen.add(slug);
