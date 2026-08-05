@@ -545,11 +545,19 @@
           </div>`;
         return;
       }
+      // Addressable for the receipt download below
+      window._acctOrders = orders;
+
       list.innerHTML = orders.map(o => `
         <div class="order-card">
           <div class="order-card-left">
             <div class="order-num">${o.order_number}</div>
             <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
+            <button onclick="downloadOrderPdf('${o.id}', this)"
+              style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              Download PDF
+            </button>
           </div>
           <div class="order-card-right">
             <div class="order-total">$${Number(o.total).toFixed(2)}</div>
@@ -557,6 +565,112 @@
           </div>
         </div>`).join("");
     }
+
+    /** Download the branded receipt PDF for one of this customer's orders. */
+    window.downloadOrderPdf = async function (orderId, btn) {
+      const o = (window._acctOrders || []).find(x => x.id === orderId);
+      if (!o) return;
+
+      const original = btn ? btn.innerHTML : null;
+      if (btn) { btn.disabled = true; btn.textContent = "Preparing…"; }
+
+      const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+      try {
+        const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt?download=1', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON}` },
+          body: JSON.stringify({
+            order_number:     o.order_number,
+            customer_name:    o.customer_name  || '',
+            customer_email:   o.customer_email || 'no-reply@roomreadysupply.com',
+            business_name:    o.business_name  || '',
+            phone:            o.phone          || '',
+            shipping_address: o.shipping_address || {},
+            subtotal:         o.subtotal       || o.total,
+            total:            o.total,
+            payment_method:   o.payment_method || '',
+            items:            o.order_items    || [],
+            created_at:       o.created_at,
+            tracking_number:  o.tracking_number || null,
+            shipping_carrier: o.shipping_carrier || null,
+            bol_number:       o.bol_number     || null,
+            pro_number:       o.pro_number     || null,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const blob = await res.blob();
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url;
+        a.download = `RRS-Receipt-${o.order_number}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("Sorry, the receipt could not be generated. Please try again, or contact us at sales@roomreadysupply.com.");
+      }
+      if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    };
+
+    /**
+     * Load the items from a sent quote into the cart at their QUOTED prices,
+     * so the customer can check out on the pricing they were given rather
+     * than re-adding everything at catalog rates.
+     *
+     * quote_items only carries { name, quantity, unit_price }, so we match
+     * each name against the loaded catalog to recover the item number and
+     * image where we can. A miss is not fatal -- checkout works from
+     * name/price/quantity, and the cart falls back to the placeholder image.
+     */
+    window.addQuoteToCart = function (quoteId) {
+      const q = (window._acctQuotes || []).find(x => x.id === quoteId);
+      if (!q || !Array.isArray(q.quote_items) || !q.quote_items.length) {
+        alert("This quote has no items to add.");
+        return;
+      }
+
+      // script.js declares allProducts with `let`, which lives in the shared
+      // script scope but is NOT a window property -- window.allProducts is
+      // always undefined. Reference it directly, guarded in case script.js
+      // has not finished loading the catalog yet.
+      const catalog = (typeof allProducts !== "undefined" && Array.isArray(allProducts)) ? allProducts : [];
+      const norm = s => String(s || "").trim().toLowerCase();
+
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      let added = 0;
+
+      q.quote_items.forEach(qi => {
+        const name = qi.name;
+        const qty  = Number(qi.quantity) || 1;
+        const price = Number(qi.unit_price) || 0;
+        const match = catalog.find(p => norm(p.name) === norm(name));
+
+        const existing = cart.find(c => norm(c.name) === norm(name));
+        if (existing) {
+          // Replace rather than stack, so clicking twice doesn't double the order
+          existing.quantity = qty;
+          existing.price    = price;
+        } else {
+          cart.push({
+            name,
+            quantity: qty,
+            price,
+            itemNumber: match?.itemNumber || "",
+            image:      match?.image || "/assets/img/product-placeholder.svg",
+            quotedFrom: q.quote_number || null,
+          });
+        }
+        added++;
+      });
+
+      localStorage.setItem("cart", JSON.stringify(cart));
+      if (typeof updateCartBadge === "function") updateCartBadge();
+
+      if (confirm(`${added} item${added !== 1 ? "s" : ""} added to your cart at your quoted pricing.\n\nGo to cart now?`)) {
+        location.href = "/cart";
+      }
+    };
 
     // Status display mapping (covers both admin-side and legacy values)
     const QUOTE_STATUS = {
@@ -629,9 +743,18 @@
         return;
       }
 
+      // Keep the loaded quotes addressable so the buttons below can look one
+      // up by id instead of embedding its item JSON in an onclick attribute.
+      window._acctQuotes = quotes;
+
       list.innerHTML = quotes.map(q => {
         const s = QUOTE_STATUS[q.status] || QUOTE_STATUS.new;
-        const isReady = (q.customer_visible || q.quote_number) && (q.status === 'quoted' || q.status === 'completed');
+        // A quote is viewable once it has actually been sent. Do NOT also
+        // require status to be 'quoted'/'completed' -- staff mark quotes
+        // 'closed' when the sales cycle ends, which previously hid the
+        // customer's own quote behind a "we're still reviewing" message and
+        // removed their View / Download buttons entirely.
+        const isReady = !!(q.quote_number || (q.customer_visible && q.quoted_at));
         const requestDate = new Date(q.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         const quoteDate   = q.quoted_at ? new Date(q.quoted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
         const validUntil  = q.valid_until ? new Date(q.valid_until + 'T00:00:00').toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
@@ -674,6 +797,12 @@
             We're reviewing your request and preparing your custom quote.
           </div>` : `
           <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${(Array.isArray(q.quote_items) && q.quote_items.length && !isExpired) ? `
+            <button onclick="addQuoteToCart('${q.id}')"
+               style="display:inline-flex;align-items:center;gap:6px;background:#ED7226;color:#fff;border:none;cursor:pointer;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+              Add to Cart
+            </button>` : ''}
             <a href="/quote-view?id=${q.id}"
                style="display:inline-flex;align-items:center;gap:6px;background:#0B1F38;color:#fff;text-decoration:none;padding:8px 16px;border-radius:8px;font-size:12px;font-weight:700">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -684,7 +813,11 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
               Download PDF
             </a>
-          </div>`}
+          </div>
+          ${isExpired ? `
+          <div style="font-size:11.5px;color:#991b1b;margin-top:8px">
+            This quote expired on ${validUntil}. Contact us to have it renewed before ordering.
+          </div>` : ''}`}
         </div>`;
       }).join('');
     }
