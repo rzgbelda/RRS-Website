@@ -229,6 +229,20 @@ serve(async (req) => {
 
     // Generate PDF
     const pdfBytes = await generatePDF(order);
+
+    // Download mode: return the PDF directly instead of emailing it, so
+    // staff can save a copy from the admin panel without sending an email.
+    const url = new URL(req.url);
+    if (url.searchParams.get("download") === "1") {
+      return new Response(pdfBytes, {
+        headers: {
+          ...CORS,
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename="RRS-Receipt-${order.order_number || "order"}.pdf"`,
+        },
+      });
+    }
+
     const pdfBase64 = btoa(String.fromCharCode(...pdfBytes));
 
     // Simple HTML email body

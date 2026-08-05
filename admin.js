@@ -1468,6 +1468,10 @@ async function openOrderModal(id) {
         style="background:#ED7226;color:#fff;border:none;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
         &#9993; Send Receipt
       </button>
+      <button id="downloadReceiptBtn" onclick="downloadReceipt('${o.id}')"
+        style="background:#fff;color:#0d1f38;border:1.5px solid #d0d7e0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        &#8681; Download PDF
+      </button>
     </div>
     <div id="resendResult" style="margin-top:8px;font-size:12.5px;display:none;"></div>
     <div id="orderActionResult" style="margin-top:14px;display:none;"></div>`;
@@ -1523,6 +1527,65 @@ async function resendReceipt(orderId) {
     resultEl.textContent = `Error: ${err.message}`;
   }
   if (btn) { btn.disabled = false; btn.innerHTML = '&#9993; Send Receipt'; }
+}
+
+async function downloadReceipt(orderId) {
+  const btn = document.getElementById('downloadReceiptBtn');
+  const resultEl = document.getElementById('resendResult');
+  if (btn) { btn.disabled = true; btn.innerHTML = 'Preparing…'; }
+
+  const { data: o } = await window.sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
+  if (!o) { if (btn) { btn.disabled = false; btn.innerHTML = '&#8681; Download PDF'; } return; }
+
+  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  try {
+    const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt?download=1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON}` },
+      body: JSON.stringify({
+        order_number:     o.order_number,
+        customer_name:    o.customer_name  || '',
+        customer_email:   o.customer_email || 'no-reply@roomreadysupply.com',
+        business_name:    o.business_name  || '',
+        phone:            o.phone          || '',
+        shipping_address: o.shipping_address || {},
+        subtotal:         o.subtotal       || o.total,
+        total:            o.total,
+        payment_method:   o.payment_method || '',
+        items:            o.order_items    || [],
+        created_at:       o.created_at,
+        tracking_number:  o.tracking_number || null,
+        shipping_carrier: o.shipping_carrier || null,
+        bol_number:       o.bol_number     || null,
+        pro_number:       o.pro_number     || null,
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `RRS-Receipt-${o.order_number}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.style.color = '#dc2626';
+      resultEl.textContent = `Download failed: ${err.message}`;
+    }
+  }
+  if (btn) { btn.disabled = false; btn.innerHTML = '&#8681; Download PDF'; }
+}
+
+function viewQuotePdf() {
+  if (!currentQuoteId) return;
+  window.open(`/quote-view.html?id=${currentQuoteId}&print=1`, "_blank");
 }
 
 function showWarpConfirmDialog() { return Promise.resolve(false); } // removed — use bookWithEstes
@@ -2830,6 +2893,9 @@ function openQuoteDetail(id) {
   const titleEl = document.getElementById("quoteDetailTitle");
   if (titleEl) titleEl.textContent = r.business_name || "Quote Request";
 
+  const pdfBtn = document.getElementById("viewQuotePdfBtn");
+  if (pdfBtn) pdfBtn.style.display = r.quote_number ? "flex" : "none";
+
   const items = r.requested_items;
   const itemsHtml = items?.length
     ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
@@ -3035,7 +3101,9 @@ async function doSendQuote(payload) {
 
     document.getElementById("quoteComposerModal").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
-    alert(`✅ Quote ${data.quote_number} sent successfully!`);
+    if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nOpen it now to save a PDF copy?`)) {
+      window.open(`/quote-view.html?id=${currentQuoteId}&print=1`, "_blank");
+    }
     renderQuoteRequestsTable();
   } catch (err) {
     alert("Send error: " + err.message);
