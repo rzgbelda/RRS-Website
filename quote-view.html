@@ -471,10 +471,18 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
         return;
       }
 
-      // Authorization: must belong to this user
+      // Authorization: the customer it belongs to, or a staff member.
+      // Staff need access because the admin panel links here to view and
+      // save a PDF copy of any quote they have sent.
       const user = session.user;
       const owns = q.user_id === user.id || q.email?.toLowerCase() === user.email?.toLowerCase();
+      let isStaff = false;
       if (!owns) {
+        const { data: profile } = await sb
+          .from('profiles').select('role').eq('id', user.id).single();
+        isStaff = profile?.role === 'admin' || profile?.role === 'sub_distributor';
+      }
+      if (!owns && !isStaff) {
         showError('You do not have permission to view this quotation.', false);
         return;
       }
@@ -492,7 +500,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       }
 
       renderDoc(q);
-      markViewed(id);
+      // Only the customer opening their own quote counts as "viewed" --
+      // staff previewing it from the admin panel must not set that flag,
+      // or it stops being a reliable signal that the customer saw it.
+      if (owns) markViewed(id);
       // Auto-print when opened via Download PDF link
       if (params.get('print') === '1') {
         setTimeout(() => window.print(), 600);
