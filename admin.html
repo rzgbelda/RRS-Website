@@ -736,25 +736,25 @@
             <button class="a-modal-close" onclick="document.getElementById('quoteDetailModal').style.display='none'" style="width:32px;height:32px;border-radius:50%;border:none;background:#f1f5f9;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#475569;flex-shrink:0">&#x2715;</button>
           </div>
           <div class="a-modal-body" id="quoteDetailBody" style="padding:0 28px 4px"></div>
-          <div class="a-modal-footer" style="padding:16px 28px 22px;display:flex;align-items:center;gap:10px;border-top:1px solid #f0f4fa">
-            <div style="flex:1;display:flex;align-items:center;gap:8px">
-              <span style="font-size:12px;font-weight:600;color:#64748b">Status:</span>
-              <select id="quoteStatusSelect" class="a-select" style="width:auto;min-width:160px;height:36px;border-radius:8px;font-size:13px;padding:0 10px">
+          <div class="a-modal-footer" style="padding:14px 28px 20px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;border-top:1px solid #f0f4fa">
+            <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;margin-right:auto">
+              <span style="font-size:12px;font-weight:600;color:#64748b;white-space:nowrap;flex-shrink:0">Status:</span>
+              <select id="quoteStatusSelect" class="a-select" style="width:auto;min-width:118px;height:36px;border-radius:8px;font-size:13px;padding:0 10px;flex-shrink:0">
                 <option value="new">New</option>
                 <option value="reviewed">Reviewed</option>
                 <option value="quoted">Quoted</option>
                 <option value="closed">Closed</option>
               </select>
+              <button class="a-btn-primary" onclick="saveQuoteStatus()" style="height:36px;padding:0 16px;border-radius:9px;font-size:13px;white-space:nowrap;flex-shrink:0">Save</button>
             </div>
-            <button class="a-btn-primary" onclick="saveQuoteStatus()" style="height:36px;padding:0 20px;border-radius:9px;font-size:13px">Save Status</button>
-            <button id="viewQuotePdfBtn" onclick="viewQuotePdf()" style="display:none;height:36px;padding:0 18px;border-radius:9px;font-size:13px;border:1.5px solid #d0d7e0;background:#fff;cursor:pointer;color:#0d1f38;font-weight:700;align-items:center;gap:6px">
-              &#8681; View / Download PDF
+            <button id="viewQuotePdfBtn" onclick="viewQuotePdf()" style="display:none;height:36px;padding:0 14px;border-radius:9px;font-size:13px;border:1.5px solid #d0d7e0;background:#fff;cursor:pointer;color:#0d1f38;font-weight:700;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
+              &#8681; PDF
             </button>
-            <button onclick="openQuoteComposer()" style="height:36px;padding:0 20px;border-radius:9px;font-size:13px;background:#0d2c50;color:#fff;border:none;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px">
+            <button onclick="openQuoteComposer()" style="height:36px;padding:0 16px;border-radius:9px;font-size:13px;background:#0d2c50;color:#fff;border:none;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
               Send Quote
             </button>
-            <button onclick="document.getElementById('quoteDetailModal').style.display='none'" style="height:36px;padding:0 16px;border-radius:9px;font-size:13px;border:1.5px solid #e2e8f0;background:white;cursor:pointer;color:#475569;font-weight:600">Close</button>
+            <button onclick="document.getElementById('quoteDetailModal').style.display='none'" style="height:36px;padding:0 14px;border-radius:9px;font-size:13px;border:1.5px solid #e2e8f0;background:white;cursor:pointer;color:#475569;font-weight:600;white-space:nowrap;flex-shrink:0">Close</button>
           </div>
         </div>
       </div>
@@ -803,16 +803,16 @@
 
         </div>
 
-        <div style="padding:16px 28px 22px;border-top:1px solid #f0f4fa;display:flex;gap:10px;flex-shrink:0">
-          <button onclick="previewQuote()" style="height:40px;padding:0 22px;border-radius:10px;border:1.5px solid #0d2c50;background:white;color:#0d2c50;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px">
+        <div style="padding:16px 28px 22px;border-top:1px solid #f0f4fa;display:flex;gap:10px;flex-shrink:0;flex-wrap:wrap;align-items:center">
+          <button onclick="previewQuote()" style="height:40px;padding:0 20px;border-radius:10px;border:1.5px solid #0d2c50;background:white;color:#0d2c50;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             Preview Quote
           </button>
-          <button onclick="sendQuote()" id="sendQuoteBtn" style="height:40px;padding:0 28px;border-radius:10px;background:#e8621a;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;margin-left:auto">
+          <button onclick="sendQuote()" id="sendQuoteBtn" style="height:40px;padding:0 24px;border-radius:10px;background:#e8621a;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px;margin-left:auto;white-space:nowrap;flex-shrink:0">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg>
             Send to Customer
           </button>
-          <button onclick="document.getElementById('quoteComposerModal').style.display='none'" style="height:40px;padding:0 18px;border-radius:10px;border:1.5px solid #e2e8f0;background:white;color:#475569;font-size:13px;font-weight:600;cursor:pointer">Cancel</button>
+          <button onclick="document.getElementById('quoteComposerModal').style.display='none'" style="height:40px;padding:0 18px;border-radius:10px;border:1.5px solid #e2e8f0;background:white;color:#475569;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;flex-shrink:0">Cancel</button>
         </div>
       </div>
     </div>
