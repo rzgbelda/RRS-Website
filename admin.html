@@ -1238,17 +1238,16 @@
             <label>Category <span class="req">*</span></label>
             <select id="prodCategory">
               <option value="">Select category...</option>
-              <option>Toilet Paper</option>
-              <option>Paper Towels</option>
-              <option>Trash Liners</option>
+              <option>Paper Products</option>
+              <option>Towels</option>
+              <option>Bed Sheets &amp; Linens</option>
+              <option>Pillows &amp; Mattress Protectors</option>
+              <option>Furniture</option>
+              <option>Trash Liners &amp; Can Liners</option>
               <option>Cleaning Chemicals</option>
-              <option>Hand Soap</option>
-              <option>Laundry Supplies</option>
-              <option>Dishwashing Supplies</option>
-              <option>Guest Room Supplies</option>
-              <option>Towels and Linens</option>
-              <option>Food Service Supplies</option>
-              <option>Facility Supplies</option>
+              <option>Housekeeping Supplies</option>
+              <option>Guest Amenities</option>
+              <option>Gloves &amp; PPE</option>
             </select>
           </div>
           <div class="a-field a-field-checkbox">
@@ -1266,12 +1265,56 @@
           <textarea id="prodDescription" rows="3" placeholder="Short product description..."></textarea>
         </div>
 
-        <!-- Row 4: Price + Sale Price + On Sale -->
+        <!-- Row 4: Cost is the only price the admin types. Every tier is
+             derived from it via the category markup, so a cost change can
+             never leave a stale (or below-cost) tier behind. -->
         <div class="a-form-col-3">
           <div class="a-field">
-            <label>Price <span class="req">*</span></label>
-            <input type="number" id="prodPrice" placeholder="0.00" min="0" step="0.01" />
+            <label>Cost Per Case ($) <span class="req">*</span></label>
+            <input type="number" id="prodCostPerCase" placeholder="0.00" min="0" step="0.01" />
           </div>
+          <div class="a-field">
+            <label>Landed Cost Per Case ($)</label>
+            <input type="number" id="prodLandedCost" placeholder="0.00" min="0" step="0.01" />
+          </div>
+          <div class="a-field">
+            <label>Truckload Qty (cases)</label>
+            <input type="number" id="prodTruckloadQty" placeholder="0" min="0" step="1" />
+          </div>
+        </div>
+
+        <!-- Row 4b: Calculated tier pricing (read-only) -->
+        <div id="tierPricingPanel" style="margin:4px 0 2px;border:1.5px solid #e2e8f0;border-radius:12px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e8eef6">
+            <span style="font-size:12px;font-weight:800;color:#0B1F38;letter-spacing:.02em">CALCULATED TIER PRICING</span>
+            <span id="tierMarkupNote" style="font-size:11.5px;font-weight:600;color:#64748b">Select a category and enter cost</span>
+          </div>
+          <div class="a-form-col-3" style="padding:14px;gap:12px;margin:0">
+            <div class="a-field">
+              <label>Price: 1&ndash;5 Cases</label>
+              <input type="number" id="prodPrice1" placeholder="0.00" readonly tabindex="-1"
+                     style="background:#f1f5f9;color:#0B1F38;font-weight:700;cursor:default" />
+            </div>
+            <div class="a-field">
+              <label>Price: 6&ndash;29 Cases</label>
+              <input type="number" id="prodPrice2" placeholder="0.00" readonly tabindex="-1"
+                     style="background:#f1f5f9;color:#0B1F38;font-weight:700;cursor:default" />
+            </div>
+            <div class="a-field">
+              <label>Price: 30+ Cases</label>
+              <input type="number" id="prodPrice3" placeholder="0.00" readonly tabindex="-1"
+                     style="background:#f1f5f9;color:#0B1F38;font-weight:700;cursor:default" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Base price mirrors the 1-5 tier; kept as a hidden field so the
+             existing save payload and the products table are unchanged. -->
+        <input type="hidden" id="prodPrice" value="" />
+
+        <!-- Row 4c: Sale price stays manual -- it is a deliberate promotion,
+             not something derived from cost. -->
+        <div class="a-form-col-3">
           <div class="a-field">
             <label>Sale Price</label>
             <input type="number" id="prodSalePrice" placeholder="0.00" min="0" step="0.01" />
@@ -1283,38 +1326,7 @@
               Enable sale price
             </label>
           </div>
-        </div>
-
-        <!-- Row 4b: Tiered Prices -->
-        <div class="a-form-col-3">
-          <div class="a-field">
-            <label>Price: 1&ndash;5 Cases</label>
-            <input type="number" id="prodPrice1" placeholder="0.00" min="0" step="0.01" />
-          </div>
-          <div class="a-field">
-            <label>Price: 6&ndash;29 Cases</label>
-            <input type="number" id="prodPrice2" placeholder="0.00" min="0" step="0.01" />
-          </div>
-          <div class="a-field">
-            <label>Price: 30+ Cases</label>
-            <input type="number" id="prodPrice3" placeholder="0.00" min="0" step="0.01" />
-          </div>
-        </div>
-
-        <!-- Row 4c: Cost / Landed Cost / Truckload Qty -->
-        <div class="a-form-col-3">
-          <div class="a-field">
-            <label>Cost Per Case ($)</label>
-            <input type="number" id="prodCostPerCase" placeholder="0.00" min="0" step="0.01" />
-          </div>
-          <div class="a-field">
-            <label>Landed Cost Per Case ($)</label>
-            <input type="number" id="prodLandedCost" placeholder="0.00" min="0" step="0.01" />
-          </div>
-          <div class="a-field">
-            <label>Truckload Qty (cases)</label>
-            <input type="number" id="prodTruckloadQty" placeholder="0" min="0" step="1" />
-          </div>
+          <div class="a-field"></div>
         </div>
 
         <!-- Row 5: Unit + Case Qty + Pack Size + Stock Qty + Stock Status -->

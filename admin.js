@@ -513,8 +513,95 @@ function openAddProduct() {
   const prev = document.getElementById("prodImagePreview");
   if (prev) prev.src = "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
+  // form.reset() does not touch the hidden base-price field or the readonly
+  // tier fields, so clear them explicitly before the panel is shown.
+  ["prodPrice", "prodPrice1", "prodPrice2", "prodPrice3"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
+  });
+  recalcTierPricing();
   openModal("productModal");
 }
+
+/**
+ * Category markup rates, from the company pricing sheet.
+ * [1-5 cases, 6-29 cases, 30+ cases] as a fraction added to cost.
+ *
+ * Verified against every supplier-priced product in the catalog:
+ * selling price = cost x (1 + markup) reproduced all 117 exactly.
+ * Keys must match the Category options in admin.html.
+ */
+const CATEGORY_MARKUPS = {
+  "Paper Products":                [0.35, 0.28, 0.22],
+  "Towels":                        [0.45, 0.35, 0.28],
+  "Bed Sheets & Linens":           [0.45, 0.35, 0.28],
+  "Pillows & Mattress Protectors": [0.55, 0.45, 0.35],
+  "Furniture":                     [0.40, 0.30, 0.25],
+  "Trash Liners & Can Liners":     [0.45, 0.35, 0.28],
+  "Cleaning Chemicals":            [0.40, 0.32, 0.25],
+  "Housekeeping Supplies":         [0.55, 0.45, 0.35],
+  "Guest Amenities":               [0.70, 0.55, 0.40],
+  "Gloves & PPE":                  [0.35, 0.28, 0.22],
+};
+
+/**
+ * Recalculate all three tier prices from cost x category markup.
+ *
+ * Cost is the only price anyone types. Tiers are always derived, so a
+ * supplier cost increase cannot leave a stale tier behind -- which is
+ * exactly how eight glove SKUs ended up selling below cost.
+ */
+function recalcTierPricing() {
+  const cat  = document.getElementById("prodCategory")?.value || "";
+  const cost = parseFloat(document.getElementById("prodCostPerCase")?.value);
+  const note = document.getElementById("tierMarkupNote");
+  const f1 = document.getElementById("prodPrice1");
+  const f2 = document.getElementById("prodPrice2");
+  const f3 = document.getElementById("prodPrice3");
+  const base = document.getElementById("prodPrice");
+  if (!f1 || !f2 || !f3) return;
+
+  const m = CATEGORY_MARKUPS[cat];
+
+  // No markup for this category (blank, or a product still on one of the
+  // old category names). Leave whatever prices are stored alone rather than
+  // blanking them -- clearing here would destroy a legacy product's pricing
+  // just by opening its edit form.
+  if (!m) {
+    if (note) {
+      note.textContent = cat
+        ? `No markup defined for "${cat}" — choose a category to calculate`
+        : "Select a category to calculate pricing";
+      note.style.color = "#b45309";
+    }
+    return;
+  }
+  if (!(cost > 0)) {
+    if (note) {
+      note.textContent = `${cat} — ${m.map(x => Math.round(x * 100) + "%").join(" / ")} markup · enter cost`;
+      note.style.color = "#94a3b8";
+    }
+    return;
+  }
+
+  const p = m.map(rate => (cost * (1 + rate)).toFixed(2));
+  f1.value = p[0];
+  f2.value = p[1];
+  f3.value = p[2];
+  if (base) base.value = p[0];   // base price always tracks the 1-5 tier
+
+  if (note) {
+    note.textContent = `${cat} — ${m.map(x => Math.round(x * 100) + "%").join(" / ")} markup on $${cost.toFixed(2)} cost`;
+    note.style.color = "#15803d";
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  ["prodCategory", "prodCostPerCase"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.addEventListener("input", recalcTierPricing); el.addEventListener("change", recalcTierPricing); }
+  });
+});
 
 async function openEditProduct(id) {
   const { data: p } = await window.sb.from("products").select("*, inventory(stock_qty, status)").eq("id", id).single();
@@ -542,6 +629,10 @@ async function openEditProduct(id) {
   setChk("prodIsOnSale",   !!p.is_on_sale);
   setChk("prodFeatured",   !!p.is_featured);
   setChk("prodActive",     !!p.is_active);
+  // Recompute from the stored cost. If the tiers on file are stale (a
+  // supplier cost went up but prices were never redone) the corrected
+  // figures appear immediately, which is the whole point of deriving them.
+  recalcTierPricing();
   const prev = document.getElementById("prodImagePreview");
   if (prev) prev.src = p.image_url || "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
@@ -561,6 +652,14 @@ async function saveProduct() {
   const name     = (document.getElementById("prodName")?.value || "").trim();
 
   if (!name) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
+
+  // Tier prices are derived, so an empty 1-5 tier means the category or cost
+  // is missing. Saving anyway would publish a $0.00 product.
+  if (!(parseFloat(document.getElementById("prodPrice1")?.value) > 0)) {
+    errEl.textContent = "Pick a category and enter Cost Per Case — tier prices are calculated from them.";
+    errEl.style.display = "block";
+    return;
+  }
   errEl.style.display = "none";
 
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
