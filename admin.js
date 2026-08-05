@@ -1585,7 +1585,7 @@ async function downloadReceipt(orderId) {
 
 function viewQuotePdf() {
   if (!currentQuoteId) return;
-  window.open(`/quote-view.html?id=${currentQuoteId}&print=1`, "_blank");
+  window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
 }
 
 function showWarpConfirmDialog() { return Promise.resolve(false); } // removed — use bookWithEstes
@@ -3102,7 +3102,7 @@ async function doSendQuote(payload) {
     document.getElementById("quoteComposerModal").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
     if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nOpen it now to save a PDF copy?`)) {
-      window.open(`/quote-view.html?id=${currentQuoteId}&print=1`, "_blank");
+      window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
     }
     renderQuoteRequestsTable();
   } catch (err) {
