@@ -26,7 +26,9 @@
       "Bash(curl -s -X POST \"https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight\" -H \"Content-Type: application/json\" -H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk3NjY2NjgsImV4cCI6MjA2NTM0MjY2OH0.r7B9UeVsIVL0HJlczKjbfHaFp0wC9ikFfBwbRs1_P9c\" -d \"{\\\\\"action\\\\\":\\\\\"quote\\\\\",\\\\\"payload\\\\\":{\\\\\"destination_zip\\\\\":\\\\\"10001\\\\\",\\\\\"weight_lbs\\\\\":500}}\")",
       "PowerShell(node \"C:\\\\Users\\\\rguti\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rguti-OneDrive-Documents-RRS-Website\\\\afe0e8d6-34c1-40ac-ad77-89b816de6cc4\\\\scratchpad\\\\baseline-live.js\")",
       "PowerShell(node \"C:\\\\Users\\\\rguti\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rguti-OneDrive-Documents-RRS-Website\\\\afe0e8d6-34c1-40ac-ad77-89b816de6cc4\\\\scratchpad\\\\verify-live.js\")",
-      "Bash(curl -s https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/debug-order?show_columns=1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY')"
+      "Bash(curl -s https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/debug-order?show_columns=1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY')",
+      "Bash(node --check tools/reseed-products.js)",
+      "Bash(node tools/reseed-products.js --rdu \"C:/Users/rguti/Downloads/products - RDU Products \\(1\\).csv\" --rj \"C:/Users/rguti/Downloads/products - RJ Schinner Products \\(1\\).csv\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"

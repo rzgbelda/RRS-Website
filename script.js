@@ -24,10 +24,9 @@ document.addEventListener("DOMContentLoaded", () => {
   setupCalendar();
   setupFeaturedSliderButtons();
 
-  fetch("/products.csv")
-    .then(response => response.text())
-    .then(csvText => {
-      allProducts = parseCSV(csvText).filter(isSellable);
+  fetchCatalogProducts()
+    .then(products => {
+      allProducts = products.filter(isSellable);
 
       const prioritized = allProducts.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
       renderProducts(prioritized);
@@ -39,9 +38,81 @@ document.addEventListener("DOMContentLoaded", () => {
       applyCatalogSearchParam();
     })
     .catch(error => {
-      console.error("Error loading products.csv:", error);
+      console.error("Error loading products:", error);
     });
 });
+
+/* =========================
+   CATALOG DATA SOURCE
+   Products used to be served from a static products.csv. They now come
+   from the Supabase `products` table (populated by tools/reseed-products.js
+   from products.csv + supplier cost files), so that editing a product's
+   cost in the admin panel changes what customers actually pay.
+
+   This function is the ONLY place that changed. It reproduces the exact
+   object shape parseCSV() used to produce, so every downstream consumer
+   (rendering, search, cart, product detail, the variant/color selector,
+   account.html's addQuoteToCart, etc.) needs no changes at all -- they
+   don't know or care where allProducts came from.
+========================= */
+
+const PRODUCTS_SUPABASE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co";
+const PRODUCTS_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+
+function mapDbProductToLegacyShape(row) {
+  const itemNumber = row.sku || "";
+  const name = row.name || "";
+  return {
+    name,
+    itemNumber,
+    image: row.image_url || "",
+    description: row.description || "",
+    overview: row.overview || "",
+
+    feature1: row.feature1 || "",
+    feature2: row.feature2 || "",
+    feature3: row.feature3 || "",
+    feature4: row.feature4 || "",
+
+    caseQty: row.case_qty != null ? String(row.case_qty) : "",
+    size: row.pack_size != null ? String(row.pack_size) : "",
+    price: row.price != null ? String(row.price) : "",
+
+    price1: row.price_tier1 != null ? String(row.price_tier1) : "",
+    price2: row.price_tier2 != null ? String(row.price_tier2) : "",
+    price3: row.price_tier3 != null ? String(row.price_tier3) : "",
+
+    productFamily: row.product_family || "",
+    variantLabel: row.variant_label || "",
+    colorGroup: row.color_group || "",
+    colorLabel: row.color_label || "",
+
+    sellByEach: row.sell_by_each || "",
+    priceBy: row.unit || "",
+    weight: row.weight != null ? String(row.weight) : "",
+    length: row.length != null ? String(row.length) : "",
+    width: row.width != null ? String(row.width) : "",
+    height: row.height != null ? String(row.height) : "",
+
+    // Same algorithm as the old CSV-driven getter, computed once here
+    // instead of as an accessor -- identical result, simpler to carry
+    // through JSON.stringify (cart storage, data-variants attributes).
+    slug: (itemNumber || name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+  };
+}
+
+async function fetchCatalogProducts() {
+  const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products?select=*&is_active=eq.true`;
+  const res = await fetch(url, {
+    headers: {
+      apikey: PRODUCTS_SUPABASE_ANON,
+      Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
+    },
+  });
+  if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
+  const rows = await res.json();
+  return rows.map(mapDbProductToLegacyShape);
+}
 
 /* =========================
    CART HELPERS
@@ -67,78 +138,6 @@ function updateCartBadge() {
 
   cartCount.textContent = totalItems;
   cartCount.style.display = totalItems > 0 ? "flex" : "none";
-}
-
-/* =========================
-   CSV PARSER
-========================= */
-
-function parseCSV(csvText) {
-  const rows = csvText.trim().split(/\r?\n/);
-
-  return rows.slice(1).map(row => {
-    const values = splitCSVRow(row);
-
-    return {
-      name: values[0]?.trim() || "",
-      itemNumber: values[1]?.trim() || "",
-      image: values[2]?.trim() || "",
-      description: values[3]?.trim() || "",
-      overview: values[4]?.trim() || "",
-
-      feature1: values[5]?.trim() || "",
-      feature2: values[6]?.trim() || "",
-      feature3: values[7]?.trim() || "",
-      feature4: values[8]?.trim() || "",
-
-      caseQty: values[9]?.trim() || "",
-      size: values[10]?.trim() || "",
-      price: values[11]?.trim() || "",
-
-      price1: values[12]?.trim() || "",
-      price2: values[13]?.trim() || "",
-      price3: values[14]?.trim() || "",
-
-      productFamily: values[15]?.trim() || "",
-      variantLabel:  values[16]?.trim() || "",
-      colorGroup:    values[23]?.trim() || "",
-      colorLabel:    values[24]?.trim() || "",
-
-      sellByEach: values[17]?.trim() || "",
-      priceBy:    values[18]?.trim() || "",
-      weight:     values[19]?.trim() || "",
-      length:     values[20]?.trim() || "",
-      width:      values[21]?.trim() || "",
-      height:     values[22]?.trim() || "",
-
-      get slug() {
-        return (this.itemNumber || this.name)
-          .toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      }
-    };
-  });
-}
-
-function splitCSVRow(row) {
-  const result = [];
-  let current = "";
-  let insideQuotes = false;
-
-  for (let i = 0; i < row.length; i++) {
-    const char = row[i];
-
-    if (char === '"') {
-      insideQuotes = !insideQuotes;
-    } else if (char === "," && !insideQuotes) {
-      result.push(current);
-      current = "";
-    } else {
-      current += char;
-    }
-  }
-
-  result.push(current);
-  return result;
 }
 
 function cleanPrice(price) {
