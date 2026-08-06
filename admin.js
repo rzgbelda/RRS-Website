@@ -448,7 +448,10 @@ async function renderProductsTable(filter) {
         ${p.cost_per_case && p.price ? `<br><small style="color:#16a34a">Margin: ${(((p.price - p.cost_per_case) / p.price) * 100).toFixed(1)}%</small>` : ""}
       </td>
       <td>${p.case_qty || 1}</td>
-      <td>${inv?.stock_qty ?? 0} — <span class="a-badge ${badgeClass(inv?.status)}">${inv?.status || "?"}</span></td>
+      <td>${inv
+        ? `${inv.stock_qty ?? 0} — <span class="a-badge ${badgeClass(inv.status)}">${inv.status}</span>`
+        : `<span class="a-badge a-badge-gray" title="No inventory record exists for this product yet">Not tracked</span>`
+      }</td>
       <td><span class="a-badge ${p.is_featured ? "a-badge-orange" : "a-badge-gray"}">${p.is_featured ? "Yes" : "No"}</span></td>
       <td>
         <button class="a-btn-sm" onclick="openEditProduct('${p.id}')">Edit</button>
