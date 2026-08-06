@@ -16,40 +16,191 @@
   <link rel="icon" type="image/png" href="/Favicon.png" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f8fafc; color: #1e293b; min-height: 100vh; display: flex; flex-direction: column; }
-    .nav { background: #0B1F38; padding: 0 32px; height: 64px; display: flex; align-items: center; }
-    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
-    .nav-logo img { height: 36px; }
-    .nav-logo span { color: #fff; font-size: 16px; font-weight: 800; letter-spacing: -.3px; }
-    .body { flex: 1; display: flex; align-items: center; justify-content: center; padding: 60px 20px; }
-    .card { background: #fff; border-radius: 20px; border: 1.5px solid #e2e8f0; padding: 56px 48px; text-align: center; max-width: 480px; width: 100%; }
-    .code { font-size: 80px; font-weight: 900; color: #e2e8f0; letter-spacing: -4px; line-height: 1; margin-bottom: 16px; }
-    h1 { font-size: 24px; font-weight: 800; color: #0B1F38; margin-bottom: 12px; }
-    p { font-size: 15px; color: #64748b; line-height: 1.6; margin-bottom: 32px; }
-    .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
-    .btn-primary { background: #ED7226; color: #fff; border: none; border-radius: 10px; padding: 13px 24px; font-size: 14px; font-weight: 800; text-decoration: none; display: inline-block; }
-    .btn-secondary { background: transparent; color: #0B1F38; border: 2px solid #e2e8f0; border-radius: 10px; padding: 12px 20px; font-size: 14px; font-weight: 700; text-decoration: none; display: inline-block; }
-    .btn-primary:hover { background: #d4611a; }
-    .btn-secondary:hover { border-color: #0B1F38; }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #000;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #nf-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+    #nf-characters { position: absolute; width: 99%; height: 95%; top: 0; left: 0; }
+    .nf-character { position: absolute; width: 18%; height: 18%; }
+
+    #nf-message {
+      position: absolute;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      width: 90%; height: 90%;
+      z-index: 100;
+      text-align: center;
+      opacity: 0;
+      transition: opacity .5s ease;
+    }
+    #nf-message.visible { opacity: 1; }
+    #nf-message .nf-title { font-size: 35px; font-weight: 600; color: #0B1F38; margin: 1%; }
+    #nf-message .nf-code { font-size: 80px; font-weight: 800; color: #0B1F38; margin: 1%; }
+    #nf-message .nf-desc { font-size: 15px; width: 90%; max-width: 480px; color: #0B1F38; margin: 1%; line-height: 1.5; }
+    #nf-message .nf-actions { display: flex; gap: 24px; margin-top: 32px; flex-wrap: wrap; justify-content: center; }
+    #nf-message .nf-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 24px; font-size: 15px; font-weight: 600;
+      border-radius: 4px; cursor: pointer;
+      text-decoration: none;
+      transition: transform .2s ease, background .2s ease, color .2s ease;
+    }
+    #nf-message .nf-btn:hover { transform: scale(1.05); }
+    .nf-btn-outline { background: transparent; color: #0B1F38; border: 2px solid #0B1F38; }
+    .nf-btn-outline:hover { background: #0B1F38; color: #fff; }
+    .nf-btn-solid { background: #0B1F38; color: #fff; border: 2px solid #0B1F38; }
+    .nf-btn-solid:hover { background: #ED7226; border-color: #ED7226; }
+
+    #nf-logo { position: absolute; top: 24px; left: 24px; z-index: 100; opacity: .9; }
+    #nf-logo img { height: 32px; }
   </style>
 </head>
 <body>
-<nav class="nav">
-  <a href="/" class="nav-logo">
-    <img width="634" height="192" src="/assets/img/RR logo.png" alt="Room Ready Supply" onerror="this.style.display='none'">
-    <span>Room Ready Supply</span>
-  </a>
-</nav>
-<div class="body">
-  <div class="card">
-    <div class="code">404</div>
-    <h1>Page Not Found</h1>
-    <p>The page you're looking for doesn't exist or may have moved. Let's get you back on track.</p>
-    <div class="actions">
-      <a href="/" class="btn-primary">Back to Home</a>
-      <a href="/catalog" class="btn-secondary">Browse Catalog</a>
+
+  <a href="/" id="nf-logo"><img src="/assets/img/RR logo.png" alt="Room Ready Supply" onerror="this.style.display='none'"></a>
+
+  <canvas id="nf-canvas"></canvas>
+  <div id="nf-characters"></div>
+
+  <div id="nf-message">
+    <div class="nf-title">Page Not Found</div>
+    <div class="nf-code">404</div>
+    <div class="nf-desc">The page you're looking for might have been removed, had its name changed, or is temporarily unavailable.</div>
+    <div class="nf-actions">
+      <a href="#" class="nf-btn nf-btn-outline" id="nf-back">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+        Go Back
+      </a>
+      <a href="/" class="nf-btn nf-btn-solid">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        Go Home
+      </a>
     </div>
   </div>
-</div>
+
+  <script>
+    // Ported from a React/canvas component: floating stick-figure characters
+    // drifting across the screen, an expanding-circle background reveal, and
+    // a delayed fade-in message. No framework involved -- this site is plain
+    // HTML/CSS/JS, so the original component's hooks/refs map directly to
+    // plain functions and DOM references.
+
+    document.getElementById('nf-back').addEventListener('click', function (e) {
+      e.preventDefault();
+      if (history.length > 1) history.back();
+      else window.location.href = '/';
+    });
+
+    // Message fade-in, delayed to let the circle animation establish first
+    setTimeout(function () {
+      document.getElementById('nf-message').classList.add('visible');
+    }, 1200);
+
+    // -- Floating characters ------------------------------------------
+    (function () {
+      const container = document.getElementById('nf-characters');
+      const figures = [
+        { top: '0%',   src: '/assets/img/404/stick0.svg', transform: 'rotateZ(-90deg)', speedX: 1500 },
+        { top: '10%',  src: '/assets/img/404/stick1.svg', speedX: 3000, speedRotation: 2000 },
+        { top: '20%',  src: '/assets/img/404/stick2.svg', speedX: 5000, speedRotation: 1000 },
+        { top: '25%',  src: '/assets/img/404/stick0.svg', speedX: 2500, speedRotation: 1500 },
+        { top: '35%',  src: '/assets/img/404/stick0.svg', speedX: 2000, speedRotation: 300 },
+        { bottom: '5%', src: '/assets/img/404/stick3.svg', speedX: 0 },
+      ];
+
+      function spawn() {
+        container.innerHTML = '';
+        figures.forEach(function (figure, index) {
+          const el = document.createElement('img');
+          el.className = 'nf-character';
+          el.src = figure.src;
+          if (figure.top) el.style.top = figure.top;
+          if (figure.bottom) el.style.bottom = figure.bottom;
+          if (figure.transform) el.style.transform = figure.transform;
+          container.appendChild(el);
+
+          if (index === 5) return; // stationary figure, no animation
+
+          el.animate(
+            [{ left: '100%' }, { left: '-20%' }],
+            { duration: figure.speedX, easing: 'linear', fill: 'forwards' }
+          );
+
+          if (index === 0) return; // first mover has a fixed rotation, no spin
+
+          if (figure.speedRotation) {
+            el.animate(
+              [{ transform: 'rotate(0deg)' }, { transform: 'rotate(-360deg)' }],
+              { duration: figure.speedRotation, iterations: Infinity, easing: 'linear' }
+            );
+          }
+        });
+      }
+
+      spawn();
+      window.addEventListener('resize', spawn);
+    })();
+
+    // -- Expanding circle background -----------------------------------
+    (function () {
+      const canvas = document.getElementById('nf-canvas');
+      const ctx = canvas.getContext('2d');
+      let circles = [];
+      let timer = 0;
+      let raf = null;
+
+      function initCircles() {
+        circles = [];
+        for (let i = 0; i < 300; i++) {
+          const x = Math.floor(Math.random() * ((canvas.width * 3) - (canvas.width * 1.2) + 1)) + (canvas.width * 1.2);
+          const y = Math.floor(Math.random() * canvas.height) + (canvas.height * -0.2);
+          circles.push({ x: x, y: y, size: canvas.width / 1000 });
+        }
+      }
+
+      function draw() {
+        timer++;
+        const distanceX = canvas.width / 80;
+        const growthRate = canvas.width / 1000;
+
+        ctx.fillStyle = 'white';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        circles.forEach(function (c) {
+          ctx.beginPath();
+          if (timer < 65) {
+            c.x -= distanceX;
+            c.size += growthRate;
+          } else if (timer < 500) {
+            c.x -= distanceX * 0.02;
+            c.size += growthRate * 0.2;
+          }
+          ctx.arc(c.x, c.y, c.size, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        if (timer > 500) { if (raf) cancelAnimationFrame(raf); return; }
+        raf = requestAnimationFrame(draw);
+      }
+
+      function start() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        timer = 0;
+        if (raf) cancelAnimationFrame(raf);
+        initCircles();
+        draw();
+      }
+
+      start();
+      window.addEventListener('resize', start);
+    })();
+  </script>
 </body>
 </html>
