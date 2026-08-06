@@ -496,8 +496,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
         return;
       }
 
-      // Not yet finalized
-      if (!q.customer_visible && !q.quote_number) {
+      // Not yet finalized. quote_number is NOT a useful signal here -- every
+      // request gets one the instant it's submitted, long before staff has
+      // priced anything, so checking it let a brand-new, unpriced request
+      // render this page's full quote document (empty line items, $0.00)
+      // instead of this placeholder. quoted_at is set exactly once, only by
+      // the send-quote function, atomically with the real quote_items --
+      // that's the actual "staff has finished this" signal.
+      if (!q.quoted_at) {
         document.getElementById('qvSkeleton').outerHTML = `
           <div class="qv-preparing">
             <strong>Your quotation is being prepared.</strong><br>

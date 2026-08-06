@@ -758,12 +758,22 @@
 
       list.innerHTML = quotes.map(q => {
         const s = QUOTE_STATUS[q.status] || QUOTE_STATUS.new;
-        // A quote is viewable once it has actually been sent. Do NOT also
-        // require status to be 'quoted'/'completed' -- staff mark quotes
-        // 'closed' when the sales cycle ends, which previously hid the
-        // customer's own quote behind a "we're still reviewing" message and
-        // removed their View / Download buttons entirely.
-        const isReady = !!(q.quote_number || (q.customer_visible && q.quoted_at));
+        // A quote is viewable once staff has actually sent it -- NOT once
+        // it has a quote_number, which turned out to be wrong: every
+        // request gets one the instant it's submitted (a friendly
+        // reference like QT-000014), long before anyone has priced it.
+        // That made brand-new, unpriced requests show a "View Quote" /
+        // "Download PDF" pair that opened a blank $0.00 page.
+        //
+        // quoted_at is set exactly once, atomically together with the real
+        // quote_items/grand_total/customer_visible, only by the send-quote
+        // function when staff finish pricing -- and is never touched again
+        // by a later status change (confirmed: saveQuoteStatus() in
+        // admin.js only ever updates `status`). That makes it the one
+        // field that reliably means "this quote is actually finished,"
+        // independent of quote_number and independent of status, which is
+        // what still correctly keeps a later-closed quote visible.
+        const isReady = !!q.quoted_at;
         const requestDate = new Date(q.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         const quoteDate   = q.quoted_at ? new Date(q.quoted_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
         const validUntil  = q.valid_until ? new Date(q.valid_until + 'T00:00:00').toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;
