@@ -1421,6 +1421,17 @@
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Submission failed.');
 
+      // GA4 conversion tracking. No monetary value yet -- this is a
+      // request for pricing, not a sale; the value only exists once staff
+      // sends a real quote (which is tracked separately, at that point).
+      if (typeof gtag === 'function') {
+        gtag('event', 'generate_lead', {
+          currency: 'USD',
+          lead_type: 'volume_quote_request',
+          items_requested: allItems.length,
+        });
+      }
+
       localStorage.removeItem('quoteBasket');
       localStorage.removeItem(VQ_STATE_KEY);
       window.location.href = '/account#quotes';

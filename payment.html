@@ -614,6 +614,28 @@
       });
     }
 
+    // GA4 conversion tracking. gtag is defined synchronously in <head> and
+    // queues events into dataLayer even before gtag.js has finished
+    // loading over the network, so this is safe to call the instant an
+    // order is confirmed -- no race with the tag actually being "ready."
+    function trackOrderConversion(orderNum, method, total, items) {
+      if (typeof gtag !== 'function') return;
+      gtag('event', 'purchase', {
+        transaction_id: orderNum,
+        value: Number(total) || 0,
+        currency: 'USD',
+        payment_type: method,
+        items: (items || []).map(function (i) {
+          return {
+            item_id: i.itemNumber || i.name || 'unknown',
+            item_name: i.name || 'Product',
+            price: getTierPrice(i),
+            quantity: Number(i.quantity) || 1,
+          };
+        }),
+      });
+    }
+
     var _submitting = false;
     window.handlePaymentSubmit = async function (e) {
       e.preventDefault();
@@ -742,6 +764,7 @@
           localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
           document.getElementById('orderRef').textContent = orderNum;
           document.getElementById('orderModal').style.display = 'flex';
+          trackOrderConversion(orderNum, method, window._orderTotal, window._orderItems);
           localStorage.removeItem('cart');
         } catch(e) {
           console.error('[invoice order] unexpected error:', e);
@@ -959,6 +982,7 @@
               }
             }
           }
+          trackOrderConversion(orderNum, 'card', window._orderTotal, window._orderItems);
           localStorage.removeItem('cart');
           localStorage.setItem('rrs_last_order', JSON.stringify(lastOrderData));
           window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
