@@ -637,22 +637,35 @@
         try {
           var userRes = await window.sb.auth.getUser();
           var userId = userRes.data?.user?.id || null;
-          var orderInsert = await window.sb.from('orders').insert({
-            order_number: orderNum,
-            user_id: userId,
-            customer_name: checkout.contact || '',
-            customer_email: checkout.email || '',
-            business_name: checkout.business || checkout.contact || 'N/A',
-            phone: checkout.phone || '',
-            shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-            subtotal: window._orderSubtotal || window._orderTotal,
-            total: window._orderTotal,
-            payment_method: method,
-            payment_status: 'pending_invoice',
-            status: 'pending',
-            order_type: checkout.orderType || 'one_time',
-            notes: checkout.notes || '',
-          }).select('id').single();
+          // Created server-side (api/create-order.js), not via window.sb
+          // directly -- the client cannot read back a just-inserted order
+          // for a guest (user_id null): the INSERT itself is allowed, but
+          // no SELECT policy lets an anonymous visitor read a null-user_id
+          // row back, and .select().single() needs to. The service-role
+          // endpoint bypasses that without opening a public SELECT policy
+          // (which would let any visitor read every guest order ever placed).
+          var createRes = await fetch('/api/create-order', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              order_number: orderNum,
+              user_id: userId,
+              customer_name: checkout.contact || '',
+              customer_email: checkout.email || '',
+              business_name: checkout.business || checkout.contact || 'N/A',
+              phone: checkout.phone || '',
+              shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+              subtotal: window._orderSubtotal || window._orderTotal,
+              total: window._orderTotal,
+              payment_method: method,
+              payment_status: 'pending_invoice',
+              status: 'pending',
+              order_type: checkout.orderType || 'one_time',
+              notes: checkout.notes || '',
+            }),
+          });
+          var createBody = await createRes.json().catch(function () { return {}; });
+          var orderInsert = { data: createRes.ok ? { id: createBody.id } : null, error: createRes.ok ? null : { message: createBody.error || ('HTTP ' + createRes.status) } };
 
           if (orderInsert.error || !orderInsert.data) {
             console.error('[invoice order] save error:', orderInsert.error && orderInsert.error.message);
@@ -771,22 +784,33 @@
           if (window.sb) {
             var userRes = await window.sb.auth.getUser();
             var userId = userRes.data?.user?.id || null;
-            var orderInsert = await window.sb.from('orders').insert({
-              order_number: orderNum,
-              user_id: userId,
-              customer_name: checkout.contact || '',
-              customer_email: checkout.email || '',
-              business_name: checkout.business || checkout.contact || 'N/A',
-              phone: checkout.phone || '',
-              shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-              subtotal: window._orderSubtotal || window._orderTotal,
-              total: window._orderTotal,
-              payment_method: 'card',
-              payment_status: pi.status === 'succeeded' ? 'paid' : 'authorized',
-              status: 'pending',
-              order_type: checkout.orderType || 'one_time',
-              notes: checkout.notes || '',
-            }).select('id').single();
+            // Same guest-checkout fix as the invoice/PO path above -- see
+            // the comment there. Card payments have a fallback (the Stripe
+            // webhook records the order a few seconds later regardless),
+            // but without this the customer would see a false "we hit a
+            // problem" error here even though their card was charged.
+            var createRes = await fetch('/api/create-order', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                order_number: orderNum,
+                user_id: userId,
+                customer_name: checkout.contact || '',
+                customer_email: checkout.email || '',
+                business_name: checkout.business || checkout.contact || 'N/A',
+                phone: checkout.phone || '',
+                shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                subtotal: window._orderSubtotal || window._orderTotal,
+                total: window._orderTotal,
+                payment_method: 'card',
+                payment_status: pi.status === 'succeeded' ? 'paid' : 'authorized',
+                status: 'pending',
+                order_type: checkout.orderType || 'one_time',
+                notes: checkout.notes || '',
+              }),
+            });
+            var createBody = await createRes.json().catch(function () { return {}; });
+            var orderInsert = { data: createRes.ok ? { id: createBody.id } : null, error: createRes.ok ? null : { message: createBody.error || ('HTTP ' + createRes.status) } };
             if (orderInsert.error) {
               console.error('[order] save error:', orderInsert.error.message);
               btn.disabled = false;
