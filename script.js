@@ -36,11 +36,54 @@ document.addEventListener("DOMContentLoaded", () => {
       setupProductQuantity();
       setupAddToCartButtons();
       applyCatalogSearchParam();
+
+      // Cart/checkout above were rendered from raw localStorage before the
+      // catalog had loaded at all, from whatever price was stored the
+      // moment each item was added -- possibly days ago, on a since-changed
+      // price. Re-sync every cart item to the price the catalog shows RIGHT
+      // NOW, persist the correction, then re-render everywhere a price is
+      // shown. Without this, a customer could check out on a price that
+      // matches nothing currently displayed on the site.
+      syncCartPricesToCatalog();
+      loadCartPage();
+      loadCheckoutProducts();
+      loadPaymentSummary();
     })
     .catch(error => {
       console.error("Error loading products:", error);
     });
 });
+
+/**
+ * Bring every stored cart item's price fields up to date with the live
+ * catalog, matched by item number (falling back to name for older cart
+ * entries added before itemNumber was carried, e.g. from the wishlist).
+ * A cart item with no catalog match is left untouched rather than guessed
+ * at -- it may be a custom quote line with no corresponding SKU.
+ */
+function syncCartPricesToCatalog() {
+  if (!allProducts.length) return false;
+  const cart = getCart();
+  let changed = false;
+
+  cart.forEach(item => {
+    const match = allProducts.find(p =>
+      (item.itemNumber && p.itemNumber && p.itemNumber === item.itemNumber) ||
+      (!item.itemNumber && p.name === item.name)
+    );
+    if (!match) return;
+
+    ["price", "price1", "price2", "price3", "image", "description"].forEach(field => {
+      if (match[field] !== undefined && item[field] !== match[field]) {
+        item[field] = match[field];
+        changed = true;
+      }
+    });
+  });
+
+  if (changed) saveCart(cart);
+  return changed;
+}
 
 /* =========================
    CATALOG DATA SOURCE

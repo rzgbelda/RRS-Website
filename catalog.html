@@ -100,6 +100,28 @@
     <a href="/cart">My Cart</a>
   </nav>
 
+  <div id="vqReturnBanner" style="display:none;background:#0d2c50;color:#fff;padding:12px 20px;text-align:center;font-size:14px;font-weight:600">
+    <span id="vqReturnText"></span>
+    &nbsp;&nbsp;<a href="/#business-pricing" style="color:#fff;text-decoration:underline;font-weight:700">Continue your quote &rarr;</a>
+  </div>
+  <script>
+    // A visitor who clicked "Browse Catalog" from the in-progress Volume
+    // Pricing quote form had no way back to it -- the form's items were
+    // still saved (vq_form_state), but nothing on this page said so or
+    // linked back. Surface a banner whenever that state has real items.
+    (function () {
+      try {
+        const state = JSON.parse(localStorage.getItem('vq_form_state') || 'null');
+        const items = (state?.items || []).filter(i => (i.name || '').trim());
+        if (items.length) {
+          document.getElementById('vqReturnText').textContent =
+            `You have a quote in progress with ${items.length} item${items.length !== 1 ? 's' : ''}.`;
+          document.getElementById('vqReturnBanner').style.display = 'block';
+        }
+      } catch (e) { /* malformed state -- nothing to show */ }
+    })();
+  </script>
+
   <section class="catalog-hero">
     <div class="catalog-content">
       <h1>Shop Catalog</h1>
