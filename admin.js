@@ -2917,6 +2917,7 @@ function timeAgo(iso) {
 
 let allQuoteRequests = [];
 let currentQuoteId   = null;
+let _quoteFiltersWired = false;
 
 async function renderQuoteRequestsTable() {
   if (!window.sb) return;
@@ -2973,9 +2974,20 @@ async function renderQuoteRequestsTable() {
     </tr>`;
   }).join("");
 
-  // Wire search/filter
-  document.getElementById("quoteSearch")?.addEventListener("input", renderQuoteRequestsTable, { once: true });
-  document.getElementById("quoteStatusFilter")?.addEventListener("change", renderQuoteRequestsTable, { once: true });
+  // Wire search/filter exactly once. This function is called on every tab
+  // switch, every "Save Status", and every "Send Quote" -- with
+  // { once: true } it looked safe per-call, but the search box and filter
+  // are static elements that live for the whole admin session, so every
+  // call stacked ANOTHER listener onto the same node forever. After enough
+  // renders in one session (completely normal admin usage), typing one
+  // character into search fired dozens of stacked listeners at once, each
+  // kicking off its own full re-fetch + re-render + re-stack -- the
+  // panel-wide freezing reported live.
+  if (!_quoteFiltersWired) {
+    document.getElementById("quoteSearch")?.addEventListener("input", renderQuoteRequestsTable);
+    document.getElementById("quoteStatusFilter")?.addEventListener("change", renderQuoteRequestsTable);
+    _quoteFiltersWired = true;
+  }
 }
 
 function openQuoteDetail(id) {
@@ -3070,8 +3082,10 @@ function openQuoteComposer() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
-  // Default valid until = 30 days from now
-  const d = new Date(); d.setDate(d.getDate() + 30);
+  // Default valid until = 10 days from now. Prices are moving with fuel
+  // costs right now, so every quote is only held for 10 days unless staff
+  // deliberately override it for a specific case.
+  const d = new Date(); d.setDate(d.getDate() + 10);
   document.getElementById("quoteValidUntil").value = d.toISOString().slice(0, 10);
   document.getElementById("quoteMessage").value = `Dear ${r.contact_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
 

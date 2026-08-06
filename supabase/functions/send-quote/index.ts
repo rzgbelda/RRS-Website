@@ -149,7 +149,21 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { quote_request_id, items, valid_until, message, preview_only } = body;
+    const { quote_request_id, items, message, preview_only } = body;
+    let { valid_until } = body;
+
+    // Belt-and-suspenders: the admin composer has a client-side guard that
+    // blocks sending without a date, but a quote reached the database with
+    // valid_until = null anyway. Rather than track down exactly how the
+    // client-side check was bypassed for that one case, make it structurally
+    // impossible here -- an invalid or missing date falls back to 10 days
+    // from today, the current standard hold period (prices are moving with
+    // fuel costs), instead of ever persisting null.
+    if (!valid_until || isNaN(new Date(valid_until).getTime())) {
+      const fallback = new Date();
+      fallback.setDate(fallback.getDate() + 10);
+      valid_until = fallback.toISOString().slice(0, 10);
+    }
 
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE);
 
@@ -216,7 +230,7 @@ serve(async (req) => {
       quoted_at:        new Date().toISOString(),
       quote_number,
       quote_items:      items,
-      valid_until:      valid_until ? valid_until.split("T")[0] : null,
+      valid_until:      valid_until.split("T")[0], // always set now -- see fallback above
       quote_message:    message || null,
       subtotal:         subtotal_amt,
       grand_total:      subtotal_amt,
