@@ -28,3 +28,23 @@ alter table public.products
   add column if not exists variant_label  text,
   add column if not exists color_group    text,
   add column if not exists color_label    text;
+
+-- Phase 1b: the reseed script upserts on sku, which requires a unique
+-- constraint that was never added. Two earlier seed runs (2026-06-23 and
+-- 2026-07-05) each inserted the same 47 real SKUs with different prices,
+-- so every one of them exists twice today -- confirmed live, e.g.
+-- 11008635042 appears as both $35.30 and $34.06. Neither survives: the
+-- reseed overwrites every field on whichever row remains, so it does not
+-- matter which duplicate is kept, only that one is. Keeps the most
+-- recently created row of each pair; only touches rows that have a sku
+-- (the ~91 unrelated legacy rows with no sku are untouched).
+with ranked as (
+  select id, sku, row_number() over (partition by sku order by created_at desc) as rn
+  from public.products
+  where sku is not null
+)
+delete from public.products
+where id in (select id from ranked where rn > 1);
+
+alter table public.products
+  add constraint products_sku_key unique (sku);

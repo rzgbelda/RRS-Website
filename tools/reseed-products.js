@@ -192,23 +192,48 @@ function main() {
   const supabase = createClient(SUPABASE_URL, serviceKey);
 
   (async () => {
+    // process.exitCode (not process.exit()) after an await -- forcing an
+    // immediate exit while supabase-js's underlying network handles are
+    // still closing crashes Node on Windows (confirmed: "Assertion failed
+    // !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c"). Setting
+    // exitCode and returning lets the event loop drain and exit cleanly.
     console.log('\nUpserting products (on conflict: sku)...');
     const { data: upserted, error: upErr } = await supabase
       .from('products')
       .upsert(toUpsert, { onConflict: 'sku' })
       .select('id');
-    if (upErr) { console.error('Upsert failed:', upErr.message); process.exit(1); }
+    if (upErr) { console.error('Upsert failed:', upErr.message); process.exitCode = 1; return; }
     console.log(`  ${upserted.length} rows upserted.`);
 
-    console.log('\nDeactivating legacy rows that do not match a live catalog item number...');
+    console.log('\nDeactivating legacy rows...');
+    // Two queries, not one -- SQL's `NOT IN` silently excludes NULLs (a row
+    // where sku IS NULL never matches `sku NOT IN (...)`, it evaluates to
+    // unknown, not true), so a single "not in" filter would leave every
+    // no-sku legacy row untouched. Handle the NULL case explicitly.
     const liveSkus = toUpsert.map(p => p.sku);
-    const { data: deactivated, error: deErr } = await supabase
+    const stamp = new Date().toISOString();
+
+    const { data: deactivatedNull, error: nullErr } = await supabase
       .from('products')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .not('sku', 'in', `(${liveSkus.map(s => `"${s}"`).join(',')})`)
+      .update({ is_active: false, updated_at: stamp })
+      .is('sku', null)
       .select('id');
-    if (deErr) { console.error('Deactivation failed:', deErr.message); process.exit(1); }
-    console.log(`  ${deactivated.length} legacy rows deactivated (is_active = false, not deleted).`);
+    if (nullErr) { console.error('Deactivation (null-sku rows) failed:', nullErr.message); process.exitCode = 1; return; }
+
+    // Pass the array straight to the client rather than hand-building the
+    // "(a,b,c)" string ourselves -- several SKUs contain spaces (e.g.
+    // "FT 30852"), and supabase-js already quotes/escapes each element
+    // correctly when given an array.
+    const { data: deactivatedStale, error: staleErr } = await supabase
+      .from('products')
+      .update({ is_active: false, updated_at: stamp })
+      .not('sku', 'is', null)
+      .not('sku', 'in', liveSkus)
+      .select('id');
+    if (staleErr) { console.error('Deactivation (stale-sku rows) failed:', staleErr.message); process.exitCode = 1; return; }
+
+    const deactivatedCount = deactivatedNull.length + deactivatedStale.length;
+    console.log(`  ${deactivatedCount} legacy rows deactivated (is_active = false, not deleted): ${deactivatedNull.length} with no sku, ${deactivatedStale.length} with a sku no longer in the live catalog.`);
 
     console.log('\nDone.');
   })();
