@@ -1,0 +1,217 @@
+/**
+ * One-time reseed of the Supabase `products` table from products.csv
+ * (source of truth for what's live) joined against the two supplier cost
+ * files (source of truth for cost + category).
+ *
+ * Run locally only -- never deployed. Requires the service role key,
+ * because RLS correctly blocks anonymous writes to `products` (confirmed
+ * live: an unauthenticated write attempt returns 42501).
+ *
+ * Usage:
+ *   SUPABASE_SERVICE_ROLE_KEY=xxx node tools/reseed-products.js \
+ *     --rdu "C:/path/to/products - RDU Products (1).csv" \
+ *     --rj  "C:/path/to/products - RJ Schinner Products (1).csv"
+ *
+ * Defaults to a DRY RUN (prints what it would do, writes nothing).
+ * Add --apply to actually write to the database.
+ */
+const fs = require('fs');
+const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co';
+
+const args = process.argv.slice(2);
+const flag = (name, def) => {
+  const i = args.indexOf('--' + name);
+  return i !== -1 && args[i + 1] ? args[i + 1] : def;
+};
+const APPLY = args.includes('--apply');
+const RDU_PATH = flag('rdu', path.join(__dirname, '..', 'data', 'rdu-products.csv'));
+const RJ_PATH  = flag('rj',  path.join(__dirname, '..', 'data', 'rj-schinner-products.csv'));
+const CSV_PATH = path.join(__dirname, '..', 'products.csv');
+
+/**
+ * Category markup rates -- must stay identical to CATEGORY_MARKUPS in
+ * admin.js. Verified against every supplier-priced product in the catalog:
+ * cost x (1 + markup) reproduced all 117 published prices exactly.
+ */
+const CATEGORY_MARKUPS = {
+  "Paper Products":                [0.35, 0.28, 0.22],
+  "Towels":                        [0.45, 0.35, 0.28],
+  "Bed Sheets & Linens":           [0.45, 0.35, 0.28],
+  "Pillows & Mattress Protectors": [0.55, 0.45, 0.35],
+  "Furniture":                     [0.40, 0.30, 0.25],
+  "Trash Liners & Can Liners":     [0.45, 0.35, 0.28],
+  "Cleaning Chemicals":            [0.40, 0.32, 0.25],
+  "Housekeeping Supplies":         [0.55, 0.45, 0.35],
+  "Guest Amenities":               [0.70, 0.55, 0.40],
+  "Gloves & PPE":                  [0.35, 0.28, 0.22],
+};
+
+function splitCSVRow(row) {
+  const out = []; let cur = '', inQ = false;
+  for (let i = 0; i < row.length; i++) {
+    const ch = row[i];
+    if (ch === '"') { if (inQ && row[i + 1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
+    else if (ch === ',' && !inQ) { out.push(cur); cur = ''; }
+    else cur += ch;
+  }
+  out.push(cur);
+  return out;
+}
+const num = v => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return isNaN(n) ? null : n; };
+const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function loadCSV(filePath) {
+  if (!fs.existsSync(filePath)) return null;
+  return fs.readFileSync(filePath, 'utf8').split(/\r?\n/).filter(r => r.trim().replace(/,/g, ''));
+}
+
+function main() {
+  console.log(APPLY ? '=== APPLYING to the live database ===' : '=== DRY RUN (pass --apply to write) ===');
+  console.log('');
+
+  // --- 1. Supplier cost + category, keyed by item number ---
+  const supplierRows = [];
+  for (const [label, p] of [['RDU', RDU_PATH], ['RJ Schinner', RJ_PATH]]) {
+    const rows = loadCSV(p);
+    if (!rows) { console.error(`Cannot find ${label} file at: ${p}\nPass --rdu / --rj with the correct path.`); process.exit(1); }
+    rows.slice(1).forEach(r => {
+      const v = splitCSVRow(r);
+      const item = (v[1] || '').trim();
+      if (!item) return;
+      supplierRows.push({
+        item, category: (v[0] || '').trim(), cost: num(v[12]),
+      });
+    });
+  }
+  const supplierByItem = new Map(supplierRows.map(r => [r.item, r]));
+  console.log(`Loaded ${supplierByItem.size} supplier cost/category rows (RDU + RJ Schinner).`);
+
+  // --- 2. products.csv -- source of truth for what's actually live ---
+  const csvRows = loadCSV(CSV_PATH);
+  if (!csvRows) { console.error(`Cannot find products.csv at ${CSV_PATH}`); process.exit(1); }
+
+  const toUpsert = [];
+  const noSupplierMatch = [];
+  csvRows.slice(1).forEach(r => {
+    const v = splitCSVRow(r);
+    const name = (v[0] || '').trim();
+    const item = (v[1] || '').trim();
+    if (!name || !item) return;
+
+    const sup = supplierByItem.get(item);
+    const markup = sup && CATEGORY_MARKUPS[sup.category];
+
+    let price1, price2, price3, cost = null, category = null;
+
+    if (sup && sup.cost != null && markup) {
+      // Normal case: derive tiers from supplier cost x category markup.
+      const [m1, m2, m3] = markup;
+      price1 = +(sup.cost * (1 + m1)).toFixed(2);
+      price2 = +(sup.cost * (1 + m2)).toFixed(2);
+      price3 = +(sup.cost * (1 + m3)).toFixed(2);
+      cost = sup.cost;
+      category = sup.category;
+    } else {
+      // No supplier record (e.g. the Sky Blue fleece blankets, hand-added
+      // to the catalog outside the supplier files). Fall back to whatever
+      // is already published in products.csv rather than silently
+      // unpublishing a product that is sellable today. No cost/category
+      // is available for these until a supplier record exists, so tier
+      // pricing here is NOT auto-updating -- flagged below for review.
+      price1 = num(v[12]); price2 = num(v[13]); price3 = num(v[14]);
+      if (price1 == null && price2 == null && price3 == null) {
+        let reason = 'no supplier record, and no price in products.csv either';
+        if (sup && sup.cost == null) reason = 'supplier record has no cost, and no price in products.csv either';
+        else if (sup && !markup) reason = `unknown category "${sup.category}", and no price in products.csv either`;
+        noSupplierMatch.push({ item, name, reason });
+        return;
+      }
+      noSupplierMatch.push({ item, name, reason: 'no supplier cost -- kept live using its current products.csv price (won’t auto-update)', kept: true });
+    }
+
+    toUpsert.push({
+      sku: item,
+      slug: slugify(item || name),
+      name,
+      description: (v[3] || '').trim() || null,
+      overview: (v[4] || '').trim() || null,
+      feature1: (v[5] || '').trim() || null,
+      feature2: (v[6] || '').trim() || null,
+      feature3: (v[7] || '').trim() || null,
+      feature4: (v[8] || '').trim() || null,
+      case_qty: (v[9] || '').trim() || null,
+      pack_size: (v[10] || '').trim() || null,
+      price: price1,
+      price_tier1: price1,
+      price_tier2: price2,
+      price_tier3: price3,
+      cost_per_case: cost,
+      category_name: category,
+      image_url: (v[2] || '').trim() || null,
+      product_family: (v[15] || '').trim() || null,
+      variant_label: (v[16] || '').trim() || null,
+      sell_by_each: (v[17] || '').trim() || null,
+      unit: (v[18] || '').trim() || 'Case',
+      weight: num(v[19]),
+      length: num(v[20]),
+      width:  num(v[21]),
+      height: num(v[22]),
+      color_group: (v[23] || '').trim() || null,
+      color_label: (v[24] || '').trim() || null,
+      is_active: true,
+      updated_at: new Date().toISOString(),
+    });
+  });
+
+  const kept = noSupplierMatch.filter(n => n.kept);
+  const excluded = noSupplierMatch.filter(n => !n.kept);
+
+  console.log(`products.csv: ${toUpsert.length} products ready to upsert.`);
+  if (kept.length) {
+    console.log(`\n${kept.length} have no supplier cost record -- kept live using their current products.csv price (no cost_per_case, so they won't auto-update on the next supplier price change until someone enters a cost for them in admin):`);
+    kept.forEach(n => console.log(`  - [${n.item}] ${n.name.slice(0, 60)}`));
+  }
+  if (excluded.length) {
+    console.log(`\n${excluded.length} excluded (no supplier cost AND no usable price in products.csv -- same as isSellable hides today):`);
+    excluded.forEach(n => console.log(`  - [${n.item}] ${n.name.slice(0, 60)}  (${n.reason})`));
+  }
+
+  if (!APPLY) {
+    console.log('\n--- sample of cost-derived rows (first 3) ---');
+    toUpsert.filter(p => p.cost_per_case != null).slice(0, 3).forEach(p => console.log(`  ${p.sku.padEnd(14)} ${p.name.slice(0, 40).padEnd(42)} cost $${p.cost_per_case}  ->  $${p.price_tier1} / $${p.price_tier2} / $${p.price_tier3}  [${p.category_name}]`));
+    console.log('\nDry run only -- nothing was written. Re-run with --apply once this looks right.');
+    return;
+  }
+
+  // --- 3. Apply, using the service role key (bypasses RLS) ---
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!serviceKey) { console.error('\nSUPABASE_SERVICE_ROLE_KEY is not set. Refusing to run --apply without it.'); process.exit(1); }
+  const supabase = createClient(SUPABASE_URL, serviceKey);
+
+  (async () => {
+    console.log('\nUpserting products (on conflict: sku)...');
+    const { data: upserted, error: upErr } = await supabase
+      .from('products')
+      .upsert(toUpsert, { onConflict: 'sku' })
+      .select('id');
+    if (upErr) { console.error('Upsert failed:', upErr.message); process.exit(1); }
+    console.log(`  ${upserted.length} rows upserted.`);
+
+    console.log('\nDeactivating legacy rows that do not match a live catalog item number...');
+    const liveSkus = toUpsert.map(p => p.sku);
+    const { data: deactivated, error: deErr } = await supabase
+      .from('products')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .not('sku', 'in', `(${liveSkus.map(s => `"${s}"`).join(',')})`)
+      .select('id');
+    if (deErr) { console.error('Deactivation failed:', deErr.message); process.exit(1); }
+    console.log(`  ${deactivated.length} legacy rows deactivated (is_active = false, not deleted).`);
+
+    console.log('\nDone.');
+  })();
+}
+
+main();
