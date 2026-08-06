@@ -3078,7 +3078,31 @@ function openQuoteDetail(id) {
 const SEND_QUOTE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-quote";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
 
-function openQuoteComposer() {
+// Case-quantity tier pricing is already computed and stored per product
+// (price_tier1/2/3, cost x category markup -- see admin.js's product
+// editor). This reuses that same data so staff no longer have to look up
+// and hand-type a unit price for every line of every quote, which was
+// exactly the kind of manual step that caused this week's pricing bugs.
+const QUOTE_NAME_STOPWORDS = /\s*[–—-]\s*wholesale pricing.*$/i;
+function normalizeProductName(s) {
+  return String(s || "")
+    .replace(QUOTE_NAME_STOPWORDS, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+function tierPriceForQty(product, qty) {
+  const q = Number(qty) || 1;
+  const t1 = Number(product.price_tier1) || 0;
+  const t2 = Number(product.price_tier2) || 0;
+  const t3 = Number(product.price_tier3) || 0;
+  if (q >= 30) return t3 || t2 || t1;
+  if (q >= 6)  return t2 || t1;
+  return t1;
+}
+
+let _quoteComposerProducts = [];
+
+async function openQuoteComposer() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
@@ -3094,26 +3118,75 @@ function openQuoteComposer() {
 
   if (!items.length) {
     container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">No products listed — add them manually below.</div>`;
-  } else {
-    container.innerHTML = items.map((item, idx) => `
+    document.getElementById("quoteComposerModal").style.display = "flex";
+    return;
+  }
+
+  container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Loading catalog pricing…</div>`;
+  document.getElementById("quoteComposerModal").style.display = "flex";
+
+  const { data: products } = await window.sb
+    .from("products")
+    .select("name, price_tier1, price_tier2, price_tier3")
+    .eq("is_active", true);
+  _quoteComposerProducts = products || [];
+
+  container.innerHTML = items.map((item, idx) => {
+    const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(item.name));
+    const autoPrice = match ? tierPriceForQty(match, item.quantity) : null;
+    return `
       <div style="display:grid;grid-template-columns:1fr 100px 120px 100px;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;align-items:center;background:${idx%2===0?"#fff":"#fafbfc"}">
-        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}</span>
+        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}${!match ? `<br><small style="color:#b45309;font-weight:600">Not in catalog — enter price manually</small>` : ""}</span>
         <div style="text-align:center">
           <input type="number" min="1" value="${item.quantity}" data-idx="${idx}" class="ql-qty"
             style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center"
-            oninput="recalcQuoteTotal()">
+            oninput="onQuoteQtyChange(${idx})">
         </div>
         <div style="text-align:right">
-          <input type="number" min="0" step="0.01" value="" placeholder="0.00" data-idx="${idx}" class="ql-price"
-            style="width:100px;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right"
-            oninput="recalcQuoteTotal()">
+          <input type="number" min="0" step="0.01" value="${autoPrice ? autoPrice.toFixed(2) : ""}" placeholder="0.00"
+            data-idx="${idx}" data-auto-price="${autoPrice != null ? autoPrice.toFixed(2) : ""}" class="ql-price"
+            style="width:100px;padding:5px 8px;border:1.5px solid ${autoPrice ? "#bbf7d0" : "#e2e8f0"};background:${autoPrice ? "#f0fdf4" : "#fff"};border-radius:7px;font-size:13px;text-align:right"
+            oninput="onQuotePriceChange(${idx})" title="${autoPrice ? "Auto-filled from catalog tier pricing — edit to override" : ""}">
         </div>
         <div style="text-align:right;font-size:13px;font-weight:700;color:#0d2c50" id="ql-line-${idx}">—</div>
-      </div>`).join("");
-  }
+      </div>`;
+  }).join("");
 
   recalcQuoteTotal();
-  document.getElementById("quoteComposerModal").style.display = "flex";
+}
+
+// Quantity changed: if staff never touched the price (it still matches
+// the last auto-filled value), recompute it for the new quantity -- e.g.
+// crossing from 4 to 6 cases should move from tier 1 to tier 2 pricing
+// automatically. A price staff have deliberately overridden is left alone.
+function onQuoteQtyChange(idx) {
+  const priceEl = document.querySelector(`.ql-price[data-idx="${idx}"]`);
+  const qtyEl   = document.querySelector(`.ql-qty[data-idx="${idx}"]`);
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  const item = r?.requested_items?.[idx];
+  if (priceEl && item) {
+    const wasAuto = priceEl.value === priceEl.dataset.autoPrice;
+    const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(item.name));
+    if (match && wasAuto) {
+      const newPrice = tierPriceForQty(match, qtyEl.value).toFixed(2);
+      priceEl.value = newPrice;
+      priceEl.dataset.autoPrice = newPrice;
+    }
+  }
+  recalcQuoteTotal();
+}
+
+// Staff typed into the price field directly -- from now on this line is a
+// manual override, so quantity changes must not silently overwrite it.
+function onQuotePriceChange(idx) {
+  const priceEl = document.querySelector(`.ql-price[data-idx="${idx}"]`);
+  if (priceEl) {
+    priceEl.dataset.autoPrice = "__overridden__";
+    priceEl.style.borderColor = "#e2e8f0";
+    priceEl.style.background = "#fff";
+    priceEl.title = "";
+  }
+  recalcQuoteTotal();
 }
 
 function recalcQuoteTotal() {
