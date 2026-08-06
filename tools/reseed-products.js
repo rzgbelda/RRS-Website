@@ -220,15 +220,18 @@ function main() {
       .select('id');
     if (nullErr) { console.error('Deactivation (null-sku rows) failed:', nullErr.message); process.exitCode = 1; return; }
 
-    // Pass the array straight to the client rather than hand-building the
-    // "(a,b,c)" string ourselves -- several SKUs contain spaces (e.g.
-    // "FT 30852"), and supabase-js already quotes/escapes each element
-    // correctly when given an array.
+    // .not(column, 'in', value) is a raw passthrough -- unlike .in(), it
+    // does NOT serialize a JS array for you (confirmed live: passing the
+    // array produced "not.in.11008635042,74828,..." with no parentheses
+    // at all, which Postgrest rejected as unparseable). Build the
+    // Postgrest list syntax ourselves: "(a,b,c)" with each element
+    // double-quoted, since several SKUs contain spaces (e.g. "FT 30852").
+    const liveSkuList = `(${liveSkus.map(s => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`;
     const { data: deactivatedStale, error: staleErr } = await supabase
       .from('products')
       .update({ is_active: false, updated_at: stamp })
       .not('sku', 'is', null)
-      .not('sku', 'in', liveSkus)
+      .not('sku', 'in', liveSkuList)
       .select('id');
     if (staleErr) { console.error('Deactivation (stale-sku rows) failed:', staleErr.message); process.exitCode = 1; return; }
 
