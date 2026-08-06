@@ -741,12 +741,15 @@ function buildSeoTitle(p) {
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
   const matStr    = matMatch  ? matMatch[1].trim()  : "";
   const suffix    = matStr  ? ` (${matStr})` : "";
-  const cleanName = p.name.replace(/\s*[��-]\s*Wholesale Pricing.*$/i, "").trim();
+  // Strip any dash variant (en dash, em dash, or plain hyphen) that
+  // precedes "Wholesale Pricing" in the raw supplier name, so it isn't
+  // duplicated when the suffix is rebuilt below.
+  const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
   // Only prepend size if the name doesn't already start with it
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const nameAlreadyHasSize = sizeStr && norm(cleanName).startsWith(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : "";
-  return `${prefix}${cleanName} � Wholesale Pricing for Hotels & Motels${suffix}`;
+  return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
 }
 
 function populateProductPage(product) {
@@ -755,7 +758,7 @@ function populateProductPage(product) {
   const seoTitle = buildSeoTitle(product);
   const metaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
-    (product.overview || "").length > 155 ? "�" : ""
+    (product.overview || "").length > 155 ? "…" : ""
   );
   const pageUrl = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
 
@@ -780,8 +783,13 @@ function populateProductPage(product) {
     brand: { "@type": "Brand", name: "Room Ready Supply" },
     offers: {
       "@type": "Offer",
+      url: pageUrl,
       priceCurrency: "USD",
       price: priceVal,
+      // Google recommends this even for prices with no planned end date --
+      // an unset value is otherwise treated as "unknown" freshness. Rolling
+      // 90-day window; regenerated on every page load either way.
+      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
       availability: "https://schema.org/InStock",
       seller: { "@type": "Organization", name: "Room Ready Supply" }
     }
