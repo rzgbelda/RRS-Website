@@ -546,7 +546,12 @@
       if (!list) return;
       var subtotal = 0;
       list.innerHTML = cart.map(function (item) {
-        var price = parseFloat(item.price) || 0;
+        // getTierPrice(), not item.price directly -- checkout.html (one
+        // step earlier) already shows the correct quantity-discounted
+        // price via this same function. Reading item.price here silently
+        // reverted to the un-discounted price at the final payment step,
+        // both on screen and in what actually got charged/invoiced.
+        var price = getTierPrice(item);
         var qty = parseInt(item.quantity) || 1;
         subtotal += price * qty;
         return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">' +
@@ -686,7 +691,7 @@
           }
 
           var invItems = (window._orderItems || []).map(function (i) {
-            var p = parseFloat(i.price) || 0;
+            var p = getTierPrice(i); // not i.price -- see loadSummary() comment above
             var q = parseInt(i.quantity) || 1;
             return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
           });
@@ -829,7 +834,7 @@
               return;
             } else {
               var cardItems = (window._orderItems || []).map(function (i) {
-                var p = parseFloat(i.price) || 0;
+                var p = getTierPrice(i); // not i.price -- see loadSummary() comment above
                 var q = parseInt(i.quantity) || 1;
                 return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
               });
