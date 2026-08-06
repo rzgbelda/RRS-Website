@@ -398,7 +398,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           </tbody>
           <tfoot>
             <tr>
-              <td colspan="4" style="color:#fff;font-size:13px;font-weight:700;text-align:right;padding-right:8px">TOTAL</td>
+              <td colspan="4" style="color:#fff;font-size:13px;font-weight:700;text-align:right;padding-right:8px">
+                TOTAL<br><span style="font-size:10.5px;font-weight:500;color:#93c5fd">Before sales tax</span>
+              </td>
               <td style="color:#f59e0b;font-size:16px;font-weight:900;text-align:right">${money(total)}</td>
             </tr>
           </tfoot>
@@ -409,6 +411,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       <div class="qv-terms-section">
         <div class="qv-section-label">Terms &amp; Conditions</div>
         <ul class="qv-terms-list">
+          <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
           <li>Prices are per case and valid until ${validUntilFmt}.</li>
           <li>Payment terms: Net 30 days upon credit approval.</li>
           <li>Freight is additional unless otherwise noted.</li>

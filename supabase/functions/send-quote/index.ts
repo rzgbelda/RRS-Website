@@ -108,7 +108,9 @@ function buildQuoteHtml(payload: {
       <tbody>${rows}</tbody>
       <tfoot>
         <tr style="background:#0d2c50">
-          <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">TOTAL</td>
+          <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">
+            TOTAL<br><span style="font-size:10px;font-weight:500;color:#93c5fd">Before sales tax</span>
+          </td>
           <td style="padding:14px 16px;font-size:16px;font-weight:800;color:#f59e0b;text-align:right">$${subtotal.toFixed(2)}</td>
         </tr>
       </tfoot>
@@ -118,6 +120,7 @@ function buildQuoteHtml(payload: {
     <div style="margin-top:24px;padding:16px 20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
       <p style="margin:0 0 6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b">Terms & Conditions</p>
       <ul style="margin:0;padding-left:16px;font-size:12px;color:#64748b;line-height:1.8">
+        <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
         <li>Prices are per case and valid until ${valid_until}.</li>
         <li>Payment terms: Net 30 days upon credit approval.</li>
         <li>Freight is additional unless otherwise noted.</li>
