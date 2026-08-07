@@ -826,7 +826,48 @@ function populateProductPage(product) {
   const ldEl = document.getElementById("productJsonLd");
   if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
 
+  // Breadcrumb structured data, so search results can show the
+  // Home > Catalog > Category > Product trail instead of a bare URL.
+  const bcEl = document.getElementById("breadcrumbJsonLd");
+  if (bcEl) {
+    const SITE = "https://www.roomreadysupply.com";
+    const trail = [
+      { "@type": "ListItem", position: 1, name: "Home", item: SITE + "/" },
+      { "@type": "ListItem", position: 2, name: "Catalog", item: SITE + "/catalog" },
+    ];
+    if (product.category) {
+      trail.push({
+        "@type": "ListItem", position: 3, name: product.category,
+        item: `${SITE}/category/${categorySlug(product.category)}`,
+      });
+    }
+    trail.push({ "@type": "ListItem", position: trail.length + 1, name: product.name, item: pageUrl });
+    bcEl.textContent = JSON.stringify({
+      "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: trail,
+    });
+  }
+
   setText("breadcrumbProductName", product.name);
+
+  // Link the breadcrumb's category segment to its landing page, but only
+  // for categories that actually have one -- the thinner categories
+  // (Housekeeping, Furniture) are filterable in the catalog without
+  // warranting a page of their own.
+  const CATEGORY_PAGES = [
+    "bed-sheets-linens", "towels", "paper-products", "cleaning-chemicals",
+    "pillows-mattress-protectors", "trash-liners-can-liners", "gloves-ppe", "guest-amenities",
+  ];
+  const catWrap = document.getElementById("breadcrumbCategoryWrap");
+  const catLink = document.getElementById("breadcrumbCategory");
+  if (catWrap && catLink && product.category) {
+    const slug = categorySlug(product.category);
+    catLink.textContent = product.category;
+    catLink.href = CATEGORY_PAGES.includes(slug)
+      ? `/category/${slug}`
+      : `/catalog?category=${encodeURIComponent(slug)}`;
+    catWrap.style.display = "";
+  }
+
   setText("productName", seoTitle);
   setText("productItemNumber", product.itemNumber);
   setText("productCaseQty", product.caseQty);

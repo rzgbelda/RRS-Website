@@ -23,6 +23,7 @@
   <meta property="og:image" id="ogImage" content="">
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
+  <script type="application/ld+json" id="breadcrumbJsonLd"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 
@@ -98,8 +99,14 @@
 
   <section class="product-page">
 
+    <!-- Real links, not plain text: this is the trail Google follows from a
+         product back up to its category, and the fastest way for a buyer to
+         see everything else in the same range. -->
     <div class="breadcrumbs">
-      Home &mdash; Catalog ... <strong id="breadcrumbProductName">Product</strong>
+      <a href="/">Home</a> &rsaquo;
+      <a href="/catalog">Catalog</a>
+      <span id="breadcrumbCategoryWrap" style="display:none">&rsaquo; <a href="#" id="breadcrumbCategory"></a></span>
+      &rsaquo; <strong id="breadcrumbProductName">Product</strong>
     </div>
 
     <div class="product-layout">

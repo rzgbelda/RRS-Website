@@ -136,11 +136,39 @@
       <h1>Shop Catalog</h1>
 
       <p>
-        Browse core hospitality and facility supplies by category.
-        Select what you need, add quantities, and submit your order request.
+        Wholesale hospitality and facility supplies by the case &mdash; hotel towels,
+        bed linens, bath tissue, cleaning chemicals, can liners and guest amenities.
+        Volume pricing drops at 6 cases and again at 30.
       </p>
+
+      <!-- Links into the category landing pages: better entry points for
+           buyers who know what they need, and internal links Google can
+           follow from the catalog down into each range. -->
+      <div class="catalog-cat-links">
+        <a href="/category/bed-sheets-linens">Bed Sheets &amp; Linens</a>
+        <a href="/category/towels">Towels</a>
+        <a href="/category/paper-products">Paper Products</a>
+        <a href="/category/cleaning-chemicals">Cleaning Chemicals</a>
+        <a href="/category/pillows-mattress-protectors">Pillows &amp; Protectors</a>
+        <a href="/category/trash-liners-can-liners">Can Liners</a>
+        <a href="/category/gloves-ppe">Gloves &amp; PPE</a>
+        <a href="/category/guest-amenities">Guest Amenities</a>
+      </div>
     </div>
   </section>
+
+  <style>
+    .catalog-cat-links {
+      display: flex; flex-wrap: wrap; gap: 9px;
+      justify-content: center; max-width: 900px; margin: 22px auto 0;
+    }
+    .catalog-cat-links a {
+      border: 1.5px solid rgba(255,255,255,.35); border-radius: 30px;
+      padding: 8px 16px; font-size: 13px; font-weight: 600;
+      color: #fff; text-decoration: none; transition: background .15s, border-color .15s;
+    }
+    .catalog-cat-links a:hover { background: #ED7226; border-color: #ED7226; }
+  </style>
 
   <div class="filter-backdrop" id="filterBackdrop"></div>
 

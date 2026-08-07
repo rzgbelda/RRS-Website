@@ -134,7 +134,14 @@ function extractNav() {
   const start = catalog.indexOf('  <div class="top-bar">');
   const end = catalog.indexOf('</nav>', catalog.indexOf('class="mobile-nav"'));
   if (start === -1 || end === -1) throw new Error('Could not locate nav block in catalog.html');
-  return catalog.slice(start, end + '</nav>'.length);
+  const nav = catalog.slice(start, end + '</nav>'.length);
+
+  // catalog.html sits at the site root, so its nav uses paths relative to
+  // it ("assets/icons/hl1.svg"). These pages live one level deeper under
+  // /category/, where those resolve to /category/assets/... and 404 --
+  // the logo and every nav icon rendered as broken images. Make them
+  // root-relative so they work at any depth.
+  return nav.replace(/(src|href)="(assets\/)/g, '$1="/$2');
 }
 
 const NAV = extractNav();
@@ -324,6 +331,25 @@ function main() {
     fs.writeFileSync(file, buildPage(cat));
     console.log('  wrote category/' + cat.slug + '.html');
   });
+
+  // Emitted here rather than hand-maintained so the sitemap can never
+  // list a category page that no longer exists, or miss a new one.
+  const today = new Date().toISOString().slice(0, 10);
+  const xml =
+    `<?xml version="1.0" encoding="UTF-8"?>\n` +
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n` +
+    CATEGORIES.map(c =>
+      `  <url>\n` +
+      `    <loc>${BASE}/category/${c.slug}</loc>\n` +
+      `    <lastmod>${today}</lastmod>\n` +
+      `    <changefreq>weekly</changefreq>\n` +
+      `    <priority>0.9</priority>\n` +
+      `  </url>`
+    ).join('\n') + '\n' +
+    `</urlset>\n`;
+  fs.writeFileSync(path.join(ROOT, 'sitemap-categories.xml'), xml);
+  console.log('  wrote sitemap-categories.xml (' + CATEGORIES.length + ' URLs)');
+
   console.log('\n' + CATEGORIES.length + ' category pages generated.');
 }
 
