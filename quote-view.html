@@ -241,7 +241,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     <button class="qv-btn qv-btn-secondary" id="qvContactBtn" style="display:none">
       Contact Us
     </button>
-    <button class="qv-btn qv-btn-primary" id="qvPrintBtn" onclick="downloadQuotePdf(this)" style="display:none">
+    <button type="button" class="qv-btn qv-btn-primary" id="qvPrintBtn" style="display:none">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
       Download PDF
     </button>
@@ -313,8 +313,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
    * id, so the server never needs credentials and can only ever draw what
    * this page was already authorised to show.
    */
+  // Bound here rather than via an inline onclick: this whole script runs
+  // inside an IIFE, so an inline handler cannot see this function at all --
+  // it threw a ReferenceError and the click fell through to the button's
+  // default behaviour, which just reloaded the page.
+  //
+  // Attached immediately rather than on DOMContentLoaded: this script sits
+  // below the button in the document, so the element already exists, and
+  // waiting for an event that may have fired would silently never bind.
+  {
+    const _pdfBtn = document.getElementById('qvPrintBtn');
+    if (_pdfBtn) _pdfBtn.addEventListener('click', () => downloadQuotePdf(_pdfBtn));
+  }
+
   async function downloadQuotePdf(btn) {
-    if (!_loadedQuote) return;
+    if (!_loadedQuote) {
+      alert('The quotation is still loading. Please try again in a moment.');
+      return;
+    }
     const original = btn ? btn.innerHTML : null;
     if (btn) { btn.disabled = true; btn.textContent = 'Preparing…'; }
     try {
