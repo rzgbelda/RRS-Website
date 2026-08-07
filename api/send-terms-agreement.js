@@ -77,7 +77,7 @@ function agreementEmailHtml(o) {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { contact_name, business_name, email, total, preview_only } = req.body || {};
+  const { contact_name, business_name, email, total, quote_request_id, preview_only } = req.body || {};
   if (!contact_name || !business_name || !email) {
     return res.status(400).json({ error: 'contact_name, business_name, and email are all required' });
   }
@@ -102,11 +102,22 @@ module.exports = async (req, res) => {
     email,
     total: total || null,
     status: 'pending',
+    quote_request_id: quote_request_id || null,
   });
 
   if (insertErr) {
     console.error('[send-terms-agreement] insert failed:', insertErr.message);
     return res.status(500).json({ error: insertErr.message });
+  }
+
+  // Denormalized onto the quote itself so admin.js's existing quote list
+  // read picks up status for free -- see the migration for why.
+  if (quote_request_id) {
+    const { error: quoteUpdateErr } = await supabase
+      .from('quote_requests')
+      .update({ terms_status: 'pending', terms_sent_at: new Date().toISOString(), terms_token: token })
+      .eq('id', quote_request_id);
+    if (quoteUpdateErr) console.error('[send-terms-agreement] quote_requests update failed:', quoteUpdateErr.message);
   }
 
   const accept_url = 'https://www.roomreadysupply.com/terms-agreement?token=' + token;

@@ -2997,6 +2997,25 @@ async function renderQuoteRequestsTable() {
   }
 }
 
+// r.terms_status/terms_sent_at/terms_accepted_at are populated by
+// api/send-terms-agreement.js and api/terms-agreement.js -- see the
+// migration for why this lives on quote_requests instead of requiring a
+// join against terms_agreements just to render a badge.
+function termsStatusBadge(r) {
+  if (!r.terms_status) return "";
+  const fmt = iso => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  if (r.terms_status === "accepted") {
+    return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:10px 14px;background:#f0fdf4;border-radius:10px">
+      <span style="font-size:12px;font-weight:700;color:#166534">✅ Payment Terms Accepted</span>
+      <span style="margin-left:auto;font-size:11px;color:#94a3b8">${fmt(r.terms_accepted_at)}</span>
+    </div>`;
+  }
+  return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:10px 14px;background:#fefce8;border-radius:10px">
+    <span style="font-size:12px;font-weight:700;color:#854d0e">⏳ Payment Terms Sent — Awaiting Response</span>
+    <span style="margin-left:auto;font-size:11px;color:#94a3b8">${fmt(r.terms_sent_at)}</span>
+  </div>`;
+}
+
 function openQuoteDetail(id) {
   const r = allQuoteRequests.find(x => x.id === id);
   if (!r) return;
@@ -3046,13 +3065,16 @@ function openQuoteDetail(id) {
       </a>`
     : "";
 
+  const termsBadge = termsStatusBadge(r);
+
   document.getElementById("quoteDetailBody").innerHTML = `
     <!-- Status pill -->
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:20px;padding:10px 14px;background:${sc.bg};border-radius:10px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:${termsBadge ? "8px" : "20px"};padding:10px 14px;background:${sc.bg};border-radius:10px">
       <span style="width:8px;height:8px;border-radius:50%;background:${sc.dot};flex-shrink:0"></span>
       <span style="font-size:12px;font-weight:700;color:${sc.color};text-transform:uppercase;letter-spacing:.06em">${r.status||"new"}</span>
       <span style="margin-left:auto;font-size:11px;color:#94a3b8">Submitted ${new Date(r.created_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>
     </div>
+    ${termsBadge}
 
     <!-- Contact info grid -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:20px">
@@ -3399,11 +3421,20 @@ async function sendInvoiceFromPreview() {
 // delivery, 10% late fee at the due date with no grace period, suspension
 // at day 40) -- those numbers are intentionally not editable per-send.
 
-function openTermsAgreementModal() {
-  document.getElementById("taContactName").value = "";
-  document.getElementById("taBusinessName").value = "";
-  document.getElementById("taEmail").value = "";
-  document.getElementById("taTotal").value = "";
+// Tracks which quote (if any) this send is tied to, so acceptance status
+// can show up on that quote's own detail view instead of only living in
+// the standalone terms_agreements table. Opening from the toolbar (no
+// argument) sends an untied agreement, same as before.
+let _termsQuoteRequestId = null;
+
+function openTermsAgreementModal(quoteRequestId) {
+  _termsQuoteRequestId = quoteRequestId || null;
+  const r = quoteRequestId ? allQuoteRequests.find(x => x.id === quoteRequestId) : null;
+
+  document.getElementById("taContactName").value  = r ? (r.contact_name || "") : "";
+  document.getElementById("taBusinessName").value = r ? (r.business_name || "") : "";
+  document.getElementById("taEmail").value        = r ? (r.email || "") : "";
+  document.getElementById("taTotal").value        = r ? (quoteItemsTotal(r) || "") : "";
   document.getElementById("termsAgreementModal").style.display = "flex";
 }
 
@@ -3416,7 +3447,11 @@ function getTermsAgreementPayload() {
     alert("Contact name, business name, and email are all required.");
     return null;
   }
-  return { contact_name, business_name, email, total: totalRaw ? Number(totalRaw) : null };
+  return {
+    contact_name, business_name, email,
+    total: totalRaw ? Number(totalRaw) : null,
+    quote_request_id: _termsQuoteRequestId,
+  };
 }
 
 async function previewTermsAgreement() {
@@ -3467,6 +3502,13 @@ async function sendTermsAgreementFromPreview() {
     document.getElementById("termsPreviewOverlay").style.display = "none";
     document.getElementById("termsAgreementModal").style.display = "none";
     alert(`✅ Payment terms agreement emailed to ${payload.email}.`);
+
+    // Refresh so the "Sent — Awaiting Response" badge shows immediately
+    // instead of only appearing after the next unrelated re-render.
+    if (payload.quote_request_id) {
+      await renderQuoteRequestsTable();
+      openQuoteDetail(payload.quote_request_id);
+    }
   } catch (err) {
     alert("Could not send the agreement: " + err.message);
   } finally {
