@@ -95,7 +95,6 @@ module.exports = async (req, res) => {
 
   if (qErr || !q) return res.status(404).json({ error: 'Quote request not found' });
   if (!q.quote_items || !q.quote_items.length) return res.status(400).json({ error: 'This quote has no priced line items yet -- send the quote first.' });
-  if (!q.grand_total || q.grand_total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
   if (!q.email) return res.status(400).json({ error: 'This quote request has no customer email on file.' });
 
   const items = q.quote_items.map(i => ({
@@ -106,6 +105,12 @@ module.exports = async (req, res) => {
 
   if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
 
+  // Prefer the stored grand_total, but some quotes were sent before the
+  // send-quote edge function was fixed to save it -- quote_items has
+  // everything needed to invoice regardless, so fall back to summing it.
+  const total = q.grand_total > 0 ? q.grand_total : items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+  if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
+
   const order_number = 'RRS-INV-' + Date.now();
 
   const { data: order, error: orderErr } = await supabase
@@ -115,8 +120,8 @@ module.exports = async (req, res) => {
       customer_name:  q.contact_name || '',
       customer_email: q.email,
       business_name:  q.business_name || 'N/A',
-      subtotal:       q.grand_total,
-      total:          q.grand_total,
+      subtotal:       total,
+      total:          total,
       payment_method: 'card',
       payment_status: 'pending_invoice',
       status:         'pending',
@@ -184,7 +189,7 @@ module.exports = async (req, res) => {
         customer_name: q.contact_name || 'there',
         business_name: q.business_name || '',
         items,
-        total: q.grand_total,
+        total,
         payment_link: link.url,
       }),
     });

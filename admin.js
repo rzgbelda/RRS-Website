@@ -3017,10 +3017,13 @@ function openQuoteDetail(id) {
   const pdfBtn = document.getElementById("viewQuotePdfBtn");
   if (pdfBtn) pdfBtn.style.display = r.quote_number ? "flex" : "none";
 
-  // Only a priced, sent quote has quote_items/grand_total to invoice --
-  // matches the same data the composer already relies on.
+  // Only a priced, sent quote can be invoiced. Prefer the stored
+  // grand_total, but older quotes (sent before the edge function was
+  // fixed to save it) only have quote_items -- fall back to summing
+  // those so this doesn't silently hide the button on real quotes.
   const invoiceBtn = document.getElementById("sendInvoiceBtn");
-  if (invoiceBtn) invoiceBtn.style.display = (r.status === "quoted" && r.grand_total > 0) ? "flex" : "none";
+  const invoiceable = r.status === "quoted" && quoteItemsTotal(r) > 0;
+  if (invoiceBtn) invoiceBtn.style.display = invoiceable ? "flex" : "none";
 
   const items = r.requested_items;
   const itemsHtml = items?.length
@@ -3102,6 +3105,16 @@ function normalizeProductName(s) {
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "");
 }
+// Some quotes were sent before the send-quote edge function was fixed to
+// save grand_total, so that column is null on them even though the quote
+// itself is real and priced. quote_items always has the numbers needed to
+// invoice regardless, so derive the total from there instead of trusting
+// grand_total to be present.
+function quoteItemsTotal(r) {
+  if (r.grand_total > 0) return Number(r.grand_total);
+  return (r.quote_items || []).reduce((sum, i) => sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0), 0);
+}
+
 function tierPriceForQty(product, qty) {
   const q = Number(qty) || 1;
   const t1 = Number(product.price_tier1) || 0;
@@ -3323,7 +3336,7 @@ async function sendInvoiceForCurrentQuote() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
-  if (!confirm(`Email an invoice + payment link for $${Number(r.grand_total).toFixed(2)} to ${r.email}?\n\nShe will be able to pay by card directly from the email, no site visit needed.`)) return;
+  if (!confirm(`Email an invoice + payment link for $${quoteItemsTotal(r).toFixed(2)} to ${r.email}?\n\nShe will be able to pay by card directly from the email, no site visit needed.`)) return;
 
   const btn = document.getElementById("sendInvoiceBtn");
   const original = btn ? btn.innerHTML : null;
