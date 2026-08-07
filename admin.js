@@ -3332,14 +3332,44 @@ async function doSendQuote(payload) {
 // log in. See api/send-invoice.js for the full flow; api/stripe-webhook.js
 // marks the order paid and sends the usual confirmation emails the moment
 // she completes payment.
-async function sendInvoiceForCurrentQuote() {
+//
+// Mirrors the existing Preview Quote / Send to Customer flow: nothing is
+// sent, no order is created and no Stripe Payment Link exists until staff
+// review the actual rendered email and its prices, then explicitly send.
+async function previewInvoice() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
-  if (!confirm(`Email an invoice + payment link for $${quoteItemsTotal(r).toFixed(2)} to ${r.email}?\n\nShe will be able to pay by card directly from the email, no site visit needed.`)) return;
-
   const btn = document.getElementById("sendInvoiceBtn");
   const original = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+
+  try {
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quote_request_id: currentQuoteId, preview_only: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Preview failed");
+
+    document.getElementById("invoicePreviewFrame").srcdoc = data.html;
+    document.getElementById("invoicePreviewOverlay").style.display = "flex";
+  } catch (err) {
+    alert("Preview error: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+
+async function sendInvoiceFromPreview() {
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return;
+
+  if (!confirm(`Email this invoice + payment link to ${r.email}?\n\nShe will be able to pay by card directly from the email, no site visit needed.`)) return;
+
+  const btn = document.querySelector('#invoicePreviewOverlay button[onclick="sendInvoiceFromPreview()"]');
+  const original = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
 
   try {
@@ -3351,12 +3381,13 @@ async function sendInvoiceForCurrentQuote() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Send failed");
 
-    alert(`✅ Invoice ${data.order_number} emailed to ${r.email}.\n\nPayment link:\n${data.payment_link}`);
+    document.getElementById("invoicePreviewOverlay").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
+    alert(`✅ Invoice ${data.order_number} emailed to ${r.email}.\n\nPayment link:\n${data.payment_link}`);
   } catch (err) {
     alert("Could not send the invoice: " + err.message);
   } finally {
-    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+    if (btn) { btn.disabled = false; btn.textContent = original; }
   }
 }
 

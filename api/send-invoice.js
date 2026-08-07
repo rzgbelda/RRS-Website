@@ -84,7 +84,7 @@ module.exports = async (req, res) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
-  const { quote_request_id } = req.body || {};
+  const { quote_request_id, preview_only } = req.body || {};
   if (!quote_request_id) return res.status(400).json({ error: 'quote_request_id is required' });
 
   const { data: q, error: qErr } = await supabase
@@ -110,6 +110,22 @@ module.exports = async (req, res) => {
   // everything needed to invoice regardless, so fall back to summing it.
   const total = q.grand_total > 0 ? q.grand_total : items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
   if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
+
+  // Preview: render the exact email that would be sent, with no order
+  // inserted, no Stripe Payment Link created, and no email dispatched --
+  // so staff can check prices and layout before anything real happens.
+  if (preview_only) {
+    return res.status(200).json({
+      html: invoiceEmailHtml({
+        order_number: '(assigned when sent)',
+        customer_name: q.contact_name || 'there',
+        business_name: q.business_name || '',
+        items,
+        total,
+        payment_link: '#preview-only',
+      }),
+    });
+  }
 
   const order_number = 'RRS-INV-' + Date.now();
 

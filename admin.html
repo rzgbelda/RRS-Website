@@ -758,7 +758,7 @@
             <button id="viewQuotePdfBtn" onclick="viewQuotePdf()" style="display:none;height:36px;padding:0 14px;border-radius:9px;font-size:13px;border:1.5px solid #d0d7e0;background:#fff;cursor:pointer;color:#0d1f38;font-weight:700;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
               &#8681; PDF
             </button>
-            <button id="sendInvoiceBtn" onclick="sendInvoiceForCurrentQuote()" style="display:none;height:36px;padding:0 16px;border-radius:9px;font-size:13px;background:#16a34a;color:#fff;border:none;cursor:pointer;font-weight:700;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
+            <button id="sendInvoiceBtn" onclick="previewInvoice()" style="display:none;height:36px;padding:0 16px;border-radius:9px;font-size:13px;background:#16a34a;color:#fff;border:none;cursor:pointer;font-weight:700;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
               &#128179; Email Invoice &amp; Pay Link
             </button>
             <button onclick="openQuoteComposer()" style="height:36px;padding:0 16px;border-radius:9px;font-size:13px;background:#0d2c50;color:#fff;border:none;cursor:pointer;font-weight:700;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0">
@@ -841,6 +841,18 @@
         </div>
       </div>
       <iframe id="quotePreviewFrame" style="flex:1;border:none;background:#f1f5f9"></iframe>
+    </div>
+
+    <!-- -- Invoice Preview Overlay ---------------------------- -->
+    <div id="invoicePreviewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;flex-direction:column">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#1e293b;flex-shrink:0">
+        <span style="color:#fff;font-size:14px;font-weight:700">Invoice Preview — nothing has been sent or charged yet</span>
+        <div style="display:flex;gap:10px">
+          <button onclick="sendInvoiceFromPreview()" style="height:34px;padding:0 18px;border-radius:8px;background:#16a34a;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">Email This Invoice</button>
+          <button onclick="document.getElementById('invoicePreviewOverlay').style.display='none'" style="height:34px;padding:0 14px;border-radius:8px;background:#334155;color:#fff;border:none;font-size:13px;cursor:pointer">Close Preview</button>
+        </div>
+      </div>
+      <iframe id="invoicePreviewFrame" style="flex:1;border:none;background:#f1f5f9"></iframe>
     </div>
 
     </div><!-- /quote-requests tab -->
@@ -1641,7 +1653,7 @@
 
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="admin.js?v=26"></script>
+<script src="admin.js?v=27"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {
