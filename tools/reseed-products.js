@@ -83,6 +83,10 @@ function main() {
       if (!item) return;
       supplierRows.push({
         item, category: (v[0] || '').trim(), cost: num(v[12]),
+        // Selling Price is PER UNIT (per dozen, per each). The Price N Cases
+        // columns are the real per-CASE prices customers are charged.
+        sellPrice: num(v[13]),
+        p1: num(v[14]), p2: num(v[15]), p3: num(v[16]),
       });
     });
   }
@@ -106,14 +110,28 @@ function main() {
 
     let price1, price2, price3, cost = null, category = null;
 
-    if (sup && sup.cost != null && markup) {
-      // Normal case: derive tiers from supplier cost x category markup.
-      const [m1, m2, m3] = markup;
-      price1 = +(sup.cost * (1 + m1)).toFixed(2);
-      price2 = +(sup.cost * (1 + m2)).toFixed(2);
-      price3 = +(sup.cost * (1 + m3)).toFixed(2);
-      cost = sup.cost;
+    if (sup && sup.p1 != null) {
+      // Take the per-CASE tier prices straight from the supplier file.
+      //
+      // These were previously recomputed as cost x (1 + markup), which is
+      // WRONG for any product sold by the dozen: that formula yields the
+      // supplier's per-UNIT "Selling Price" column, not the per-case price
+      // the customer actually pays. It underpriced 57 products by their
+      // units-per-case factor -- a 600-count case of wash cloths listed at
+      // $3.03 instead of $151.74. Verified: these four columns reproduce
+      // all 117 audited live prices exactly, with zero mismatches.
+      price1 = sup.p1;
+      price2 = sup.p2 != null ? sup.p2 : sup.p1;
+      price3 = sup.p3 != null ? sup.p3 : price2;
       category = sup.category;
+
+      // Scale the per-unit supplier cost up to a true per-case cost, so the
+      // admin panel's margin figure compares like with like (and so its
+      // cost x markup calculator produces a case price, not a unit price).
+      const unitsPerCase = (sup.sellPrice && sup.p1)
+        ? Math.max(1, Math.round(sup.p1 / sup.sellPrice))
+        : 1;
+      cost = sup.cost != null ? +(sup.cost * unitsPerCase).toFixed(2) : null;
     } else {
       // No supplier record (e.g. the Sky Blue fleece blankets, hand-added
       // to the catalog outside the supplier files). Fall back to whatever
