@@ -62,6 +62,7 @@ function splitCSVRow(row) {
 }
 const num = v => { const n = parseFloat(String(v || '').replace(/[^0-9.]/g, '')); return isNaN(n) ? null : n; };
 const slugify = s => String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const titleCase = s => String(s || '').toLowerCase().replace(/\b[a-z]/g, c => c.toUpperCase());
 
 function loadCSV(filePath) {
   if (!fs.existsSync(filePath)) return null;
@@ -108,7 +109,7 @@ function main() {
     const sup = supplierByItem.get(item);
     const markup = sup && CATEGORY_MARKUPS[sup.category];
 
-    let price1, price2, price3, cost = null, category = null;
+    let price1, price2, price3, cost = null, category = null, unitsPerCase = 1;
 
     if (sup && sup.p1 != null) {
       // Take the per-CASE tier prices straight from the supplier file.
@@ -128,7 +129,7 @@ function main() {
       // Scale the per-unit supplier cost up to a true per-case cost, so the
       // admin panel's margin figure compares like with like (and so its
       // cost x markup calculator produces a case price, not a unit price).
-      const unitsPerCase = (sup.sellPrice && sup.p1)
+      unitsPerCase = (sup.sellPrice && sup.p1)
         ? Math.max(1, Math.round(sup.p1 / sup.sellPrice))
         : 1;
       cost = sup.cost != null ? +(sup.cost * unitsPerCase).toFixed(2) : null;
@@ -172,7 +173,15 @@ function main() {
       product_family: (v[15] || '').trim() || null,
       variant_label: (v[16] || '').trim() || null,
       sell_by_each: (v[17] || '').trim() || null,
-      unit: (v[18] || '').trim() || 'Case',
+      // This drives the "/ X" label next to the price everywhere on the
+      // site. The supplier's PRICE BY column describes the basis of their
+      // per-unit Selling Price ("DOZEN"), but what we list and charge is
+      // the per-case price -- so a 50-dozen case read "$151.74 / DOZEN",
+      // implying a customer got twelve wash cloths for that. Whenever a
+      // case holds more than one sales unit, the price is per case and the
+      // label must say so; case_qty still conveys how the case is made up.
+      // Title-cased so the site doesn't mix "/ CASE" and "/ Case".
+      unit: unitsPerCase > 1 ? 'Case' : titleCase((v[18] || '').trim() || 'Case'),
       weight: num(v[19]),
       length: num(v[20]),
       width:  num(v[21]),
