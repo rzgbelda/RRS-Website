@@ -423,13 +423,19 @@ async function renderProductsTable(filter) {
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="8" class="a-empty" style="padding:30px">Loading…</td></tr>`;
 
+  // Deactivated products are hidden unless explicitly asked for. The admin
+  // policy lets staff read inactive rows, so this list was also showing 91
+  // dead rows from an old seed -- they read as duplicates of real products
+  // at stale prices, which is exactly how they were reported.
+  const showHidden = document.getElementById("showHiddenProducts")?.checked;
   let q = window.sb.from("products").select("*, inventory(stock_qty, status)").order("name");
+  if (!showHidden) q = q.eq("is_active", true);
   if (filter) q = q.ilike("name", `%${filter}%`);
   const { data: products } = await q;
 
   tbody.innerHTML = (products || []).map(p => {
     const inv = p.inventory?.[0];
-    return `<tr data-id="${p.id}">
+    return `<tr data-id="${p.id}"${p.is_active ? "" : ' style="opacity:.55;background:#fafafa"'}>
       <td style="text-align:center">
         <input type="checkbox" class="product-cb" data-id="${p.id}"
           style="width:16px;height:16px;cursor:pointer;accent-color:#ED7226"
@@ -438,6 +444,7 @@ async function renderProductsTable(filter) {
       <td><img src="${escHtml(p.image_url || "assets/img/product-placeholder.svg")}" style="width:44px;height:44px;object-fit:cover;border-radius:6px" onerror="this.src='assets/img/product-placeholder.svg'"></td>
       <td>
         <strong>${escHtml(p.name)}</strong>
+        ${p.is_active ? "" : `<span class="a-badge a-badge-gray" style="margin-left:7px" title="Not visible to customers">Hidden</span>`}
         ${p.sku ? `<br><small style="color:#aaa">SKU: ${escHtml(p.sku)}</small>` : ""}
       </td>
       <td>${escHtml(p.category_name || "—")}</td>

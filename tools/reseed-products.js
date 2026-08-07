@@ -193,6 +193,37 @@ function main() {
     });
   });
 
+  // Colour variants (SKU = base SKU + a suffix, e.g. ...-FLC-SB for Sky
+  // Blue) aren't listed separately in the supplier files, so they came
+  // through with no cost and no category -- the admin list showed them
+  // with a blank margin. Inherit both from the base product, but ONLY when
+  // all three tier prices match exactly. That guard is the point: identical
+  // pricing is what proves it's the same product economically, so if a
+  // variant is ever priced differently this quietly stops applying rather
+  // than assuming a cost that isn't true.
+  const bySku = new Map(toUpsert.map(p => [p.sku, p]));
+  const inherited = [];
+  toUpsert.forEach(p => {
+    if (p.cost_per_case != null || !p.sku) return;
+    const base = [...bySku.keys()]
+      .filter(k => k !== p.sku && p.sku.startsWith(k + '-'))
+      .sort((a, b) => b.length - a.length)   // longest = closest ancestor
+      .map(k => bySku.get(k))
+      .find(b => b.cost_per_case != null &&
+                 b.price_tier1 === p.price_tier1 &&
+                 b.price_tier2 === p.price_tier2 &&
+                 b.price_tier3 === p.price_tier3);
+    if (!base) return;
+    p.cost_per_case = base.cost_per_case;
+    p.category_name = p.category_name || base.category_name;
+    inherited.push({ sku: p.sku, from: base.sku, cost: base.cost_per_case, category: base.category_name });
+  });
+
+  if (inherited.length) {
+    console.log(`\n${inherited.length} colour variant(s) inherited cost + category from their base product (identical tier pricing):`);
+    inherited.forEach(i => console.log(`  - ${i.sku}  <- ${i.from}   cost $${i.cost}, ${i.category}`));
+  }
+
   const kept = noSupplierMatch.filter(n => n.kept);
   const excluded = noSupplierMatch.filter(n => !n.kept);
 

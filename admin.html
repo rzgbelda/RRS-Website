@@ -312,18 +312,26 @@
           <input type="text" id="productSearch" class="a-search" placeholder="Search products...">
           <select id="productCategoryFilter" class="a-select">
             <option value="">All Categories</option>
-            <option>Toilet Paper</option>
-            <option>Paper Towels</option>
-            <option>Trash Liners</option>
+            <option>Bed Sheets &amp; Linens</option>
+            <option>Towels</option>
+            <option>Paper Products</option>
             <option>Cleaning Chemicals</option>
-            <option>Hand Soap</option>
-            <option>Laundry Supplies</option>
-            <option>Dishwashing Supplies</option>
-            <option>Guest Room Supplies</option>
-            <option>Towels and Linens</option>
-            <option>Food Service Supplies</option>
-            <option>Facility Supplies</option>
+            <option>Pillows &amp; Mattress Protectors</option>
+            <option>Trash Liners &amp; Can Liners</option>
+            <option>Gloves &amp; PPE</option>
+            <option>Guest Amenities</option>
+            <option>Housekeeping Supplies</option>
+            <option>Furniture</option>
           </select>
+          <!-- Hidden products are excluded by default. Without this the list
+               also showed 91 deactivated rows left over from an old seed,
+               which looked like duplicates of real products at stale prices
+               (e.g. a second "Fleece Blanket King" at $17.99). Customers
+               never see those; they only exist as history. -->
+          <label style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:#475569;font-weight:600;white-space:nowrap;margin-right:8px;cursor:pointer">
+            <input type="checkbox" id="showHiddenProducts" onchange="renderProductsTable(document.getElementById('productSearch').value.trim())" style="width:15px;height:15px;cursor:pointer;accent-color:#ED7226">
+            Show hidden
+          </label>
           <button class="a-btn-primary" id="openCsvImport" onclick="showCsvSection()" style="margin-right:8px;background:#1a4a8a">&uarr; Import CSV</button>
           <button class="a-btn-primary" id="openAddProduct" onclick="openAddProduct()">+ Add Product</button>
         </div>
