@@ -3391,6 +3391,89 @@ async function sendInvoiceFromPreview() {
   }
 }
 
+/* ── Payment Terms Agreement ────────────────────────────────── */
+// Confirms an approved 30-day net-terms exception before any invoice or
+// payment link goes out -- a customer who agreed to pay after delivery
+// should not get a "pay now" email the same week. See
+// api/send-terms-agreement.js for the fixed wording (30 days from
+// delivery, 10% late fee at the due date with no grace period, suspension
+// at day 40) -- those numbers are intentionally not editable per-send.
+
+function openTermsAgreementModal() {
+  document.getElementById("taContactName").value = "";
+  document.getElementById("taBusinessName").value = "";
+  document.getElementById("taEmail").value = "";
+  document.getElementById("taTotal").value = "";
+  document.getElementById("termsAgreementModal").style.display = "flex";
+}
+
+function getTermsAgreementPayload() {
+  const contact_name  = document.getElementById("taContactName").value.trim();
+  const business_name = document.getElementById("taBusinessName").value.trim();
+  const email          = document.getElementById("taEmail").value.trim();
+  const totalRaw        = document.getElementById("taTotal").value.trim();
+  if (!contact_name || !business_name || !email) {
+    alert("Contact name, business name, and email are all required.");
+    return null;
+  }
+  return { contact_name, business_name, email, total: totalRaw ? Number(totalRaw) : null };
+}
+
+async function previewTermsAgreement() {
+  const payload = getTermsAgreementPayload();
+  if (!payload) return;
+
+  const btn = document.getElementById("taPreviewBtn");
+  const original = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+
+  try {
+    const res = await fetch("/api/send-terms-agreement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, preview_only: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Preview failed");
+
+    document.getElementById("termsPreviewFrame").srcdoc = data.html;
+    document.getElementById("termsPreviewOverlay").style.display = "flex";
+  } catch (err) {
+    alert("Preview error: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
+}
+
+async function sendTermsAgreementFromPreview() {
+  const payload = getTermsAgreementPayload();
+  if (!payload) return;
+
+  if (!confirm(`Email the payment terms agreement to ${payload.email}?`)) return;
+
+  const btn = document.querySelector('#termsPreviewOverlay button[onclick="sendTermsAgreementFromPreview()"]');
+  const original = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+
+  try {
+    const res = await fetch("/api/send-terms-agreement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Send failed");
+
+    document.getElementById("termsPreviewOverlay").style.display = "none";
+    document.getElementById("termsAgreementModal").style.display = "none";
+    alert(`✅ Payment terms agreement emailed to ${payload.email}.`);
+  } catch (err) {
+    alert("Could not send the agreement: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
+}
+
 async function saveQuoteStatus() {
   const btn = document.querySelector('[onclick="saveQuoteStatus()"]');
   if (!currentQuoteId) { alert("No quote selected."); return; }
