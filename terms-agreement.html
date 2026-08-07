@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment Terms Agreement — Room Ready Supply</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+
+.ta-header{background:#0B1F38;padding:28px 24px;text-align:center}
+.ta-header p{color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;margin:0 0 6px}
+.ta-header h1{color:#fff;font-size:22px;font-weight:900}
+
+.ta-page{max-width:600px;margin:36px auto;padding:0 16px 80px}
+.ta-card{background:#fff;border-radius:16px;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+
+.ta-loading,.ta-error{text-align:center;padding:60px 20px;color:#64748b;font-size:14px}
+
+.ta-terms-box{background:#fffbf7;border:1.5px solid #fde8d4;border-radius:12px;padding:20px;margin:20px 0}
+.ta-terms-box h2{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#ED7226;margin-bottom:14px}
+.ta-terms-box p{font-size:14px;color:#334155;line-height:1.6;margin-bottom:8px}
+.ta-terms-box p:last-child{margin-bottom:0}
+
+.ta-total{font-size:14px;color:#334155;margin-bottom:20px}
+.ta-total strong{color:#0B1F38}
+
+.ta-pdf-link{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;color:#0B1F38;text-decoration:none;font-size:13px;font-weight:700;margin-bottom:24px}
+.ta-pdf-link:hover{border-color:#ED7226}
+
+.ta-accept-btn{display:block;width:100%;background:#ED7226;color:#fff;border:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer}
+.ta-accept-btn:hover{opacity:.92}
+.ta-accept-btn:disabled{opacity:.6;cursor:not-allowed}
+
+.ta-accepted{text-align:center;padding:20px 0}
+.ta-accepted .ta-check{width:56px;height:56px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.ta-accepted h2{font-size:19px;font-weight:800;color:#0B1F38;margin-bottom:8px}
+.ta-accepted p{font-size:14px;color:#64748b;line-height:1.6}
+
+.ta-footer{text-align:center;padding:20px;color:#94a3b8;font-size:12px}
+.ta-footer a{color:#ED7226;text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="ta-header">
+  <p>Room Ready Supply</p>
+  <h1>Payment Terms Agreement</h1>
+</div>
+
+<div class="ta-page">
+  <div class="ta-card" id="taCard">
+    <div class="ta-loading">Loading…</div>
+  </div>
+</div>
+
+<div class="ta-footer">
+  Room Ready Supply &bull; 609 Washington St., Plymouth, NC 27962<br>
+  <a href="mailto:sales@roomreadysupply.com">sales@roomreadysupply.com</a> &bull; (252) 227-0073
+</div>
+
+<script>
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+const params = new URLSearchParams(location.search);
+const token = params.get('token');
+const card = document.getElementById('taCard');
+
+function renderError(msg) {
+  card.innerHTML = '<div class="ta-error">' + esc(msg) + '</div>';
+}
+
+function renderAccepted(data) {
+  card.innerHTML =
+    '<div class="ta-accepted">' +
+    '<div class="ta-check"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>' +
+    '<h2>Terms Accepted</h2>' +
+    '<p>Thanks, ' + esc(data.contact_name) + ' &mdash; your agreement to these payment terms was recorded' +
+    (data.accepted_at ? ' on ' + fmtDate(data.accepted_at) : '') + '.<br>We\'ll follow up with your invoice once delivery is confirmed.</p>' +
+    '</div>';
+}
+
+function renderPending(data) {
+  const totalHtml = data.total
+    ? '<p class="ta-total"><strong>Order total:</strong> $' + Number(data.total).toFixed(2) + '</p>'
+    : '';
+
+  card.innerHTML =
+    '<p style="font-size:15px;line-height:1.6;margin-bottom:16px">Dear ' + esc(data.contact_name) + ',</p>' +
+    '<p style="font-size:15px;line-height:1.6;margin-bottom:16px">Please review the payment terms Room Ready Supply has approved for ' + esc(data.business_name) + ':</p>' +
+    '<div class="ta-terms-box">' +
+    '<h2>Approved Payment Terms</h2>' +
+    '<p>Your order will be shipped now, and payment will be due in full <strong>30 calendar days from your confirmed delivery date</strong> &mdash; an exception to our standard 20-day terms, approved specifically for your account. All other terms in our Payment Terms &amp; Conditions (below) continue to apply, including:</p>' +
+    '<p>&bull; A one-time <strong>10% late fee</strong> if payment is not received by the 30-day due date</p>' +
+    '<p>&bull; Your account may be <strong>suspended</strong> if payment remains outstanding 40 calendar days after delivery</p>' +
+    '</div>' +
+    totalHtml +
+    '<a class="ta-pdf-link" href="/assets/legal/RRS-Payment-Terms-and-Conditions.pdf" target="_blank" rel="noopener">' +
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>' +
+    'View Full Payment Terms &amp; Conditions (PDF)</a>' +
+    '<button class="ta-accept-btn" id="acceptBtn" onclick="acceptTerms()">I Agree to These Terms</button>';
+}
+
+async function loadAgreement() {
+  if (!token) return renderError('This link is missing its reference code. Please use the link from your email, or contact sales@roomreadysupply.com.');
+
+  try {
+    const res = await fetch('/api/terms-agreement?token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load this agreement.');
+
+    if (data.status === 'accepted') renderAccepted(data);
+    else renderPending(data);
+
+    window._agreementData = data;
+  } catch (err) {
+    renderError(err.message);
+  }
+}
+
+async function acceptTerms() {
+  const btn = document.getElementById('acceptBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Recording…'; }
+
+  try {
+    const res = await fetch('/api/terms-agreement', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not record your agreement.');
+
+    renderAccepted({ ...window._agreementData, accepted_at: new Date().toISOString() });
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'I Agree to These Terms'; }
+    alert(err.message);
+  }
+}
+
+loadAgreement();
+</script>
+
+</body>
+</html>

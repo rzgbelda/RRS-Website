@@ -1,3 +1,5 @@
+const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 
 let _resend = null;
@@ -23,6 +25,10 @@ function esc(s) {
  * per-send. If a future customer needs different numbers, that is a new
  * negotiated exception and deserves its own reviewed copy, not a form
  * field that could be filled in wrong under time pressure.
+ *
+ * accept_url is '#preview-only' in preview mode (no token exists yet) --
+ * inert inside the sandboxed preview iframe, same pattern as the invoice
+ * preview's Pay Now button.
  */
 function agreementEmailHtml(o) {
   const totalLine = o.total
@@ -52,9 +58,11 @@ function agreementEmailHtml(o) {
 
     (totalLine ? '<div style="margin-bottom:24px;">' + totalLine + '</div>' : '') +
 
-    '<p style="font-size:15px;color:#334155;line-height:1.6;margin:0 0 24px;"><strong>Please reply to confirm you agree to these terms.</strong> Once delivery is confirmed, we\'ll follow up with your invoice.</p>' +
+    '<p style="font-size:15px;color:#334155;line-height:1.6;margin:0 0 20px;">Please review the attached Payment Terms &amp; Conditions, then click below to confirm your agreement.</p>' +
 
-    '<p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 24px;">The complete Payment Terms &amp; Conditions governing this and all Room Ready Supply orders is attached to this email.</p>' +
+    '<a href="' + esc(o.accept_url) + '" style="display:block;background:' + BRAND.orange + ';color:#fff;text-decoration:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;margin-bottom:24px;">I Agree to These Terms &rarr;</a>' +
+
+    '<p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 24px;">The complete Payment Terms &amp; Conditions governing this and all Room Ready Supply orders is attached to this email. Once delivery is confirmed, we\'ll follow up with your invoice.</p>' +
 
     '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions? Reply to this email or call us at <strong style="color:#334155;">(252) 227-0073</strong></p>' +
     '</div>' +
@@ -74,9 +82,34 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'contact_name, business_name, and email are all required' });
   }
 
-  const html = agreementEmailHtml({ contact_name, business_name, total });
+  if (preview_only) {
+    return res.status(200).json({
+      html: agreementEmailHtml({ contact_name, business_name, total, accept_url: '#preview-only' }),
+    });
+  }
 
-  if (preview_only) return res.status(200).json({ html });
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  const token = crypto.randomBytes(24).toString('base64url');
+
+  const { error: insertErr } = await supabase.from('terms_agreements').insert({
+    token,
+    contact_name,
+    business_name,
+    email,
+    total: total || null,
+    status: 'pending',
+  });
+
+  if (insertErr) {
+    console.error('[send-terms-agreement] insert failed:', insertErr.message);
+    return res.status(500).json({ error: insertErr.message });
+  }
+
+  const accept_url = 'https://www.roomreadysupply.com/terms-agreement?token=' + token;
 
   let pdfBuffer;
   try {
@@ -93,7 +126,7 @@ module.exports = async (req, res) => {
       to: email,
       reply_to: 'sales@roomreadysupply.com',
       subject: 'Payment Terms Confirmation — ' + business_name + ' (30-Day Account Terms)',
-      html,
+      html: agreementEmailHtml({ contact_name, business_name, total, accept_url }),
       attachments: [{
         filename: 'RRS-Payment-Terms-and-Conditions.pdf',
         content: pdfBuffer,
