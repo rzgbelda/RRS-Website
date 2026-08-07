@@ -3017,6 +3017,11 @@ function openQuoteDetail(id) {
   const pdfBtn = document.getElementById("viewQuotePdfBtn");
   if (pdfBtn) pdfBtn.style.display = r.quote_number ? "flex" : "none";
 
+  // Only a priced, sent quote has quote_items/grand_total to invoice --
+  // matches the same data the composer already relies on.
+  const invoiceBtn = document.getElementById("sendInvoiceBtn");
+  if (invoiceBtn) invoiceBtn.style.display = (r.status === "quoted" && r.grand_total > 0) ? "flex" : "none";
+
   const items = r.requested_items;
   const itemsHtml = items?.length
     ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
@@ -3305,6 +3310,40 @@ async function doSendQuote(payload) {
     alert("Send error: " + err.message);
   } finally {
     if (btn) { btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 2L11 13"/><path d="M22 2L15 22 11 13 2 9l20-7z"/></svg> Send to Customer`; btn.disabled = false; }
+  }
+}
+
+// Converts an already-quoted request into a real order (payment_status
+// "pending_invoice") plus a Stripe Payment Link, and emails the customer a
+// one-click "Pay Invoice Now" link -- so she never has to visit the site or
+// log in. See api/send-invoice.js for the full flow; api/stripe-webhook.js
+// marks the order paid and sends the usual confirmation emails the moment
+// she completes payment.
+async function sendInvoiceForCurrentQuote() {
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return;
+
+  if (!confirm(`Email an invoice + payment link for $${Number(r.grand_total).toFixed(2)} to ${r.email}?\n\nShe will be able to pay by card directly from the email, no site visit needed.`)) return;
+
+  const btn = document.getElementById("sendInvoiceBtn");
+  const original = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+
+  try {
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ quote_request_id: currentQuoteId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Send failed");
+
+    alert(`✅ Invoice ${data.order_number} emailed to ${r.email}.\n\nPayment link:\n${data.payment_link}`);
+    document.getElementById("quoteDetailModal").style.display = "none";
+  } catch (err) {
+    alert("Could not send the invoice: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
   }
 }
 

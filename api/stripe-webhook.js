@@ -166,6 +166,43 @@ module.exports = async (req, res) => {
                 .catch(function (e) { console.error('Estes booking failed:', e.message); })
             : Promise.resolve(),
         ]);
+      } else {
+        // Order already existed. This is the normal path for an emailed
+        // invoice paid via a Stripe Payment Link: api/send-invoice.js
+        // inserts the order up front as payment_status 'pending_invoice'
+        // (no browser checkout ever runs), so this is the only place that
+        // ever flips it to paid and sends the confirmation emails.
+        //
+        // Guarded on payment_status !== 'paid' so a Stripe retry of the
+        // same event -- or a normal browser-completed card order, which
+        // already inserted as 'paid' -- can never double-send.
+        const { data: existing, error: fetchErr } = await supabase
+          .from('orders')
+          .select('id, payment_status, order_number, customer_name, customer_email, business_name, phone, shipping_address, subtotal, total')
+          .eq('order_number', orderData.order_number)
+          .single();
+
+        if (!fetchErr && existing && existing.payment_status !== 'paid') {
+          await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', existing.id);
+
+          const { data: items } = await supabase
+            .from('order_items')
+            .select('product_name, price_per_case, quantity')
+            .eq('order_id', existing.id);
+
+          const emailOrder = {
+            ...existing,
+            items: (items || []).map(function (i) { return { name: i.product_name, price: i.price_per_case, quantity: i.quantity }; }),
+            amount_total: pi.amount,
+          };
+
+          Promise.all([
+            existing.customer_email
+              ? sendCustomerConfirmation(emailOrder).catch(function (e) { console.error('Customer email failed:', e.message); })
+              : Promise.resolve(),
+            sendInternalAlert(emailOrder).catch(function (e) { console.error('Internal alert email failed:', e.message); }),
+          ]);
+        }
       }
     }
   }
