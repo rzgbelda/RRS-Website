@@ -130,6 +130,11 @@ function mapDbProductToLegacyShape(row) {
     colorGroup: row.color_group || "",
     colorLabel: row.color_label || "",
 
+    // Real supplier category (e.g. "Bed Sheets & Linens"). Categories used
+    // to be guessed by keyword-matching product text, which badly
+    // misfired -- see the CATEGORY_KEYWORDS note in applyFilters().
+    category: row.category_name || "",
+
     sellByEach: row.sell_by_each || "",
     priceBy: row.unit || "",
     weight: row.weight != null ? String(row.weight) : "",
@@ -144,17 +149,32 @@ function mapDbProductToLegacyShape(row) {
   };
 }
 
+// Cached so a page that needs the catalog for its own rendering (the
+// category landing pages) shares this one request with script.js's own
+// startup fetch instead of pulling all 120 products down twice.
+let _catalogProductsPromise = null;
+
 async function fetchCatalogProducts() {
-  const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products?select=*&is_active=eq.true`;
-  const res = await fetch(url, {
-    headers: {
-      apikey: PRODUCTS_SUPABASE_ANON,
-      Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
-    },
-  });
-  if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
-  const rows = await res.json();
-  return rows.map(mapDbProductToLegacyShape);
+  if (_catalogProductsPromise) return _catalogProductsPromise;
+
+  _catalogProductsPromise = (async () => {
+    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products?select=*&is_active=eq.true`;
+    const res = await fetch(url, {
+      headers: {
+        apikey: PRODUCTS_SUPABASE_ANON,
+        Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
+      },
+    });
+    if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
+    const rows = await res.json();
+    return rows.map(mapDbProductToLegacyShape);
+  })();
+
+  // Don't cache a rejection -- a transient network failure shouldn't
+  // permanently break every later caller on the page.
+  _catalogProductsPromise.catch(() => { _catalogProductsPromise = null; });
+
+  return _catalogProductsPromise;
 }
 
 /* =========================
@@ -653,19 +673,14 @@ function getProductPriority(p) {
   return PRIORITY_KEYWORDS.some(kw => hay.includes(kw)) ? 0 : 1;
 }
 
-const CATEGORY_KEYWORDS = {
-  'toilet-paper':        ['bath tissue', 'toilet paper', 'toilet tissue', 'bath roll', '2-ply bathroom', '2 ply bathroom', 'bathroom tissue'],
-  'paper-towels':        ['paper towel', 'hardwound', 'roll towel', 'kitchen towel', 'hand towel roll', 'center pull', 'multifold', 'c-fold', 'facial tissue', 'tissue'],
-  'trash-liners':        ['can liner', 'trash bag', 'trash liner', 'garbage bag', 'liner'],
-  'cleaning-chemicals':  ['bleach', 'disinfectant', 'cleaner', 'pine-sol', 'lysol', 'sanitizer', 'germicidal', 'multi-surface'],
-  'hand-soap':           ['hand soap', 'hand wash', 'foaming soap', 'soap dispenser'],
-  'laundry-supplies':    ['laundry', 'detergent', 'fabric softener', 'dryer sheet', 'washing'],
-  'dishwashing-supplies':['dish', 'dishwasher', 'powerball', 'dawn', 'pot & pan', 'pot and pan'],
-  'guest-room-supplies': ['guest', 'amenity', 'shampoo', 'conditioner', 'lotion', 'room supply'],
-  'towels-linens':       ['bath towel', 'hand towel', 'pool towel', 'gym towel', 'linen', 'sheet set', 'bed sheet', 'pillowcase', 'blanket', 'washcloth', 'terry', 'microfiber towel'],
-  'food-service':        ['food service', 'food safe', 'glove', 'nitrile', 'food prep'],
-  'facility-supplies':   ['facility', 'janitorial', 'mop', 'broom', 'floor', 'squeegee'],
-};
+/**
+ * Turn a supplier category name into the URL/filter slug used by the
+ * catalog checkboxes and the category landing pages.
+ * "Bed Sheets & Linens" -> "bed-sheets-linens"
+ */
+function categorySlug(name) {
+  return String(name || "").toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
 
 function getActiveCategories() {
   return Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
@@ -687,14 +702,18 @@ function applyFilters() {
       if (!haystack.includes(keyword)) return false;
     }
 
-    // Category match � product must match at least one checked category
+    // Category match -- product must be in at least one checked category.
+    //
+    // This used to keyword-match against the product's name + description +
+    // overview text, which produced badly wrong results: "guest-room-supplies"
+    // listed only the keyword "guest", and every product's marketing copy
+    // mentions guests, so it matched 114 of 120 products (bleach, laundry
+    // detergent and trash liners all appeared under it). "laundry-supplies"
+    // matched bed sheets, because linen care text says "washing"/"laundering".
+    // The products table now carries the real supplier category, so match on
+    // that instead of guessing from prose.
     if (catFilters.length > 0) {
-      const haystack = (product.name + ' ' + product.description + ' ' + product.overview).toLowerCase();
-      const matches = catFilters.some(cat => {
-        const kws = CATEGORY_KEYWORDS[cat] || [];
-        return kws.some(kw => haystack.includes(kw));
-      });
-      if (!matches) return false;
+      if (!catFilters.includes(categorySlug(product.category))) return false;
     }
 
     return true;
@@ -714,11 +733,21 @@ function applyFilters() {
 function applyCatalogSearchParam() {
   const input = document.getElementById('search-input');
   if (!input) return;
-  const term = new URLSearchParams(window.location.search).get('search');
-  if (term) {
-    input.value = term;
-    applyFilters();
+  const params = new URLSearchParams(window.location.search);
+  const term = params.get('search');
+  let changed = false;
+
+  if (term) { input.value = term; changed = true; }
+
+  // ?category=<slug> lets the category landing pages deep-link straight
+  // into a pre-filtered catalog view.
+  const cat = params.get('category');
+  if (cat) {
+    const box = document.querySelector(`.category-filter[value="${CSS.escape(cat)}"]`);
+    if (box) { box.checked = true; changed = true; }
   }
+
+  if (changed) applyFilters();
 }
 
 // Replace old search listener with unified filter handler
