@@ -766,19 +766,27 @@ document.addEventListener('change', e => {
 function buildSeoTitle(p) {
   const desc = p.description || "";
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
-  const matMatch  = desc.match(/Material:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
-  const matStr    = matMatch  ? matMatch[1].trim()  : "";
-  const suffix    = matStr  ? ` (${matStr})` : "";
   // Strip any dash variant (en dash, em dash, or plain hyphen) that
-  // precedes "Wholesale Pricing" in the raw supplier name, so it isn't
-  // duplicated when the suffix is rebuilt below.
+  // precedes "Wholesale Pricing" in the raw supplier name.
   const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
-  // Only prepend size if the name doesn't already start with it
+  // Only prepend the size if the name doesn't already contain it
+  // anywhere -- startsWith() missed names like "Economy 22x44 Bath
+  // Towels", producing "22x44 Economy 22x44 Bath Towels".
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const nameAlreadyHasSize = sizeStr && norm(cleanName).startsWith(norm(sizeStr));
+  const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : "";
-  return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
+  // "Wholesale" leads because that is how B2B buyers search, and it is
+  // the part that survives Google's ~60-character display cut. This
+  // previously appended "– Wholesale Pricing for Hotels & Motels" plus a
+  // material parenthetical, which pushed titles to 140-160 chars -- all
+  // of it truncated away in results. Those terms still appear in each
+  // page's H1, meta description and body copy, so nothing is lost for
+  // ranking; only the truncation is.
+  //
+  // api/product-meta.js renders this same title server-side and MUST be
+  // kept identical -- a mismatch hands Google two titles for one URL.
+  return `Wholesale ${prefix}${cleanName}`;
 }
 
 function populateProductPage(product) {

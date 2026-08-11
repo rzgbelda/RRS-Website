@@ -67,15 +67,12 @@ function slugify(s) {
 function buildSeoTitle(p) {
   const desc = p.description || '';
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
-  const matMatch  = desc.match(/Material:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
-  const matStr    = matMatch  ? matMatch[1].trim()  : '';
-  const suffix    = matStr ? ` (${matStr})` : '';
   const cleanName = String(p.name || '').replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, '').trim();
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
-  const nameAlreadyHasSize = sizeStr && norm(cleanName).startsWith(norm(sizeStr));
+  const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : '';
-  return `${prefix}${cleanName} – Wholesale Pricing for Hotels & Motels${suffix}`;
+  return `Wholesale ${prefix}${cleanName}`;
 }
 
 // Mirrors populateProductPage()'s metaDesc, including its quirk of
