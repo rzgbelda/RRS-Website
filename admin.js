@@ -3208,7 +3208,7 @@ function openQuoteDetail(id) {
   const itemsHtml = items?.length
     ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
         <div style="display:grid;grid-template-columns:1fr 90px;background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
-          <span>Product</span><span style="text-align:center">Qty (cases)</span>
+          <span>Product</span><span style="text-align:center">Qty</span>
         </div>
         ${items.map((i, idx) => `
           <div style="display:grid;grid-template-columns:1fr 90px;padding:10px 14px;border-top:1px solid #f1f5f9;background:${idx%2===0?'#fff':'#fafbfc'};font-size:13px;align-items:center">
@@ -3297,11 +3297,20 @@ function quoteItemsTotal(r) {
   return (r.quote_items || []).reduce((sum, i) => sum + (Number(i.unit_price) || 0) * (Number(i.quantity) || 0), 0);
 }
 
+// Mirrors getTierPrice()/isSoldByDozen() in script.js. The storefront and
+// this composer must agree exactly: if they disagree, a customer is
+// quoted one price and charged another.
 function tierPriceForQty(product, qty) {
   const q = Number(qty) || 1;
   const t1 = Number(product.price_tier1) || 0;
   const t2 = Number(product.price_tier2) || 0;
   const t3 = Number(product.price_tier3) || 0;
+
+  // Sold by the dozen: one flat rate at every quantity. Without this, a
+  // quote for 50 dozen wash cloths would cross the "30+" line and apply a
+  // case volume discount that no longer exists.
+  if (String(product.unit || "").trim().toLowerCase() === "dozen") return t1;
+
   if (q >= 30) return t3 || t2 || t1;
   if (q >= 6)  return t2 || t1;
   return t1;
@@ -3334,7 +3343,7 @@ async function openQuoteComposer() {
 
   const { data: products } = await window.sb
     .from("products")
-    .select("name, price_tier1, price_tier2, price_tier3")
+    .select("name, price_tier1, price_tier2, price_tier3, unit, moq")
     .eq("is_active", true);
   _quoteComposerProducts = products || [];
 

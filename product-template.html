@@ -143,39 +143,39 @@
         <div class="pricing-tier-cards">
 
   <div class="tier-card">
-  <div class="tier-badge">STANDARD</div>
+  <div class="tier-badge" id="tier1Badge">STANDARD</div>
 
   <img src="assets/icons/box.svg" alt="" loading="lazy">
 
-  <h4>1&ndash;5 Cases</h4>
+  <h4 id="tier1Label">1&ndash;5 Cases</h4>
 
   <span id="tier1Price">$--.--</span>
 
-  <p>Standard Pricing</p>
+  <p id="tier1Sub">Standard Pricing</p>
 </div>
 
 <div class="tier-card">
-  <div class="tier-badge">VOLUME</div>
+  <div class="tier-badge" id="tier2Badge">VOLUME</div>
 
   <img src="assets/icons/box2.svg" alt="" loading="lazy">
 
-  <h4>6&ndash;29 Cases</h4>
+  <h4 id="tier2Label">6&ndash;29 Cases</h4>
 
   <span id="tier2Price">$--.--</span>
 
-  <p>Volume Discount</p>
+  <p id="tier2Sub">Volume Discount</p>
 </div>
 
 <div class="tier-card">
-  <div class="tier-badge best-value">BEST VALUE</div>
+  <div class="tier-badge best-value" id="tier3Badge">BEST VALUE</div>
 
   <img src="assets/icons/box3.svg" alt="" loading="lazy">
 
-  <h4>30+ Cases</h4>
+  <h4 id="tier3Label">30+ Cases</h4>
 
   <span id="tier3Price">$--.--</span>
 
-  <p>Best Price Per Case</p>
+  <p id="tier3Sub">Best Price Per Case</p>
 </div>
 
 </div>
@@ -200,6 +200,9 @@
             <button id="minusQty">-</button>
             <input type="number" id="qtyValue" value="1" min="1" max="9999" inputmode="numeric" />
             <button id="plusQty">+</button>
+          </div>
+          <p id="moqNote" style="display:none;margin-top:8px;font-size:13px;font-weight:700;color:#ED7226"></p>
+          <div style="display:none">
           </div>
 
           <button class="add-btn" id="productAddToCart">

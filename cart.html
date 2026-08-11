@@ -118,11 +118,6 @@
       <span id="subtotal">$349.90</span>
     </div>
 
-    <div class="summary-row">
-      <span>Shipping</span>
-      <strong>Calculated at checkout</strong>
-    </div>
-
     <div class="summary-row discount">
       <span>Discount</span>
       <span id="discount">-$0.00</span>
@@ -135,7 +130,9 @@
 
     <p>Taxes calculated at checkout</p>
 
-    <a href="/checkout" class="checkout-btn">
+    <p id="cartMoqWarning" style="display:none;background:#fef2f2;border:1.5px solid #fca5a5;border-radius:9px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#b91c1c;font-weight:600;line-height:1.5"></p>
+
+    <a href="/checkout" class="checkout-btn" id="cartCheckoutBtn">
     Proceed to Checkout
     </a>
 

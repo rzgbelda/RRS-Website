@@ -137,6 +137,10 @@ function mapDbProductToLegacyShape(row) {
 
     sellByEach: row.sell_by_each || "",
     priceBy: row.unit || "",
+    // Minimum order in whatever priceBy says. 1 for anything sold by the
+    // case or each; dozen-sold products carry a real minimum (50 dz for
+    // economy wash cloths, 2 dz for most linens) that the cart enforces.
+    moq: Number(row.moq) || 1,
     weight: row.weight != null ? String(row.weight) : "",
     length: row.length != null ? String(row.length) : "",
     width: row.width != null ? String(row.width) : "",
@@ -227,6 +231,60 @@ function isSellable(p) {
          cleanPrice(p.price3) > 0;
 }
 
+// Is this product sold by the dozen (flat rate, minimum order) rather
+// than by the case with volume tiers? Single definition, because the
+// product page, the cart, the checkout summary and the admin quote
+// composer all have to agree -- if any one of them disagreed, a customer
+// would be shown one price and charged another.
+function isSoldByDozen(p) {
+  return String(p && (p.priceBy || p.unit) || "").trim().toLowerCase() === "dozen";
+}
+
+// Minimum order, in whatever unit the product is sold by. Anything sold
+// by the case or each has no minimum beyond one.
+function productMoq(p) {
+  const m = Number(p && p.moq);
+  return Number.isFinite(m) && m > 0 ? Math.round(m) : 1;
+}
+
+// Blocks checkout while any dozen-sold line sits below its minimum. The
+// quantity control steps by the minimum, so this should not normally
+// trigger -- but a cart persists in localStorage across visits, and a
+// minimum can change after an item was added, so the check has to live
+// where the order is actually placed rather than only where it is built.
+function enforceCartMinimums(cart) {
+  const btn = document.getElementById("cartCheckoutBtn");
+  const warn = document.getElementById("cartMoqWarning");
+  if (!btn && !warn) return [];
+
+  const below = (cart || []).filter(i => {
+    if (!isSoldByDozen(i)) return false;
+    return (Number(i.quantity) || 0) < productMoq(i);
+  });
+
+  if (warn) {
+    warn.style.display = below.length ? "" : "none";
+    if (below.length) {
+      warn.innerHTML = below.length === 1
+        ? `<strong>${below[0].name}</strong> has a minimum order of ${productMoq(below[0])} dozen. Please increase the quantity to continue.`
+        : `${below.length} items are below their minimum order quantity. Please increase them to continue:<br>` +
+          below.map(i => `&bull; ${i.name} &mdash; minimum ${productMoq(i)} dozen`).join("<br>");
+    }
+  }
+  if (btn) {
+    if (below.length) {
+      btn.setAttribute("aria-disabled", "true");
+      btn.style.pointerEvents = "none";
+      btn.style.opacity = ".55";
+    } else {
+      btn.removeAttribute("aria-disabled");
+      btn.style.pointerEvents = "";
+      btn.style.opacity = "";
+    }
+  }
+  return below;
+}
+
 function getTierPrice(item) {
   const qty = Number(item.quantity) || 1;
 
@@ -234,6 +292,16 @@ function getTierPrice(item) {
   const tier2 = cleanPrice(item.price2);
   const tier3 = cleanPrice(item.price3);
   const base = cleanPrice(item.price);
+
+  // Dozen-sold products charge one flat rate at every quantity. The
+  // case-quantity thresholds below must not apply to them: a customer
+  // ordering 50 dozen would otherwise cross the "30+ cases" line and be
+  // charged a volume price that no longer exists. The reseed writes the
+  // same figure into all three tier fields, so this is belt and braces --
+  // but the two must never disagree.
+  if (isSoldByDozen(item)) {
+    return tier1 || base || 0;
+  }
 
   if (qty >= 30) {
     return tier3 || tier2 || tier1 || base || 0;
@@ -379,6 +447,8 @@ function renderSingleCard(product) {
             data-price1="${cleanPrice(product.price1)}"
             data-price2="${cleanPrice(product.price2)}"
             data-price3="${cleanPrice(product.price3)}"
+            data-unit="${product.priceBy || ''}"
+            data-moq="${productMoq(product)}"
             data-image="${product.image}"
           >
             Add to Order
@@ -486,6 +556,8 @@ function renderVariantCard(variants) {
             data-price1="${cleanPrice(v.price1)}"
             data-price2="${cleanPrice(v.price2)}"
             data-price3="${cleanPrice(v.price3)}"
+            data-unit="${v.priceBy || ''}"
+            data-moq="${productMoq(v)}"
             data-image="${v.image}"
           >
             Add to Order
@@ -917,16 +989,35 @@ function populateProductPage(product) {
     }
   }
 
-  setText("tier1Price", product.price1 ? `$${cleanPrice(product.price1).toFixed(2)}` : "$--.--");
-  setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
-  setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
-
   const t1 = cleanPrice(product.price1), t2 = cleanPrice(product.price2), t3 = cleanPrice(product.price3);
   const tierCardsEl = document.querySelector(".pricing-tier-cards");
-  if (tierCardsEl) {
-    const allSame = t1 && t2 && t3 && t1 === t2 && t2 === t3;
-    const noPrices = !t1 && !t2 && !t3;
-    tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
+
+  if (isSoldByDozen(product)) {
+    // Sold by the dozen: one flat rate, no volume discount. The three
+    // cards show order sizes stepping up from the minimum, not price
+    // breaks -- so they deliberately avoid "VOLUME"/"BEST VALUE" wording,
+    // which would promise a saving that does not exist.
+    const moq  = productMoq(product);
+    const rate = t1 || cleanPrice(product.price) || 0;
+    [1, 2, 3].forEach(step => {
+      const qty = moq * step;
+      setText(`tier${step}Price`, rate ? `$${(rate * qty).toFixed(2)}` : "$--.--");
+      setText(`tier${step}Label`, `${qty} Dozen`);
+      setText(`tier${step}Sub`, rate ? `$${rate.toFixed(2)} per dozen` : "");
+      setText(`tier${step}Badge`, step === 1 ? "MINIMUM ORDER" : `${step}× MINIMUM`);
+    });
+    document.getElementById("tier3Badge")?.classList.remove("best-value");
+    if (tierCardsEl) tierCardsEl.style.display = rate ? "" : "none";
+  } else {
+    setText("tier1Price", product.price1 ? `$${cleanPrice(product.price1).toFixed(2)}` : "$--.--");
+    setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
+    setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
+
+    if (tierCardsEl) {
+      const allSame = t1 && t2 && t3 && t1 === t2 && t2 === t3;
+      const noPrices = !t1 && !t2 && !t3;
+      tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
+    }
   }
 
   const altText = product.size ? `${product.name} – ${product.size}` : product.name;
@@ -953,6 +1044,27 @@ function populateProductPage(product) {
     addBtn.dataset.price1      = cleanPrice(product.price1);
     addBtn.dataset.price2      = cleanPrice(product.price2);
     addBtn.dataset.price3      = cleanPrice(product.price3);
+    // Carried through so the quantity control and the cart can enforce the
+    // minimum, and so getTierPrice() knows not to apply case volume tiers.
+    addBtn.dataset.unit        = product.priceBy || "";
+    addBtn.dataset.moq         = productMoq(product);
+  }
+
+  // Dozen-sold products cannot be bought below their minimum, so the
+  // quantity box starts there and steps by it rather than by 1.
+  const qtyBox = document.getElementById("qtyValue");
+  if (qtyBox) {
+    const moq = isSoldByDozen(product) ? productMoq(product) : 1;
+    qtyBox.min = String(moq);
+    qtyBox.step = String(moq);
+    qtyBox.value = String(moq);
+  }
+  const moqNote = document.getElementById("moqNote");
+  if (moqNote) {
+    const moq = productMoq(product);
+    const show = isSoldByDozen(product) && moq > 1;
+    moqNote.style.display = show ? "" : "none";
+    if (show) moqNote.textContent = `Minimum order: ${moq} dozen`;
   }
 }
 
@@ -1078,8 +1190,14 @@ function setupAddToCartButtons() {
 
       let quantity = 1;
 
+      const itemMoq = Math.max(1, parseInt(button.dataset.moq) || 1);
       if (qtyValue && button.id === "productAddToCart") {
-        quantity = Math.max(1, parseInt(qtyValue.value || qtyValue.textContent) || 1);
+        quantity = Math.max(itemMoq, parseInt(qtyValue.value || qtyValue.textContent) || itemMoq);
+      } else {
+        // Adding straight from a catalog tile skips the quantity box, so
+        // start at the minimum rather than at 1 -- otherwise a dozen-sold
+        // product would land in the cart already below what we can sell.
+        quantity = Math.max(quantity, itemMoq);
       }
 
       const product = {
@@ -1091,6 +1209,10 @@ function setupAddToCartButtons() {
         price2: cleanPrice(button.dataset.price2) || cleanPrice(button.dataset.price1) || cleanPrice(button.dataset.price),
         price3: cleanPrice(button.dataset.price3) || cleanPrice(button.dataset.price2) || cleanPrice(button.dataset.price1) || cleanPrice(button.dataset.price),
         image: button.dataset.image || "",
+        // Stored on the line so the cart can price and validate it without
+        // having to look the product up again.
+        unit: button.dataset.unit || "",
+        moq: itemMoq,
         quantity: quantity
       };
 
@@ -1321,7 +1443,11 @@ function setupProductQuantity() {
     };
   }
 
-  function getQty() { return Math.max(1, parseInt(qtyValue.value) || 1); }
+  // Step size is the minimum order: a product that starts at 50 dozen
+  // should move 50 at a time, not 1, so every reachable quantity is one
+  // the customer can actually buy.
+  const stepSize = () => Math.max(1, parseInt(addBtn.dataset.moq) || 1);
+  function getQty() { return Math.max(stepSize(), parseInt(qtyValue.value) || stepSize()); }
 
   function updateProductPagePrice() {
     const qty = getQty();
@@ -1330,19 +1456,25 @@ function setupProductQuantity() {
       price: addBtn.dataset.price,
       price1: addBtn.dataset.price1,
       price2: addBtn.dataset.price2,
-      price3: addBtn.dataset.price3
+      price3: addBtn.dataset.price3,
+      unit:   addBtn.dataset.unit,
+      moq:    addBtn.dataset.moq,
     };
+    // Stays a per-unit rate: the figure is labelled "Per Case" / "Per
+    // Dozen" beneath it, so multiplying by quantity here would contradict
+    // its own caption.
     productPriceEl.textContent = `$${getTierPrice(item).toFixed(2)}`;
   }
 
   plusQty.onclick = () => {
-    qtyValue.value = getQty() + 1;
+    qtyValue.value = getQty() + stepSize();
     updateProductPagePrice();
   };
 
   minusQty.onclick = () => {
+    const step = stepSize();
     const q = getQty();
-    if (q > 1) { qtyValue.value = q - 1; updateProductPagePrice(); }
+    if (q - step >= step) { qtyValue.value = q - step; updateProductPagePrice(); }
   };
 
   qtyValue.addEventListener("input", () => {
@@ -1449,6 +1581,8 @@ function loadCartPage() {
 
   const summaryLabel = document.querySelector(".summary-row span");
   if (summaryLabel) summaryLabel.textContent = `Subtotal (${totalItems} items)`;
+
+  enforceCartMinimums(cart);
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
   estimatedTotalEl.textContent = `$${subtotal.toFixed(2)}`;
@@ -2076,6 +2210,8 @@ function showFeaturedProducts() {
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
           data-price3="${cleanPrice(product.price3)}"
+          data-unit="${product.priceBy || ''}"
+          data-moq="${productMoq(product)}"
           data-image="${product.image}"
         >
           <img src="assets/img/Cart.png" alt="">
@@ -2205,20 +2341,15 @@ function loadPaymentSummary() {
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // Load saved freight quote
-  let shippingCost = 0;
-  try {
-    const savedQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || 'null');
-    const shippingCostEl = document.getElementById('payment-shipping-cost');
-    const shippingLabelEl = document.getElementById('payment-shipping-label');
-    if (savedQuote && shippingCostEl) {
-      shippingCost = parseFloat(savedQuote.total_charge || savedQuote.price || 0);
-      const carrier = savedQuote.carrier_name || savedQuote.carrier || 'Freight';
-      const transit = savedQuote.transit_days ? ` – ${savedQuote.transit_days} days` : '';
-      shippingCostEl.textContent = `$${shippingCost.toFixed(2)}`;
-      if (shippingLabelEl) shippingLabelEl.textContent = `Shipping (${carrier}${transit})`;
-    }
-  } catch(e) {}
+  // Freight is no longer billed to the customer as a separate line: it is
+  // built into product pricing and shows up only in P&L. The freight quote
+  // is still fetched and stored for the admin side (it drives Estes
+  // booking), it just no longer adds to what is charged here.
+  //
+  // Stated explicitly rather than relying on the shipping element having
+  // been removed -- that would leave the total correct only by accident,
+  // and silently re-charge freight if the element ever came back.
+  const shippingCost = 0;
 
   const tax = subtotal * 0.07;
   const taxEl = document.getElementById('payment-tax');
