@@ -38,8 +38,23 @@ function firstMatch(html, re) {
   const m = html.match(re);
   return m ? m[1].trim() : '';
 }
+// Length checks must run on what a searcher sees, not the source bytes.
+// "&" is written &amp; in HTML -- 5 characters instead of 1 -- so measuring
+// raw markup over-counts every ampersand by 4 and reports titles as
+// truncated when they display fine.
+function decodeEntities(s) {
+  return s
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#0?39;|&apos;/g, "'")
+    .replace(/&mdash;/g, '—')
+    .replace(/&ndash;/g, '–')
+    .replace(/&nbsp;/g, ' ');
+}
 function getTitle(html) {
-  return firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i);
+  return decodeEntities(firstMatch(html, /<title[^>]*>([\s\S]*?)<\/title>/i));
 }
 function getAttrOf(html, tagRe, attr) {
   const tag = firstMatch(html, tagRe);
@@ -48,7 +63,7 @@ function getAttrOf(html, tagRe, attr) {
   return m ? m[1].trim() : '';
 }
 function getMeta(html, name) {
-  return getAttrOf(html, new RegExp('(<meta[^>]*name\\s*=\\s*["\']' + name + '["\'][^>]*>)', 'i'), 'content');
+  return decodeEntities(getAttrOf(html, new RegExp('(<meta[^>]*name\\s*=\\s*["\']' + name + '["\'][^>]*>)', 'i'), 'content'));
 }
 function getProperty(html, prop) {
   return getAttrOf(html, new RegExp('(<meta[^>]*property\\s*=\\s*["\']' + prop + '["\'][^>]*>)', 'i'), 'content');
