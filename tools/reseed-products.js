@@ -38,10 +38,10 @@ const CSV_PATH = path.join(__dirname, '..', 'products.csv');
  */
 const CATEGORY_MARKUPS = {
   "Paper Products":                [0.35, 0.28, 0.22],
-  "Towels":                        [0.45, 0.35, 0.28],
-  "Bed Sheets & Linens":           [0.45, 0.35, 0.28],
-  "Pillows & Mattress Protectors": [0.55, 0.45, 0.35],
-  "Furniture":                     [0.40, 0.30, 0.25],
+  "Towels":                        [0.50, 0.40, 0.33],
+  "Bed Sheets & Linens":           [0.50, 0.40, 0.33],
+  "Pillows & Mattress Protectors": [0.60, 0.50, 0.40],
+  "Furniture":                     [0.45, 0.35, 0.30],
   "Trash Liners & Can Liners":     [0.45, 0.35, 0.28],
   "Cleaning Chemicals":            [0.40, 0.32, 0.25],
   "Housekeeping Supplies":         [0.55, 0.45, 0.35],
@@ -88,6 +88,14 @@ function main() {
         // columns are the real per-CASE prices customers are charged.
         sellPrice: num(v[13]),
         p1: num(v[14]), p2: num(v[15]), p3: num(v[16]),
+        // PRICE BY decides the whole selling model, so it is read directly
+        // rather than inferred: DOZEN products are sold by the dozen at a
+        // flat rate with a minimum order, everything else by the case with
+        // volume tiers. MOQ is that minimum (in dozens) and is exact --
+        // verified across all 41 dozen products that MOQ x Selling Price
+        // equals the supplier's own Price 1-5 Cases figure.
+        moq: num(v[17]),
+        priceBy: (v[18] || '').trim().toUpperCase(),
       });
     });
   }
@@ -110,8 +118,26 @@ function main() {
     const markup = sup && CATEGORY_MARKUPS[sup.category];
 
     let price1, price2, price3, cost = null, category = null, unitsPerCase = 1;
+    let moq = 1, soldByDozen = false;
 
-    if (sup && sup.p1 != null) {
+    if (sup && sup.priceBy === 'DOZEN' && sup.sellPrice != null) {
+      // Sold BY THE DOZEN at a single flat rate, with a minimum order.
+      //
+      // These 41 products used to be listed per case with 1-5 / 6-29 / 30+
+      // case tiers. That is gone: the customer now buys dozens directly,
+      // every dozen costs the same, and the only constraint is the minimum
+      // (e.g. wash cloths start at 50 dozen). All three tier columns are
+      // set to the same per-dozen figure so that any code still reading
+      // price_tier2/3 -- the quote composer, the cart -- cannot accidentally
+      // apply a discount that no longer exists.
+      soldByDozen = true;
+      moq = Math.max(1, Math.round(sup.moq || 1));
+      price1 = price2 = price3 = sup.sellPrice;
+      category = sup.category;
+      // sup.cost is already per dozen here, so it is NOT scaled by the case
+      // multiplier the way the per-case branch below does.
+      cost = sup.cost != null ? +sup.cost.toFixed(2) : null;
+    } else if (sup && sup.p1 != null) {
       // Take the per-CASE tier prices straight from the supplier file.
       //
       // These were previously recomputed as cost x (1 + markup), which is
@@ -181,7 +207,17 @@ function main() {
       // case holds more than one sales unit, the price is per case and the
       // label must say so; case_qty still conveys how the case is made up.
       // Title-cased so the site doesn't mix "/ CASE" and "/ Case".
-      unit: unitsPerCase > 1 ? 'Case' : titleCase((v[18] || '').trim() || 'Case'),
+      // Only the dozen branch above may label a product 'Dozen'. A product
+      // with no supplier record has no per-dozen rate and no MOQ, so its
+      // price is still per case -- inheriting "DOZEN" from products.csv
+      // would advertise a case price as a per-dozen one, which is the same
+      // class of error that once listed a 600-count case at $3.03.
+      unit: soldByDozen
+        ? 'Dozen'
+        : (unitsPerCase > 1 ? 'Case' : (titleCase((v[18] || '').trim()) === 'Dozen' ? 'Case' : titleCase((v[18] || '').trim() || 'Case'))),
+      // Minimum order, in whatever `unit` says. 1 for everything sold by
+      // the case or each, so existing behaviour is unchanged for them.
+      moq,
       weight: num(v[19]),
       length: num(v[20]),
       width:  num(v[21]),
@@ -236,6 +272,22 @@ function main() {
     console.log(`\n${excluded.length} excluded (no supplier cost AND no usable price in products.csv -- same as isSellable hides today):`);
     excluded.forEach(n => console.log(`  - [${n.item}] ${n.name.slice(0, 60)}  (${n.reason})`));
   }
+
+  // Sold-by-the-dozen products are the ones whose whole pricing model
+  // changed, so they get their own summary rather than being buried in a
+  // generic sample. Flat rate and minimum order are what to eyeball here.
+  const dozenRows = toUpsert.filter(p => p.unit === 'Dozen');
+  console.log(`\n${dozenRows.length} products sold BY THE DOZEN (flat rate, no volume tiers):`);
+  const byMoq = {};
+  dozenRows.forEach(p => { (byMoq[p.moq] = byMoq[p.moq] || []).push(p); });
+  Object.keys(byMoq).map(Number).sort((a, b) => a - b).forEach(m => {
+    const g = byMoq[m];
+    console.log(`  min ${String(m).padStart(2)} dz  (${String(g.length).padStart(2)} products)  e.g. ${g[0].sku.padEnd(22)} $${g[0].price_tier1}/dz  -> ${m} dz = $${(g[0].price_tier1 * m).toFixed(2)}`);
+  });
+  const badTiers = dozenRows.filter(p => p.price_tier1 !== p.price_tier2 || p.price_tier2 !== p.price_tier3);
+  console.log(badTiers.length
+    ? `  WARNING: ${badTiers.length} dozen products still carry unequal tiers`
+    : '  all dozen products have a single flat rate across all three tier fields');
 
   if (!APPLY) {
     console.log('\n--- sample of cost-derived rows (first 3) ---');

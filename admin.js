@@ -543,10 +543,10 @@ function openAddProduct() {
  */
 const CATEGORY_MARKUPS = {
   "Paper Products":                [0.35, 0.28, 0.22],
-  "Towels":                        [0.45, 0.35, 0.28],
-  "Bed Sheets & Linens":           [0.45, 0.35, 0.28],
-  "Pillows & Mattress Protectors": [0.55, 0.45, 0.35],
-  "Furniture":                     [0.40, 0.30, 0.25],
+  "Towels":                        [0.50, 0.40, 0.33],
+  "Bed Sheets & Linens":           [0.50, 0.40, 0.33],
+  "Pillows & Mattress Protectors": [0.60, 0.50, 0.40],
+  "Furniture":                     [0.45, 0.35, 0.30],
   "Trash Liners & Can Liners":     [0.45, 0.35, 0.28],
   "Cleaning Chemicals":            [0.40, 0.32, 0.25],
   "Housekeeping Supplies":         [0.55, 0.45, 0.35],
