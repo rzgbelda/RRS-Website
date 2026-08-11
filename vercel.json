@@ -1,5 +1,10 @@
 {
   "cleanUrls": true,
+  "functions": {
+    "api/product-meta.js": {
+      "includeFiles": "product.html"
+    }
+  },
   "headers": [
     {
       "source": "/(.*)\\.html",
@@ -298,7 +303,7 @@
     },
     {
       "source": "/product",
-      "destination": "/product.html"
+      "destination": "/api/product-meta"
     },
     {
       "source": "/cart",
