@@ -29,8 +29,8 @@ const CATEGORIES = [
     slug: 'bed-sheets-linens',
     name: 'Bed Sheets & Linens',
     h1: 'Wholesale Hotel Sheets & Bed Linens',
-    title: 'Wholesale Hotel Sheets & Bed Linens | Bulk Case Pricing',
-    description: 'Bulk hotel bed sheets and linens by the case — T-180, T-200, T-250 percale and microfiber in Full XL, Queen and King. Volume pricing with fast North Carolina delivery.',
+    title: 'Wholesale Hotel Sheets & Bed Linens',
+    description: 'Bulk hotel bed sheets and linens by the case — T-180, T-200, T-250 percale and microfiber in Full XL, Queen and King. Volume pricing, fast NC delivery.',
     intro: [
       'Bed linens are the single biggest driver of how a guest rates their stay, and the fastest-wearing item in any housekeeping program. We supply flat sheets, fitted sheets, pillowcases and blankets by the case, in the sizes and thread counts hotels and motels actually reorder.',
       'Choose microfiber for wrinkle resistance and quick turnover, T-180 percale for dependable everyday value, or T-250 sateen where the room rate justifies a softer hand. Every option is built for commercial laundering, not household washing machines.',
@@ -41,8 +41,8 @@ const CATEGORIES = [
     slug: 'towels',
     name: 'Towels',
     h1: 'Wholesale Hotel Towels — Bath, Hand & Wash Cloths',
-    title: 'Wholesale Hotel Towels in Bulk | Bath, Hand & Wash Cloths',
-    description: 'Commercial hotel towels by the case — bath towels, hand towels, wash cloths and bath mats in economy, premium and luxury cotton. Bulk case pricing, fast NC delivery.',
+    title: 'Wholesale Hotel Towels in Bulk',
+    description: 'Commercial hotel towels by the case — bath towels, hand towels, wash cloths and bath mats in economy, premium and luxury cotton. Case pricing, fast NC delivery.',
     intro: [
       'Guest room towels take more abuse than any other linen you buy. We stock three tiers so you can match quality to room rate: economy cotton terry for high-turnover properties, premium 86/14 cotton-poly for a noticeably softer hand, and luxury ringspun cotton where guests expect a spa feel.',
       'Bath towels, hand towels, wash cloths and bath mats are all sold by the case in standard commercial sizes, from 12×12 wash cloths through 27×54 bath sheets.',
@@ -53,7 +53,7 @@ const CATEGORIES = [
     slug: 'paper-products',
     name: 'Paper Products',
     h1: 'Wholesale Bath Tissue, Paper Towels & Facial Tissue',
-    title: 'Wholesale Paper Products for Hotels | Bath Tissue & Towels',
+    title: 'Wholesale Paper Products for Hotels',
     description: 'Bulk bath tissue, kitchen roll towels, multifold towels, hardwound roll towels and facial tissue for hotels and facilities. Case pricing with volume discounts.',
     intro: [
       'Paper is the line item every property underestimates and every guest notices when it runs out. We carry SFI-certified 2-ply bath tissue, kitchen roll towels, multifold and hardwound roll towels for dispensers, and cube and flat box facial tissue.',
@@ -65,7 +65,7 @@ const CATEGORIES = [
     slug: 'cleaning-chemicals',
     name: 'Cleaning Chemicals',
     h1: 'Wholesale Commercial Cleaning Chemicals & Disinfectants',
-    title: 'Commercial Cleaning Chemicals Wholesale | Disinfectants & Bleach',
+    title: 'Commercial Cleaning Chemicals Wholesale',
     description: 'EPA-registered disinfectants, germicidal bleach, glass cleaner, laundry detergent and dish soap in bulk for hotels and commercial facilities. Case pricing.',
     intro: [
       'Housekeeping chemicals are where compliance and cost meet. We supply EPA-registered disinfectants and germicidal cleaners with documented kill claims, alongside the everyday glass cleaner, laundry detergent and pot-and-pan soap that keep a property running.',
@@ -77,7 +77,7 @@ const CATEGORIES = [
     slug: 'pillows-mattress-protectors',
     name: 'Pillows & Mattress Protectors',
     h1: 'Wholesale Hotel Pillows & Mattress Protectors',
-    title: 'Wholesale Hotel Pillows & Mattress Protectors | Bulk Pricing',
+    title: 'Wholesale Pillows & Mattress Protectors',
     description: 'Bulk hotel pillows, waterproof mattress protectors and pillow protectors in Standard, Queen and King. Protect mattress investment with case pricing.',
     intro: [
       'A waterproof protector costs a fraction of the mattress it saves, which makes this the highest-return category most properties under-buy. We stock 100% waterproof mattress protectors and pillow protectors in Full XL, Queen and King, plus poly-fill pillows in Standard, Queen and King.',
@@ -89,8 +89,8 @@ const CATEGORIES = [
     slug: 'trash-liners-can-liners',
     name: 'Trash Liners & Can Liners',
     h1: 'Wholesale Can Liners & Trash Bags in Bulk',
-    title: 'Wholesale Can Liners & Trash Bags | Bulk Case Pricing',
-    description: 'Commercial can liners and trash bags in bulk — low density, high density and recycled resin in 24×33, 38×58, 40×46 and 43×47. Case pricing for hotels and facilities.',
+    title: 'Wholesale Can Liners & Trash Bags',
+    description: 'Commercial can liners and trash bags in bulk — low density, high density and recycled resin in 24×33, 38×58, 40×46 and 43×47. Case pricing for hotels.',
     intro: [
       'Can liners are bought on gauge and size, and the wrong choice on either shows up as torn bags and a housekeeping complaint. We carry low-density liners where puncture resistance matters, high-density for paper and light waste, and heavy-gauge recycled resin for municipal-grade duty.',
       'Standard commercial sizes cover guest room baskets through outdoor containers: 24×33, 38×58, 40×46 and 43×47, in coreless interleaved rolls that dispense cleanly off a housekeeping cart.',
@@ -101,7 +101,7 @@ const CATEGORIES = [
     slug: 'gloves-ppe',
     name: 'Gloves & PPE',
     h1: 'Wholesale Nitrile Gloves & PPE',
-    title: 'Wholesale Nitrile Gloves in Bulk | Powder-Free & Exam Grade',
+    title: 'Wholesale Nitrile Gloves in Bulk',
     description: 'Bulk powder-free nitrile gloves in Small, Medium, Large and XL. Exam grade and standard, food-handling safe. Case pricing with fast NC delivery.',
     intro: [
       'Powder-free blue nitrile gloves in the sizes housekeeping and food service actually go through, sold by the case rather than the box. Suitable for cleaning, food handling and general facility use.',
@@ -113,7 +113,7 @@ const CATEGORIES = [
     slug: 'guest-amenities',
     name: 'Guest Amenities',
     h1: 'Wholesale Hotel Amenities — Soap, Shampoo & Lotion',
-    title: 'Wholesale Hotel Amenities | Bulk Soap, Shampoo & Lotion',
+    title: 'Wholesale Hotel Amenities & Toiletries',
     description: 'Bulk hotel guest amenities — 15g soap bars, 30mL shampoo, conditioner, body wash and lotion. Individually wrapped, case pricing for hotels and motels.',
     intro: [
       'Guest amenities are the least expensive way to signal the quality of a room. We supply a coordinated single-stay set — 15 gram soap bars and 30 mL shampoo, conditioner, body wash and lotion — so every bathroom in the property presents consistently.',
