@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "functions": {
     "api/product-meta.js": {
-      "includeFiles": "product.html"
+      "includeFiles": "product-template.html"
     }
   },
   "headers": [
@@ -26,6 +26,11 @@
     }
   ],
   "redirects": [
+    {
+      "source": "/product-template",
+      "destination": "/catalog",
+      "permanent": false
+    },
     {
       "source": "/profile",
       "destination": "/account",

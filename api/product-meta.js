@@ -31,13 +31,20 @@ const SELECT = 'sku,name,description,overview,image_url,pack_size';
 let _shell = null;
 function loadShell() {
   if (_shell) return _shell;
+  // The shell is product-template.html, NOT product.html, and the name
+  // matters: Vercel only applies a rewrite when the path does not already
+  // match a static file, and cleanUrls maps /product straight onto a
+  // root-level product.html. While that file existed the rewrite below
+  // never fired and every product page kept serving the blank-tag shell.
+  // Renaming it frees /product for this function. Do not rename it back.
+  //
   // Several candidates because the working directory of a serverless
   // function is not guaranteed across build layouts; vercel.json's
   // includeFiles is what actually ships the file.
   const candidates = [
-    path.join(process.cwd(), 'product.html'),
-    path.join(__dirname, '..', 'product.html'),
-    path.join(__dirname, 'product.html'),
+    path.join(process.cwd(), 'product-template.html'),
+    path.join(__dirname, '..', 'product-template.html'),
+    path.join(__dirname, 'product-template.html'),
   ];
   for (const p of candidates) {
     try { _shell = fs.readFileSync(p, 'utf8'); return _shell; } catch { /* try next */ }
