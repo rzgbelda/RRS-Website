@@ -953,6 +953,42 @@ body.admin-body {
 .csv-step-panel { animation: csvFadeIn .2s ease; }
 @keyframes csvFadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
 
+/* ── Order modal: fulfillment action buttons ──────
+   "Add address" is a blocker -- without it the freight quote can't run
+   at all, so it gets a filled, pulsing treatment to draw the eye (this
+   replaced a plain underlined text link that staff missed entirely on
+   a real order). "Switch to pickup/shipping" is a secondary, low-stakes
+   toggle, so it stays quiet and outlined. */
+.a-ship-action-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  font-size: 12.5px; font-weight: 700;
+  cursor: pointer; border: none;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.a-ship-action-btn:hover { transform: translateY(-1px); }
+
+.a-ship-action-primary {
+  background: #ED7226; color: #fff;
+  box-shadow: 0 0 0 0 rgba(237,114,38,.55);
+  animation: shipAddressPulse 1.8s ease-in-out infinite;
+}
+.a-ship-action-primary:hover { box-shadow: 0 4px 12px rgba(237,114,38,.4); }
+@keyframes shipAddressPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(237,114,38,.5); }
+  70%  { box-shadow: 0 0 0 8px rgba(237,114,38,0); }
+  100% { box-shadow: 0 0 0 0 rgba(237,114,38,0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .a-ship-action-primary { animation: none; }
+}
+
+.a-ship-action-outline {
+  background: #fff; color: #475569;
+  border: 1.5px solid #d0d7e0;
+}
+.a-ship-action-outline:hover { border-color: #94a3b8; color: #1e293b; }
+
 /* ── Upload layout (two-column) ─────────────────── */
 .csv-upload-layout {
   display: grid;

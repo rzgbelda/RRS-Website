@@ -1640,11 +1640,22 @@ async function openOrderModal(id) {
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
       <div style="grid-column:span 2">
         <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${isPickup ? "Fulfillment" : "Ship To"}</span><br>
-        ${isPickup
-          ? `🏪 Warehouse pickup <button onclick="setFulfillmentMethod('${o.id}','ship')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">Switch to shipping</button>`
-          : `${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}
-             <button onclick="openEditAddressModal('${o.id}')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">${addr.street ? "Edit" : "Add address"}</button>
-             <button onclick="setFulfillmentMethod('${o.id}','pickup')" style="margin-left:8px;background:none;border:none;color:#94a3b8;font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0">Switch to pickup</button>`}
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
+          <span>${isPickup ? "🏪 Warehouse pickup" : escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</span>
+          ${isPickup
+            ? `<button onclick="setFulfillmentMethod('${o.id}','ship')" class="a-ship-action-btn a-ship-action-outline">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                 Switch to shipping
+               </button>`
+            : `<button onclick="openEditAddressModal('${o.id}')" class="a-ship-action-btn ${addr.street ? "a-ship-action-outline" : "a-ship-action-primary"}">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                 ${addr.street ? "Edit address" : "Add address"}
+               </button>
+               <button onclick="setFulfillmentMethod('${o.id}','pickup')" class="a-ship-action-btn a-ship-action-outline">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
+                 Switch to pickup
+               </button>`}
+        </div>
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
