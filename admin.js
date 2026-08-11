@@ -1446,6 +1446,67 @@ async function updateOrderStatus(orderId, status) {
   showToast("Order status updated.");
 }
 
+// Orders created from an invoice or payment-terms agreement (see
+// api/send-invoice.js / api/send-terms-agreement.js) never run through
+// checkout's shipping form, so shipping_address starts empty. Lets staff
+// fill it in directly from the order modal.
+async function openEditAddressModal(orderId) {
+  const { data: o } = await window.sb.from("orders").select("shipping_address").eq("id", orderId).single();
+  const addr = o?.shipping_address || {};
+  document.getElementById("eaOrderId").value = orderId;
+  document.getElementById("eaStreet").value = addr.street || "";
+  document.getElementById("eaCity").value = addr.city || "";
+  document.getElementById("eaState").value = addr.state || "";
+  document.getElementById("eaZip").value = addr.zip || "";
+  document.getElementById("eaError").style.display = "none";
+  document.getElementById("editAddressModal").style.display = "flex";
+}
+
+async function saveEditedAddress() {
+  const orderId = document.getElementById("eaOrderId").value;
+  const street = document.getElementById("eaStreet").value.trim();
+  const city   = document.getElementById("eaCity").value.trim();
+  const state  = document.getElementById("eaState").value.trim().toUpperCase();
+  const zip    = document.getElementById("eaZip").value.trim();
+
+  const errEl = document.getElementById("eaError");
+  if (!street || !city || !state || !zip) {
+    errEl.textContent = "Street, city, state, and ZIP are all required for a freight quote.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!/^[A-Z]{2}$/.test(state)) {
+    errEl.textContent = "State should be a 2-letter code, e.g. NC.";
+    errEl.style.display = "block";
+    return;
+  }
+  if (!/^\d{5}(-\d{4})?$/.test(zip)) {
+    errEl.textContent = "ZIP should be 5 digits (or 5+4), e.g. 27962.";
+    errEl.style.display = "block";
+    return;
+  }
+  errEl.style.display = "none";
+
+  const btn = document.getElementById("eaSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const { error } = await window.sb.from("orders")
+    .update({ shipping_address: { street, city, state, zip }, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+
+  btn.disabled = false; btn.textContent = "Save Address";
+
+  if (error) {
+    errEl.textContent = "Could not save: " + error.message;
+    errEl.style.display = "block";
+    return;
+  }
+
+  document.getElementById("editAddressModal").style.display = "none";
+  showToast("Ship-to address saved.");
+  openOrderModal(orderId);
+}
+
 async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
@@ -1523,7 +1584,13 @@ async function openOrderModal(id) {
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
-      <div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Ship To</span><br>${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</div>
+      <div style="grid-column:span 2">
+        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Ship To</span><br>
+        ${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}
+        <button onclick="openEditAddressModal('${o.id}')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">
+          ${addr.street ? "Edit" : "Add address"}
+        </button>
+      </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
       ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""}</div>` : ""}
@@ -1932,6 +1999,21 @@ async function getEstesQuote(orderId) {
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
   const addr  = order?.shipping_address || {};
   const items = order?.order_items || [];
+
+  // Invoice- and terms-agreement-created orders never collect an address
+  // (see api/send-invoice.js), so this is a real, expected case -- not
+  // just defensive coding. Catching it here means a clear, actionable
+  // message instead of Estes's raw "City, State, Zip... not valid
+  // together" error, which is what an empty city/state/zip produces.
+  if (!addr.city || !addr.state || !addr.zip) {
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 16px;">
+        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ No shipping address on file</strong>
+        <span style="color:#b91c1c;font-size:12px;">This order has no ship-to address yet -- click "Add address" next to Ship To above, then try the quote again.</span>
+      </div>`;
+    }
+    return;
+  }
 
   // Calculate total shipment weight: sum of (qty × 40 lbs default per case)
   const totalWeight = items.reduce((sum, i) => sum + (i.quantity * (i.weight_lbs || 40)), 0) || 40;

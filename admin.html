@@ -1594,6 +1594,46 @@
   </div>
 </div>
 
+<!-- EDIT SHIP-TO ADDRESS MODAL -->
+<!-- Orders created from an invoice or payment-terms agreement never went
+     through checkout's shipping form, so shipping_address is empty --
+     confirmed live: an Estes rate quote on one of these orders came back
+     "Destination City, State, Zip... are not valid together" because it
+     was sending blanks. This lets staff fill it in before requesting a
+     freight quote. -->
+<div id="editAddressModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal a-modal-sm">
+    <div class="a-modal-header">
+      <h3>Ship-To Address</h3>
+      <button class="a-modal-close" onclick="document.getElementById('editAddressModal').style.display='none'">&#x2715;</button>
+    </div>
+    <div class="a-modal-body">
+      <input type="hidden" id="eaOrderId">
+      <label style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">Street Address</label>
+      <input type="text" id="eaStreet" placeholder="123 Main St" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:14px">
+
+      <label style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">City</label>
+      <input type="text" id="eaCity" placeholder="Plymouth" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:14px">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">State</label>
+          <input type="text" id="eaState" placeholder="NC" maxlength="2" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box;text-transform:uppercase">
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:#374151;margin-bottom:6px">ZIP</label>
+          <input type="text" id="eaZip" placeholder="27962" maxlength="10" style="width:100%;padding:10px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;box-sizing:border-box">
+        </div>
+      </div>
+      <div id="eaError" style="display:none;margin-top:12px;font-size:12.5px;color:#b91c1c;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;padding:8px 12px"></div>
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" onclick="document.getElementById('editAddressModal').style.display='none'" style="width:auto">Cancel</button>
+      <button class="a-btn-primary" id="eaSaveBtn" onclick="saveEditedAddress()" style="width:auto">Save Address</button>
+    </div>
+  </div>
+</div>
+
 <!-- DELETE CONFIRM MODAL -->
 <div id="deleteModal" class="a-modal-overlay" style="display:none">
   <div class="a-modal a-modal-sm">
@@ -1704,7 +1744,7 @@
 
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
-<script src="admin.js?v=30"></script>
+<script src="admin.js?v=31"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {
