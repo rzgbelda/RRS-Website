@@ -65,6 +65,11 @@ function wrapText(str, maxWidth, font, size) {
 }
 
 async function buildQuotePdf(q) {
+  // Defaults to 'Quotation' so /api/quote-pdf's existing behaviour is
+  // completely unchanged; passing docLabel: 'Invoice' reuses the exact
+  // same branded layout for a real order instead of duplicating ~300
+  // lines of PDF layout code for a second document type.
+  const docLabel = q.doc_label || 'Quotation';
   const doc = await PDFDocument.create();
   const reg = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -84,7 +89,7 @@ async function buildQuotePdf(q) {
     p.drawRectangle({ x: 0, y: H - 108, width: W, height: 4, color: ORANGE });
 
     p.drawText('ROOM READY SUPPLY', { x: MARGIN, y: H - 44, size: 15, font: bold, color: ORANGE });
-    p.drawText(continued ? 'Quotation (continued)' : 'Quotation', {
+    p.drawText(continued ? `${docLabel} (continued)` : docLabel, {
       x: MARGIN, y: H - 62, size: 9.5, font: reg, color: WHITE,
     });
     p.drawText('609 Washington St, Plymouth, NC 27962', {
@@ -130,7 +135,10 @@ async function buildQuotePdf(q) {
   ({ page, y } = newPage(false));
 
   // ── Validity pill ────────────────────────────────────────────────
-  const pillText = validUntil ? `VALID UNTIL ${validUntil.toUpperCase()}` : 'VALIDITY ON REQUEST';
+  // Overridable for non-quote documents (e.g. an invoice showing order
+  // status instead of a validity date); defaults preserve exact prior
+  // behaviour for real quotes.
+  const pillText = q.pill_text || (validUntil ? `VALID UNTIL ${validUntil.toUpperCase()}` : 'VALIDITY ON REQUEST');
   const pillW = bold.widthOfTextAtSize(pillText, 8) + 20;
   page.drawRectangle({ x: MARGIN, y: y - 17, width: pillW, height: 19, color: AMBER_BG, borderColor: rgb(0.949, 0.863, 0.682), borderWidth: 1 });
   page.drawText(pillText, { x: MARGIN + 10, y: y - 11, size: 8, font: bold, color: AMBER });
