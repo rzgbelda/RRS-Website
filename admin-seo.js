@@ -297,7 +297,7 @@ function saveSeoApiKey() {
 
 /* ── Google Search Console — real keyword & traffic data ──── */
 const GSC_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/search-console";
-const GSC_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+const GSC_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
 async function loadSearchConsole() {
   const host = document.getElementById("seoGscBody");

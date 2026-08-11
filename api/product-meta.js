@@ -22,7 +22,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 // Public anon key -- already shipped in the client bundle, and RLS limits
 // it to is_active=true rows. Nothing here needs elevated access.
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
 const SELECT = 'sku,name,description,overview,image_url,pack_size';
 

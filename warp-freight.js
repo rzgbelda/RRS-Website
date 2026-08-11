@@ -97,7 +97,7 @@ function buildFreightItems(cartItems) {
 
 const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LTL (Warp)
 const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
-const SUPABASE_ANON_KEY   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+const SUPABASE_ANON_KEY   = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
 // Fetch live parcel rates from Shippo (via Edge Function) for orders < 150 lbs
 // Retries up to MAX_RETRIES times on failure to handle cold-start timeouts

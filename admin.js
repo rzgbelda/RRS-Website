@@ -1731,7 +1731,7 @@ async function resendReceipt(orderId) {
   const { data: o } = await window.sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
   if (!o) { if (btn) { btn.disabled=false; btn.textContent='✉ Send Receipt'; } return; }
 
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  const ANON = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
   try {
     const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
       method: 'POST',
@@ -1779,7 +1779,7 @@ async function downloadReceipt(orderId) {
   const { data: o } = await window.sb.from('orders').select('*, order_items(*)').eq('id', orderId).single();
   if (!o) { if (btn) { btn.disabled = false; btn.innerHTML = '&#8681; Download PDF'; } return; }
 
-  const ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY';
+  const ANON = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
   try {
     const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt?download=1', {
       method: 'POST',
@@ -1942,7 +1942,7 @@ async function _approveAndBookWithWarpUnused(orderId) {
     resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Booking with Warp…</div>`;
   }
 
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+  const SUPABASE_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
   let warpShipmentId = null;
   let warpError = null;
@@ -2041,7 +2041,7 @@ async function _approveAndBookWithWarpUnused(orderId) {
 }
 
 // ── Estes Express Integration ────────────────────────────────────────────────
-const SUPABASE_ANON_KEY_ESTES = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+const SUPABASE_ANON_KEY_ESTES = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 const ESTES_FN_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight";
 
 async function callEstesFunction(action, payload) {
@@ -3273,7 +3273,7 @@ function openQuoteDetail(id) {
 /* ── Quote Composer ─────────────────────────────────────────── */
 
 const SEND_QUOTE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-quote";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY";
+const SUPABASE_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
 // Case-quantity tier pricing is already computed and stored per product
 // (price_tier1/2/3, cost x category markup -- see admin.js's product
