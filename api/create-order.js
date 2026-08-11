@@ -44,6 +44,7 @@ module.exports = async (req, res) => {
     status:             b.status || 'pending',
     order_type:         b.order_type || 'one_time',
     notes:              b.notes || '',
+    fulfillment_method: b.fulfillment_method || 'ship',
   };
 
   if (!orderData.order_number) return res.status(400).json({ error: 'order_number is required' });

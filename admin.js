@@ -1507,6 +1507,33 @@ async function saveEditedAddress() {
   openOrderModal(orderId);
 }
 
+// Switches an order between shipping and warehouse pickup. Reused both
+// from the ship-order "Switch to pickup" link and the pickup-order
+// "Switch to shipping" link. Deliberately does not touch shipping_address
+// or any existing freight_quote/estes_* fields -- toggling back to ship
+// should not silently lose an address someone already entered, and if
+// staff toggle to pickup then back, the old ship data is still there to
+// resume from.
+async function setFulfillmentMethod(orderId, method) {
+  const { error } = await window.sb.from("orders")
+    .update({ fulfillment_method: method, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) { alert("Could not update: " + error.message); return; }
+  showToast(method === "pickup" ? "Order switched to warehouse pickup." : "Order switched to shipping.");
+  openOrderModal(orderId);
+}
+
+async function markPickedUp(orderId) {
+  if (!confirm("Mark this order as picked up by the customer?")) return;
+  const { error } = await window.sb.from("orders")
+    .update({ status: "confirmed", updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) { alert("Could not update: " + error.message); return; }
+  showToast("Order marked picked up.");
+  openOrderModal(orderId);
+  renderOrdersTable();
+}
+
 async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
@@ -1517,10 +1544,37 @@ async function openOrderModal(id) {
   const estesBooked  = !!o.estes_bol_number;
   const freightQuote = o.freight_quote ? (typeof o.freight_quote === "string" ? JSON.parse(o.freight_quote) : o.freight_quote) : null;
   const estesQuoted  = freightQuote?.carrier_name === "Estes Express";
+  // Reported live: an invoice-created order for a customer picking up in
+  // person got routed through the Estes rate flow purely because every
+  // order implicitly assumed shipping. fulfillment_method (default
+  // 'ship') lets staff mark an order as warehouse pickup instead, which
+  // skips freight entirely -- see the pickup branch below.
+  const isPickup     = o.fulfillment_method === "pickup";
 
   // Action bar — only show for actionable statuses
   let actionBar = "";
-  if (isPending) {
+  if (isPending && isPickup) {
+    actionBar = `
+      <div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <span style="font-size:20px;">🏪</span>
+          <div>
+            <strong style="font-size:14px;color:#9a3412;display:block;">Warehouse Pickup — No Freight Needed</strong>
+            <span style="font-size:12px;color:#7c3f12;">Customer will collect this order in person. Mark it picked up once they've taken it.</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="markPickedUp('${o.id}')"
+            style="flex:2;min-width:180px;background:#ED7226;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            ✅ Mark Picked Up
+          </button>
+          <button onclick="cancelOrderFromModal('${o.id}')"
+            style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
+            ✕ Cancel Order
+          </button>
+        </div>
+      </div>`;
+  } else if (isPending) {
     const quotePanel = estesQuoted ? `
       <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Freight Cost</span>
@@ -1571,7 +1625,7 @@ async function openOrderModal(id) {
     actionBar = `
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:20px;">✅</span>
-        <div><strong style="color:#15803d;font-size:13px;display:block;">Order Confirmed</strong></div>
+        <div><strong style="color:#15803d;font-size:13px;display:block;">${isPickup ? "Picked Up" : "Order Confirmed"}</strong></div>
       </div>`;
   }
 
@@ -1585,11 +1639,12 @@ async function openOrderModal(id) {
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
       <div style="grid-column:span 2">
-        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Ship To</span><br>
-        ${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}
-        <button onclick="openEditAddressModal('${o.id}')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">
-          ${addr.street ? "Edit" : "Add address"}
-        </button>
+        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${isPickup ? "Fulfillment" : "Ship To"}</span><br>
+        ${isPickup
+          ? `🏪 Warehouse pickup <button onclick="setFulfillmentMethod('${o.id}','ship')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">Switch to shipping</button>`
+          : `${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}
+             <button onclick="openEditAddressModal('${o.id}')" style="margin-left:8px;background:none;border:none;color:#0b2d52;font-size:12px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0">${addr.street ? "Edit" : "Add address"}</button>
+             <button onclick="setFulfillmentMethod('${o.id}','pickup')" style="margin-left:8px;background:none;border:none;color:#94a3b8;font-size:12px;font-weight:600;text-decoration:underline;cursor:pointer;padding:0">Switch to pickup</button>`}
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
@@ -1999,6 +2054,18 @@ async function getEstesQuote(orderId) {
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
   const addr  = order?.shipping_address || {};
   const items = order?.order_items || [];
+
+  // The action bar only offers this button for ship orders, but guard it
+  // directly too -- a pickup order should never be able to trigger a
+  // freight quote, full stop, regardless of what called this.
+  if (order?.fulfillment_method === "pickup") {
+    if (resultEl) {
+      resultEl.innerHTML = `<div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:10px;padding:12px 16px;">
+        <strong style="color:#9a3412;font-size:13px;">This order is marked as warehouse pickup — no freight quote needed.</strong>
+      </div>`;
+    }
+    return;
+  }
 
   // Invoice- and terms-agreement-created orders never collect an address
   // (see api/send-invoice.js), so this is a real, expected case -- not

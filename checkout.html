@@ -148,6 +148,24 @@
           <label>Email Address: <input type="email" id="checkout-email" placeholder="email@business.com"></label>
         </div>
 
+        <p class="field-title" style="margin-top:18px">How would you like to receive this order?*</p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+          <label style="display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.5px solid #d0d7e0;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;color:#1f2d3d">
+            <input type="radio" name="fulfillmentMethod" id="fulfillShip" checked onchange="onFulfillmentChange()">
+            Ship to my address
+          </label>
+          <label style="display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.5px solid #d0d7e0;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;color:#1f2d3d">
+            <input type="radio" name="fulfillmentMethod" id="fulfillPickup" onchange="onFulfillmentChange()">
+            Pick up at our warehouse
+          </label>
+        </div>
+
+        <div id="pickupNotice" style="display:none;background:#fff7f0;border:1.5px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13.5px;color:#7c3f12;line-height:1.6">
+          <strong>Pickup location:</strong> 609 Washington St., Plymouth, NC 27962<br>
+          No shipping charge for warehouse pickup. We'll email you when your order is ready.
+        </div>
+
+        <div id="shipToBlock">
         <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address"></label>
 
         <div class="address-grid">
@@ -215,8 +233,9 @@
           <input type="checkbox">
           Billing address is the same as delivery address.
         </label>
+        </div><!-- /shipToBlock -->
 
-        <!-- Referral / Sub-Distributor Code -->
+        <!-- Referral / Sub-Distributor Code, always available regardless of fulfillment method -->
         <div class="fq-section" style="margin-top:20px;border-top:1px solid #e8edf3;padding-top:16px;">
           <div class="fq-section-label">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
@@ -238,7 +257,7 @@
         </div>
 
         <!-- Live freight quote panel -->
-        <div class="fq-section">
+        <div class="fq-section" id="freightQuoteSection">
           <div class="fq-section-label">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             Live Freight Rates
@@ -350,23 +369,47 @@
 <script src="warp-freight.js?v=14"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
 <script>
+// Pickup skips the address entirely -- there's nothing to ship to, and
+// the live freight-rate panel (which needs a ZIP to quote against) has
+// nothing to quote. Toggling back to Ship restores both and re-fires the
+// freight quote in case the customer had already filled in an address
+// before switching.
+function onFulfillmentChange() {
+  const isPickup = document.getElementById('fulfillPickup')?.checked;
+  const shipBlock = document.getElementById('shipToBlock');
+  const freightSection = document.getElementById('freightQuoteSection');
+  const pickupNotice = document.getElementById('pickupNotice');
+
+  if (shipBlock) shipBlock.style.display = isPickup ? 'none' : '';
+  if (freightSection) freightSection.style.display = isPickup ? 'none' : '';
+  if (pickupNotice) pickupNotice.style.display = isPickup ? 'block' : 'none';
+
+  // A stale quote from switching Ship -> Pickup -> Ship, or from a
+  // previous visit, must not silently trigger freight booking on
+  // payment.html for an order that's actually a pickup.
+  if (isPickup) localStorage.removeItem('rrs_freight_quote');
+  else if (typeof initFreightQuoting === 'function') initFreightQuoting();
+}
+
 function saveCheckoutAndProceed() {
+  const fulfillmentMethod = document.getElementById('fulfillPickup')?.checked ? 'pickup' : 'ship';
   const data = {
     business: document.getElementById('checkout-business')?.value.trim() || '',
     contact:  document.getElementById('checkout-contact')?.value.trim()  || '',
     phone:    document.getElementById('checkout-phone')?.value.trim()    || '',
     email:    document.getElementById('checkout-email')?.value.trim()    || '',
-    street:   document.getElementById('checkout-street')?.value.trim()   || '',
-    city:     document.getElementById('checkout-city')?.value.trim()     || '',
-    state:    document.getElementById('checkout-state')?.value           || '',
-    zip:      document.getElementById('checkout-zip')?.value.trim()      || '',
+    street:   fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-street')?.value.trim() || ''),
+    city:     fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-city')?.value.trim()   || ''),
+    state:    fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-state')?.value          || ''),
+    zip:      fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-zip')?.value.trim()    || ''),
     notes:    document.getElementById('checkout-notes')?.value.trim()    || '',
     orderType: document.getElementById('reorderOption')?.checked ? 'reorder' : 'one_time',
     referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',
+    fulfillmentMethod,
   };
   if (!data.business) { alert('Please enter your business name.'); return; }
   if (!data.phone)    { alert('Please enter your phone number.'); return; }
-  if (!data.street)   { alert('Please enter your delivery address.'); return; }
+  if (fulfillmentMethod === 'ship' && !data.street) { alert('Please enter your delivery address.'); return; }
   localStorage.setItem('rrs_checkout_data', JSON.stringify(data));
   window.location.href = 'payment.html';
 }

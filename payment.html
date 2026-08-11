@@ -567,6 +567,14 @@
       window._orderTax = tax;
       window._orderTotal = total;
       window._orderItems = cart;
+
+      var checkoutForShipping = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      var shipCostEl = document.getElementById('payment-shipping-cost');
+      var shipLabelEl = document.getElementById('payment-shipping-label');
+      if (checkoutForShipping.fulfillmentMethod === 'pickup' && shipCostEl && shipLabelEl) {
+        shipLabelEl.textContent = 'Pickup';
+        shipCostEl.textContent = 'Free';
+      }
     }
 
     function initPaymentIntent() {
@@ -600,6 +608,7 @@
             items_count: String((window._orderItems || []).length),
             notes: checkout.notes || '',
             order_type: checkout.orderType || 'one_time',
+            fulfillment_method: checkout.fulfillmentMethod || 'ship',
             referral_code: checkout.referral || '',
             tax_amount: String(Math.round((window._orderTax || 0) * 100))
           }
@@ -690,7 +699,7 @@
               customer_email: checkout.email || '',
               business_name: checkout.business || checkout.contact || 'N/A',
               phone: checkout.phone || '',
-              shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+              shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
               subtotal: window._orderSubtotal || window._orderTotal,
               total: window._orderTotal,
               payment_method: method,
@@ -698,6 +707,7 @@
               status: 'pending',
               order_type: checkout.orderType || 'one_time',
               notes: checkout.notes || '',
+              fulfillment_method: checkout.fulfillmentMethod || 'ship',
             }),
           });
           var createBody = await createRes.json().catch(function () { return {}; });
@@ -751,7 +761,7 @@
                 customer_email: checkout.email,
                 business_name:  checkout.business || '',
                 phone:          checkout.phone    || '',
-                shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
                 subtotal:       window._orderSubtotal || window._orderTotal,
                 total:          window._orderTotal,
                 payment_method: method,
@@ -836,7 +846,7 @@
                 customer_email: checkout.email || '',
                 business_name: checkout.business || checkout.contact || 'N/A',
                 phone: checkout.phone || '',
-                shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
                 subtotal: window._orderSubtotal || window._orderTotal,
                 total: window._orderTotal,
                 payment_method: 'card',
@@ -844,6 +854,7 @@
                 status: 'pending',
                 order_type: checkout.orderType || 'one_time',
                 notes: checkout.notes || '',
+                fulfillment_method: checkout.fulfillmentMethod || 'ship',
               }),
             });
             var createBody = await createRes.json().catch(function () { return {}; });
@@ -865,8 +876,11 @@
                 var cardItemsRes = await window.sb.from('order_items').insert(cardItems);
                 if (cardItemsRes.error) console.error('[order_items] save error:', cardItemsRes.error.message);
               }
-              // Auto-purchase shipping label or BOL for confirmed card payments
-              var freightQuote = JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
+              // Auto-purchase shipping label or BOL for confirmed card payments.
+              // Never for pickup -- there is nothing to ship, and booking
+              // freight against a customer who is walking in would be a
+              // real, billable mistake, not just a cosmetic one.
+              var freightQuote = checkout.fulfillmentMethod === 'pickup' ? {} : JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
               var isEstesFreight = (freightQuote.carrier_name || '').toLowerCase().includes('estes');
 
               // Estes LTL freight — auto-create BOL
@@ -955,7 +969,7 @@
                     customer_email: checkout.email,
                     business_name:  checkout.business || '',
                     phone:          checkout.phone    || '',
-                    shipping_address: { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
+                    shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
                     subtotal:       window._orderSubtotal || window._orderTotal,
                     total:          window._orderTotal,
                     payment_method: 'card',

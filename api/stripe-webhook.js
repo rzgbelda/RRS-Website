@@ -98,6 +98,7 @@ module.exports = async (req, res) => {
       total:          totalDollars,
       notes:          meta.notes || null,
       order_type:     meta.order_type || 'one_time',
+      fulfillment_method: meta.fulfillment_method || 'ship',
     };
 
     // Item detail no longer travels through Stripe metadata (it blew past
