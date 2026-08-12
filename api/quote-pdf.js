@@ -164,7 +164,13 @@ async function buildQuotePdf(q) {
   y -= panelH + 20;
 
   // ── Custom message ───────────────────────────────────────────────
-  if (q.quote_message) {
+  // Extracted into a function so it can run either here (default, before
+  // the items table -- unchanged for every quote already using this
+  // generator) or after the total (q.message_at_bottom), which keeps a
+  // long message from pushing the items table and total apart onto
+  // separate pages.
+  function drawMessageBlock() {
+    if (!q.quote_message) return;
     const msgLines = String(q.quote_message).split(/\n+/)
       .flatMap(para => wrapText(para, RIGHT - MARGIN - 26, reg, 9))
       .slice(0, 12);
@@ -179,6 +185,8 @@ async function buildQuotePdf(q) {
     });
     y -= msgH + 20;
   }
+
+  if (!q.message_at_bottom) drawMessageBlock();
 
   // ── Items table ──────────────────────────────────────────────────
   const COL_QTY   = 348;
@@ -235,6 +243,8 @@ async function buildQuotePdf(q) {
   const gt = money(grand);
   page.drawText(gt, { x: rightOf(gt, RIGHT - 12, 15, bold), y: y - 21, size: 15, font: bold, color: ORANGE });
   y -= 34 + 22;
+
+  if (q.message_at_bottom) drawMessageBlock();
 
   // ── Terms ────────────────────────────────────────────────────────
   const terms = [
