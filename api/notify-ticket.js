@@ -90,7 +90,7 @@ module.exports = async (req, res) => {
 
     if (!ticket || !ticket.id) return res.status(400).json({ error: 'ticket.id required' });
 
-    const url = process.env.SUPABASE_URL;
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!url || !key) return res.status(200).json({ sent: false, reason: 'supabase-not-configured' });
 
