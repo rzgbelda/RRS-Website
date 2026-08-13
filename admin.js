@@ -107,7 +107,7 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo"];
+const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo","dev-notes"];
 
 function resetRoleRestrictions() {
   // Restore all hidden nav items (needed when switching accounts without full page reload)
@@ -196,7 +196,7 @@ function switchTab(tab) {
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
-      "quote-requests":"Quote Requests" }[tab] || tab;
+      "quote-requests":"Quote Requests", "dev-notes":"Developer Notes" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -209,6 +209,7 @@ function switchTab(tab) {
   if (tab === "manage-about")     loadAboutSection();
   if (tab === "sub-distributors") renderSubDistributorsTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
+  if (tab === "dev-notes")        renderDevNotesTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -2380,6 +2381,178 @@ function setupSettings(userId) {
     e.preventDefault();
     showToast("Site info saved.");
   });
+}
+
+/* ── Developer Notes ───────────────────────────────────────── */
+
+const DEV_NOTE_TYPE_LABEL   = { bug:"Bug", error:"Error", idea:"Idea" };
+const DEV_NOTE_TYPE_BADGE   = { bug:"a-badge-red", error:"a-badge-yellow", idea:"a-badge-blue" };
+const DEV_NOTE_STATUS_LABEL = { open:"Open", in_progress:"In Progress", resolved:"Resolved" };
+const DEV_NOTE_STATUS_BADGE = { open:"a-badge-red", in_progress:"a-badge-yellow", resolved:"a-badge-green" };
+
+async function renderDevNotesTab(filter) {
+  const panel = document.getElementById("tab-dev-notes");
+  if (!panel) return;
+  panel.innerHTML = `<div style="text-align:center;padding:40px;color:#888">Loading notes…</div>`;
+
+  let query = window.sb.from("dev_notes").select("*").order("created_at", { ascending: false });
+  if (filter && filter !== "all") query = query.eq("status", filter);
+  const { data: notes, error } = await query;
+
+  const activeFilter = filter || "all";
+  const filterBtn = (val, label) => `
+    <button class="a-btn-secondary${activeFilter === val ? " active" : ""}"
+      style="${activeFilter === val ? "background:#0b2d52;color:#fff;" : ""}"
+      onclick="renderDevNotesTab('${val}')">${label}</button>`;
+
+  panel.innerHTML = `
+    <div class="a-page-header" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+      <div>
+        <h1 class="a-page-title">Developer Notes</h1>
+        <p class="a-page-sub">Bugs, errors, or ideas found while testing the site &mdash; admin only.</p>
+      </div>
+      <button class="a-btn-primary" onclick="openAddDevNote()">+ Add Note</button>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
+      ${filterBtn("all", "All")}
+      ${filterBtn("open", "Open")}
+      ${filterBtn("in_progress", "In Progress")}
+      ${filterBtn("resolved", "Resolved")}
+    </div>
+
+    <div id="devNotesList" style="display:flex;flex-direction:column;gap:14px"></div>
+  `;
+
+  const list = document.getElementById("devNotesList");
+  if (error) {
+    list.innerHTML = `<div class="a-empty">Couldn't load notes: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!notes || !notes.length) {
+    list.innerHTML = `<div class="a-empty">No developer notes yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = notes.map(n => `
+    <div class="a-card" style="padding:18px 20px">
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
+        <div style="min-width:0">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
+            <span class="a-badge ${DEV_NOTE_TYPE_BADGE[n.note_type] || "a-badge-yellow"}">${DEV_NOTE_TYPE_LABEL[n.note_type] || n.note_type}</span>
+            <strong style="font-size:15px;color:#0b2d52">${escHtml(n.title)}</strong>
+          </div>
+          <p style="font-size:13px;color:#5b6c7e;white-space:pre-wrap;margin-bottom:8px">${escHtml(n.description)}</p>
+          ${n.screenshot_url ? `<img data-note-id="${n.id}" class="dev-note-thumb" style="max-width:220px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer" alt="Screenshot">` : ""}
+          <div style="font-size:11px;color:#94a3b8;margin-top:8px">${escHtml(n.author_email || "Unknown")} &middot; ${fmt(n.created_at)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex:none">
+          <span class="a-badge ${DEV_NOTE_STATUS_BADGE[n.status] || "a-badge-red"}">${DEV_NOTE_STATUS_LABEL[n.status] || n.status}</span>
+          <select class="a-input" style="font-size:12px;padding:4px 8px" onchange="setDevNoteStatus('${n.id}', this.value)">
+            <option value="open" ${n.status === "open" ? "selected" : ""}>Open</option>
+            <option value="in_progress" ${n.status === "in_progress" ? "selected" : ""}>In Progress</option>
+            <option value="resolved" ${n.status === "resolved" ? "selected" : ""}>Resolved</option>
+          </select>
+          <button class="a-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="deleteDevNote('${n.id}', ${n.screenshot_url ? `'${n.screenshot_url}'` : "null"})">Delete</button>
+        </div>
+      </div>
+    </div>
+  `).join("");
+
+  // Screenshots live in a private bucket -- resolve each thumbnail via a signed URL.
+  notes.filter(n => n.screenshot_url).forEach(async n => {
+    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(n.screenshot_url, 3600);
+    const img = list.querySelector(`img[data-note-id="${n.id}"]`);
+    if (img && data?.signedUrl) {
+      img.src = data.signedUrl;
+      img.onclick = () => window.open(data.signedUrl, "_blank");
+    }
+  });
+}
+
+function openAddDevNote() {
+  document.getElementById("devNoteModalTitle").textContent = "Add Developer Note";
+  document.getElementById("devNoteId").value = "";
+  document.getElementById("devNoteType").value = "bug";
+  document.getElementById("devNoteTitleInput").value = "";
+  document.getElementById("devNoteDescription").value = "";
+  document.getElementById("devNoteScreenshotFile").value = "";
+  document.getElementById("devNoteScreenshotPreviewWrap").style.display = "none";
+  openModal("devNoteModal");
+}
+
+document.getElementById("devNoteScreenshotFile")?.addEventListener("change", e => {
+  const file = e.target.files[0];
+  const wrap = document.getElementById("devNoteScreenshotPreviewWrap");
+  const img  = document.getElementById("devNoteScreenshotPreview");
+  if (!file) { wrap.style.display = "none"; return; }
+  img.src = URL.createObjectURL(file);
+  wrap.style.display = "block";
+});
+
+async function saveDevNote() {
+  const title = document.getElementById("devNoteTitleInput").value.trim();
+  const description = document.getElementById("devNoteDescription").value.trim();
+  if (!title || !description) { showToast("Title and notes are required."); return; }
+
+  const btn = document.getElementById("devNoteSaveBtn");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+
+  try {
+    const file = document.getElementById("devNoteScreenshotFile").files[0];
+    let screenshot_url = null;
+    if (file) {
+      const ext  = file.name.split(".").pop();
+      const path = `notes/${Date.now()}.${ext}`;
+      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      screenshot_url = path;
+    }
+
+    const { data: { user } } = await window.sb.auth.getUser();
+    const payload = {
+      note_type: document.getElementById("devNoteType").value,
+      title,
+      description,
+    };
+    if (screenshot_url) payload.screenshot_url = screenshot_url;
+
+    const id = document.getElementById("devNoteId").value;
+    let error;
+    if (id) {
+      ({ error } = await window.sb.from("dev_notes").update(payload).eq("id", id));
+    } else {
+      payload.author_id = user?.id || null;
+      payload.author_email = user?.email || null;
+      ({ error } = await window.sb.from("dev_notes").insert(payload));
+    }
+    if (error) throw error;
+
+    closeModal("devNoteModal");
+    showToast("Note saved.");
+    renderDevNotesTab();
+  } catch (err) {
+    showToast("Couldn't save note: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save Note";
+  }
+}
+
+async function setDevNoteStatus(id, status) {
+  const { error } = await window.sb.from("dev_notes").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+  if (error) { showToast("Couldn't update status: " + error.message); return; }
+  renderDevNotesTab();
+}
+
+async function deleteDevNote(id, screenshotPath) {
+  if (!confirm("Delete this note? This can't be undone.")) return;
+  if (screenshotPath) await window.sb.storage.from("dev-note-screenshots").remove([screenshotPath]);
+  const { error } = await window.sb.from("dev_notes").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete note: " + error.message); return; }
+  showToast("Note deleted.");
+  renderDevNotesTab();
 }
 
 /* ── Modal helpers ─────────────────────────────────────────── */
