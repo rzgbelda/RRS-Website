@@ -1008,61 +1008,93 @@
 
     <!-- NEW TICKET MODAL -->
     <div id="devTicketModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:560px">
+      <div class="a-modal tkt-modal" style="max-width:580px">
         <div class="a-modal-header">
-          <h3 id="devTicketModalTitle">New Ticket</h3>
+          <div>
+            <h3 id="devTicketModalTitle">New Ticket</h3>
+            <p class="tkt-modal-sub">Report a bug, error, or idea found while testing the site.</p>
+          </div>
           <button class="a-modal-close" onclick="closeModal('devTicketModal')">&times;</button>
         </div>
         <div class="a-modal-body">
           <input type="hidden" id="devTicketId">
+          <input type="hidden" id="devTicketType" value="bug">
+          <input type="hidden" id="devTicketPriority" value="medium">
 
           <div class="cms-form-group">
             <label class="cms-label">Summary</label>
             <input id="devTicketTitle" class="a-input" placeholder="e.g. Checkout total is wrong on pickup orders">
           </div>
 
+          <div class="cms-form-group">
+            <label class="cms-label">Type</label>
+            <div class="tkt-pillgroup" id="devTicketTypePills">
+              <button type="button" class="tkt-pillbtn tkt-t-bug" data-value="bug" onclick="pickTicketType('bug')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="4" y="6" width="16" height="15" rx="3"/><path d="M9 14l2 2 4-4"/></svg>
+                Bug
+              </button>
+              <button type="button" class="tkt-pillbtn tkt-t-error" data-value="error" onclick="pickTicketType('error')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                Error
+              </button>
+              <button type="button" class="tkt-pillbtn tkt-t-idea" data-value="idea" onclick="pickTicketType('idea')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 00-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0012 2z"/></svg>
+                Enhancement
+              </button>
+            </div>
+          </div>
+
+          <div class="cms-form-group">
+            <label class="cms-label">Priority</label>
+            <div class="tkt-pillgroup" id="devTicketPriorityPills">
+              <button type="button" class="tkt-pillbtn tkt-p-critical" data-value="critical" onclick="pickTicketPriority('critical')">
+                <span class="tkt-pilldot"></span> Critical
+              </button>
+              <button type="button" class="tkt-pillbtn tkt-p-medium" data-value="medium" onclick="pickTicketPriority('medium')">
+                <span class="tkt-pilldot"></span> Medium
+              </button>
+              <button type="button" class="tkt-pillbtn tkt-p-enhancement" data-value="enhancement" onclick="pickTicketPriority('enhancement')">
+                <span class="tkt-pilldot"></span> Enhancement
+              </button>
+            </div>
+          </div>
+
           <div class="tkt-form-row">
             <div class="cms-form-group">
-              <label class="cms-label">Type</label>
-              <select id="devTicketType" class="a-input">
-                <option value="bug">Bug</option>
-                <option value="error">Error</option>
-                <option value="idea">Enhancement idea</option>
-              </select>
+              <label class="cms-label">Assign to <span class="cms-label-hint">emailed on save</span></label>
+              <div class="tkt-assignwrap">
+                <span id="devTicketAssigneeAvatar"></span>
+                <select id="devTicketAssignee" class="a-input" onchange="updateTicketAssigneeAvatar()">
+                  <option value="">Unassigned</option>
+                </select>
+              </div>
             </div>
             <div class="cms-form-group">
-              <label class="cms-label">Priority</label>
-              <select id="devTicketPriority" class="a-input">
-                <option value="critical">Critical</option>
-                <option value="medium" selected>Medium</option>
-                <option value="enhancement">Enhancement</option>
-              </select>
+              <label class="cms-label">Page / URL <span class="cms-label-hint">optional</span></label>
+              <input id="devTicketPageUrl" class="a-input" placeholder="/checkout.html">
             </div>
-          </div>
-
-          <div class="cms-form-group">
-            <label class="cms-label">Assign to <span class="cms-label-hint">developer is emailed</span></label>
-            <select id="devTicketAssignee" class="a-input">
-              <option value="">Unassigned</option>
-            </select>
-          </div>
-
-          <div class="cms-form-group">
-            <label class="cms-label">Page / URL <span class="cms-label-hint">optional</span></label>
-            <input id="devTicketPageUrl" class="a-input" placeholder="e.g. /checkout.html">
           </div>
 
           <div class="cms-form-group">
             <label class="cms-label">Description</label>
-            <textarea id="devTicketDescription" class="a-input" rows="5" placeholder="What did you do, what happened, what did you expect?" style="resize:vertical;"></textarea>
+            <textarea id="devTicketDescription" class="a-input" rows="4" placeholder="What did you do, what happened, what did you expect?" style="resize:vertical;"></textarea>
           </div>
 
           <div class="cms-form-group" style="margin-bottom:0">
             <label class="cms-label">Screenshot <span class="cms-label-hint">optional</span></label>
-            <input type="file" id="devTicketScreenshotFile" accept="image/*">
-            <div id="devTicketScreenshotPreviewWrap" style="display:none;margin-top:10px">
-              <img id="devTicketScreenshotPreview" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0">
-            </div>
+            <label id="devTicketDropzone" class="tkt-dropzone" for="devTicketScreenshotFile">
+              <input type="file" id="devTicketScreenshotFile" accept="image/*" hidden>
+              <div id="devTicketDropzoneEmpty" class="tkt-dropzone-empty">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                <span><strong>Click to upload</strong> or drag an image here</span>
+              </div>
+              <div id="devTicketScreenshotPreviewWrap" style="display:none">
+                <img id="devTicketScreenshotPreview" alt="Screenshot preview">
+                <button type="button" class="tkt-dropzone-remove" onclick="clearTicketScreenshot(event)" title="Remove">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </div>
+            </label>
           </div>
         </div>
         <div class="a-modal-footer">

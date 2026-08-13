@@ -2710,31 +2710,80 @@ function openNewTicket() {
   document.getElementById("devTicketModalTitle").textContent = "New Ticket";
   document.getElementById("devTicketId").value = "";
   document.getElementById("devTicketTitle").value = "";
-  document.getElementById("devTicketType").value = "bug";
-  document.getElementById("devTicketPriority").value = "medium";
   document.getElementById("devTicketPageUrl").value = "";
   document.getElementById("devTicketDescription").value = "";
   document.getElementById("devTicketScreenshotFile").value = "";
-  document.getElementById("devTicketScreenshotPreviewWrap").style.display = "none";
+  clearTicketScreenshot();
   document.getElementById("devTicketSaveBtn").textContent = "Create Ticket";
+  pickTicketType("bug");
+  pickTicketPriority("medium");
 
   const sel = document.getElementById("devTicketAssignee");
   sel.innerHTML = `<option value="">Unassigned</option>` +
     _tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email || "")}">${escHtml(d.full_name || d.email || "")}${d.role === "developer" ? " (developer)" : ""}</option>`).join("");
   // Non-admins can't reassign work; the field is theirs to read, not change.
   sel.disabled = !tktIsAdmin();
+  updateTicketAssigneeAvatar();
 
   openModal("devTicketModal");
 }
 
-document.getElementById("devTicketScreenshotFile")?.addEventListener("change", e => {
-  const file = e.target.files[0];
-  const wrap = document.getElementById("devTicketScreenshotPreviewWrap");
-  const img  = document.getElementById("devTicketScreenshotPreview");
-  if (!file) { wrap.style.display = "none"; return; }
+function pickTicketType(value) {
+  document.getElementById("devTicketType").value = value;
+  document.querySelectorAll("#devTicketTypePills .tkt-pillbtn").forEach(b => {
+    b.classList.toggle("active", b.dataset.value === value);
+  });
+}
+
+function pickTicketPriority(value) {
+  document.getElementById("devTicketPriority").value = value;
+  document.querySelectorAll("#devTicketPriorityPills .tkt-pillbtn").forEach(b => {
+    b.classList.toggle("active", b.dataset.value === value);
+  });
+}
+
+function updateTicketAssigneeAvatar() {
+  const sel = document.getElementById("devTicketAssignee");
+  const email = sel.selectedOptions[0]?.dataset.email || null;
+  document.getElementById("devTicketAssigneeAvatar").innerHTML = tktAvatar(email, 26);
+}
+
+function clearTicketScreenshot(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  document.getElementById("devTicketScreenshotFile").value = "";
+  document.getElementById("devTicketDropzoneEmpty").style.display = "flex";
+  document.getElementById("devTicketScreenshotPreviewWrap").style.display = "none";
+}
+
+function showTicketScreenshotFile(file) {
+  const wrap  = document.getElementById("devTicketScreenshotPreviewWrap");
+  const empty = document.getElementById("devTicketDropzoneEmpty");
+  const img   = document.getElementById("devTicketScreenshotPreview");
+  if (!file || !file.type?.startsWith("image/")) return;
   img.src = URL.createObjectURL(file);
+  empty.style.display = "none";
   wrap.style.display = "block";
+}
+
+document.getElementById("devTicketScreenshotFile")?.addEventListener("change", e => {
+  showTicketScreenshotFile(e.target.files[0]);
 });
+
+const _tktDropzone = document.getElementById("devTicketDropzone");
+if (_tktDropzone) {
+  ["dragenter", "dragover"].forEach(evt => _tktDropzone.addEventListener(evt, e => {
+    e.preventDefault(); _tktDropzone.classList.add("dragover");
+  }));
+  ["dragleave", "drop"].forEach(evt => _tktDropzone.addEventListener(evt, e => {
+    e.preventDefault(); _tktDropzone.classList.remove("dragover");
+  }));
+  _tktDropzone.addEventListener("drop", e => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    document.getElementById("devTicketScreenshotFile").files = e.dataTransfer.files;
+    showTicketScreenshotFile(file);
+  });
+}
 
 async function saveDevTicket() {
   const title = document.getElementById("devTicketTitle").value.trim();
