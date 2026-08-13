@@ -2,19 +2,9 @@
 -- file bugs / errors / enhancement ideas found while testing the site, assign
 -- them to a developer, and track them through to done.
 --
--- Supersedes the never-deployed dev_notes table from earlier the same day.
--- That table only ever held notes with no priority, assignee, or comments,
--- so it is dropped below -- but only if it exists AND is empty, so this
--- migration is safe to run whether or not the earlier one was ever applied.
-
-do $$
-begin
-  if exists (select 1 from information_schema.tables
-             where table_schema = 'public' and table_name = 'dev_notes')
-     and not exists (select 1 from public.dev_notes limit 1) then
-    drop table public.dev_notes;
-  end if;
-end $$;
+-- Supersedes the never-deployed dev_notes table from earlier the same day --
+-- that table was never actually created (its migration was never run), so
+-- there is nothing to clean up here.
 
 -- ============================================================
 -- ROLES
