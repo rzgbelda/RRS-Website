@@ -36,6 +36,11 @@ const CATEGORIES = [
       'Choose microfiber for wrinkle resistance and quick turnover, T-180 percale for dependable everyday value, or T-250 sateen where the room rate justifies a softer hand. Every option is built for commercial laundering, not household washing machines.',
       'Pricing drops at 6 cases and again at 30. If you are outfitting a full property or standardizing across several, send us your room count and we will quote the whole program.',
     ],
+    faq: [
+      { q: 'What\'s the difference between T-180, T-200, and T-250 sheets?', a: 'The number is thread count. T-180 percale is our everyday value option, T-200 gives a slightly finer weave for a small step up in feel, and T-250 is a sateen-style finish for properties where guests expect a softer, more polished bed. All three are built for commercial laundering, not household machines.' },
+      { q: 'What sizes are available?', a: 'Full XL, Queen, and King in flat sheets, fitted sheets, and matching pillowcases, plus a 100% microfiber option in the same three sizes for faster-drying, wrinkle-resistant turnover.' },
+      { q: 'Is there a minimum order?', a: 'Yes -- each linen has its own minimum shown on the product page, and pricing steps down as your order grows. If you are outfitting a full property, send us your room count and we will quote the whole program at once.' },
+    ],
   },
   {
     slug: 'towels',
@@ -47,6 +52,11 @@ const CATEGORIES = [
       'Guest room towels take more abuse than any other linen you buy. We stock three tiers so you can match quality to room rate: economy cotton terry for high-turnover properties, premium 86/14 cotton-poly for a noticeably softer hand, and luxury ringspun cotton where guests expect a spa feel.',
       'Bath towels, hand towels, wash cloths and bath mats are all sold by the case in standard commercial sizes, from 12×12 wash cloths through 27×54 bath sheets.',
       'Not sure which tier fits your property? Tell us your average daily rate and how often you replace linen, and we will recommend the grade that lasts without overspending.',
+    ],
+    faq: [
+      { q: 'What\'s the difference between economy, premium, and luxury towels?', a: 'Economy is 100% cotton terry built for high-turnover properties. Premium is an 86/14 cotton-poly blend with a noticeably softer hand. Luxury is 100% ringspun cotton with cam-border construction, for properties where guests expect a spa-level feel.' },
+      { q: 'What sizes do you carry?', a: 'Wash cloths, hand towels, bath towels, and bath mats, from 12x12 wash cloths up to 27x54 bath sheets, depending on the tier.' },
+      { q: 'How do I know which tier is right for my property?', a: 'Tell us your average daily rate and how often you replace linen, and we will recommend the grade that holds up without overspending.' },
     ],
   },
   {
@@ -60,6 +70,11 @@ const CATEGORIES = [
       'Everything ships in full commercial case packs sized for a supply closet, not a retail shelf — so your housekeeping team restocks less often and your cost per roll drops.',
       'Bulk pricing starts at 6 cases. Most properties order paper on a standing reorder schedule; ask us about setting one up so you stop placing the same order every month.',
     ],
+    faq: [
+      { q: 'Is your bath tissue certified?', a: 'Yes, our 2-ply bath tissue is SFI-certified, sourced from responsibly managed forests.' },
+      { q: 'What paper towel formats do you offer?', a: 'Kitchen roll towels, multifold towels, and hardwound roll towels for wall dispensers, alongside cube and flat box facial tissue.' },
+      { q: 'Can I set up a standing reorder for paper?', a: 'Yes -- most properties order paper on a recurring schedule so housekeeping never runs low. Ask us about setting one up.' },
+    ],
   },
   {
     slug: 'cleaning-chemicals',
@@ -71,6 +86,11 @@ const CATEGORIES = [
       'Housekeeping chemicals are where compliance and cost meet. We supply EPA-registered disinfectants and germicidal cleaners with documented kill claims, alongside the everyday glass cleaner, laundry detergent and pot-and-pan soap that keep a property running.',
       'Brands your staff already know — Clorox, Lysol, Pine-Sol, Purex, Dawn and Windex — in commercial case packs and concentrates that cost far less per use than retail sizes.',
       'If your property has specific disinfection requirements or a health-department standard to meet, send us the spec and we will confirm which products carry the right registrations before you order.',
+    ],
+    faq: [
+      { q: 'Are your disinfectants EPA-registered?', a: 'Yes, our disinfectants and germicidal cleaners carry EPA registration with documented kill claims, and we can confirm the exact registration number for any product before you order.' },
+      { q: 'What brands do you carry?', a: 'Clorox, Lysol, Pine-Sol, Purex, Dawn, and Windex, in commercial case packs and concentrates.' },
+      { q: 'Can you match a specific health-department requirement?', a: 'Send us your disinfection spec or health-department standard and we will confirm which products meet it before you order.' },
     ],
   },
   {
@@ -84,6 +104,11 @@ const CATEGORIES = [
       'Protectors use a breathable membrane, so they block spills and moisture without the crinkle that generates guest complaints. All are machine washable and rated for commercial laundry cycles.',
       'Replacing protectors across a whole property at once? Volume pricing at 30 cases makes a full-property refresh considerably cheaper than replacing piecemeal.',
     ],
+    faq: [
+      { q: 'Are your mattress protectors actually waterproof?', a: 'Yes, 100% waterproof with a breathable membrane, so they block spills and moisture without the crinkle sound that generates guest complaints. All are machine washable and rated for commercial laundry cycles.' },
+      { q: 'What pillow sizes do you carry?', a: 'Standard, Queen, and King poly-fill pillows, sized to match our protector sizing.' },
+      { q: 'Is there a bulk discount for a full-property refresh?', a: 'Yes, pricing steps down significantly at higher case volumes -- replacing protectors across a whole property at once is considerably cheaper than piecemeal reordering.' },
+    ],
   },
   {
     slug: 'trash-liners-can-liners',
@@ -95,6 +120,11 @@ const CATEGORIES = [
       'Can liners are bought on gauge and size, and the wrong choice on either shows up as torn bags and a housekeeping complaint. We carry low-density liners where puncture resistance matters, high-density for paper and light waste, and heavy-gauge recycled resin for municipal-grade duty.',
       'Standard commercial sizes cover guest room baskets through outdoor containers: 24×33, 38×58, 40×46 and 43×47, in coreless interleaved rolls that dispense cleanly off a housekeeping cart.',
       'Not sure which gauge fits your containers? Tell us the can size and what goes in it, and we will match the liner so you are not paying for thickness you do not need.',
+    ],
+    faq: [
+      { q: 'What gauge liner do I need?', a: 'It depends on what is going in the can. Low-density liners handle puncture-prone waste, high-density suits paper and light waste, and heavy-gauge recycled resin is built for municipal-grade duty. Tell us your can size and typical contents and we will match the right gauge.' },
+      { q: 'What sizes are available?', a: '24x33, 38x58, 40x46, and 43x47, covering guest room baskets through outdoor containers.' },
+      { q: 'Are the liners on a roll or individually packed?', a: 'Coreless interleaved rolls, designed to dispense cleanly off a housekeeping cart one at a time.' },
     ],
   },
   {
@@ -108,6 +138,11 @@ const CATEGORIES = [
       'Exam-grade options meet stringent medical standards with additional chemical and puncture resistance, for properties with healthcare-adjacent requirements or heavier chemical handling.',
       'Glove usage is predictable and constant, which makes it a natural fit for a standing reorder. Ask us about scheduling delivery so your team never opens the last case.',
     ],
+    faq: [
+      { q: 'What sizes do your nitrile gloves come in?', a: 'Small, Medium, Large, and XL, in both our standard powder-free grade and an exam-grade option for properties with additional chemical or puncture-resistance needs.' },
+      { q: 'Are the gloves food-safe?', a: 'Yes, our standard nitrile gloves are safe for food handling as well as general cleaning use.' },
+      { q: 'Can I set up a recurring glove order?', a: 'Yes -- glove usage is predictable, which makes it a natural fit for a standing reorder so your team never opens the last case.' },
+    ],
   },
   {
     slug: 'guest-amenities',
@@ -119,6 +154,11 @@ const CATEGORIES = [
       'Guest amenities are the least expensive way to signal the quality of a room. We supply a coordinated single-stay set — 15 gram soap bars and 30 mL shampoo, conditioner, body wash and lotion — so every bathroom in the property presents consistently.',
       'Individually wrapped and sized for a single stay, which keeps housekeeping restocking simple and amenity cost per occupied room predictable.',
       'Buying the full set together is the cheapest way to standardize a property. Send us your room count and average occupancy and we will work out how many cases a quarter actually costs you.',
+    ],
+    faq: [
+      { q: 'What\'s included in the amenity set?', a: '15 gram soap bars and 30 mL shampoo, conditioner, body wash, and lotion -- individually wrapped and sized for a single guest stay.' },
+      { q: 'Can I order just one item, like soap, instead of the full set?', a: 'Yes, each amenity is sold separately, though most properties order the full coordinated set so every bathroom presents consistently.' },
+      { q: 'How do I estimate how many cases I need per quarter?', a: 'Send us your room count and average occupancy and we will work out the case volume that actually covers a quarter, so you are not over- or under-ordering.' },
     ],
   },
 ];
@@ -175,6 +215,15 @@ function buildPage(cat) {
       { '@type': 'ListItem', position: 3, name: cat.name, item: url },
     ],
   };
+  const faqJsonLd = cat.faq && cat.faq.length ? {
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: cat.faq.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a },
+    })),
+  } : null;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -202,7 +251,10 @@ ${JSON.stringify(jsonLd, null, 2)}
   </script>
   <script type="application/ld+json">
 ${JSON.stringify(breadcrumb, null, 2)}
-  </script>
+  </script>${faqJsonLd ? `
+  <script type="application/ld+json">
+${JSON.stringify(faqJsonLd, null, 2)}
+  </script>` : ''}
   <link rel="stylesheet" href="/style.css" />
   <style>
     .cat-wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
@@ -232,6 +284,11 @@ ${JSON.stringify(breadcrumb, null, 2)}
     .cat-others-list { display:flex; flex-wrap:wrap; gap:10px; }
     .cat-others-list a { border:1.5px solid #e2e8f0; border-radius:30px; padding:9px 18px; font-size:13.5px; font-weight:600; color:#0B1F38; text-decoration:none; }
     .cat-others-list a:hover { border-color:#ED7226; color:#ED7226; }
+    .cat-faq { border-top:1px solid #e8eef5; padding:36px 0 30px; }
+    .cat-faq h2 { font-size:20px; font-weight:800; color:#0B1F38; margin:0 0 18px; }
+    .cat-faq-item { border:1.5px solid #e2e8f0; border-radius:12px; padding:18px 20px; margin-bottom:12px; }
+    .cat-faq-item h3 { font-size:14.5px; font-weight:700; color:#0B1F38; margin:0 0 8px; }
+    .cat-faq-item p { font-size:14px; line-height:1.7; color:#5B6C7E; margin:0; }
     .cat-loading { padding:40px 0; text-align:center; color:#94a3b8; font-size:14px; }
   </style>
 </head>
@@ -266,7 +323,15 @@ ${cat.intro.map(p => `      <p>${esc(p)}</p>`).join('\n')}
       <a href="/#business-pricing">Request Volume Pricing</a>
     </section>
 
-    <section class="cat-others">
+${cat.faq && cat.faq.length ? `    <section class="cat-faq">
+      <h2>Frequently Asked Questions</h2>
+${cat.faq.map(f => `      <div class="cat-faq-item">
+        <h3>${esc(f.q)}</h3>
+        <p>${esc(f.a)}</p>
+      </div>`).join('\n')}
+    </section>
+
+` : ''}    <section class="cat-others">
       <h2>Browse other categories</h2>
       <div class="cat-others-list">
 ${others.map(o => `        <a href="/category/${o.slug}">${esc(o.name)}</a>`).join('\n')}
