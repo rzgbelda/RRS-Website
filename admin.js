@@ -38,18 +38,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { data: profile } = await window.sb.from("profiles").select("role").eq("id", session.user.id).single();
   const role = profile?.role;
 
-  // Allow "admin" full access and "sub_distributor" limited access
-  if (role !== "admin" && role !== "sub_distributor") {
+  // Allow "admin" full access, "sub_distributor" limited access,
+  // and "developer" the ticket board only
+  if (role !== "admin" && role !== "sub_distributor" && role !== "developer") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
   }
 
   window._adminRole = role;
+  window._adminUserId = session.user.id;
+  window._adminUserEmail = session.user.email;
   document.getElementById("adminNameDisplay").textContent = session.user.email;
   applyRoleRestrictions(role);
   showDashboard();
-  switchTab("dashboard");
+  switchTab(landingTabFor(role));
   loadWarpModeBadge();
   updateNotifBadgeFromStorage();
 
@@ -86,16 +89,18 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "admin" && role !== "sub_distributor") {
+  if (role !== "admin" && role !== "sub_distributor" && role !== "developer") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
   }
   window._adminRole = role;
+  window._adminUserId = data.user.id;
+  window._adminUserEmail = data.user.email;
   document.getElementById("adminNameDisplay").textContent = data.user.email;
   applyRoleRestrictions(role);
   showDashboard();
-  switchTab("dashboard");
+  switchTab(landingTabFor(role));
   if (role === "admin") setupSettings(data.user.id);
   bindSdButtons();
 });
@@ -107,11 +112,27 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo","dev-notes"];
+const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo"];
+
+// A developer account is scoped to the ticket board and nothing else -- no
+// products, orders, customers, pricing, or revenue. Allow-list rather than
+// deny-list, so any tab added later is closed to developers by default.
+const DEVELOPER_TABS = ["dev-tickets"];
+
+function isTabAllowed(tab) {
+  if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
+  if (window._adminRole === "admin") return true;
+  return !ADMIN_ONLY_TABS.includes(tab);
+}
+
+function landingTabFor(role) {
+  return role === "developer" ? "dev-tickets" : "dashboard";
+}
 
 function resetRoleRestrictions() {
   // Restore all hidden nav items (needed when switching accounts without full page reload)
   document.querySelectorAll(".admin-only-nav").forEach(el => { el.style.display = ""; });
+  document.querySelectorAll(".a-nav-item, .a-nav-section").forEach(el => { el.style.display = ""; });
   var badge = document.querySelector(".sd-partner-badge");
   if (badge) badge.remove();
 }
@@ -119,27 +140,41 @@ function resetRoleRestrictions() {
 function applyRoleRestrictions(role) {
   resetRoleRestrictions(); // always reset first
   if (role === "admin") return; // full access — nothing to hide
-  if (document.querySelector(".sd-partner-badge")) return; // already applied
 
-  // Hide admin-only nav items and sections
+  if (role === "developer") {
+    // Hide every nav item except the ticket board, and every section
+    // heading that ends up with nothing under it.
+    document.querySelectorAll(".a-nav-item").forEach(el => {
+      if (!DEVELOPER_TABS.includes(el.dataset.tab)) el.style.display = "none";
+    });
+    document.querySelectorAll(".a-nav-section").forEach(el => {
+      let sib = el.nextElementSibling, keep = false;
+      while (sib && sib.classList.contains("a-nav-item")) {
+        if (sib.style.display !== "none") { keep = true; break; }
+        sib = sib.nextElementSibling;
+      }
+      if (!keep) el.style.display = "none";
+    });
+    addRoleBadge("Developer Portal");
+    return;
+  }
+
+  // sub_distributor — hide admin-only nav items and sections
   document.querySelectorAll(".admin-only-nav").forEach(el => {
     el.style.display = "none";
   });
-
-  // Add a role badge below the logo
-  const logoEl = document.querySelector(".a-sidebar-logo");
-  if (logoEl) {
-    const badge = document.createElement("div");
-    badge.className = "sd-partner-badge";
-    badge.style.cssText = "text-align:center;padding:8px 16px 0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(245,130,32,.85);";
-    badge.textContent = "Partner Portal";
-    logoEl.parentNode.insertBefore(badge, logoEl.nextSibling);
-  }
+  addRoleBadge("Partner Portal");
 }
 
-function isTabAllowed(tab) {
-  if (window._adminRole === "admin") return true;
-  return !ADMIN_ONLY_TABS.includes(tab);
+function addRoleBadge(text) {
+  if (document.querySelector(".sd-partner-badge")) return; // already applied
+  const logoEl = document.querySelector(".a-sidebar-logo");
+  if (!logoEl) return;
+  const badge = document.createElement("div");
+  badge.className = "sd-partner-badge";
+  badge.style.cssText = "text-align:center;padding:8px 16px 0;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:rgba(245,130,32,.85);";
+  badge.textContent = text;
+  logoEl.parentNode.insertBefore(badge, logoEl.nextSibling);
 }
 
 function showAccessDeniedOverlay() {
@@ -152,7 +187,11 @@ function showAccessDeniedOverlay() {
     '<div style="width:56px;height:56px;border-radius:14px;background:#fef2f2;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;">' +
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
     '<h3 style="font-size:18px;font-weight:800;color:#0d1f38;margin:0 0 8px;letter-spacing:-.3px;">Access Restricted</h3>' +
-    '<p style="font-size:13px;color:#8a9bb5;margin:0 0 24px;line-height:1.6;">This section is only available to administrators. Your partner account has access to Dashboard, Sub-Distributors, and Reports.</p>' +
+    '<p style="font-size:13px;color:#8a9bb5;margin:0 0 24px;line-height:1.6;">' +
+      (window._adminRole === "developer"
+        ? 'This section is only available to administrators. Your developer account has access to the Developer Tickets board.'
+        : 'This section is only available to administrators. Your partner account has access to Dashboard, Sub-Distributors, and Reports.') +
+    '</p>' +
     '<button onclick="document.getElementById(\'accessDeniedOverlay\').style.display=\'none\'" style="background:linear-gradient(135deg,#f58220,#e0711a);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>' +
     '</div>';
   document.body.appendChild(div);
@@ -196,7 +235,7 @@ function switchTab(tab) {
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
-      "quote-requests":"Quote Requests", "dev-notes":"Developer Notes" }[tab] || tab;
+      "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -209,7 +248,7 @@ function switchTab(tab) {
   if (tab === "manage-about")     loadAboutSection();
   if (tab === "sub-distributors") renderSubDistributorsTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
-  if (tab === "dev-notes")        renderDevNotesTab();
+  if (tab === "dev-tickets")      renderDevTicketsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -2383,176 +2422,648 @@ function setupSettings(userId) {
   });
 }
 
-/* ── Developer Notes ───────────────────────────────────────── */
+/* ── Developer Tickets ─────────────────────────────────────── */
 
-const DEV_NOTE_TYPE_LABEL   = { bug:"Bug", error:"Error", idea:"Idea" };
-const DEV_NOTE_TYPE_BADGE   = { bug:"a-badge-red", error:"a-badge-yellow", idea:"a-badge-blue" };
-const DEV_NOTE_STATUS_LABEL = { open:"Open", in_progress:"In Progress", resolved:"Resolved" };
-const DEV_NOTE_STATUS_BADGE = { open:"a-badge-red", in_progress:"a-badge-yellow", resolved:"a-badge-green" };
+const TKT_STATUS = [
+  { key:"open",         label:"Open" },
+  { key:"in_progress",  label:"In Progress" },
+  { key:"done",         label:"Done" },
+  { key:"not_possible", label:"Not Possible" },
+];
+const TKT_STATUS_LABEL = Object.fromEntries(TKT_STATUS.map(s => [s.key, s.label]));
+const TKT_PRIORITY = {
+  critical:    { label:"Critical",    cls:"tkt-p-critical" },
+  medium:      { label:"Medium",      cls:"tkt-p-medium" },
+  enhancement: { label:"Enhancement", cls:"tkt-p-enhancement" },
+};
+const TKT_TYPE = {
+  bug:   { label:"Bug",         cls:"tkt-t-bug" },
+  error: { label:"Error",       cls:"tkt-t-error" },
+  idea:  { label:"Enhancement", cls:"tkt-t-idea" },
+};
 
-async function renderDevNotesTab(filter) {
-  const panel = document.getElementById("tab-dev-notes");
+const _tkt = {
+  tickets: [],
+  comments: {},          // ticket_id -> count
+  developers: [],
+  view: "board",
+  filters: { priority:"all", type:"all", assignee:"all", q:"" },
+};
+
+function tktIsAdmin()    { return window._adminRole === "admin"; }
+function tktInitials(email) {
+  if (!email) return "?";
+  const name = email.split("@")[0].replace(/[._-]+/g, " ").trim();
+  const parts = name.split(" ").filter(Boolean);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || email[0].toUpperCase();
+}
+function tktAvatar(email, size) {
+  const s = size || 26;
+  if (!email) return `<span class="tkt-avatar tkt-avatar-empty" style="width:${s}px;height:${s}px" title="Unassigned">–</span>`;
+  // Deterministic hue from the address so each person keeps the same colour.
+  let h = 0; for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) % 360;
+  return `<span class="tkt-avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 62% 42%)" title="${escHtml(email)}">${escHtml(tktInitials(email))}</span>`;
+}
+
+async function renderDevTicketsTab() {
+  const panel = document.getElementById("tab-dev-tickets");
   if (!panel) return;
-  panel.innerHTML = `<div style="text-align:center;padding:40px;color:#888">Loading notes…</div>`;
+  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading tickets…</div>`;
 
-  let query = window.sb.from("dev_notes").select("*").order("created_at", { ascending: false });
-  if (filter && filter !== "all") query = query.eq("status", filter);
-  const { data: notes, error } = await query;
+  const [ticketsRes, commentsRes, devsRes] = await Promise.all([
+    window.sb.from("dev_tickets").select("*").order("created_at", { ascending:false }),
+    window.sb.from("dev_ticket_comments").select("ticket_id"),
+    tktIsAdmin()
+      ? window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","admin"])
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  const activeFilter = filter || "all";
-  const filterBtn = (val, label) => `
-    <button class="a-btn-secondary${activeFilter === val ? " active" : ""}"
-      style="${activeFilter === val ? "background:#0b2d52;color:#fff;" : ""}"
-      onclick="renderDevNotesTab('${val}')">${label}</button>`;
+  if (ticketsRes.error) {
+    panel.innerHTML = `<div class="a-empty" style="padding:50px">Couldn't load tickets: ${escHtml(ticketsRes.error.message)}<br><span style="font-size:12px;color:#94a3b8">If this says the table is missing, run the 20260814_dev_tickets.sql migration.</span></div>`;
+    return;
+  }
+
+  _tkt.tickets    = ticketsRes.data || [];
+  _tkt.developers = devsRes.data || [];
+  _tkt.comments   = {};
+  (commentsRes.data || []).forEach(c => { _tkt.comments[c.ticket_id] = (_tkt.comments[c.ticket_id] || 0) + 1; });
 
   panel.innerHTML = `
-    <div class="a-page-header" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div class="tkt-header">
       <div>
-        <h1 class="a-page-title">Developer Notes</h1>
-        <p class="a-page-sub">Bugs, errors, or ideas found while testing the site &mdash; admin only.</p>
+        <h1 class="a-page-title">Developer Tickets</h1>
+        <p class="a-page-sub">${tktIsAdmin()
+          ? "Report bugs, errors, and ideas found while testing — then track them to done."
+          : "Tickets assigned to the development team."}</p>
       </div>
-      <button class="a-btn-primary" onclick="openAddDevNote()">+ Add Note</button>
+      <div class="tkt-header-actions">
+        <div class="tkt-viewtoggle">
+          <button class="tkt-viewbtn${_tkt.view==="board"?" active":""}" onclick="setTicketView('board')" title="Board view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>
+            Board
+          </button>
+          <button class="tkt-viewbtn${_tkt.view==="list"?" active":""}" onclick="setTicketView('list')" title="List view">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            List
+          </button>
+        </div>
+        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Developers</button>` : ""}
+        <button class="a-btn-primary" onclick="openNewTicket()">+ New Ticket</button>
+      </div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap">
-      ${filterBtn("all", "All")}
-      ${filterBtn("open", "Open")}
-      ${filterBtn("in_progress", "In Progress")}
-      ${filterBtn("resolved", "Resolved")}
+    <div class="tkt-statstrip" id="tktStats"></div>
+
+    <div class="tkt-filterbar">
+      <div class="tkt-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="tktSearch" type="text" placeholder="Search tickets…" value="${escHtml(_tkt.filters.q)}" oninput="setTicketFilter('q', this.value)">
+      </div>
+      <select class="tkt-filtersel" onchange="setTicketFilter('priority', this.value)">
+        <option value="all">All priorities</option>
+        ${Object.entries(TKT_PRIORITY).map(([k,v]) => `<option value="${k}"${_tkt.filters.priority===k?" selected":""}>${v.label}</option>`).join("")}
+      </select>
+      <select class="tkt-filtersel" onchange="setTicketFilter('type', this.value)">
+        <option value="all">All types</option>
+        ${Object.entries(TKT_TYPE).map(([k,v]) => `<option value="${k}"${_tkt.filters.type===k?" selected":""}>${v.label}</option>`).join("")}
+      </select>
+      <select class="tkt-filtersel" onchange="setTicketFilter('assignee', this.value)">
+        <option value="all">Everyone</option>
+        <option value="me"${_tkt.filters.assignee==="me"?" selected":""}>Assigned to me</option>
+        <option value="none"${_tkt.filters.assignee==="none"?" selected":""}>Unassigned</option>
+      </select>
     </div>
 
-    <div id="devNotesList" style="display:flex;flex-direction:column;gap:14px"></div>
+    <div id="tktBoardWrap"></div>
   `;
 
-  const list = document.getElementById("devNotesList");
-  if (error) {
-    list.innerHTML = `<div class="a-empty">Couldn't load notes: ${escHtml(error.message)}</div>`;
-    return;
-  }
-  if (!notes || !notes.length) {
-    list.innerHTML = `<div class="a-empty">No developer notes yet.</div>`;
-    return;
-  }
+  renderTicketStats();
+  renderTicketBoard();
+  updateDevTicketNavCount();
+}
 
-  list.innerHTML = notes.map(n => `
-    <div class="a-card" style="padding:18px 20px">
-      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start">
-        <div style="min-width:0">
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-            <span class="a-badge ${DEV_NOTE_TYPE_BADGE[n.note_type] || "a-badge-yellow"}">${DEV_NOTE_TYPE_LABEL[n.note_type] || n.note_type}</span>
-            <strong style="font-size:15px;color:#0b2d52">${escHtml(n.title)}</strong>
-          </div>
-          <p style="font-size:13px;color:#5b6c7e;white-space:pre-wrap;margin-bottom:8px">${escHtml(n.description)}</p>
-          ${n.screenshot_url ? `<img data-note-id="${n.id}" class="dev-note-thumb" style="max-width:220px;border-radius:8px;border:1px solid #e2e8f0;cursor:pointer" alt="Screenshot">` : ""}
-          <div style="font-size:11px;color:#94a3b8;margin-top:8px">${escHtml(n.author_email || "Unknown")} &middot; ${fmt(n.created_at)}</div>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;align-items:flex-end;flex:none">
-          <span class="a-badge ${DEV_NOTE_STATUS_BADGE[n.status] || "a-badge-red"}">${DEV_NOTE_STATUS_LABEL[n.status] || n.status}</span>
-          <select class="a-input" style="font-size:12px;padding:4px 8px" onchange="setDevNoteStatus('${n.id}', this.value)">
-            <option value="open" ${n.status === "open" ? "selected" : ""}>Open</option>
-            <option value="in_progress" ${n.status === "in_progress" ? "selected" : ""}>In Progress</option>
-            <option value="resolved" ${n.status === "resolved" ? "selected" : ""}>Resolved</option>
-          </select>
-          <button class="a-btn-secondary" style="font-size:12px;padding:4px 10px" onclick="deleteDevNote('${n.id}', ${n.screenshot_url ? `'${n.screenshot_url}'` : "null"})">Delete</button>
-        </div>
-      </div>
-    </div>
-  `).join("");
+function renderTicketStats() {
+  const el = document.getElementById("tktStats");
+  if (!el) return;
+  const open     = _tkt.tickets.filter(t => t.status === "open").length;
+  const progress = _tkt.tickets.filter(t => t.status === "in_progress").length;
+  const critical = _tkt.tickets.filter(t => t.priority === "critical" && !["done","not_possible"].includes(t.status)).length;
+  const done     = _tkt.tickets.filter(t => t.status === "done").length;
 
-  // Screenshots live in a private bucket -- resolve each thumbnail via a signed URL.
-  notes.filter(n => n.screenshot_url).forEach(async n => {
-    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(n.screenshot_url, 3600);
-    const img = list.querySelector(`img[data-note-id="${n.id}"]`);
-    if (img && data?.signedUrl) {
-      img.src = data.signedUrl;
-      img.onclick = () => window.open(data.signedUrl, "_blank");
+  el.innerHTML = `
+    <div class="tkt-stat"><span class="tkt-stat-n">${open}</span><span class="tkt-stat-l">Open</span></div>
+    <div class="tkt-stat"><span class="tkt-stat-n">${progress}</span><span class="tkt-stat-l">In Progress</span></div>
+    <div class="tkt-stat tkt-stat-critical"><span class="tkt-stat-n">${critical}</span><span class="tkt-stat-l">Critical unresolved</span></div>
+    <div class="tkt-stat tkt-stat-done"><span class="tkt-stat-n">${done}</span><span class="tkt-stat-l">Done</span></div>
+  `;
+}
+
+function tktVisibleTickets() {
+  const f = _tkt.filters;
+  const q = f.q.trim().toLowerCase();
+  return _tkt.tickets.filter(t => {
+    if (f.priority !== "all" && t.priority !== f.priority) return false;
+    if (f.type !== "all" && t.ticket_type !== f.type) return false;
+    if (f.assignee === "none" && t.assignee_id) return false;
+    if (f.assignee === "me" && t.assignee_id !== window._adminUserId) return false;
+    if (q) {
+      const hay = `${t.ticket_number} ${t.title} ${t.description} ${t.assignee_email || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
     }
+    return true;
   });
 }
 
-function openAddDevNote() {
-  document.getElementById("devNoteModalTitle").textContent = "Add Developer Note";
-  document.getElementById("devNoteId").value = "";
-  document.getElementById("devNoteType").value = "bug";
-  document.getElementById("devNoteTitleInput").value = "";
-  document.getElementById("devNoteDescription").value = "";
-  document.getElementById("devNoteScreenshotFile").value = "";
-  document.getElementById("devNoteScreenshotPreviewWrap").style.display = "none";
-  openModal("devNoteModal");
+function setTicketView(v)         { _tkt.view = v; renderDevTicketsTab(); }
+function setTicketFilter(k, val)  {
+  _tkt.filters[k] = val;
+  renderTicketBoard();
+  if (k === "q") document.getElementById("tktSearch")?.focus();
 }
 
-document.getElementById("devNoteScreenshotFile")?.addEventListener("change", e => {
+function renderTicketBoard() {
+  const wrap = document.getElementById("tktBoardWrap");
+  if (!wrap) return;
+  const visible = tktVisibleTickets();
+
+  if (!_tkt.tickets.length) {
+    wrap.innerHTML = `<div class="tkt-empty">
+      <div class="tkt-empty-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/></svg>
+      </div>
+      <h3>No tickets yet</h3>
+      <p>File the first bug, error, or idea you run into while testing the site.</p>
+      <button class="a-btn-primary" onclick="openNewTicket()">+ New Ticket</button>
+    </div>`;
+    return;
+  }
+
+  if (_tkt.view === "list") { renderTicketList(wrap, visible); return; }
+
+  wrap.innerHTML = `<div class="tkt-board">${TKT_STATUS.map(col => {
+    const items = visible.filter(t => t.status === col.key);
+    return `
+      <section class="tkt-col" data-status="${col.key}"
+        ondragover="tktDragOver(event)" ondragleave="tktDragLeave(event)" ondrop="tktDrop(event,'${col.key}')">
+        <header class="tkt-col-head">
+          <span class="tkt-col-dot tkt-dot-${col.key}"></span>
+          <span class="tkt-col-title">${col.label}</span>
+          <span class="tkt-col-count">${items.length}</span>
+        </header>
+        <div class="tkt-col-body">
+          ${items.map(tktCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
+        </div>
+      </section>`;
+  }).join("")}</div>`;
+}
+
+function tktCard(t) {
+  const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
+  const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
+  const cCount = _tkt.comments[t.id] || 0;
+  return `
+    <article class="tkt-card ${pr.cls}" draggable="true"
+      ondragstart="tktDragStart(event,'${t.id}')" ondragend="tktDragEnd(event)"
+      onclick="openTicketDrawer('${t.id}')">
+      <div class="tkt-card-top">
+        <span class="tkt-num">${escHtml(t.ticket_number || "—")}</span>
+        <span class="tkt-pri ${pr.cls}">${pr.label}</span>
+      </div>
+      <p class="tkt-card-title">${escHtml(t.title)}</p>
+      <div class="tkt-card-foot">
+        <span class="tkt-type ${ty.cls}">${ty.label}</span>
+        <div class="tkt-card-meta">
+          ${t.screenshot_url ? `<span class="tkt-chip" title="Has screenshot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>` : ""}
+          ${cCount ? `<span class="tkt-chip" title="${cCount} comment${cCount>1?"s":""}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${cCount}</span>` : ""}
+          ${tktAvatar(t.assignee_email, 24)}
+        </div>
+      </div>
+    </article>`;
+}
+
+function renderTicketList(wrap, visible) {
+  wrap.innerHTML = `
+    <div class="a-card" style="overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="a-table tkt-table">
+          <thead><tr>
+            <th>Ticket</th><th>Summary</th><th>Type</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Created</th>
+          </tr></thead>
+          <tbody>
+            ${visible.map(t => {
+              const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
+              const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
+              return `<tr class="tkt-row" onclick="openTicketDrawer('${t.id}')">
+                <td><strong class="tkt-num">${escHtml(t.ticket_number || "—")}</strong></td>
+                <td>${escHtml(t.title)}</td>
+                <td><span class="tkt-type ${ty.cls}">${ty.label}</span></td>
+                <td><span class="tkt-pri ${pr.cls}">${pr.label}</span></td>
+                <td><span class="tkt-status-pill tkt-dotbg-${t.status}">${TKT_STATUS_LABEL[t.status] || t.status}</span></td>
+                <td>${tktAvatar(t.assignee_email, 24)}</td>
+                <td style="white-space:nowrap;color:#94a3b8;font-size:12px">${fmt(t.created_at)}</td>
+              </tr>`;
+            }).join("") || `<tr><td colspan="7" class="a-empty">No tickets match these filters.</td></tr>`}
+          </tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
+/* Drag & drop between columns */
+let _tktDragId = null;
+function tktDragStart(e, id) { _tktDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
+function tktDragEnd(e)       { _tktDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
+function tktDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
+function tktDragLeave(e)     { e.currentTarget.classList.remove("over"); }
+async function tktDrop(e, status) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("over");
+  if (!_tktDragId) return;
+  const id = _tktDragId; _tktDragId = null;
+  const t = _tkt.tickets.find(x => x.id === id);
+  if (!t || t.status === status) return;
+  await setTicketStatus(id, status);
+}
+
+async function setTicketStatus(id, status) {
+  const t = _tkt.tickets.find(x => x.id === id);
+  if (!t) return;
+  const prev = t.status;
+  t.status = status;                       // optimistic — board repaints instantly
+  renderTicketStats(); renderTicketBoard();
+
+  const { error } = await window.sb.from("dev_tickets").update({ status }).eq("id", id);
+  if (error) {
+    t.status = prev;
+    renderTicketStats(); renderTicketBoard();
+    showToast("Couldn't update status: " + error.message);
+    return;
+  }
+  updateDevTicketNavCount();
+  if (document.getElementById("tktDrawerOverlay").style.display === "flex") openTicketDrawer(id);
+  notifyTicketEvent(t, "status", `Status changed to “${TKT_STATUS_LABEL[status]}”`);
+}
+
+/* ── New / edit ticket ─────────────────────────────────────── */
+
+function openNewTicket() {
+  document.getElementById("devTicketModalTitle").textContent = "New Ticket";
+  document.getElementById("devTicketId").value = "";
+  document.getElementById("devTicketTitle").value = "";
+  document.getElementById("devTicketType").value = "bug";
+  document.getElementById("devTicketPriority").value = "medium";
+  document.getElementById("devTicketPageUrl").value = "";
+  document.getElementById("devTicketDescription").value = "";
+  document.getElementById("devTicketScreenshotFile").value = "";
+  document.getElementById("devTicketScreenshotPreviewWrap").style.display = "none";
+  document.getElementById("devTicketSaveBtn").textContent = "Create Ticket";
+
+  const sel = document.getElementById("devTicketAssignee");
+  sel.innerHTML = `<option value="">Unassigned</option>` +
+    _tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email || "")}">${escHtml(d.full_name || d.email || "")}${d.role === "developer" ? " (developer)" : ""}</option>`).join("");
+  // Non-admins can't reassign work; the field is theirs to read, not change.
+  sel.disabled = !tktIsAdmin();
+
+  openModal("devTicketModal");
+}
+
+document.getElementById("devTicketScreenshotFile")?.addEventListener("change", e => {
   const file = e.target.files[0];
-  const wrap = document.getElementById("devNoteScreenshotPreviewWrap");
-  const img  = document.getElementById("devNoteScreenshotPreview");
+  const wrap = document.getElementById("devTicketScreenshotPreviewWrap");
+  const img  = document.getElementById("devTicketScreenshotPreview");
   if (!file) { wrap.style.display = "none"; return; }
   img.src = URL.createObjectURL(file);
   wrap.style.display = "block";
 });
 
-async function saveDevNote() {
-  const title = document.getElementById("devNoteTitleInput").value.trim();
-  const description = document.getElementById("devNoteDescription").value.trim();
-  if (!title || !description) { showToast("Title and notes are required."); return; }
+async function saveDevTicket() {
+  const title = document.getElementById("devTicketTitle").value.trim();
+  const description = document.getElementById("devTicketDescription").value.trim();
+  if (!title || !description) { showToast("Summary and description are required."); return; }
 
-  const btn = document.getElementById("devNoteSaveBtn");
-  btn.disabled = true;
-  btn.textContent = "Saving…";
+  const btn = document.getElementById("devTicketSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
 
   try {
-    const file = document.getElementById("devNoteScreenshotFile").files[0];
+    const file = document.getElementById("devTicketScreenshotFile").files[0];
     let screenshot_url = null;
     if (file) {
-      const ext  = file.name.split(".").pop();
-      const path = `notes/${Date.now()}.${ext}`;
-      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, file, { upsert: true });
+      const ext  = (file.name.split(".").pop() || "png").toLowerCase();
+      const path = `tickets/${Date.now()}.${ext}`;
+      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, file, { upsert:true });
       if (upErr) throw upErr;
       screenshot_url = path;
     }
 
     const { data: { user } } = await window.sb.auth.getUser();
+    const sel = document.getElementById("devTicketAssignee");
+    const assignee_id = sel.value || null;
+    const assignee_email = assignee_id ? (sel.selectedOptions[0]?.dataset.email || null) : null;
+
     const payload = {
-      note_type: document.getElementById("devNoteType").value,
       title,
       description,
+      ticket_type: document.getElementById("devTicketType").value,
+      priority:    document.getElementById("devTicketPriority").value,
+      page_url:    document.getElementById("devTicketPageUrl").value.trim() || null,
+      assignee_id, assignee_email,
+      reporter_id: user?.id || null,
+      reporter_email: user?.email || null,
     };
     if (screenshot_url) payload.screenshot_url = screenshot_url;
 
-    const id = document.getElementById("devNoteId").value;
-    let error;
-    if (id) {
-      ({ error } = await window.sb.from("dev_notes").update(payload).eq("id", id));
-    } else {
-      payload.author_id = user?.id || null;
-      payload.author_email = user?.email || null;
-      ({ error } = await window.sb.from("dev_notes").insert(payload));
-    }
+    const { data: created, error } = await window.sb.from("dev_tickets").insert(payload).select().single();
     if (error) throw error;
 
-    closeModal("devNoteModal");
-    showToast("Note saved.");
-    renderDevNotesTab();
+    closeModal("devTicketModal");
+    showToast(`Ticket ${created.ticket_number} created.`);
+    await renderDevTicketsTab();
+    if (created.assignee_email) notifyTicketEvent(created, "assigned", "You have been assigned a new ticket.");
   } catch (err) {
-    showToast("Couldn't save note: " + err.message);
+    showToast("Couldn't save ticket: " + err.message);
   } finally {
-    btn.disabled = false;
-    btn.textContent = "Save Note";
+    btn.disabled = false; btn.textContent = "Create Ticket";
   }
 }
 
-async function setDevNoteStatus(id, status) {
-  const { error } = await window.sb.from("dev_notes").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
-  if (error) { showToast("Couldn't update status: " + error.message); return; }
-  renderDevNotesTab();
+async function deleteDevTicket(id) {
+  const t = _tkt.tickets.find(x => x.id === id);
+  if (!t) return;
+  if (!confirm(`Delete ${t.ticket_number}? This also removes its comments and can't be undone.`)) return;
+  if (t.screenshot_url) await window.sb.storage.from("dev-note-screenshots").remove([t.screenshot_url]);
+  const { error } = await window.sb.from("dev_tickets").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  closeTicketDrawer(true);
+  showToast("Ticket deleted.");
+  renderDevTicketsTab();
 }
 
-async function deleteDevNote(id, screenshotPath) {
-  if (!confirm("Delete this note? This can't be undone.")) return;
-  if (screenshotPath) await window.sb.storage.from("dev-note-screenshots").remove([screenshotPath]);
-  const { error } = await window.sb.from("dev_notes").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete note: " + error.message); return; }
-  showToast("Note deleted.");
-  renderDevNotesTab();
+/* ── Ticket detail drawer ──────────────────────────────────── */
+
+async function openTicketDrawer(id) {
+  const overlay = document.getElementById("tktDrawerOverlay");
+  const body    = document.getElementById("tktDrawerBody");
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  const t = _tkt.tickets.find(x => x.id === id);
+  if (!t) { body.innerHTML = `<div class="a-empty" style="padding:60px">Ticket not found.</div>`; return; }
+
+  const { data: comments } = await window.sb
+    .from("dev_ticket_comments").select("*").eq("ticket_id", id).order("created_at", { ascending:true });
+
+  const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
+  const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
+
+  body.innerHTML = `
+    <header class="tkt-dr-head">
+      <div class="tkt-dr-headtop">
+        <span class="tkt-num tkt-num-lg">${escHtml(t.ticket_number || "—")}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          ${tktIsAdmin() ? `<button class="tkt-iconbtn" title="Delete ticket" onclick="deleteDevTicket('${t.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>` : ""}
+          <button class="tkt-iconbtn" title="Close" onclick="closeTicketDrawer(true)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <h2 class="tkt-dr-title">${escHtml(t.title)}</h2>
+      <div class="tkt-dr-badges">
+        <span class="tkt-type ${ty.cls}">${ty.label}</span>
+        <span class="tkt-pri ${pr.cls}">${pr.label}</span>
+        <span class="tkt-status-pill tkt-dotbg-${t.status}">${TKT_STATUS_LABEL[t.status] || t.status}</span>
+      </div>
+    </header>
+
+    <div class="tkt-dr-controls">
+      <label class="tkt-dr-ctl">
+        <span>Status</span>
+        <select class="a-input" onchange="setTicketStatus('${t.id}', this.value)">
+          ${TKT_STATUS.map(s => `<option value="${s.key}"${t.status===s.key?" selected":""}>${s.label}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Priority</span>
+        <select class="a-input" onchange="setTicketField('${t.id}','priority',this.value)" ${tktIsAdmin()?"":"disabled"}>
+          ${Object.entries(TKT_PRIORITY).map(([k,v]) => `<option value="${k}"${t.priority===k?" selected":""}>${v.label}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Assignee</span>
+        <select class="a-input" onchange="setTicketAssignee('${t.id}', this)" ${tktIsAdmin()?"":"disabled"}>
+          <option value="">Unassigned</option>
+          ${_tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email||"")}"${t.assignee_id===d.id?" selected":""}>${escHtml(d.full_name || d.email || "")}${d.role==="developer"?" (developer)":""}</option>`).join("")}
+          ${(!tktIsAdmin() && t.assignee_email) ? `<option value="${t.assignee_id}" selected>${escHtml(t.assignee_email)}</option>` : ""}
+        </select>
+      </label>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Description</h4>
+      <p class="tkt-dr-desc">${escHtml(t.description)}</p>
+      ${t.page_url ? `<p class="tkt-dr-meta">Page: <code>${escHtml(t.page_url)}</code></p>` : ""}
+      ${t.screenshot_url ? `<div id="tktShot" class="tkt-dr-shot"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
+    </div>
+
+    <div class="tkt-dr-section tkt-dr-facts">
+      <div><span>Reported by</span><strong>${escHtml(t.reporter_email || "—")}</strong></div>
+      <div><span>Created</span><strong>${fmt(t.created_at)}</strong></div>
+      ${t.resolved_at ? `<div><span>Closed</span><strong>${fmt(t.resolved_at)}</strong></div>` : ""}
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Activity <span class="tkt-cnt">${(comments||[]).length}</span></h4>
+      <div class="tkt-thread">
+        ${(comments||[]).map(c => `
+          <div class="tkt-comment">
+            ${tktAvatar(c.author_email, 30)}
+            <div class="tkt-comment-body">
+              <div class="tkt-comment-head">
+                <strong>${escHtml(c.author_email || "Unknown")}</strong>
+                ${c.author_role ? `<span class="tkt-role-tag">${escHtml(c.author_role)}</span>` : ""}
+                <span class="tkt-comment-time">${timeAgo(c.created_at)}</span>
+              </div>
+              <p>${escHtml(c.body)}</p>
+            </div>
+          </div>`).join("") || `<p class="tkt-dr-meta">No comments yet.</p>`}
+      </div>
+
+      <div class="tkt-composer">
+        ${tktAvatar(window._adminUserEmail, 30)}
+        <div style="flex:1">
+          <textarea id="tktCommentBody" class="a-input" rows="3" placeholder="Add a comment…" style="resize:vertical"></textarea>
+          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+            <button class="a-btn-primary" id="tktCommentBtn" onclick="addTicketComment('${t.id}')">Comment</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (t.screenshot_url) {
+    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(t.screenshot_url, 3600);
+    const holder = document.getElementById("tktShot");
+    if (holder && data?.signedUrl) {
+      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Screenshot attached to ${escHtml(t.ticket_number||"ticket")}"></a>`;
+    } else if (holder) {
+      holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
+    }
+  }
+}
+
+function closeTicketDrawer(force) {
+  // Backdrop clicks pass the event; the drawer itself stops propagation.
+  if (force !== true && force && force.target && force.target.id !== "tktDrawerOverlay") return;
+  const overlay = document.getElementById("tktDrawerOverlay");
+  overlay.classList.remove("open");
+  setTimeout(() => { overlay.style.display = "none"; }, 180);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("tktDrawerOverlay")?.style.display === "flex") closeTicketDrawer(true);
+});
+
+async function setTicketField(id, field, value) {
+  const t = _tkt.tickets.find(x => x.id === id);
+  const { error } = await window.sb.from("dev_tickets").update({ [field]: value }).eq("id", id);
+  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (t) t[field] = value;
+  renderTicketStats(); renderTicketBoard();
+  showToast("Ticket updated.");
+}
+
+async function setTicketAssignee(id, sel) {
+  const assignee_id = sel.value || null;
+  const assignee_email = assignee_id ? (sel.selectedOptions[0]?.dataset.email || null) : null;
+  const { error } = await window.sb.from("dev_tickets").update({ assignee_id, assignee_email }).eq("id", id);
+  if (error) { showToast("Couldn't reassign: " + error.message); return; }
+  const t = _tkt.tickets.find(x => x.id === id);
+  if (t) { t.assignee_id = assignee_id; t.assignee_email = assignee_email; }
+  renderTicketBoard();
+  showToast(assignee_email ? "Assigned to " + assignee_email : "Unassigned.");
+  if (t && assignee_email) notifyTicketEvent(t, "assigned", "You have been assigned this ticket.");
+}
+
+async function addTicketComment(ticketId) {
+  const box = document.getElementById("tktCommentBody");
+  const body = box.value.trim();
+  if (!body) return;
+  const btn = document.getElementById("tktCommentBtn");
+  btn.disabled = true; btn.textContent = "Posting…";
+
+  const { data: { user } } = await window.sb.auth.getUser();
+  const { error } = await window.sb.from("dev_ticket_comments").insert({
+    ticket_id: ticketId,
+    author_id: user?.id || null,
+    author_email: user?.email || null,
+    author_role: window._adminRole || null,
+    body,
+  });
+
+  btn.disabled = false; btn.textContent = "Comment";
+  if (error) { showToast("Couldn't post comment: " + error.message); return; }
+
+  _tkt.comments[ticketId] = (_tkt.comments[ticketId] || 0) + 1;
+  box.value = "";
+  await openTicketDrawer(ticketId);
+  renderTicketBoard();
+
+  const t = _tkt.tickets.find(x => x.id === ticketId);
+  if (t) notifyTicketEvent(t, "comment", body.slice(0, 240));
+}
+
+function updateDevTicketNavCount() {
+  const el = document.getElementById("devTicketNavCount");
+  if (!el) return;
+  const openCount = _tkt.tickets.filter(t => !["done","not_possible"].includes(t.status)).length;
+  el.textContent = openCount;
+  el.style.display = openCount ? "inline-flex" : "none";
+}
+
+/* ── Developer accounts ────────────────────────────────────── */
+
+function openDevTeamModal() {
+  const devs = _tkt.developers.filter(d => d.role === "developer");
+  document.getElementById("devTeamList").innerHTML = devs.length
+    ? devs.map(d => `
+        <div class="tkt-teamrow">
+          ${tktAvatar(d.email, 32)}
+          <div style="flex:1;min-width:0">
+            <strong>${escHtml(d.full_name || d.email || "")}</strong>
+            <span>${escHtml(d.email || "")}</span>
+          </div>
+          <span class="tkt-role-tag">developer</span>
+        </div>`).join("")
+    : `<p class="tkt-dr-meta" style="margin:0">No developer accounts yet. Create one below.</p>`;
+
+  document.getElementById("devTeamEmail").value = "";
+  document.getElementById("devTeamName").value = "";
+  document.getElementById("devTeamPassword").value = "";
+  document.getElementById("devTeamError").style.display = "none";
+  openModal("devTeamModal");
+}
+
+async function createDeveloperAccount() {
+  const email = document.getElementById("devTeamEmail").value.trim();
+  const full_name = document.getElementById("devTeamName").value.trim();
+  const password = document.getElementById("devTeamPassword").value;
+  const errEl = document.getElementById("devTeamError");
+  errEl.style.display = "none";
+
+  if (!email || !password) { errEl.textContent = "Email and password are required."; errEl.style.display = "block"; return; }
+  if (password.length < 8)  { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = "block"; return; }
+
+  const btn = document.getElementById("devTeamCreateBtn");
+  btn.disabled = true; btn.textContent = "Creating…";
+
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/create-dev-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + (session?.access_token || ""),
+      },
+      body: JSON.stringify({ email, password, full_name }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+
+    closeModal("devTeamModal");
+    showToast("Developer account created for " + email);
+    renderDevTicketsTab();
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Create Account";
+  }
+}
+
+/* Email ping. Fire-and-forget: a mail failure must never block the board. */
+async function notifyTicketEvent(ticket, event, message) {
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    await fetch("/api/notify-ticket", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        event,
+        message,
+        actor_email: session?.user?.email || null,
+        ticket: {
+          id: ticket.id,
+          ticket_number: ticket.ticket_number,
+          title: ticket.title,
+          priority: ticket.priority,
+          status: ticket.status,
+          assignee_email: ticket.assignee_email,
+          reporter_email: ticket.reporter_email,
+        },
+      }),
+    });
+  } catch (_) { /* email is best-effort */ }
 }
 
 /* ── Modal helpers ─────────────────────────────────────────── */
@@ -3145,12 +3656,28 @@ async function loadNotifications() {
 
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // last 7 days
 
-  const [ordersRes, quotesRes] = await Promise.all([
-    window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
-    window.sb.from("quote_requests").select("id,created_at,status,business_name,contact_name").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+  // A developer account has no read access to orders or quote requests, so
+  // asking for them would only produce RLS errors. Their feed is tickets only.
+  const isDev = window._adminRole === "developer";
+
+  const [ordersRes, quotesRes, ticketsRes] = await Promise.all([
+    isDev ? Promise.resolve({ data: [] })
+          : window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+    isDev ? Promise.resolve({ data: [] })
+          : window.sb.from("quote_requests").select("id,created_at,status,business_name,contact_name").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+    window.sb.from("dev_tickets")
+      .select("id,ticket_number,title,priority,status,assignee_id,assignee_email,updated_at,created_at")
+      .gte("updated_at", since).order("updated_at", { ascending: false }).limit(15),
   ]);
 
   const readIds = getReadIds();
+
+  // Only surface tickets that are actually this person's problem: assigned to
+  // them, or (for admins) unresolved criticals anyone should be aware of.
+  const myTickets = (ticketsRes.data || []).filter(t => {
+    if (t.assignee_id && t.assignee_id === window._adminUserId) return true;
+    return !isDev && t.priority === "critical" && !["done","not_possible"].includes(t.status);
+  });
 
   const items = [
     ...(ordersRes.data || []).map(o => ({
@@ -3169,6 +3696,16 @@ async function loadNotifications() {
       time: q.created_at,
       action: () => { switchTab("quote-requests"); toggleNotifPanel(); },
     })),
+    ...myTickets.map(t => ({
+      // Key on updated_at so a ticket that changes again re-alerts instead of
+      // staying silently "read" from a previous update.
+      id: "ticket-" + t.id + "-" + t.updated_at,
+      type: "ticket",
+      title: `${t.ticket_number} · ${t.title}`,
+      sub: `${(TKT_PRIORITY[t.priority] || {}).label || t.priority} · ${TKT_STATUS_LABEL[t.status] || t.status}`,
+      time: t.updated_at || t.created_at,
+      action: () => { switchTab("dev-tickets"); toggleNotifPanel(); },
+    })),
   ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
   const unread = items.filter(i => !readIds.has(i.id));
@@ -3182,13 +3719,16 @@ async function loadNotifications() {
   const icons = {
     order: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>`,
     quote: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>`,
+    ticket: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 9V7a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 000 4v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2a2 2 0 000-4z"/></svg>`,
   };
+  const iconBg = { order:"#eff6ff", quote:"#fff7f0", ticket:"#f5f3ff" };
+  const iconFg = { order:"#3b82f6", quote:"#e8621a", ticket:"#7c3aed" };
 
   list.innerHTML = items.map(item => {
     const isUnread = !readIds.has(item.id);
     const ago = timeAgo(item.time);
     return `<div onclick="handleNotifClick('${item.id}')" style="padding:12px 18px;border-bottom:1px solid #f8fafc;cursor:pointer;display:flex;gap:12px;align-items:flex-start;background:${isUnread ? "#fffbf7" : "#fff"};transition:.15s" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='${isUnread ? "#fffbf7" : "#fff"}'">
-      <div style="width:30px;height:30px;border-radius:8px;background:${item.type==="order"?"#eff6ff":"#fff7f0"};color:${item.type==="order"?"#3b82f6":"#e8621a"};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
+      <div style="width:30px;height:30px;border-radius:8px;background:${iconBg[item.type]||"#fff7f0"};color:${iconFg[item.type]||"#e8621a"};display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:2px">
         ${icons[item.type]}
       </div>
       <div style="flex:1;min-width:0">
@@ -3210,6 +3750,7 @@ function handleNotifClick(id) {
   notifPanelOpen = false;
   if (id.startsWith("order-")) switchTab("orders");
   else if (id.startsWith("quote-")) switchTab("quote-requests");
+  else if (id.startsWith("ticket-")) switchTab("dev-tickets");
   // refresh badge
   updateNotifBadgeFromStorage();
 }
@@ -3233,13 +3774,21 @@ function updateNotifBadge(count) {
 async function updateNotifBadgeFromStorage() {
   if (!window.sb) return;
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const [o, q] = await Promise.all([
-    window.sb.from("orders").select("id,created_at").gte("created_at", since),
-    window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
+  const isDev = window._adminRole === "developer";
+
+  const [o, q, t] = await Promise.all([
+    isDev ? Promise.resolve({ data: [] }) : window.sb.from("orders").select("id,created_at").gte("created_at", since),
+    isDev ? Promise.resolve({ data: [] }) : window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
+    window.sb.from("dev_tickets").select("id,updated_at,assignee_id").gte("updated_at", since),
   ]);
+
   const readIds = getReadIds();
-  const total = [...(o.data||[]).map(x => "order-"+x.id), ...(q.data||[]).map(x => "quote-"+x.id)]
-    .filter(id => !readIds.has(id)).length;
+  const total = [
+    ...(o.data||[]).map(x => "order-"+x.id),
+    ...(q.data||[]).map(x => "quote-"+x.id),
+    ...(t.data||[]).filter(x => x.assignee_id && x.assignee_id === window._adminUserId)
+                   .map(x => "ticket-"+x.id+"-"+x.updated_at),
+  ].filter(id => !readIds.has(id)).length;
   updateNotifBadge(total);
 }
 

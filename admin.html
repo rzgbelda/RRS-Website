@@ -94,9 +94,10 @@
       </a>
 
       <span class="a-nav-section">System</span>
-      <a href="#" class="a-nav-item admin-only-nav" data-tab="dev-notes">
-        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-        Developer Notes
+      <a href="#" class="a-nav-item" data-tab="dev-tickets">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/><line x1="12" y1="7" x2="12" y2="17" stroke-dasharray="2 3"/></svg>
+        Developer Tickets
+        <span id="devTicketNavCount" class="a-nav-count" style="display:none"></span>
       </a>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="seo">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
@@ -1000,53 +1001,123 @@
       <!-- Populated dynamically by renderReportsTab() in admin.js -->
     </div><!-- /reports tab -->
 
-    <!-- ============ DEVELOPER NOTES TAB ============ -->
-    <div id="tab-dev-notes" class="a-tab" style="display:none">
-      <!-- Populated dynamically by renderDevNotesTab() in admin.js -->
-    </div><!-- /dev-notes tab -->
+    <!-- ============ DEVELOPER TICKETS TAB ============ -->
+    <div id="tab-dev-tickets" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderDevTicketsTab() in admin.js -->
+    </div><!-- /dev-tickets tab -->
 
-    <!-- DEV NOTE MODAL -->
-    <div id="devNoteModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:520px">
+    <!-- NEW TICKET MODAL -->
+    <div id="devTicketModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:560px">
         <div class="a-modal-header">
-          <h3 id="devNoteModalTitle">Add Developer Note</h3>
-          <button class="a-modal-close" onclick="closeModal('devNoteModal')">&times;</button>
+          <h3 id="devTicketModalTitle">New Ticket</h3>
+          <button class="a-modal-close" onclick="closeModal('devTicketModal')">&times;</button>
         </div>
         <div class="a-modal-body">
-          <input type="hidden" id="devNoteId">
+          <input type="hidden" id="devTicketId">
 
           <div class="cms-form-group">
-            <label class="cms-label">Type</label>
-            <select id="devNoteType" class="a-input">
-              <option value="bug">Bug</option>
-              <option value="error">Error</option>
-              <option value="idea">Idea</option>
+            <label class="cms-label">Summary</label>
+            <input id="devTicketTitle" class="a-input" placeholder="e.g. Checkout total is wrong on pickup orders">
+          </div>
+
+          <div class="tkt-form-row">
+            <div class="cms-form-group">
+              <label class="cms-label">Type</label>
+              <select id="devTicketType" class="a-input">
+                <option value="bug">Bug</option>
+                <option value="error">Error</option>
+                <option value="idea">Enhancement idea</option>
+              </select>
+            </div>
+            <div class="cms-form-group">
+              <label class="cms-label">Priority</label>
+              <select id="devTicketPriority" class="a-input">
+                <option value="critical">Critical</option>
+                <option value="medium" selected>Medium</option>
+                <option value="enhancement">Enhancement</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="cms-form-group">
+            <label class="cms-label">Assign to <span class="cms-label-hint">developer is emailed</span></label>
+            <select id="devTicketAssignee" class="a-input">
+              <option value="">Unassigned</option>
             </select>
           </div>
 
           <div class="cms-form-group">
-            <label class="cms-label">Title</label>
-            <input id="devNoteTitleInput" class="a-input" placeholder="Short summary, e.g. Checkout total wrong on pickup orders">
+            <label class="cms-label">Page / URL <span class="cms-label-hint">optional</span></label>
+            <input id="devTicketPageUrl" class="a-input" placeholder="e.g. /checkout.html">
           </div>
 
           <div class="cms-form-group">
-            <label class="cms-label">Notes</label>
-            <textarea id="devNoteDescription" class="a-input" rows="5" placeholder="What did you do, what happened, what did you expect?" style="resize:vertical;"></textarea>
+            <label class="cms-label">Description</label>
+            <textarea id="devTicketDescription" class="a-input" rows="5" placeholder="What did you do, what happened, what did you expect?" style="resize:vertical;"></textarea>
           </div>
 
           <div class="cms-form-group" style="margin-bottom:0">
             <label class="cms-label">Screenshot <span class="cms-label-hint">optional</span></label>
-            <input type="file" id="devNoteScreenshotFile" accept="image/*">
-            <div id="devNoteScreenshotPreviewWrap" style="display:none;margin-top:10px">
-              <img id="devNoteScreenshotPreview" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0">
+            <input type="file" id="devTicketScreenshotFile" accept="image/*">
+            <div id="devTicketScreenshotPreviewWrap" style="display:none;margin-top:10px">
+              <img id="devTicketScreenshotPreview" style="max-width:100%;border-radius:8px;border:1px solid #e2e8f0">
             </div>
           </div>
         </div>
         <div class="a-modal-footer">
-          <button class="a-btn-secondary" onclick="closeModal('devNoteModal')">Cancel</button>
-          <button class="a-btn-primary" id="devNoteSaveBtn" onclick="saveDevNote()">Save Note</button>
+          <button class="a-btn-secondary" onclick="closeModal('devTicketModal')">Cancel</button>
+          <button class="a-btn-primary" id="devTicketSaveBtn" onclick="saveDevTicket()">Create Ticket</button>
         </div>
       </div>
+    </div>
+
+    <!-- DEVELOPER ACCOUNTS MODAL -->
+    <div id="devTeamModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:480px">
+        <div class="a-modal-header">
+          <h3>Developer Accounts</h3>
+          <button class="a-modal-close" onclick="closeModal('devTeamModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <div id="devTeamList" class="tkt-teamlist"></div>
+
+          <div class="tkt-teamdivider"><span>Add a developer</span></div>
+
+          <p class="tkt-dr-meta" style="margin:0 0 14px">
+            They sign in at this same admin address, but only ever see the ticket board &mdash;
+            no products, orders, customers, or revenue.
+          </p>
+
+          <div class="cms-form-group">
+            <label class="cms-label">Name</label>
+            <input id="devTeamName" class="a-input" placeholder="e.g. Alex Rivera">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Email</label>
+            <input id="devTeamEmail" class="a-input" type="email" placeholder="developer@example.com">
+          </div>
+          <div class="cms-form-group" style="margin-bottom:0">
+            <label class="cms-label">Temporary password <span class="cms-label-hint">min 8 characters</span></label>
+            <input id="devTeamPassword" class="a-input" type="text" placeholder="Share this with them privately">
+          </div>
+
+          <p id="devTeamError" class="tkt-formerror" style="display:none"></p>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" onclick="closeModal('devTeamModal')">Close</button>
+          <button class="a-btn-primary" id="devTeamCreateBtn" onclick="createDeveloperAccount()">Create Account</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TICKET DETAIL DRAWER -->
+    <div id="tktDrawerOverlay" class="tkt-drawer-overlay" style="display:none" onclick="closeTicketDrawer(event)">
+      <aside class="tkt-drawer" id="tktDrawer" onclick="event.stopPropagation()">
+        <div id="tktDrawerBody">
+          <div class="a-empty" style="padding:60px">Loading…</div>
+        </div>
+      </aside>
     </div>
 
     <!-- ============ HERO SECTION TAB ============ -->
