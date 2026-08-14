@@ -4275,12 +4275,20 @@ async function openQuoteComposer() {
 
   container.innerHTML = items.map((item, idx) => {
     const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(item.name));
-    const autoPrice = match ? tierPriceForQty(match, item.quantity) : null;
+    // A customer's quote request can ask for less than a product's real
+    // minimum order (e.g. "1" wash cloth on a 25-dozen-case item) -- the
+    // composer used to show that raw "1" as-is, so a quote could go out
+    // priced and quantified below what we'd actually sell. Auto-bump the
+    // starting quantity up to the catalog minimum; staff can still raise
+    // it further, just never see a quote start below what's sellable.
+    const moq = match ? (parseInt(match.moq) || 1) : 1;
+    const effectiveQty = Math.max(parseInt(item.quantity) || 1, moq);
+    const autoPrice = match ? tierPriceForQty(match, effectiveQty) : null;
     return `
       <div style="display:grid;grid-template-columns:1fr 100px 120px 100px;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;align-items:center;background:${idx%2===0?"#fff":"#fafbfc"}">
-        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}${!match ? `<br><small style="color:#b45309;font-weight:600">Not in catalog — enter price manually</small>` : ""}</span>
+        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}${!match ? `<br><small style="color:#b45309;font-weight:600">Not in catalog — enter price manually</small>` : ""}${match && moq > 1 && effectiveQty > (parseInt(item.quantity)||1) ? `<br><small style="color:#0369a1;font-weight:600">Bumped up to the ${moq}-unit minimum order</small>` : ""}</span>
         <div style="text-align:center">
-          <input type="number" min="1" value="${item.quantity}" data-idx="${idx}" class="ql-qty"
+          <input type="number" min="${moq}" step="${moq > 1 ? moq : 1}" value="${effectiveQty}" data-idx="${idx}" data-moq="${moq}" class="ql-qty"
             style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center"
             oninput="onQuoteQtyChange(${idx})">
         </div>
