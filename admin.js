@@ -2854,6 +2854,7 @@ async function openTicketDrawer(id) {
   const body    = document.getElementById("tktDrawerBody");
   overlay.style.display = "flex";
   requestAnimationFrame(() => overlay.classList.add("open"));
+  _tktCommentScreenshotFile = null; // don't carry a pasted image between tickets/reopens
 
   const t = _tkt.tickets.find(x => x.id === id);
   if (!t) { body.innerHTML = `<div class="a-empty" style="padding:60px">Ticket not found.</div>`; return; }
@@ -2934,6 +2935,7 @@ async function openTicketDrawer(id) {
                 <span class="tkt-comment-time">${timeAgo(c.created_at)}</span>
               </div>
               <p>${escHtml(c.body)}</p>
+              ${c.screenshot_url ? `<div class="tkt-comment-shot" id="tktCommentShot-${c.id}"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
             </div>
           </div>`).join("") || `<p class="tkt-dr-meta">No comments yet.</p>`}
       </div>
@@ -2941,8 +2943,19 @@ async function openTicketDrawer(id) {
       <div class="tkt-composer">
         ${tktAvatar(window._adminUserEmail, 30)}
         <div style="flex:1">
-          <textarea id="tktCommentBody" class="a-input" rows="3" placeholder="Add a comment…" style="resize:vertical"></textarea>
-          <div style="display:flex;justify-content:flex-end;margin-top:8px">
+          <textarea id="tktCommentBody" class="a-input" rows="3" placeholder="Add a comment… (you can paste a screenshot here)" style="resize:vertical"></textarea>
+          <div id="tktCommentShotPreviewWrap" style="display:none;margin-top:8px;position:relative">
+            <img id="tktCommentShotPreview" alt="Pasted screenshot" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #e2e8f0;display:block">
+            <button type="button" class="tkt-dropzone-remove" onclick="clearTicketCommentScreenshot()" title="Remove" style="position:absolute;top:-8px;right:-8px">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+            <label class="tkt-comment-attach" title="Attach a screenshot">
+              <input type="file" id="tktCommentShotFile" accept="image/*" hidden onchange="showTicketCommentScreenshot(this.files[0])">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+              Attach screenshot
+            </label>
             <button class="a-btn-primary" id="tktCommentBtn" onclick="addTicketComment('${t.id}')">Comment</button>
           </div>
         </div>
@@ -2959,6 +2972,42 @@ async function openTicketDrawer(id) {
       holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
     }
   }
+
+  (comments || []).filter(c => c.screenshot_url).forEach(async c => {
+    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(c.screenshot_url, 3600);
+    const holder = document.getElementById(`tktCommentShot-${c.id}`);
+    if (holder && data?.signedUrl) {
+      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Screenshot attached to comment"></a>`;
+    } else if (holder) {
+      holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
+    }
+  });
+
+  // Paste-to-attach: Ctrl+V an image straight into the comment box.
+  const commentBox = document.getElementById("tktCommentBody");
+  if (commentBox) {
+    commentBox.onpaste = e => {
+      const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"));
+      if (!item) return;
+      e.preventDefault();
+      showTicketCommentScreenshot(item.getAsFile());
+    };
+  }
+}
+
+let _tktCommentScreenshotFile = null;
+function showTicketCommentScreenshot(file) {
+  if (!file || !file.type?.startsWith("image/")) return;
+  _tktCommentScreenshotFile = file;
+  const wrap = document.getElementById("tktCommentShotPreviewWrap");
+  const img  = document.getElementById("tktCommentShotPreview");
+  img.src = URL.createObjectURL(file);
+  wrap.style.display = "block";
+}
+function clearTicketCommentScreenshot() {
+  _tktCommentScreenshotFile = null;
+  document.getElementById("tktCommentShotFile").value = "";
+  document.getElementById("tktCommentShotPreviewWrap").style.display = "none";
 }
 
 function closeTicketDrawer(force) {
@@ -2996,25 +3045,45 @@ async function setTicketAssignee(id, sel) {
 
 async function addTicketComment(ticketId) {
   const box = document.getElementById("tktCommentBody");
-  const body = box.value.trim();
-  if (!body) return;
+  let body = box.value.trim();
+  if (!body && !_tktCommentScreenshotFile) return;
+  if (!body) body = "📎 Screenshot attached.";
+
   const btn = document.getElementById("tktCommentBtn");
   btn.disabled = true; btn.textContent = "Posting…";
 
-  const { data: { user } } = await window.sb.auth.getUser();
-  const { error } = await window.sb.from("dev_ticket_comments").insert({
-    ticket_id: ticketId,
-    author_id: user?.id || null,
-    author_email: user?.email || null,
-    author_role: window._adminRole || null,
-    body,
-  });
+  try {
+    let screenshot_url = null;
+    if (_tktCommentScreenshotFile) {
+      const ext  = (_tktCommentScreenshotFile.name?.split(".").pop() || "png").toLowerCase();
+      const path = `comments/${Date.now()}.${ext}`;
+      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, _tktCommentScreenshotFile, { upsert: true });
+      if (upErr) throw upErr;
+      screenshot_url = path;
+    }
+
+    const { data: { user } } = await window.sb.auth.getUser();
+    const payload = {
+      ticket_id: ticketId,
+      author_id: user?.id || null,
+      author_email: user?.email || null,
+      author_role: window._adminRole || null,
+      body,
+    };
+    if (screenshot_url) payload.screenshot_url = screenshot_url;
+
+    const { error } = await window.sb.from("dev_ticket_comments").insert(payload);
+    if (error) throw error;
+  } catch (err) {
+    btn.disabled = false; btn.textContent = "Comment";
+    showToast("Couldn't post comment: " + err.message);
+    return;
+  }
 
   btn.disabled = false; btn.textContent = "Comment";
-  if (error) { showToast("Couldn't post comment: " + error.message); return; }
-
   _tkt.comments[ticketId] = (_tkt.comments[ticketId] || 0) + 1;
   box.value = "";
+  clearTicketCommentScreenshot();
   await openTicketDrawer(ticketId);
   renderTicketBoard();
 

@@ -2330,3 +2330,13 @@ body.admin-body {
   }
   .tkt-modal .a-modal-close:hover { transform: none; }
 }
+
+/* Comment screenshots (paste or attach) -------------------------- */
+.tkt-comment-shot { margin-top: 8px; }
+.tkt-comment-shot img { max-width: 100%; max-height: 220px; border-radius: 8px; border: 1px solid #e2e8f0; display: block; }
+.tkt-comment-attach {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; font-weight: 700; color: #7c8ba1; cursor: pointer;
+  transition: color .15s;
+}
+.tkt-comment-attach:hover { color: #f58220; }
