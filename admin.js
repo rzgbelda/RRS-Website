@@ -1579,19 +1579,25 @@ async function saveEditedAddress() {
   openOrderModal(orderId);
 }
 
-// Switches an order between shipping and warehouse pickup. Reused both
-// from the ship-order "Switch to pickup" link and the pickup-order
-// "Switch to shipping" link. Deliberately does not touch shipping_address
-// or any existing freight_quote/estes_* fields -- toggling back to ship
-// should not silently lose an address someone already entered, and if
-// staff toggle to pickup then back, the old ship data is still there to
-// resume from.
+// Switches an order between carrier shipping, warehouse pickup, and
+// in-house delivery. Deliberately does not touch shipping_address or any
+// existing freight_quote/estes_* fields -- toggling back to ship should
+// not silently lose an address someone already entered, and if staff
+// toggle away then back, the old ship data is still there to resume from.
 async function setFulfillmentMethod(orderId, method) {
+  // Switching an already-invoiced order to in-house here does NOT add a
+  // delivery fee: the customer was already billed a fixed total and may
+  // have paid it. The fee is set on the quote, before money changes hands.
   const { error } = await window.sb.from("orders")
     .update({ fulfillment_method: method, updated_at: new Date().toISOString() })
     .eq("id", orderId);
   if (error) { alert("Could not update: " + error.message); return; }
-  showToast(method === "pickup" ? "Order switched to warehouse pickup." : "Order switched to shipping.");
+  const label = {
+    pickup:   "Order switched to warehouse pickup.",
+    in_house: "Order switched to in-house delivery. Estes/Shippo skipped.",
+    ship:     "Order switched to carrier shipping.",
+  }[method] || "Order updated.";
+  showToast(label);
   openOrderModal(orderId);
 }
 
@@ -1622,6 +1628,12 @@ async function openOrderModal(id) {
   // 'ship') lets staff mark an order as warehouse pickup instead, which
   // skips freight entirely -- see the pickup branch below.
   const isPickup     = o.fulfillment_method === "pickup";
+  // In-house delivery: we drive it out ourselves for a fee set on the
+  // quote. Like pickup, it deliberately hides the Estes/Shippo buttons --
+  // booking a paid carrier pickup for an order we are delivering would be
+  // a real, billable mistake.
+  const isInHouse    = o.fulfillment_method === "in_house";
+  const deliveryFee  = Number(o.in_house_delivery_fee || 0);
 
   // Action bar — only show for actionable statuses
   let actionBar = "";
@@ -1639,6 +1651,31 @@ async function openOrderModal(id) {
           <button onclick="markPickedUp('${o.id}')"
             style="flex:2;min-width:180px;background:#ED7226;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
             ✅ Mark Picked Up
+          </button>
+          <button onclick="cancelOrderFromModal('${o.id}')"
+            style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
+            ✕ Cancel Order
+          </button>
+        </div>
+      </div>`;
+  } else if (isPending && isInHouse) {
+    actionBar = `
+      <div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          <div>
+            <strong style="font-size:14px;color:#9a3412;display:block;">In-House Delivery — No Carrier Needed</strong>
+            <span style="font-size:12px;color:#7c3f12;">We deliver this order ourselves${deliveryFee > 0 ? ` for <strong>$${deliveryFee.toFixed(2)}</strong>, already billed on the invoice` : ""}. Mark it delivered once it's dropped off.</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="markPickedUp('${o.id}')"
+            style="flex:2;min-width:180px;background:#ED7226;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+            ✅ Mark Delivered
+          </button>
+          <button onclick="setFulfillmentMethod('${o.id}','ship')"
+            style="flex:1;min-width:150px;background:#fff;color:#0b2d52;border:1.5px solid #0b2d52;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
+            Switch to carrier
           </button>
           <button onclick="cancelOrderFromModal('${o.id}')"
             style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
@@ -1711,17 +1748,30 @@ async function openOrderModal(id) {
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
       <div style="grid-column:span 2">
-        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${isPickup ? "Fulfillment" : "Ship To"}</span><br>
+        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">${isPickup || isInHouse ? "Fulfillment" : "Ship To"}</span><br>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px">
-          <span>${isPickup ? "🏪 Warehouse pickup" : escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</span>
+          <span>${isPickup
+            ? "🏪 Warehouse pickup"
+            : isInHouse
+              ? `🚚 In-house delivery${deliveryFee > 0 ? ` — $${deliveryFee.toFixed(2)}` : ""}${addr.street ? ` &nbsp;·&nbsp; ${escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "))}` : ""}`
+              : escHtml([addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", ") || "—")}</span>
           ${isPickup
             ? `<button onclick="setFulfillmentMethod('${o.id}','ship')" class="a-ship-action-btn a-ship-action-outline">
                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
                  Switch to shipping
                </button>`
+            : isInHouse
+            ? `<button onclick="openEditAddressModal('${o.id}')" class="a-ship-action-btn ${addr.street ? "a-ship-action-outline" : "a-ship-action-primary"}">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                 ${addr.street ? "Edit address" : "Add address"}
+               </button>`
             : `<button onclick="openEditAddressModal('${o.id}')" class="a-ship-action-btn ${addr.street ? "a-ship-action-outline" : "a-ship-action-primary"}">
                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
                  ${addr.street ? "Edit address" : "Add address"}
+               </button>
+               <button onclick="setFulfillmentMethod('${o.id}','in_house')" class="a-ship-action-btn a-ship-action-outline">
+                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                 Deliver in-house
                </button>
                <button onclick="setFulfillmentMethod('${o.id}','pickup')" class="a-ship-action-btn a-ship-action-outline">
                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
@@ -4201,6 +4251,9 @@ async function openQuoteComposer() {
   document.getElementById("quoteValidUntil").value = d.toISOString().slice(0, 10);
   document.getElementById("quoteMessage").value = `Dear ${r.contact_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
   document.getElementById("quoteNet30").checked = false;
+  document.getElementById("quoteInHouse").checked = false;
+  document.getElementById("quoteInHouseFee").value = "0.00";
+  toggleQuoteInHouse();
 
   const items = r.requested_items || [];
   const container = document.getElementById("quoteLineItems");
@@ -4278,6 +4331,25 @@ function onQuotePriceChange(idx) {
   recalcQuoteTotal();
 }
 
+function toggleQuoteInHouse() {
+  const on = document.getElementById("quoteInHouse").checked;
+  document.getElementById("quoteInHouseFeeRow").style.display = on ? "block" : "none";
+  const box = document.getElementById("quoteInHouseBox");
+  if (box) {
+    box.style.borderColor = on ? "#fbbf85" : "#e2e8f0";
+    box.style.background  = on ? "#fff8f2" : "#fbfcfe";
+  }
+  recalcQuoteTotal();
+}
+
+// The delivery fee counts toward the quoted total, so it has to be part of
+// this sum -- otherwise the emailed quote, the invoice and the Stripe
+// payment link would each disagree about what the customer owes.
+function quoteInHouseFee() {
+  if (!document.getElementById("quoteInHouse")?.checked) return 0;
+  return Math.max(0, parseFloat(document.getElementById("quoteInHouseFee")?.value) || 0);
+}
+
 function recalcQuoteTotal() {
   let total = 0;
   document.querySelectorAll(".ql-price").forEach((priceEl, idx) => {
@@ -4289,6 +4361,7 @@ function recalcQuoteTotal() {
     const lineEl = document.getElementById(`ql-line-${idx}`);
     if (lineEl) lineEl.textContent = line > 0 ? `$${line.toFixed(2)}` : "—";
   });
+  total += quoteInHouseFee();
   const el = document.getElementById("quoteGrandTotal");
   if (el) el.textContent = `$${total.toFixed(2)}`;
 }
@@ -4307,12 +4380,15 @@ function getComposerPayload() {
       items.push({ name: names[idx] || `Item ${idx+1}`, quantity: qty, unit_price: price });
     }
   });
+  const inHouse = document.getElementById("quoteInHouse").checked;
   return {
     quote_request_id: currentQuoteId,
     items,
     valid_until: document.getElementById("quoteValidUntil").value,
     message: document.getElementById("quoteMessage").value.trim(),
     net_30_terms: document.getElementById("quoteNet30").checked,
+    fulfillment_method: inHouse ? "in_house" : "ship",
+    in_house_delivery_fee: inHouse ? quoteInHouseFee() : 0,
   };
 }
 

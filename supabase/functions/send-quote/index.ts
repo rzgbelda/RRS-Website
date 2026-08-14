@@ -27,9 +27,12 @@ function buildQuoteHtml(payload: {
   items: Array<{ name: string; quantity: number; unit_price: number }>;
   message?: string;
   net_30_terms?: boolean;
+  in_house_delivery_fee?: number;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms } = payload;
-  const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee } = payload;
+  const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+  const deliveryFee = Number(in_house_delivery_fee) || 0;
+  const subtotal = itemsTotal + deliveryFee;
 
   const rows = items.map((i, idx) => {
     const line = i.quantity * i.unit_price;
@@ -106,7 +109,16 @@ function buildQuoteHtml(payload: {
           <th style="padding:12px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#93c5fd;text-align:right">Total</th>
         </tr>
       </thead>
-      <tbody>${rows}</tbody>
+      <tbody>${rows}${deliveryFee > 0 ? `
+        <tr style="background:${items.length % 2 === 0 ? "#fff" : "#f8fafc"}">
+          <td style="padding:12px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">
+            In-House Delivery
+            <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Delivered by Room Ready Supply</span>
+          </td>
+          <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:center;border-bottom:1px solid #f1f5f9">—</td>
+          <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:right;border-bottom:1px solid #f1f5f9">—</td>
+          <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right;border-bottom:1px solid #f1f5f9">$${deliveryFee.toFixed(2)}</td>
+        </tr>` : ""}</tbody>
       <tfoot>
         <tr style="background:#0d2c50">
           <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">
@@ -124,7 +136,9 @@ function buildQuoteHtml(payload: {
         <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
         <li>Prices are per case and valid until ${valid_until}.</li>
         ${net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
-        <li>Freight is additional unless otherwise noted.</li>
+        ${deliveryFee > 0
+          ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
+          : `<li>Freight is additional unless otherwise noted.</li>`}
         <li>Minimum order quantities may apply.</li>
       </ul>
     </div>
@@ -153,7 +167,10 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { quote_request_id, items, message, preview_only, net_30_terms } = body;
+    const { quote_request_id, items, message, preview_only, net_30_terms,
+            fulfillment_method, in_house_delivery_fee } = body;
+    const deliveryFee = Math.max(0, Number(in_house_delivery_fee) || 0);
+    const isInHouse   = fulfillment_method === "in_house";
     let { valid_until } = body;
 
     // Belt-and-suspenders: the admin composer has a client-side guard that
@@ -197,6 +214,7 @@ serve(async (req) => {
       items,
       message,
       net_30_terms: !!net_30_terms,
+      in_house_delivery_fee: isInHouse ? deliveryFee : 0,
     });
 
     // Preview mode — just return the HTML
@@ -226,8 +244,13 @@ serve(async (req) => {
       throw new Error(err.message || "Failed to send email");
     }
 
-    // Compute totals for snapshot
+    // Compute totals for snapshot. grand_total MUST include the in-house
+    // delivery fee: api/send-invoice.js builds the Stripe payment link from
+    // this number, so leaving the fee out here would silently undercharge
+    // the customer by exactly the delivery amount.
+    const fee_amt      = isInHouse ? deliveryFee : 0;
     const subtotal_amt = items.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0);
+    const grand_amt    = subtotal_amt + fee_amt;
 
     // Update status to quoted + save full quote snapshot for customer portal
     await sb.from("quote_requests").update({
@@ -238,8 +261,10 @@ serve(async (req) => {
       valid_until:      valid_until.split("T")[0], // always set now -- see fallback above
       quote_message:    message || null,
       net_30_terms:     !!net_30_terms,
+      fulfillment_method:    isInHouse ? "in_house" : "ship",
+      in_house_delivery_fee: fee_amt,
       subtotal:         subtotal_amt,
-      grand_total:      subtotal_amt,
+      grand_total:      grand_amt,
       customer_visible: true,
     }).eq("id", quote_request_id);
 

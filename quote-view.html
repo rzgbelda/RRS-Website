@@ -360,8 +360,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
   function renderDoc(q) {
     _loadedQuote = q;
     const items   = Array.isArray(q.quote_items) ? q.quote_items : [];
+    // grand_total already includes any in-house delivery fee; the fallback
+    // sums line items only, so it has to add the fee back in itself.
+    const deliveryFee = Number(q.in_house_delivery_fee) || 0;
     const total   = q.grand_total != null ? q.grand_total
-                  : items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
+                  : items.reduce((s, i) => s + (i.quantity * i.unit_price), 0) + deliveryFee;
 
     const defaultMsg = `Dear ${q.contact_name || q.business_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
     const message = q.quote_message || defaultMsg;
@@ -373,7 +376,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
         <td style="text-align:right">${item.quantity || 1}</td>
         <td style="text-align:right">${money(item.unit_price)}</td>
         <td style="text-align:right;font-weight:700">${money((item.quantity || 1) * item.unit_price)}</td>
-      </tr>`).join('');
+      </tr>`).join('') + (
+      Number(q.in_house_delivery_fee) > 0
+        ? `<tr>
+        <td style="color:#64748b;font-size:12px">${items.length + 1}</td>
+        <td><strong>In-House Delivery</strong><br><span style="font-size:11px;color:#94a3b8">Delivered by Room Ready Supply</span></td>
+        <td style="text-align:right">&mdash;</td>
+        <td style="text-align:right">&mdash;</td>
+        <td style="text-align:right;font-weight:700">${money(q.in_house_delivery_fee)}</td>
+      </tr>`
+        : '');
 
     const noItemsRow = items.length === 0
       ? `<tr><td colspan="5" style="text-align:center;padding:24px;color:#94a3b8;font-style:italic">No line items</td></tr>`
@@ -469,7 +481,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
           <li>Prices are per case and valid until ${validUntilFmt}.</li>
           ${q.net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
-          <li>Freight is additional unless otherwise noted.</li>
+          ${deliveryFee > 0
+            ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
+            : `<li>Freight is additional unless otherwise noted.</li>`}
           <li>Minimum order quantities may apply.</li>
         </ul>
       </div>

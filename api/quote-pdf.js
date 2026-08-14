@@ -233,7 +233,29 @@ async function buildQuotePdf(q) {
     });
   }
 
+  // In-house delivery fee: its own row so the customer can see what the
+  // delivery portion of the total is, matching the emailed quote and the
+  // customer-facing quote page.
+  const deliveryFee = Math.max(0, Number(q.in_house_delivery_fee) || 0);
+  if (deliveryFee > 0) {
+    if (ensure(24)) drawTableHead();
+    if (items.length % 2 === 1) {
+      page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
+    }
+    const nameY = y - 12.5;
+    page.drawText(fitText('In-House Delivery', COL_QTY - MARGIN - 74, reg, 8.5),
+      { x: MARGIN + 10, y: nameY, size: 8.5, font: reg, color: rgb(0.12, 0.18, 0.25) });
+    const ds = money(deliveryFee);
+    page.drawText('—', { x: rightOf('—', COL_QTY, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
+    page.drawText('—', { x: rightOf('—', COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
+    page.drawText(ds, { x: rightOf(ds, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: NAVY });
+    y -= 18;
+    subtotal += deliveryFee;
+  }
+
   // ── Total ────────────────────────────────────────────────────────
+  // grand_total already includes the delivery fee; the subtotal fallback
+  // now does too, since the fee was added to it just above.
   const grand = q.grand_total != null ? Number(q.grand_total) : subtotal;
   ensure(46);
   y -= 6;
@@ -251,7 +273,9 @@ async function buildQuotePdf(q) {
     'Prices shown are before sales tax; tax will be added at checkout or invoicing.',
     validUntil ? `Prices are per case and valid until ${validUntil}.` : 'Prices are per case.',
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
-    'Freight is additional unless otherwise noted.',
+    deliveryFee > 0
+      ? 'Delivery is by Room Ready Supply and is included in the total above.'
+      : 'Freight is additional unless otherwise noted.',
     'Minimum order quantities may apply.',
   ];
   ensure(20 + terms.length * 11 + 10);

@@ -27,7 +27,17 @@ function invoiceEmailHtml(o) {
     '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">$' + i.unit_price.toFixed(2) + '</td>' +
     '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + (i.unit_price * i.quantity).toFixed(2) + '</td>' +
     '</tr>'
-  ).join('');
+  ).join('') + (
+    Number(o.delivery_fee) > 0
+      ? '<tr>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">In-House Delivery' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Delivered by Room Ready Supply</span></td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.delivery_fee).toFixed(2) + '</td>' +
+        '</tr>'
+      : ''
+  );
 
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">' +
@@ -89,7 +99,7 @@ module.exports = async (req, res) => {
 
   const { data: q, error: qErr } = await supabase
     .from('quote_requests')
-    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status')
+    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee')
     .eq('id', quote_request_id)
     .single();
 
@@ -105,10 +115,22 @@ module.exports = async (req, res) => {
 
   if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
 
+  // In-house delivery: we deliver the order ourselves and charge a fee set
+  // by hand on the quote, instead of an Estes/Shippo carrier rate. It is a
+  // real payable line, so it has to reach the invoice total AND the Stripe
+  // payment link below -- billing only the items would undercharge by
+  // exactly the delivery amount.
+  const deliveryFee = q.fulfillment_method === 'in_house'
+    ? Math.max(0, parseFloat(q.in_house_delivery_fee) || 0)
+    : 0;
+
+  const itemsTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+
   // Prefer the stored grand_total, but some quotes were sent before the
   // send-quote edge function was fixed to save it -- quote_items has
   // everything needed to invoice regardless, so fall back to summing it.
-  const total = q.grand_total > 0 ? q.grand_total : items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+  // The fallback must add the fee back in; grand_total already includes it.
+  const total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee;
   if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
 
   // Preview: render the exact email that would be sent, with no order
@@ -122,6 +144,7 @@ module.exports = async (req, res) => {
         business_name: q.business_name || '',
         items,
         total,
+        delivery_fee: deliveryFee,
         payment_link: '#preview-only',
       }),
     });
@@ -136,12 +159,16 @@ module.exports = async (req, res) => {
       customer_name:  q.contact_name || '',
       customer_email: q.email,
       business_name:  q.business_name || 'N/A',
-      subtotal:       total,
+      subtotal:       total - deliveryFee,
       total:          total,
       payment_method: 'card',
       payment_status: 'pending_invoice',
       status:         'pending',
       order_type:     'invoice',
+      // Carries the choice onto the order so the admin order modal shows
+      // the in-house delivery panel instead of the Estes freight flow.
+      fulfillment_method:    q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
+      in_house_delivery_fee: deliveryFee,
       notes:          q.quote_number ? ('Invoiced from quote ' + q.quote_number) : 'Invoiced from an admin quote request',
     })
     .select('id')
@@ -167,6 +194,9 @@ module.exports = async (req, res) => {
   let link;
   try {
     link = await stripe.paymentLinks.create({
+      // The delivery fee is appended as its own Stripe line so the amount
+      // charged matches the invoice total exactly. Without it Stripe would
+      // collect only the goods and we would eat the delivery cost.
       line_items: items.map(i => ({
         price_data: {
           currency: 'usd',
@@ -174,7 +204,14 @@ module.exports = async (req, res) => {
           unit_amount: Math.round(i.unit_price * 100),
         },
         quantity: i.quantity,
-      })),
+      })).concat(deliveryFee > 0 ? [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'In-House Delivery' },
+          unit_amount: Math.round(deliveryFee * 100),
+        },
+        quantity: 1,
+      }] : []),
       payment_intent_data: {
         metadata: { order_number, order_type: 'invoice', quote_number: q.quote_number || '' },
       },
@@ -206,6 +243,7 @@ module.exports = async (req, res) => {
         business_name: q.business_name || '',
         items,
         total,
+        delivery_fee: deliveryFee,
         payment_link: link.url,
       }),
     });
