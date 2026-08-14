@@ -188,18 +188,42 @@ async function buildQuotePdf(q) {
     // page-break a long message instead of truncating it.
     const msgLines = String(q.quote_message).split(/\n/)
       .flatMap(line => line.trim() === '' ? [''] : wrapText(line, RIGHT - MARGIN - 26, reg, 9));
-    const msgH = 16 + msgLines.length * 12;
-    ensure(msgH + 12);
-    page.drawRectangle({ x: MARGIN, y: y - msgH, width: RIGHT - MARGIN, height: msgH, color: rgb(0.996, 0.980, 0.965) });
-    page.drawRectangle({ x: MARGIN, y: y - msgH, width: 3, height: msgH, color: ORANGE });
-    let my = y - 16;
-    msgLines.forEach(line => {
-      if (line) {
-        page.drawText(line, { x: MARGIN + 16, y: my, size: 9, font: reg, color: rgb(0.25, 0.31, 0.38) });
+
+    // Fixing the blank-line collapse above made long messages tall enough
+    // to not fit in whatever space was left on the current page -- ensure()
+    // only knows "fits or doesn't", so a message that didn't fit jumped in
+    // full to a new page, leaving the current one mostly blank (and then
+    // pushed the items table to a THIRD page behind it). Chunking the
+    // message itself across pages, filling each one as far as it goes,
+    // uses the space that's actually there instead of wasting it.
+    let idx = 0;
+    while (idx < msgLines.length) {
+      const minLines = 3; // don't start a sliver of 1-2 lines at a page bottom
+      const avail = y - BODY_FLOOR - 16 - 20;
+      let fitCount = Math.floor(avail / 12);
+      if (fitCount < minLines) {
+        const n = newPage(true);
+        page = n.page; y = n.y;
+        continue;
       }
-      my -= 12;
-    });
-    y -= msgH + 20;
+      const chunk = msgLines.slice(idx, idx + Math.min(fitCount, msgLines.length - idx));
+      const chunkH = 16 + chunk.length * 12;
+      page.drawRectangle({ x: MARGIN, y: y - chunkH, width: RIGHT - MARGIN, height: chunkH, color: rgb(0.996, 0.980, 0.965) });
+      page.drawRectangle({ x: MARGIN, y: y - chunkH, width: 3, height: chunkH, color: ORANGE });
+      let my = y - 16;
+      chunk.forEach(line => {
+        if (line) {
+          page.drawText(line, { x: MARGIN + 16, y: my, size: 9, font: reg, color: rgb(0.25, 0.31, 0.38) });
+        }
+        my -= 12;
+      });
+      idx += chunk.length;
+      y -= chunkH + (idx >= msgLines.length ? 20 : 12);
+      if (idx < msgLines.length) {
+        const n = newPage(true);
+        page = n.page; y = n.y;
+      }
+    }
   }
 
   if (!q.message_at_bottom) drawMessageBlock();
