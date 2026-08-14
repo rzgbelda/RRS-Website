@@ -28,7 +28,9 @@
       "PowerShell(node \"C:\\\\Users\\\\rguti\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rguti-OneDrive-Documents-RRS-Website\\\\afe0e8d6-34c1-40ac-ad77-89b816de6cc4\\\\scratchpad\\\\verify-live.js\")",
       "Bash(curl -s https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/debug-order?show_columns=1 -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdpcHJrdmx5b3V3ZnpqbGFpYmtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNjA0ODUsImV4cCI6MjA5NjczNjQ4NX0.y0K_i9oN9DUNx_xIxUDWbvyXsubYIKpJR5un1yLtvvY')",
       "Bash(node --check tools/reseed-products.js)",
-      "Bash(node tools/reseed-products.js --rdu \"C:/Users/rguti/Downloads/products - RDU Products \\(1\\).csv\" --rj \"C:/Users/rguti/Downloads/products - RJ Schinner Products \\(1\\).csv\")"
+      "Bash(node tools/reseed-products.js --rdu \"C:/Users/rguti/Downloads/products - RDU Products \\(1\\).csv\" --rj \"C:/Users/rguti/Downloads/products - RJ Schinner Products \\(1\\).csv\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/test-message-block.js\")",
+      "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/check-pages.js\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
