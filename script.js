@@ -17,7 +17,6 @@ document.addEventListener("DOMContentLoaded", () => {
   setupLogin();
   setupAccountDropdown();
   setupPasswordToggle();
-  setupProductQuantity();
   loadCartPage();
   loadCheckoutProducts();
   loadPaymentSummary();
@@ -1430,6 +1429,15 @@ function setupProductQuantity() {
   const addBtn = document.getElementById("productAddToCart");
 
   if (!qtyValue || !plusQty || !minusQty || !productPriceEl || !addBtn) return;
+
+  // Guards against double-binding if this ever gets called more than once
+  // for the same page: qtyValue's "input"/"blur" listeners use
+  // addEventListener, which stacks rather than overwrites, so a second
+  // call previously registered a second pair that fired alongside the
+  // first -- one of them still holding the pre-catalog-load MOQ/step
+  // values -- and made the quantity box fight itself on every keystroke.
+  if (qtyValue.dataset.wired === "1") return;
+  qtyValue.dataset.wired = "1";
 
   // Wire up "Add to Reorder Program" button on product page
   const reorderBtn = document.querySelector(".reorder-program-btn");
