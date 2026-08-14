@@ -136,13 +136,18 @@ create index if not exists dev_ticket_comments_ticket_idx
 -- tickets and comments. Nobody else -- customers and sub-distributors have
 -- no policy here at all, so RLS denies them by default.
 
+-- NOTE: "for all using (...)" alone leaves with_check null in pg_policies --
+-- Postgres does NOT fall back to USING for the insert/update check the way
+-- the docs read at a skim. Every insert failed RLS until this was made
+-- explicit. Always pair using() with an explicit with check() on ALL policies.
+
 alter table public.dev_tickets enable row level security;
 drop policy if exists "staff_manage_dev_tickets" on public.dev_tickets;
-create policy "staff_manage_dev_tickets" on public.dev_tickets for all using (public.is_staff());
+create policy "staff_manage_dev_tickets" on public.dev_tickets for all using (public.is_staff()) with check (public.is_staff());
 
 alter table public.dev_ticket_comments enable row level security;
 drop policy if exists "staff_manage_dev_ticket_comments" on public.dev_ticket_comments;
-create policy "staff_manage_dev_ticket_comments" on public.dev_ticket_comments for all using (public.is_staff());
+create policy "staff_manage_dev_ticket_comments" on public.dev_ticket_comments for all using (public.is_staff()) with check (public.is_staff());
 
 -- ============================================================
 -- STORAGE (screenshots)
