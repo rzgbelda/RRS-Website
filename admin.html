@@ -902,6 +902,10 @@
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#1e293b;flex-shrink:0">
         <span style="color:#fff;font-size:14px;font-weight:700">Quotation Preview</span>
         <div style="display:flex;gap:10px">
+          <button id="downloadQuotePreviewBtn" onclick="downloadQuotePreviewPdf()" style="height:34px;padding:0 18px;border-radius:8px;background:#fff;color:#0d1f38;border:1.5px solid #475569;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download PDF
+          </button>
           <button onclick="sendQuoteFromPreview()" style="height:34px;padding:0 18px;border-radius:8px;background:#e8621a;color:#fff;border:none;font-size:13px;font-weight:700;cursor:pointer">Send to Customer</button>
           <button onclick="document.getElementById('quotePreviewOverlay').style.display='none'" style="height:34px;padding:0 14px;border-radius:8px;background:#334155;color:#fff;border:none;font-size:13px;cursor:pointer">Close Preview</button>
         </div>

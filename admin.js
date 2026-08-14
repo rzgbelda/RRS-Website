@@ -4428,6 +4428,60 @@ async function previewQuote() {
   }
 }
 
+// Downloads the quote exactly as it's been customized in the composer --
+// current quantities, any manually overridden prices, the message, Net 30
+// and in-house delivery choices -- rather than only being downloadable
+// after it's been sent and saved. Builds the same fields /api/quote-pdf.js
+// reads off a real saved quote_requests row, just from the live form
+// instead of the database, so nothing has to be sent first to get a PDF.
+async function downloadQuotePreviewPdf() {
+  const payload = getComposerPayload();
+  if (!payload || !payload.items.length) { alert("Nothing to download yet — add at least one priced item first."); return; }
+
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  const btn = document.getElementById("downloadQuotePreviewBtn");
+  const original = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Preparing…"; }
+
+  try {
+    const itemsTotal = payload.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
+    const deliveryFee = payload.fulfillment_method === "in_house" ? (payload.in_house_delivery_fee || 0) : 0;
+
+    const res = await fetch("/api/quote-pdf", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        quote_number: r?.quote_number || "PREVIEW",
+        created_at: new Date().toISOString(),
+        valid_until: payload.valid_until,
+        business_name: r?.business_name || "",
+        contact_name: r?.contact_name || "",
+        email: r?.email || "",
+        customer_type: r?.customer_type || "",
+        quote_items: payload.items,
+        quote_message: payload.message,
+        net_30_terms: payload.net_30_terms,
+        in_house_delivery_fee: deliveryFee,
+        grand_total: itemsTotal + deliveryFee,
+      }),
+    });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `RRS-Quotation-Preview-${r?.business_name || "draft"}.pdf`.replace(/[^\w.-]+/g, "-");
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("Couldn't download the PDF: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+
 async function sendQuote() {
   const payload = getComposerPayload();
   if (!payload) return;
