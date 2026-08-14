@@ -468,7 +468,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
         <ul class="qv-terms-list">
           <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
           <li>Prices are per case and valid until ${validUntilFmt}.</li>
-          <li>Payment terms: Net 30 days upon credit approval.</li>
+          ${q.net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
           <li>Freight is additional unless otherwise noted.</li>
           <li>Minimum order quantities may apply.</li>
         </ul>

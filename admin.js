@@ -4168,6 +4168,7 @@ async function openQuoteComposer() {
   const d = new Date(); d.setDate(d.getDate() + 10);
   document.getElementById("quoteValidUntil").value = d.toISOString().slice(0, 10);
   document.getElementById("quoteMessage").value = `Dear ${r.contact_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
+  document.getElementById("quoteNet30").checked = false;
 
   const items = r.requested_items || [];
   const container = document.getElementById("quoteLineItems");
@@ -4279,6 +4280,7 @@ function getComposerPayload() {
     items,
     valid_until: document.getElementById("quoteValidUntil").value,
     message: document.getElementById("quoteMessage").value.trim(),
+    net_30_terms: document.getElementById("quoteNet30").checked,
   };
 }
 

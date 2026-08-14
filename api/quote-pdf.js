@@ -250,7 +250,7 @@ async function buildQuotePdf(q) {
   const terms = [
     'Prices shown are before sales tax; tax will be added at checkout or invoicing.',
     validUntil ? `Prices are per case and valid until ${validUntil}.` : 'Prices are per case.',
-    'Payment terms: Net 30 days upon credit approval.',
+    ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
     'Freight is additional unless otherwise noted.',
     'Minimum order quantities may apply.',
   ];

@@ -26,8 +26,9 @@ function buildQuoteHtml(payload: {
   customer: { business_name: string; contact_name: string; email: string; customer_type?: string };
   items: Array<{ name: string; quantity: number; unit_price: number }>;
   message?: string;
+  net_30_terms?: boolean;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message } = payload;
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms } = payload;
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
 
   const rows = items.map((i, idx) => {
@@ -122,7 +123,7 @@ function buildQuoteHtml(payload: {
       <ul style="margin:0;padding-left:16px;font-size:12px;color:#64748b;line-height:1.8">
         <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
         <li>Prices are per case and valid until ${valid_until}.</li>
-        <li>Payment terms: Net 30 days upon credit approval.</li>
+        ${net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
         <li>Freight is additional unless otherwise noted.</li>
         <li>Minimum order quantities may apply.</li>
       </ul>
@@ -152,7 +153,7 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { quote_request_id, items, message, preview_only } = body;
+    const { quote_request_id, items, message, preview_only, net_30_terms } = body;
     let { valid_until } = body;
 
     // Belt-and-suspenders: the admin composer has a client-side guard that
@@ -195,6 +196,7 @@ serve(async (req) => {
       },
       items,
       message,
+      net_30_terms: !!net_30_terms,
     });
 
     // Preview mode — just return the HTML
@@ -235,6 +237,7 @@ serve(async (req) => {
       quote_items:      items,
       valid_until:      valid_until.split("T")[0], // always set now -- see fallback above
       quote_message:    message || null,
+      net_30_terms:     !!net_30_terms,
       subtotal:         subtotal_amt,
       grand_total:      subtotal_amt,
       customer_visible: true,
