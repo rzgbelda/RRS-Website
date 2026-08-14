@@ -163,9 +163,33 @@
             </div>
           </div>
         </div>
-        <div class="a-user-pill">
-          <div class="a-avatar">A</div>
+        <button type="button" class="a-user-pill" id="userPillBtn" onclick="openMyProfileModal()" style="cursor:pointer;border:none;background:transparent">
+          <div class="a-avatar" id="userPillAvatar">A</div>
           <span class="a-admin-name" id="adminNameDisplay">Admin</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- MY PROFILE MODAL -->
+    <div id="myProfileModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:400px">
+        <div class="a-modal-header">
+          <h3>My Profile</h3>
+          <button class="a-modal-close" onclick="closeModal('myProfileModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <div class="cms-form-group">
+            <label class="cms-label">Display Name <span class="cms-label-hint">shown instead of your email</span></label>
+            <input id="myProfileName" class="a-input" placeholder="e.g. Renz Belda">
+          </div>
+          <div class="cms-form-group" style="margin-bottom:0">
+            <label class="cms-label">Email</label>
+            <input id="myProfileEmail" class="a-input" disabled style="background:#f1f5f9;color:#94a3b8">
+          </div>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" onclick="closeModal('myProfileModal')">Cancel</button>
+          <button class="a-btn-primary" id="myProfileSaveBtn" onclick="saveMyProfile()">Save</button>
         </div>
       </div>
     </div>

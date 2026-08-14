@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { data: { session } } = await window.sb.auth.getSession();
   if (!session) { showLogin(); return; }
 
-  const { data: profile } = await window.sb.from("profiles").select("role").eq("id", session.user.id).single();
+  const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", session.user.id).single();
   const role = profile?.role;
 
   // Allow "admin" full access, "sub_distributor" limited access,
@@ -49,7 +49,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   window._adminRole = role;
   window._adminUserId = session.user.id;
   window._adminUserEmail = session.user.email;
-  document.getElementById("adminNameDisplay").textContent = session.user.email;
+  applyUserPillDisplay(profile?.full_name, session.user.email);
   applyRoleRestrictions(role);
   showDashboard();
   switchTab(landingTabFor(role));
@@ -87,7 +87,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
   btn.disabled = false; btn.textContent = "Sign In";
   if (error) { showLoginError(error.message); return; }
 
-  const { data: profile } = await window.sb.from("profiles").select("role").eq("id", data.user.id).single();
+  const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
   if (role !== "admin" && role !== "sub_distributor" && role !== "developer") {
     await window.sb.auth.signOut();
@@ -97,7 +97,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
   window._adminRole = role;
   window._adminUserId = data.user.id;
   window._adminUserEmail = data.user.email;
-  document.getElementById("adminNameDisplay").textContent = data.user.email;
+  applyUserPillDisplay(profile?.full_name, data.user.email);
   applyRoleRestrictions(role);
   showDashboard();
   switchTab(landingTabFor(role));
@@ -109,6 +109,38 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
   await window.sb.auth.signOut();
   showLogin();
 });
+
+/* ── My Profile (display name) ────────────────────────────────── */
+
+function applyUserPillDisplay(fullName, email) {
+  const name = (fullName || "").trim() || email;
+  document.getElementById("adminNameDisplay").textContent = name;
+  const initial = ((fullName || "").trim()[0] || email[0] || "A").toUpperCase();
+  const avatar = document.getElementById("userPillAvatar");
+  if (avatar) avatar.textContent = initial;
+}
+
+function openMyProfileModal() {
+  document.getElementById("myProfileName").value = document.getElementById("adminNameDisplay").textContent === window._adminUserEmail
+    ? "" : document.getElementById("adminNameDisplay").textContent;
+  document.getElementById("myProfileEmail").value = window._adminUserEmail || "";
+  openModal("myProfileModal");
+}
+
+async function saveMyProfile() {
+  const fullName = document.getElementById("myProfileName").value.trim();
+  const btn = document.getElementById("myProfileSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const { error } = await window.sb.from("profiles").update({ full_name: fullName || null }).eq("id", window._adminUserId);
+
+  btn.disabled = false; btn.textContent = "Save";
+  if (error) { showToast("Couldn't save name: " + error.message); return; }
+
+  applyUserPillDisplay(fullName, window._adminUserEmail);
+  closeModal("myProfileModal");
+  showToast("Profile updated.");
+}
 
 /* ── Role-based access control ─────────────────────────────── */
 
