@@ -24,7 +24,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -82,6 +82,15 @@ function buildMetaDesc(p) {
   return base + ((p.overview || '').length > 155 ? '…' : '');
 }
 
+// Mirrors categorySlug() in script.js.
+function categorySlug(name) {
+  return String(name || '').toLowerCase().replace(/&/g, ' ').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+}
+
+function cleanPrice(price) {
+  return Number(String(price || '').replace('$', '').replace(',', '').trim()) || 0;
+}
+
 /* ── HTML injection ──────────────────────────────────────────── */
 
 function escAttr(s) {
@@ -101,6 +110,57 @@ function setAttrById(html, id, attr, value) {
   return html.replace(re, (m, before, after) => before + escAttr(value) + after);
 }
 
+// Every target tag in product.html carries its id on the <script>, so this
+// stays anchored on the id rather than assuming any particular content.
+function setScriptContentById(html, id, obj) {
+  const re = new RegExp('(<script[^>]*\\bid="' + id + '"[^>]*>)[\\s\\S]*?(</script>)', 'i');
+  return html.replace(re, (m, open, close) => open + JSON.stringify(obj) + close);
+}
+
+// Mirrors populateProductPage()'s Product JSON-LD block. Google's crawler
+// does eventually run JavaScript, but that is a slower second-pass render,
+// and rich-result eligibility (price, availability, review stars) is only
+// picked up reliably from what is present on first fetch -- exactly the
+// gap Day 6 closed for the plain meta tags. This closes it for structured
+// data too, across all ~120 product pages.
+function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
+  const priceVal = cleanPrice(p.price || p.price_tier1);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: seoTitle,
+    description: metaDesc,
+    image: p.image_url || '',
+    sku: p.sku || slugify(p.name),
+    brand: { '@type': 'Brand', name: 'Room Ready Supply' },
+    offers: {
+      '@type': 'Offer',
+      url: pageUrl,
+      priceCurrency: 'USD',
+      price: priceVal > 0 ? priceVal.toFixed(2) : null,
+      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+      availability: 'https://schema.org/InStock',
+      seller: { '@type': 'Organization', name: 'Room Ready Supply' },
+    },
+  };
+}
+
+function buildBreadcrumbJsonLd(p, pageUrl) {
+  const SITE = 'https://www.roomreadysupply.com';
+  const trail = [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: SITE + '/' },
+    { '@type': 'ListItem', position: 2, name: 'Catalog', item: SITE + '/catalog' },
+  ];
+  if (p.category_name) {
+    trail.push({
+      '@type': 'ListItem', position: 3, name: p.category_name,
+      item: SITE + '/category/' + categorySlug(p.category_name),
+    });
+  }
+  trail.push({ '@type': 'ListItem', position: trail.length + 1, name: p.name, item: pageUrl });
+  return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: trail };
+}
+
 function injectMeta(html, p) {
   const seoTitle = buildSeoTitle(p);
   const metaDesc = buildMetaDesc(p);
@@ -118,6 +178,8 @@ function injectMeta(html, p) {
   out = setAttrById(out, 'ogDescription',   'content', metaDesc);
   out = setAttrById(out, 'ogImage',         'content', image);
   out = setAttrById(out, 'ogUrl',           'content', pageUrl);
+  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, metaDesc, pageUrl));
+  out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;
 }
 
@@ -198,8 +260,10 @@ module.exports = async (req, res) => {
 
 // Exported for tools/test-product-meta.js -- lets the tag-building logic
 // be checked against real catalog rows without deploying.
-module.exports.injectMeta     = injectMeta;
-module.exports.buildSeoTitle  = buildSeoTitle;
-module.exports.buildMetaDesc  = buildMetaDesc;
-module.exports.slugify        = slugify;
-module.exports.lookupProduct  = lookupProduct;
+module.exports.injectMeta          = injectMeta;
+module.exports.buildSeoTitle       = buildSeoTitle;
+module.exports.buildMetaDesc       = buildMetaDesc;
+module.exports.buildProductJsonLd  = buildProductJsonLd;
+module.exports.buildBreadcrumbJsonLd = buildBreadcrumbJsonLd;
+module.exports.slugify             = slugify;
+module.exports.lookupProduct       = lookupProduct;
