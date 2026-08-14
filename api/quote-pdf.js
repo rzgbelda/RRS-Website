@@ -171,16 +171,32 @@ async function buildQuotePdf(q) {
   // separate pages.
   function drawMessageBlock() {
     if (!q.quote_message) return;
-    const msgLines = String(q.quote_message).split(/\n+/)
-      .flatMap(para => wrapText(para, RIGHT - MARGIN - 26, reg, 9))
-      .slice(0, 12);
+    // Two bugs here, both invisible in the emailed HTML (which just does
+    // message.replace(/\n/g,'<br>')) but very visible side-by-side with it:
+    //
+    // 1. split(/\n+/) collapsed a blank line between paragraphs into the
+    //    SAME split boundary as a single newline, so every paragraph and
+    //    bullet ran straight into the next with no gap -- one dense wall
+    //    of text instead of the spaced-out message the email shows.
+    // 2. slice(0, 12) hard-capped the box at 12 wrapped lines and silently
+    //    dropped anything past that -- a message this long (intro, three
+    //    bulleted line items, totals, delivery note) was losing its tail
+    //    end with no indication anything was cut.
+    //
+    // Splitting on a single \n and re-inserting a blank entry for empty
+    // lines preserves paragraph spacing; dropping the slice() lets ensure()
+    // page-break a long message instead of truncating it.
+    const msgLines = String(q.quote_message).split(/\n/)
+      .flatMap(line => line.trim() === '' ? [''] : wrapText(line, RIGHT - MARGIN - 26, reg, 9));
     const msgH = 16 + msgLines.length * 12;
     ensure(msgH + 12);
     page.drawRectangle({ x: MARGIN, y: y - msgH, width: RIGHT - MARGIN, height: msgH, color: rgb(0.996, 0.980, 0.965) });
     page.drawRectangle({ x: MARGIN, y: y - msgH, width: 3, height: msgH, color: ORANGE });
     let my = y - 16;
     msgLines.forEach(line => {
-      page.drawText(line, { x: MARGIN + 16, y: my, size: 9, font: reg, color: rgb(0.25, 0.31, 0.38) });
+      if (line) {
+        page.drawText(line, { x: MARGIN + 16, y: my, size: 9, font: reg, color: rgb(0.25, 0.31, 0.38) });
+      }
       my -= 12;
     });
     y -= msgH + 20;
