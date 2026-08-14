@@ -1316,6 +1316,25 @@ function showVpToast(msg, type) {
   toast._t = setTimeout(() => toast.classList.remove("vp-toast--visible"), 2800);
 }
 
+// On mobile the filter sidebar (and the VP basket panel living inside it)
+// is an off-canvas drawer, closed by default -- opened only via the
+// "Filters" button's own click handler in catalog.html. "Get Volume Price"
+// never triggered that open, so the basket panel became display:block
+// while its parent stayed off-screen at left:-100%: nothing visible, and
+// scrollIntoView on that off-screen fixed ancestor produced a disorienting
+// jump that read as "navigated away with no way back." Opening the same
+// drawer here (mirroring catalog.html's openFilter()) makes it visible
+// AND closable through the existing close button / backdrop.
+function openMobileFilterDrawerIfNeeded() {
+  if (!window.matchMedia("(max-width: 768px)").matches) return;
+  const sidebar  = document.getElementById("catalogSidebarCol");
+  const backdrop = document.getElementById("filterBackdrop");
+  if (!sidebar) return;
+  sidebar.classList.add("filter-open");
+  if (backdrop) backdrop.classList.add("active");
+  document.body.style.overflow = "hidden";
+}
+
 function setupQuoteButtons() {
   renderVpBasketPanel(getQuoteBasket());
   document.querySelectorAll(".quote-add-btn").forEach(btn => {
@@ -1333,12 +1352,14 @@ function setupQuoteButtons() {
       const alreadyIn = basket.find(i => i.itemNumber === item.itemNumber);
       if (alreadyIn) {
         showVpToast(`"${item.name}" is already in your Volume Pricing List.`, "warn");
+        openMobileFilterDrawerIfNeeded();
         requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
         return;
       }
       basket.push(item);
       saveQuoteBasket(basket);
       updateQuoteBadge();
+      openMobileFilterDrawerIfNeeded();
       // Wait for browser to paint the updated panel before scrolling
       requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
       showVpToast(`"${item.name}" added to your Volume Pricing List.`);
