@@ -87,11 +87,37 @@
       background:linear-gradient(180deg, rgba(255,113,12,.07), rgba(255,113,12,0));
       pointer-events:none;
     }
+    /* Badge: a small glass pill with a moving gradient blob behind it --
+       ported from the GradientBlobCard component (blurred animated blob
+       under a frosted-glass layer), recolored from its default pink/red/
+       yellow to the site's orange palette and shrunk from a full standalone
+       card down to badge scale. isolation:isolate keeps the blur contained
+       to this element instead of bleeding into the card behind it. */
     .bd-card-badge {
-      position:relative; display:inline-flex; align-items:center; gap:6px;
-      background:#FFE7D6; color:#C44E00; font-size:11px; font-weight:800;
-      letter-spacing:.04em; text-transform:uppercase; padding:5px 11px;
-      border-radius:999px; margin-bottom:12px;
+      position:relative; display:inline-flex; align-items:center;
+      padding:5px 12px; border-radius:999px; margin-bottom:12px;
+      overflow:hidden; isolation:isolate; background:#FFE7D6;
+    }
+    .bd-card-badge .bd-badge-blob {
+      position:absolute; top:50%; left:50%; width:38px; height:38px;
+      margin:-19px 0 0 -19px; border-radius:999px; filter:blur(9px);
+      background:linear-gradient(120deg,#FFB25E,#FF710C,#FFD24D);
+      animation:bdBadgeBlob 5s linear infinite; z-index:0;
+    }
+    .bd-card-badge::before {
+      content:''; position:absolute; inset:1px; border-radius:999px;
+      background:rgba(255,255,255,.8); backdrop-filter:blur(6px); z-index:1;
+    }
+    .bd-card-badge .bd-badge-label {
+      position:relative; z-index:2; color:#C44E00; font-size:11px; font-weight:800;
+      letter-spacing:.04em; text-transform:uppercase;
+    }
+    @keyframes bdBadgeBlob {
+      0%   { transform:translate(-55%,-55%); }
+      25%  { transform:translate(15%,-55%); }
+      50%  { transform:translate(15%,15%); }
+      75%  { transform:translate(-55%,15%); }
+      100% { transform:translate(-55%,-55%); }
     }
     .bd-card-hook { position:relative; font-size:20px; font-weight:800; color:#0B2545; line-height:1.3; margin-bottom:8px; }
     .bd-card-pitch { position:relative; font-size:13.5px; color:#5B6C7E; line-height:1.65; margin:0; }
@@ -201,6 +227,7 @@
       .bd-card:hover .bd-card-copy,
       .bd-buy-btn:hover, .bd-account-btn:hover { transform:none !important; }
       .bd-account-btn { animation:none !important; }
+      .bd-card-badge .bd-badge-blob { animation:none !important; }
     }
 
     @media (max-width:760px) {
@@ -385,7 +412,7 @@
         </div>
         <div class="bd-card-copy">
           <div class="bd-card-panel-header">
-            <span class="bd-card-badge">This Month's Deal</span>
+            <span class="bd-card-badge"><span class="bd-badge-blob" aria-hidden="true"></span><span class="bd-badge-label">This Month's Deal</span></span>
             <p class="bd-card-hook">${escBd(deal.hook_title)}</p>
             <p class="bd-card-pitch">${escBd(deal.pitch_text)}</p>
           </div>
