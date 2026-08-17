@@ -133,19 +133,21 @@
     }
     .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; line-height:1; }
     .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; margin-top:4px; }
+    /* Soft-glow style: a top-lit gradient, a faint outer ring, and a soft
+       colored shadow give the button depth at rest; hovering just brightens
+       it in place (a filter, not a transform) -- no lift, no shifting arrow. */
     .bd-buy-btn {
       display:inline-flex; align-items:center; gap:8px;
-      background:#FF710C; color:#fff; font-weight:700; font-size:14px;
+      background:linear-gradient(180deg, #FF8A38, #FF710C 65%);
+      color:#fff; font-weight:700; font-size:14px;
       padding:12px 22px; border-radius:10px; text-decoration:none;
-      transition:background .15s, transform .15s, box-shadow .15s;
+      border:2px solid rgba(11,37,69,.08);
+      box-shadow:0 10px 24px -8px rgba(255,113,12,.55), 0 0 0 4px rgba(255,255,255,.4);
+      transition:filter .2s ease;
     }
-    .bd-buy-btn:hover {
-      background:#E0630A; transform:translateY(-2px);
-      box-shadow:0 12px 24px -10px rgba(255,113,12,.6);
-    }
-    .bd-buy-btn:active { transform:translateY(0); }
-    .bd-buy-btn .bd-arrow { display:inline-block; transition:transform .15s ease; }
-    .bd-buy-btn:hover .bd-arrow { transform:translateX(4px); }
+    .bd-buy-btn:hover { filter:brightness(1.15); }
+    .bd-buy-btn:active { filter:brightness(1); }
+    .bd-buy-btn .bd-arrow { display:inline-block; }
 
     .bd-cta { max-width:1160px; margin:0 auto; padding:20px 24px 64px; }
     .bd-cta-inner {
@@ -187,22 +189,16 @@
     }
     .bd-account-btn {
       display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      background:#FF710C; color:#fff; font-weight:700; font-size:15px;
+      background:linear-gradient(180deg, #FF8A38, #FF710C 65%);
+      color:#fff; font-weight:700; font-size:15px;
       padding:16px 28px; border-radius:10px; text-decoration:none; width:100%;
-      transition:background .15s, transform .15s, box-shadow .15s;
-      animation:bdPulseGlow 2.6s ease-in-out infinite;
+      border:2px solid rgba(11,37,69,.08);
+      box-shadow:0 12px 28px -10px rgba(255,113,12,.55), 0 0 0 4px rgba(255,255,255,.4);
+      transition:filter .2s ease;
     }
-    .bd-account-btn:hover {
-      background:#E0630A; transform:translateY(-2px) scale(1.015);
-      box-shadow:0 16px 32px -12px rgba(255,113,12,.55);
-      animation-play-state:paused;
-    }
-    .bd-account-btn .bd-arrow { display:inline-block; transition:transform .15s ease; }
-    .bd-account-btn:hover .bd-arrow { transform:translateX(4px); }
-    @keyframes bdPulseGlow {
-      0%, 100% { box-shadow:0 0 0 0 rgba(255,113,12,.4); }
-      50%      { box-shadow:0 0 0 9px rgba(255,113,12,0); }
-    }
+    .bd-account-btn:hover { filter:brightness(1.15); }
+    .bd-account-btn:active { filter:brightness(1); }
+    .bd-account-btn .bd-arrow { display:inline-block; }
 
     .bd-footer { background:#032C58; padding:20px 24px; text-align:center; }
     .bd-footer p { color:#B7C4D6; font-size:12.5px; margin-bottom:6px; }
