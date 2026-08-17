@@ -204,6 +204,29 @@
       50%      { box-shadow:0 0 0 9px rgba(255,113,12,0); }
     }
 
+    /* Liquid-metal buttons: a WebGL shader (@paper-design/shaders, loaded
+       from CDN) painted behind each CTA's label, tinted orange via a CSS
+       filter + warm backing gradient since the shader itself renders a
+       neutral metal. Progressive enhancement -- buttons keep their normal
+       flat-orange background and full label/link behavior until (unless)
+       the shader successfully mounts, so nothing breaks if WebGL or the
+       CDN is unavailable. See the mounting script near the end of <body>. */
+    .lm-btn { position:relative; overflow:hidden; isolation:isolate; }
+    .lm-shader { position:absolute; inset:0; z-index:0; display:block; border-radius:inherit; overflow:hidden; pointer-events:none; }
+    .lm-shader canvas {
+      position:absolute !important; inset:0 !important; width:100% !important; height:100% !important;
+      display:block !important; border-radius:inherit;
+      filter:sepia(1) saturate(4.5) hue-rotate(-12deg) brightness(1.08) contrast(1.05);
+    }
+    .lm-label { position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; }
+    .lm-btn.lm-active { background:transparent !important; }
+    .lm-btn.lm-active::before {
+      content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit;
+      background:linear-gradient(180deg,#9A3B00,#3A1400);
+    }
+    .lm-btn.lm-active:hover { background:transparent !important; }
+    .lm-btn.lm-active:hover::before { background:linear-gradient(180deg,#B24700,#4A1A00); }
+
     .bd-footer { background:#032C58; padding:20px 24px; text-align:center; }
     .bd-footer p { color:#B7C4D6; font-size:12.5px; margin-bottom:6px; }
     .bd-footer a { color:#fff; font-size:12.5px; text-decoration:none; margin:0 8px; }
@@ -335,7 +358,7 @@
           <span class="bd-cta-badge">Most Popular</span>
           <p class="bd-cta-h">Better Prices Start With an Account.</p>
           <p class="bd-cta-p" style="margin-bottom:18px">Create a free account for volume pricing, easy reordering, and access to every deal on this page.</p>
-          <a href="/login" class="bd-account-btn">Create an Account <span class="bd-arrow">→</span></a>
+          <a href="/login" class="bd-account-btn lm-btn"><span class="lm-label">Create an Account <span class="bd-arrow">→</span></span></a>
         </div>
       </div>
     </section>
@@ -421,7 +444,7 @@
             <ul class="bd-card-specs">${specs.join('')}</ul>
             <div class="bd-card-price-row">
               <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
-              <a class="bd-buy-btn" href="${buyHref}">Buy Now <span class="bd-arrow">&rarr;</span></a>
+              <a class="bd-buy-btn lm-btn" href="${buyHref}"><span class="lm-label">Buy Now <span class="bd-arrow">&rarr;</span></span></a>
             </div>
           </div>
         </div>
@@ -453,6 +476,7 @@
 
         container.innerHTML = deals.map((d, i) => bdCardHtml(d, bySku[d.sku], i)).join('');
         bdObserveReveals(container);
+        window.bdMountLiquidButtons?.(container);
       } catch (err) {
         console.error('[best-deals]', err);
         container.innerHTML = `<div style="text-align:center;padding:40px;color:#B3261E;font-size:14px">Couldn't load this month's deals right now &mdash; please refresh, or <a href="/catalog" style="color:#FF710C;font-weight:700">browse the full catalog</a>.</div>`;
@@ -491,6 +515,74 @@
       msg.className = 'bd-subscribe-msg ok';
       input.value = '';
     });
+  </script>
+
+  <script type="module">
+    // Liquid-metal buttons: mounts a live WebGL shader (@paper-design/shaders,
+    // via esm.sh so it works with zero build step) behind each .lm-btn's
+    // label. Buttons render as normal flat-orange CTAs first -- this only
+    // upgrades them once the module loads and WebGL is confirmed available,
+    // so a slow/broken CDN or an unsupported browser just leaves the plain
+    // orange button in place instead of breaking anything.
+    (async () => {
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+      // The shader library requires WebGL2 specifically (not WebGL1) --
+      // check before spending a network round-trip on the CDN import.
+      const gl = document.createElement('canvas').getContext('webgl2');
+      if (!gl) return;
+
+      let ShaderMount, liquidMetalFragmentShader;
+      try {
+        ({ ShaderMount, liquidMetalFragmentShader } = await import('https://esm.sh/@paper-design/shaders@0.0.80'));
+      } catch (err) {
+        console.warn('[best-deals] liquid-metal shader failed to load, buttons stay flat orange', err);
+        return;
+      }
+
+      function mountOne(btn) {
+        if (!btn || btn.dataset.lmMounted) return;
+        btn.dataset.lmMounted = '1';
+
+        const shaderEl = document.createElement('span');
+        shaderEl.className = 'lm-shader';
+        shaderEl.setAttribute('aria-hidden', 'true');
+        btn.insertBefore(shaderEl, btn.firstChild);
+
+        try {
+          const mount = new ShaderMount(shaderEl, liquidMetalFragmentShader, {
+            u_repetition: 4,
+            u_softness: 0.5,
+            u_shiftRed: 0.3,
+            u_shiftBlue: 0.3,
+            u_distortion: 0,
+            u_contour: 0,
+            u_angle: 45,
+            u_scale: 8,
+            u_shape: 1,
+            u_offsetX: 0.1,
+            u_offsetY: -0.1,
+          }, undefined, 0.6);
+
+          btn.classList.add('lm-active');
+          btn.addEventListener('mouseenter', () => mount.setSpeed?.(1));
+          btn.addEventListener('mouseleave', () => mount.setSpeed?.(0.6));
+          btn.addEventListener('mousedown', () => mount.setSpeed?.(2.4));
+          btn.addEventListener('mouseup', () => mount.setSpeed?.(1));
+        } catch (err) {
+          console.warn('[best-deals] shader mount failed for a button, leaving it flat orange', err);
+          shaderEl.remove();
+          btn.dataset.lmMounted = '';
+        }
+      }
+
+      function mountAll(root) {
+        (root || document).querySelectorAll('.lm-btn:not([data-lm-mounted])').forEach(mountOne);
+      }
+
+      window.bdMountLiquidButtons = mountAll;
+      mountAll();
+    })();
   </script>
 </body>
 </html>
