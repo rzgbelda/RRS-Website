@@ -32,18 +32,24 @@
     .bd-hero { max-width:1160px; margin:0 auto; padding:56px 24px 40px; text-align:center; }
     .bd-eyebrow { font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FF710C; margin-bottom:14px; }
     .bd-hero h1 { font-size:clamp(30px,4.6vw,48px); font-weight:800; line-height:1.14; letter-spacing:-.01em; color:#0B2545; margin-bottom:18px; text-wrap:balance; }
-    /* A moving gradient sweep only lights up part of the phrase at any
-       instant by definition -- to make the whole phrase shine together,
-       pulse brightness + a soft glow uniformly across the entire span
-       instead of animating a highlight's position. */
+    /* A continuous left-to-right sweep, not a ping-pong pulse: linear
+       timing (constant speed, no easing pause at the ends) plus a single
+       0%->100% keyframe pass (not back-and-forth) is what actually reads
+       as "flowing" rather than "breathing." The band is wide relative to
+       the gradient's tile size so a large portion of the phrase is lit as
+       it passes, and both loop endpoints are solid orange so the repeat
+       is seamless. */
     .bd-hero h1 .hl {
       display:inline-block; white-space:nowrap;
       color:#FF710C;
-      animation:bdHeroShimmer 2.2s ease-in-out infinite;
+      background:linear-gradient(90deg, #FF710C 0%, #FF710C 38%, #FFE9C6 50%, #FF710C 62%, #FF710C 100%);
+      background-size:280% 100%;
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      animation:bdHeroShimmer 2.4s linear infinite;
     }
     @keyframes bdHeroShimmer {
-      0%, 100% { filter:brightness(1) drop-shadow(0 0 0 rgba(255,150,60,0)); }
-      50%      { filter:brightness(1.45) drop-shadow(0 0 12px rgba(255,170,80,.9)); }
+      0%   { background-position:200% 0; }
+      100% { background-position:-200% 0; }
     }
     .bd-hero p { font-size:16px; line-height:1.65; color:#3A4A5C; max-width:66ch; margin:0 auto; }
     .bd-hero p .hl { color:#FF710C; font-weight:700; }
