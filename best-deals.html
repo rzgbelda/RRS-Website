@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-69R8R75Q3Y');
+  </script>
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/Favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Best Deals | Room Ready Supply</title>
+  <meta name="description" content="Quality supplies, lower costs. Five of our best wholesale deals on hospitality and facility essentials — bathroom tissue, laundry detergent, gloves, and more." />
+  <link rel="canonical" href="https://www.roomreadysupply.com/best-deals" />
+  <meta name="robots" content="noindex, follow">
+  <!-- Marketing-campaign landing page: kept out of search results (it's meant
+       to be reached from ads/email/social, not organic search) but links to
+       real product pages still get crawled and pass value through. -->
+  <link rel="stylesheet" href="style.css" />
+
+  <style>
+    /* Scoped to this page only -- reuses the site's Inter font stack and
+       navbar from style.css, everything else matches the Figma export
+       (colors, corner radii, spacing) exactly rather than the site's
+       existing visual language, since this is a standalone campaign page. */
+    .bd-page { background:#FDF0E9; }
+
+    .bd-hero { max-width:1160px; margin:0 auto; padding:56px 24px 40px; text-align:center; }
+    .bd-eyebrow { font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FF710C; margin-bottom:14px; }
+    .bd-hero h1 { font-size:clamp(30px,4.6vw,48px); font-weight:800; line-height:1.14; letter-spacing:-.01em; color:#0B2545; margin-bottom:18px; text-wrap:balance; }
+    .bd-hero h1 .hl { color:#FF710C; }
+    .bd-hero p { font-size:16px; line-height:1.65; color:#3A4A5C; max-width:66ch; margin:0 auto; }
+    .bd-hero p .hl { color:#FF710C; font-weight:700; }
+
+    .bd-hero-photo { max-width:1160px; margin:0 auto; padding:0 24px 48px; }
+    .bd-hero-photo img { width:100%; height:auto; border-radius:16px; display:block; box-shadow:0 18px 40px -14px rgba(11,37,69,.28); }
+
+    .bd-intro { max-width:900px; margin:0 auto; padding:0 24px 56px; text-align:center; }
+    .bd-intro p { font-size:15px; line-height:1.75; color:#3A4A5C; }
+    .bd-intro p .hl { color:#FF710C; font-weight:700; }
+
+    .bd-offer-head { text-align:center; max-width:760px; margin:0 auto; padding:0 24px 44px; }
+    .bd-offer-head h2 { font-size:clamp(24px,3.2vw,32px); font-weight:800; color:#0B2545; margin-bottom:12px; }
+    .bd-offer-head p { font-size:14.5px; color:#3A4A5C; line-height:1.6; }
+    .bd-offer-head p .hl { color:#FF710C; font-weight:700; }
+
+    .bd-products { max-width:1160px; margin:0 auto; padding:0 24px 60px; display:flex; flex-direction:column; gap:56px; }
+    .bd-card {
+      display:grid; grid-template-columns:1fr 1fr; gap:44px; align-items:center;
+    }
+    .bd-card.flip .bd-card-media { order:2; }
+    .bd-card.flip .bd-card-copy { order:1; }
+    .bd-card-media {
+      background:#fff; border-radius:16px; padding:28px;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 12px 30px -12px rgba(11,37,69,.16);
+    }
+    .bd-card-media img { width:100%; max-width:280px; height:auto; display:block; }
+    .bd-card-hook { font-size:20px; font-weight:800; color:#0B2545; line-height:1.3; margin-bottom:10px; }
+    .bd-card-pitch { font-size:13.5px; color:#5B6C7E; line-height:1.65; margin-bottom:18px; }
+    .bd-card-name { font-size:15px; font-weight:700; color:#0B2545; margin-bottom:10px; line-height:1.4; }
+    .bd-card-specs { list-style:none; padding:0; margin:0 0 18px; display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; }
+    .bd-card-specs li { font-size:12px; color:#5B6C7E; }
+    .bd-card-specs li b { color:#0B2545; font-weight:700; }
+    .bd-card-price-row { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
+    .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; }
+    .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; }
+    .bd-buy-btn {
+      display:inline-flex; align-items:center; gap:8px;
+      background:#FF710C; color:#fff; font-weight:700; font-size:14px;
+      padding:12px 22px; border-radius:10px; text-decoration:none;
+      transition:background .15s;
+    }
+    .bd-buy-btn:hover { background:#E0630A; }
+
+    .bd-cta { max-width:1160px; margin:0 auto; padding:20px 24px 64px; }
+    .bd-cta-inner {
+      background:#fff; border-radius:20px; padding:40px 36px;
+      display:grid; grid-template-columns:1fr 1fr; gap:40px; align-items:center;
+      box-shadow:0 16px 40px -16px rgba(11,37,69,.14);
+    }
+    .bd-cta-h { font-size:22px; font-weight:800; color:#0B2545; margin-bottom:8px; line-height:1.3; }
+    .bd-cta-p { font-size:13.5px; color:#5B6C7E; line-height:1.6; }
+    .bd-subscribe { display:flex; gap:10px; margin-top:16px; }
+    .bd-subscribe input {
+      flex:1; min-width:0; background:#fff; border:1.5px solid #E2E8F0; border-radius:10px;
+      padding:0 16px; height:50px; font-size:14px; font-family:inherit; color:#0B2545;
+    }
+    .bd-subscribe input:focus { outline:none; border-color:#FF710C; }
+    .bd-subscribe button {
+      background:#FF710C; color:#fff; border:none; border-radius:10px;
+      padding:0 24px; height:50px; font-size:14px; font-weight:700; font-family:inherit; cursor:pointer;
+      white-space:nowrap;
+    }
+    .bd-subscribe button:hover { background:#E0630A; }
+    .bd-subscribe button:disabled { opacity:.6; cursor:default; }
+    .bd-subscribe-msg { font-size:12.5px; margin-top:9px; min-height:16px; }
+    .bd-subscribe-msg.ok { color:#13703A; }
+    .bd-subscribe-msg.err { color:#B3261E; }
+    .bd-cta-right { text-align:center; }
+    .bd-account-btn {
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      background:#FF710C; color:#fff; font-weight:700; font-size:15px;
+      padding:16px 28px; border-radius:10px; text-decoration:none; width:100%;
+      transition:background .15s;
+    }
+    .bd-account-btn:hover { background:#E0630A; }
+
+    .bd-footer { background:#032C58; padding:20px 24px; text-align:center; }
+    .bd-footer p { color:#B7C4D6; font-size:12.5px; margin-bottom:6px; }
+    .bd-footer a { color:#fff; font-size:12.5px; text-decoration:none; margin:0 8px; }
+    .bd-footer a:hover { text-decoration:underline; }
+
+    @media (max-width:760px) {
+      .bd-card, .bd-card.flip .bd-card-media, .bd-card.flip .bd-card-copy { grid-template-columns:1fr; order:initial; }
+      .bd-card { grid-template-columns:1fr; }
+      .bd-cta-inner { grid-template-columns:1fr; }
+      .bd-subscribe { flex-direction:column; }
+    }
+  </style>
+</head>
+
+<body class="bd-page">
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (252) 227-0073</span>
+      <span>✉ sales@roomreadysupply.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="/" class="logo">
+      <img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" />
+    </a>
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/#reorder-header">Reorder Program</a>
+      <a href="/#business-pricing">Volume Pricing</a>
+      <a href="/#about-us">About Us</a>
+      <a href="#" onclick="openContactModal();return false;">Contact</a>
+    </nav>
+    <div class="nav-icons">
+      <a href="/catalog"><img src="assets/icons/hl1.svg" alt="Search"></a>
+      <a href="/login" class="guest-only login-nav-btn">Login</a>
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn"><img src="assets/icons/hl2.svg" alt="Account"></button>
+        <div class="dropdown-menu">
+          <a href="/account">My Account</a>
+          <a href="/account#orders">Order History</a>
+          <a href="/profile?tab=reorder">Reorder Program</a>
+          <div class="dropdown-divider"></div>
+          <button id="logout-btn">Logout</button>
+        </div>
+      </div>
+      <div class="cart-container">
+        <a href="/cart"><img src="assets/icons/hl3.svg" alt="Cart"></a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+    <a href="/">Home</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/#reorder-header">Reorder Program</a>
+    <a href="/#business-pricing">Volume Pricing</a>
+    <a href="/#about-us">About Us</a>
+    <a href="#" onclick="openContactModal();return false;">Contact</a>
+    <a href="/cart">My Cart</a>
+  </nav>
+
+  <main>
+
+    <section class="bd-hero">
+      <p class="bd-eyebrow">Limited-Time Offers</p>
+      <h1>Quality Supplies. <span class="hl">Lower Costs.</span> Better Business.</h1>
+      <p>Get access to <span class="hl">low-cost</span> hospitality and business supplies designed to give you more room for <span class="hl">higher margins and bigger profits</span>.</p>
+    </section>
+
+    <section class="bd-hero-photo">
+      <img src="assets/img/banner1.jpg" alt="Room Ready Supply warehouse" width="1600" height="900" />
+    </section>
+
+    <section class="bd-intro">
+      <p>Room Ready Supply offers <span class="hl">low-cost</span> hospitality and business essentials at competitive prices, helping you cut <span class="hl">supply costs</span> and protect your <span class="hl">profit margins</span>. Get better deals, bigger savings, and dependable quality <span class="hl">all in one place</span>.</p>
+    </section>
+
+    <section class="bd-offer-head">
+      <h2>What We Offer</h2>
+      <p>These are the products that we are proud of and what we offer. Take advantage of these <span class="hl">low-cost</span> products while it lasts!</p>
+    </section>
+
+    <section class="bd-products">
+
+      <!-- 1 — Bathroom tissue -->
+      <article class="bd-card">
+        <div class="bd-card-media">
+          <img src="assets/img/best-deals/product-tissue.png" alt="4.0x3.1 Green Heritage Pro 2-Ply Bathroom Tissue" loading="lazy">
+        </div>
+        <div class="bd-card-copy">
+          <p class="bd-card-hook">Why Pay $50+ When You Can Get It for Less?</p>
+          <p class="bd-card-pitch">Get the same essential supplies your business needs at a lower cost. Spend less per case, protect your budget, and create more room for profit.</p>
+          <p class="bd-card-name">4.0x3.1 Green® Heritage Pro 2-Ply Bathroom Tissue</p>
+          <ul class="bd-card-specs">
+            <li><b>Item #</b> 248</li>
+            <li><b>Case Qty</b> 96</li>
+            <li><b>Weight</b> 23 lbs</li>
+            <li><b>Dimensions</b> 26.1" x 17.6" x 16.8"</li>
+          </ul>
+          <div class="bd-card-price-row">
+            <div class="bd-card-price">$46.58<span>Our Price / Case</span></div>
+            <a class="bd-buy-btn" href="/product?item=4-0x3-1-green-heritage-pro-2-ply-bathroom-tissue">Buy Now →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 2 — Purex detergent -->
+      <article class="bd-card flip">
+        <div class="bd-card-media">
+          <img src="assets/img/best-deals/product-purex.png" alt="150oz Purex Mountain Breeze Liquid Laundry Detergent" loading="lazy">
+        </div>
+        <div class="bd-card-copy">
+          <p class="bd-card-hook">Cut Your Laundry Supply Costs</p>
+          <p class="bd-card-pitch">Get the supplies your business needs without the retail markup — 115 loads per case, formulated for everyday commercial use.</p>
+          <p class="bd-card-name">150oz. Purex® Mountain Breeze® Liquid Laundry Detergent</p>
+          <ul class="bd-card-specs">
+            <li><b>Item #</b> 5016</li>
+            <li><b>Case Qty</b> 4</li>
+            <li><b>Weight</b> 41 lbs</li>
+            <li><b>Dimensions</b> 13" x 13" x 13.5"</li>
+          </ul>
+          <div class="bd-card-price-row">
+            <div class="bd-card-price">$77.76<span>Our Price / Case</span></div>
+            <a class="bd-buy-btn" href="/product?item=5016">Buy Now →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 3 — Nitrile gloves -->
+      <article class="bd-card">
+        <div class="bd-card-media">
+          <img src="assets/img/best-deals/product-gloves.png" alt="Empress Exam Grade Blue Nitrile Powder Free Gloves" loading="lazy">
+        </div>
+        <div class="bd-card-copy">
+          <p class="bd-card-hook">Stock Up on What You Use Every Day</p>
+          <p class="bd-card-pitch">Exam-grade protection with a powder-free design, engineered for comfort and chemical resistance — a must-have for housekeeping and maintenance teams.</p>
+          <p class="bd-card-name">Empress™ Exam Grade Blue Nitrile Powder Free Gloves (Large)</p>
+          <ul class="bd-card-specs">
+            <li><b>Item #</b> ENEL2003</li>
+            <li><b>Case Qty</b> 10/100</li>
+            <li><b>Weight</b> 16.1 lbs</li>
+            <li><b>Dimensions</b> 14" x 11" x 10.2"</li>
+          </ul>
+          <div class="bd-card-price-row">
+            <div class="bd-card-price">$67.12<span>Our Price / Case</span></div>
+            <a class="bd-buy-btn" href="/product?item=enel2003">Buy Now →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 4 — Performance Plus powder detergent -->
+      <article class="bd-card flip">
+        <div class="bd-card-media">
+          <img src="assets/img/best-deals/product-detergent-pail.png" alt="40lb Performance Plus Low Suds Powder Laundry Detergent" loading="lazy">
+        </div>
+        <div class="bd-card-copy">
+          <p class="bd-card-hook">Heavy-Duty Cleaning, Small Cost</p>
+          <p class="bd-card-pitch">A low-suds powder formula built for high-efficiency and standard machines alike — hot, warm, or cold cycles, one pail covers a lot of laundry.</p>
+          <p class="bd-card-name">40lb. Performance Plus™ Low Suds Powder Laundry Detergent</p>
+          <ul class="bd-card-specs">
+            <li><b>Item #</b> PP40PAIL</li>
+            <li><b>Case Qty</b> 1 Pail</li>
+            <li><b>Weight</b> 43 lbs</li>
+            <li><b>Dimensions</b> 15" x 15" x 14"</li>
+          </ul>
+          <div class="bd-card-price-row">
+            <div class="bd-card-price">$32.87<span>Our Price / Pail</span></div>
+            <a class="bd-buy-btn" href="/product?item=pp40pail">Buy Now →</a>
+          </div>
+        </div>
+      </article>
+
+      <!-- 5 — Ice liner -->
+      <article class="bd-card">
+        <div class="bd-card-media">
+          <img src="assets/img/best-deals/product-can-liner.png" alt="3 Gallon Ice Liner" loading="lazy">
+        </div>
+        <div class="bd-card-copy">
+          <p class="bd-card-hook">Small Cost, Bigger Profit Potential</p>
+          <p class="bd-card-pitch">Keep ice bins sanitary between fills without scrubbing — disposable liners at a price that makes sense for high-turnover properties.</p>
+          <p class="bd-card-name">3 Gallon Ice Liner</p>
+          <ul class="bd-card-specs">
+            <li><b>Item #</b> RDU-LNR-ICE-3GAL-ICE12</li>
+            <li><b>Case Qty</b> 1,000</li>
+            <li><b>Pack Size</b> 3 Gallon</li>
+            <li><b>Dimensions</b> 12" x 12"</li>
+          </ul>
+          <div class="bd-card-price-row">
+            <div class="bd-card-price">$13.18<span>Our Price / Case</span></div>
+            <a class="bd-buy-btn" href="/product?item=rdu-lnr-ice-3gal-ice12">Buy Now →</a>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <section class="bd-cta">
+      <div class="bd-cta-inner">
+        <div>
+          <p class="bd-cta-h">Good Prices Are Worth Repeating.</p>
+          <p class="bd-cta-p">Get notified the moment new low-cost deals like these go live — no spam, just savings when they matter.</p>
+          <form class="bd-subscribe" id="bdSubscribeForm">
+            <input type="email" id="bdSubscribeEmail" placeholder="Your business email" required>
+            <button type="submit" id="bdSubscribeBtn">Subscribe</button>
+          </form>
+          <p class="bd-subscribe-msg" id="bdSubscribeMsg"></p>
+        </div>
+        <div class="bd-cta-right">
+          <p class="bd-cta-h">Better Prices Start With an Account.</p>
+          <p class="bd-cta-p" style="margin-bottom:18px">Create a free account for volume pricing, easy reordering, and access to every deal on this page.</p>
+          <a href="/login" class="bd-account-btn">Create an Account →</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bd-footer">
+    <p>&copy; 2026 Room Ready Supply. All Rights Reserved.</p>
+    <div>
+      <a href="/privacy">Privacy Policy</a> | <a href="/terms">Terms &amp; Conditions</a>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js"></script>
+  <script>
+    document.getElementById('bdSubscribeForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const input = document.getElementById('bdSubscribeEmail');
+      const btn   = document.getElementById('bdSubscribeBtn');
+      const msg   = document.getElementById('bdSubscribeMsg');
+      const email = input.value.trim();
+      if (!email) return;
+
+      btn.disabled = true; btn.textContent = 'Saving…';
+      msg.textContent = ''; msg.className = 'bd-subscribe-msg';
+
+      const { error } = await window.sb.from('newsletter_subscribers').insert({ email, source: 'best-deals' });
+
+      btn.disabled = false; btn.textContent = 'Subscribe';
+      if (error) {
+        // 23505 = unique_violation -- already subscribed isn't really an
+        // error from the visitor's point of view, so it reads as success.
+        if (error.code === '23505') {
+          msg.textContent = "You're already on the list!";
+          msg.className = 'bd-subscribe-msg ok';
+          input.value = '';
+        } else {
+          msg.textContent = "Couldn't save that — please try again.";
+          msg.className = 'bd-subscribe-msg err';
+        }
+        return;
+      }
+      msg.textContent = "You're on the list — we'll email you next time.";
+      msg.className = 'bd-subscribe-msg ok';
+      input.value = '';
+    });
+  </script>
+</body>
+</html>
