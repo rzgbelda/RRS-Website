@@ -525,18 +525,25 @@
     // so a slow/broken CDN or an unsupported browser just leaves the plain
     // orange button in place instead of breaking anything.
     (async () => {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        console.warn('[best-deals liquid-metal] skipped: prefers-reduced-motion is on');
+        return;
+      }
 
       // The shader library requires WebGL2 specifically (not WebGL1) --
       // check before spending a network round-trip on the CDN import.
       const gl = document.createElement('canvas').getContext('webgl2');
-      if (!gl) return;
+      if (!gl) {
+        console.warn('[best-deals liquid-metal] skipped: WebGL2 is not available in this browser/context');
+        return;
+      }
 
       let ShaderMount, liquidMetalFragmentShader;
       try {
         ({ ShaderMount, liquidMetalFragmentShader } = await import('https://esm.sh/@paper-design/shaders@0.0.80'));
+        console.info('[best-deals liquid-metal] shader module loaded OK', { ShaderMount, liquidMetalFragmentShader: typeof liquidMetalFragmentShader });
       } catch (err) {
-        console.warn('[best-deals] liquid-metal shader failed to load, buttons stay flat orange', err);
+        console.warn('[best-deals liquid-metal] shader module failed to load, buttons stay flat orange', err);
         return;
       }
 
@@ -569,18 +576,22 @@
           btn.addEventListener('mouseleave', () => mount.setSpeed?.(0.6));
           btn.addEventListener('mousedown', () => mount.setSpeed?.(2.4));
           btn.addEventListener('mouseup', () => mount.setSpeed?.(1));
+          console.info('[best-deals liquid-metal] mounted on button:', btn.textContent.trim());
         } catch (err) {
-          console.warn('[best-deals] shader mount failed for a button, leaving it flat orange', err);
+          console.warn('[best-deals liquid-metal] shader mount failed for a button, leaving it flat orange', btn, err);
           shaderEl.remove();
           btn.dataset.lmMounted = '';
         }
       }
 
       function mountAll(root) {
-        (root || document).querySelectorAll('.lm-btn:not([data-lm-mounted])').forEach(mountOne);
+        const targets = (root || document).querySelectorAll('.lm-btn:not([data-lm-mounted])');
+        console.info('[best-deals liquid-metal] mountAll found', targets.length, 'button(s) to mount');
+        targets.forEach(mountOne);
       }
 
       window.bdMountLiquidButtons = mountAll;
+      console.info('[best-deals liquid-metal] module ready, running initial mountAll()');
       mountAll();
     })();
   </script>
