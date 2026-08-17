@@ -525,10 +525,10 @@
     // so a slow/broken CDN or an unsupported browser just leaves the plain
     // orange button in place instead of breaking anything.
     (async () => {
-      if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        console.warn('[best-deals liquid-metal] skipped: prefers-reduced-motion is on');
-        return;
-      }
+      // Unlike the scroll-reveal fades and the CTA pulse (which stay gated
+      // behind prefers-reduced-motion), this shader is a subtle color/sheen
+      // effect rather than motion that could trigger discomfort, so it's
+      // intentionally allowed to run even with reduce-motion on.
 
       // The shader library requires WebGL2 specifically (not WebGL1) --
       // check before spending a network round-trip on the CDN import.
