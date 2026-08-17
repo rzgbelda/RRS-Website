@@ -48,8 +48,13 @@
     .bd-hero p { font-size:16px; line-height:1.65; color:#3A4A5C; max-width:66ch; margin:0 auto; }
     .bd-hero p .hl { color:#FF710C; font-weight:700; }
 
-    .bd-hero-photo { max-width:1160px; margin:0 auto; padding:0 24px 48px; }
-    .bd-hero-photo img { width:100%; height:auto; border-radius:16px; display:block; box-shadow:0 18px 40px -14px rgba(11,37,69,.28); }
+    /* Full-bleed: no max-width/side padding, so this spans the entire
+       viewport edge-to-edge rather than sitting inside the page's usual
+       centered 1160px column. height:auto (not object-fit:cover) keeps
+       the whole image visible at its native aspect ratio -- nothing gets
+       cropped off the sides or top/bottom. */
+    .bd-hero-photo { margin:0 0 48px; }
+    .bd-hero-photo img { width:100%; height:auto; display:block; }
 
     .bd-intro { max-width:900px; margin:0 auto; padding:0 24px 56px; text-align:center; }
     .bd-intro p { font-size:15px; line-height:1.75; color:#3A4A5C; }
@@ -316,7 +321,7 @@
     </section>
 
     <section class="bd-hero-photo bd-reveal">
-      <img src="assets/img/banner1.jpg" alt="Room Ready Supply warehouse" width="1600" height="900" />
+      <img src="assets/img/best-deals-hero.jpg" alt="Room Ready Supply warehouse shelving stocked with hospitality supplies" width="1600" height="639" />
     </section>
 
     <section class="bd-intro bd-reveal">
