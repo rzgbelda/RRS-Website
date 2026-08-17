@@ -60,15 +60,45 @@
       box-shadow:0 12px 30px -12px rgba(11,37,69,.16);
     }
     .bd-card-media img { width:100%; max-width:280px; height:auto; display:block; }
-    .bd-card-hook { font-size:20px; font-weight:800; color:#0B2545; line-height:1.3; margin-bottom:10px; }
-    .bd-card-pitch { font-size:13.5px; color:#5B6C7E; line-height:1.65; margin-bottom:18px; }
-    .bd-card-name { font-size:15px; font-weight:700; color:#0B2545; margin-bottom:10px; line-height:1.4; }
-    .bd-card-specs { list-style:none; padding:0; margin:0 0 18px; display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; }
-    .bd-card-specs li { font-size:12px; color:#5B6C7E; }
+
+    /* Copy panel restructured as a self-contained card: glass header (badge
+       + hook + pitch) over a subtle gradient, divider, then a body section
+       (checkmark spec list + price + CTA) -- pattern adapted from 21st.dev's
+       "Pricing Card" component (header/body/list system), translated from
+       React/Tailwind into this site's plain CSS since there's no build step. */
+    .bd-card-copy {
+      background:#fff; border:1px solid #ECE3DA; border-radius:18px;
+      box-shadow:0 14px 34px -16px rgba(11,37,69,.14); overflow:hidden;
+    }
+    .bd-card-panel-header {
+      position:relative; padding:22px 26px 20px; background:#FBF6F0;
+      border-bottom:1px solid #ECE3DA;
+    }
+    .bd-card-panel-header::before {
+      content:''; position:absolute; inset:0 0 auto 0; height:60px;
+      background:linear-gradient(180deg, rgba(255,113,12,.07), rgba(255,113,12,0));
+      pointer-events:none;
+    }
+    .bd-card-badge {
+      position:relative; display:inline-flex; align-items:center; gap:6px;
+      background:#FFE7D6; color:#C44E00; font-size:11px; font-weight:800;
+      letter-spacing:.04em; text-transform:uppercase; padding:5px 11px;
+      border-radius:999px; margin-bottom:12px;
+    }
+    .bd-card-hook { position:relative; font-size:20px; font-weight:800; color:#0B2545; line-height:1.3; margin-bottom:8px; }
+    .bd-card-pitch { position:relative; font-size:13.5px; color:#5B6C7E; line-height:1.65; margin:0; }
+    .bd-card-panel-body { padding:20px 26px 26px; }
+    .bd-card-name { font-size:15px; font-weight:700; color:#0B2545; margin-bottom:14px; line-height:1.4; }
+    .bd-card-specs { list-style:none; padding:0; margin:0 0 20px; display:flex; flex-direction:column; gap:9px; }
+    .bd-card-specs li { display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:#5B6C7E; line-height:1.5; }
+    .bd-card-specs li svg { flex:none; margin-top:1px; color:#FF710C; }
     .bd-card-specs li b { color:#0B2545; font-weight:700; }
-    .bd-card-price-row { display:flex; align-items:center; gap:18px; flex-wrap:wrap; }
-    .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; }
-    .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; }
+    .bd-card-price-row {
+      display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
+      padding-top:18px; border-top:1px dashed #ECE3DA;
+    }
+    .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; line-height:1; }
+    .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; margin-top:4px; }
     .bd-buy-btn {
       display:inline-flex; align-items:center; gap:8px;
       background:#FF710C; color:#fff; font-weight:700; font-size:14px;
@@ -245,19 +275,21 @@
       return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
+    const BD_CHECK_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>';
+
     function bdCardHtml(deal, product, idx) {
       const p = product || {};
       const specs = [];
-      specs.push(`<li><b>Item #</b> ${escBd(p.sku || '')}</li>`);
-      if (p.case_qty) specs.push(`<li><b>Case Qty</b> ${escBd(p.case_qty)}</li>`);
+      specs.push(`<li>${BD_CHECK_SVG}<span><b>Item #</b> ${escBd(p.sku || '')}</span></li>`);
+      if (p.case_qty) specs.push(`<li>${BD_CHECK_SVG}<span><b>Case Qty</b> ${escBd(p.case_qty)}</span></li>`);
       const hasWeight = Number(p.weight) > 0.05;
       const hasDims = Number(p.length) > 0.05 && Number(p.width) > 0.05;
-      if (hasWeight) specs.push(`<li><b>Weight</b> ${Number(p.weight)} lbs</li>`);
+      if (hasWeight) specs.push(`<li>${BD_CHECK_SVG}<span><b>Weight</b> ${Number(p.weight)} lbs</span></li>`);
       if (hasDims) {
         const h = Number(p.height) > 0.05 ? ` x ${p.height}"` : '';
-        specs.push(`<li><b>Dimensions</b> ${p.length}" x ${p.width}"${h}</li>`);
+        specs.push(`<li>${BD_CHECK_SVG}<span><b>Dimensions</b> ${p.length}" x ${p.width}"${h}</span></li>`);
       } else if (p.pack_size) {
-        specs.push(`<li><b>Pack Size</b> ${escBd(p.pack_size)}</li>`);
+        specs.push(`<li>${BD_CHECK_SVG}<span><b>Pack Size</b> ${escBd(p.pack_size)}</span></li>`);
       }
 
       const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (p.unit === 'Case' ? 'Case' : (p.unit || 'Case'));
@@ -270,13 +302,18 @@
           <img src="${escBd(p.image_url || '')}" alt="${escBd(p.name || '')}" loading="lazy">
         </div>
         <div class="bd-card-copy">
-          <p class="bd-card-hook">${escBd(deal.hook_title)}</p>
-          <p class="bd-card-pitch">${escBd(deal.pitch_text)}</p>
-          <p class="bd-card-name">${escBd(p.name || '')}</p>
-          <ul class="bd-card-specs">${specs.join('')}</ul>
-          <div class="bd-card-price-row">
-            <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
-            <a class="bd-buy-btn" href="${buyHref}">Buy Now &rarr;</a>
+          <div class="bd-card-panel-header">
+            <span class="bd-card-badge">This Month's Deal</span>
+            <p class="bd-card-hook">${escBd(deal.hook_title)}</p>
+            <p class="bd-card-pitch">${escBd(deal.pitch_text)}</p>
+          </div>
+          <div class="bd-card-panel-body">
+            <p class="bd-card-name">${escBd(p.name || '')}</p>
+            <ul class="bd-card-specs">${specs.join('')}</ul>
+            <div class="bd-card-price-row">
+              <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
+              <a class="bd-buy-btn" href="${buyHref}">Buy Now &rarr;</a>
+            </div>
           </div>
         </div>
       </article>`;
