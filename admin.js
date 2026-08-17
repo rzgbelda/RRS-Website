@@ -144,7 +144,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo"];
+const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo","best-deals"];
 
 // A developer account is scoped to the ticket board and nothing else -- no
 // products, orders, customers, pricing, or revenue. Allow-list rather than
@@ -267,7 +267,8 @@ function switchTab(tab) {
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
-      "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets" }[tab] || tab;
+      "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
+      "best-deals":"Best Deals Campaign" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -281,6 +282,7 @@ function switchTab(tab) {
   if (tab === "sub-distributors") renderSubDistributorsTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
   if (tab === "dev-tickets")      renderDevTicketsTab();
+  if (tab === "best-deals")       renderBestDealsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -3454,6 +3456,157 @@ function previewAboutBanner(input) {
     showToast("Image previewed — save to apply");
   };
   reader.readAsDataURL(file);
+}
+
+/* ============================================================
+   BEST DEALS CAMPAIGN TAB
+   Powers the /best-deals landing page. Deliberately stores only a sku
+   reference plus the marketing copy -- name/price/image are read live
+   from products at render time on both this admin list and the public
+   page, so a price change never goes stale here the way a snapshot would.
+============================================================ */
+
+let _bdProductCache = [];
+
+async function renderBestDealsTab() {
+  const list = document.getElementById("bestDealsList");
+  if (!list) return;
+  list.innerHTML = `<div class="a-empty" style="padding:40px">Loading…</div>`;
+
+  const { data: deals, error } = await window.sb
+    .from("best_deals")
+    .select("*")
+    .order("position", { ascending: true });
+
+  if (error) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">Couldn't load: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!deals || !deals.length) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">No deals yet. Click "+ Add Deal" to build this month's lineup.</div>`;
+    return;
+  }
+
+  const skus = [...new Set(deals.map(d => d.sku))];
+  const { data: products } = await window.sb
+    .from("products")
+    .select("sku,name,image_url,price,is_active")
+    .in("sku", skus);
+  const productBySku = Object.fromEntries((products || []).map(p => [p.sku, p]));
+
+  list.innerHTML = deals.map(d => {
+    const p = productBySku[d.sku];
+    const missing = !p;
+    return `
+    <div class="a-card" style="padding:16px 18px;display:flex;gap:14px;align-items:flex-start;${d.is_active ? "" : "opacity:.55"}">
+      <img src="${p?.image_url || ""}" alt="" style="width:52px;height:52px;object-fit:contain;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;flex:none">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+          <span style="font-size:11px;font-weight:800;color:#94a3b8;font-family:ui-monospace,monospace">#${d.position}</span>
+          <strong style="font-size:14px;color:#0d1f38">${escHtml(d.hook_title)}</strong>
+          <span class="a-badge ${d.is_active ? "a-badge-green" : "a-badge-yellow"}">${d.is_active ? "Active" : "Draft"}</span>
+          ${missing ? `<span class="a-badge a-badge-red">Product not found (sku: ${escHtml(d.sku)})</span>` : (!p.is_active ? `<span class="a-badge a-badge-red">Product inactive</span>` : "")}
+        </div>
+        <div style="font-size:12.5px;color:#64748b;margin-bottom:4px">${escHtml(d.pitch_text)}</div>
+        <div style="font-size:12px;color:#94a3b8">${p ? `${escHtml(p.name)} &middot; <strong style="color:#0d1f38">$${Number(p.price).toFixed(2)}</strong> <span style="color:#94a3b8">(live price)</span>` : ""}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex:none">
+        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px" onclick="editBestDeal('${d.id}')">Edit</button>
+        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px;color:#dc2626" onclick="deleteBestDeal('${d.id}')">Delete</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function loadBestDealProductOptions() {
+  if (_bdProductCache.length) return _bdProductCache;
+  const { data } = await window.sb
+    .from("products")
+    .select("sku,name,image_url,price")
+    .eq("is_active", true)
+    .order("name");
+  _bdProductCache = data || [];
+  const dl = document.getElementById("bdProductList");
+  if (dl) {
+    dl.innerHTML = _bdProductCache.map(p => `<option value="${escHtml(p.sku)} — ${escHtml(p.name)}">`).join("");
+  }
+  return _bdProductCache;
+}
+
+function onBestDealProductPick() {
+  const val = document.getElementById("bdSkuInput").value;
+  const sku = val.split(" — ")[0].trim();
+  const p = _bdProductCache.find(x => x.sku === sku);
+  const preview = document.getElementById("bdProductPreview");
+  if (!p) { preview.style.display = "none"; return; }
+  document.getElementById("bdProductPreviewImg").src = p.image_url || "";
+  document.getElementById("bdProductPreviewName").textContent = p.name;
+  document.getElementById("bdProductPreviewPrice").textContent = `$${Number(p.price).toFixed(2)} (live price, shown automatically)`;
+  preview.style.display = "flex";
+}
+
+async function openAddBestDeal() {
+  document.getElementById("bestDealModalTitle").textContent = "Add Deal";
+  document.getElementById("bdId").value = "";
+  document.getElementById("bdSkuInput").value = "";
+  document.getElementById("bdHookInput").value = "";
+  document.getElementById("bdPitchInput").value = "";
+  document.getElementById("bdPositionInput").value = "1";
+  document.getElementById("bdActiveInput").value = "true";
+  document.getElementById("bdProductPreview").style.display = "none";
+  await loadBestDealProductOptions();
+  openModal("bestDealModal");
+}
+
+async function editBestDeal(id) {
+  const { data: d } = await window.sb.from("best_deals").select("*").eq("id", id).single();
+  if (!d) return;
+  document.getElementById("bestDealModalTitle").textContent = "Edit Deal";
+  document.getElementById("bdId").value = d.id;
+  document.getElementById("bdHookInput").value = d.hook_title;
+  document.getElementById("bdPitchInput").value = d.pitch_text;
+  document.getElementById("bdPositionInput").value = d.position;
+  document.getElementById("bdActiveInput").value = String(d.is_active);
+  await loadBestDealProductOptions();
+  const p = _bdProductCache.find(x => x.sku === d.sku);
+  document.getElementById("bdSkuInput").value = p ? `${p.sku} — ${p.name}` : d.sku;
+  onBestDealProductPick();
+  openModal("bestDealModal");
+}
+
+async function saveBestDeal() {
+  const skuRaw = document.getElementById("bdSkuInput").value.split(" — ")[0].trim();
+  const hook = document.getElementById("bdHookInput").value.trim();
+  const pitch = document.getElementById("bdPitchInput").value.trim();
+  const position = parseInt(document.getElementById("bdPositionInput").value) || 1;
+  const isActive = document.getElementById("bdActiveInput").value === "true";
+  const id = document.getElementById("bdId").value;
+
+  if (!skuRaw) { showToast("Pick a product first."); return; }
+  if (!hook || !pitch) { showToast("Hook headline and pitch text are required."); return; }
+
+  const btn = document.getElementById("bdSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const payload = { sku: skuRaw, hook_title: hook, pitch_text: pitch, position, is_active: isActive, updated_at: new Date().toISOString() };
+  const { error } = id
+    ? await window.sb.from("best_deals").update(payload).eq("id", id)
+    : await window.sb.from("best_deals").insert(payload);
+
+  btn.disabled = false; btn.textContent = "Save Deal";
+  if (error) { showToast("Couldn't save: " + error.message); return; }
+
+  closeModal("bestDealModal");
+  showToast("Deal saved.");
+  renderBestDealsTab();
+}
+
+async function deleteBestDeal(id) {
+  if (!confirm("Remove this deal from the campaign?")) return;
+  const { error } = await window.sb.from("best_deals").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  showToast("Deal removed.");
+  renderBestDealsTab();
 }
 
 /* ============================================================
