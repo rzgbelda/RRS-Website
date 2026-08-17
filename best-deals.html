@@ -205,27 +205,34 @@
     }
 
     /* Liquid-metal buttons: a WebGL shader (@paper-design/shaders, loaded
-       from CDN) painted behind each CTA's label, tinted orange via a CSS
-       filter + warm backing gradient since the shader itself renders a
-       neutral metal. Progressive enhancement -- buttons keep their normal
-       flat-orange background and full label/link behavior until (unless)
-       the shader successfully mounts, so nothing breaks if WebGL or the
-       CDN is unavailable. See the mounting script near the end of <body>. */
+       from CDN) painted behind each CTA's label. The canvas is fully
+       opaque, so a backing gradient placed *behind* it (as originally
+       tried) never shows through -- instead a semi-transparent dark-copper
+       scrim sits ON TOP of the canvas (.lm-shader::after) to tame its
+       bright highlights and guarantee contrast for the white label text.
+       Progressive enhancement -- buttons keep their normal flat-orange
+       background and full label/link behavior until (unless) the shader
+       successfully mounts, so nothing breaks if WebGL or the CDN is
+       unavailable. See the mounting script near the end of <body>. */
     .lm-btn { position:relative; overflow:hidden; isolation:isolate; }
     .lm-shader { position:absolute; inset:0; z-index:0; display:block; border-radius:inherit; overflow:hidden; pointer-events:none; }
     .lm-shader canvas {
       position:absolute !important; inset:0 !important; width:100% !important; height:100% !important;
       display:block !important; border-radius:inherit;
-      filter:sepia(1) saturate(4.5) hue-rotate(-12deg) brightness(1.08) contrast(1.05);
+      filter:sepia(.55) saturate(2.1) hue-rotate(-6deg) brightness(.72) contrast(1.12);
     }
-    .lm-label { position:relative; z-index:1; display:inline-flex; align-items:center; gap:8px; }
-    .lm-btn.lm-active { background:transparent !important; }
-    .lm-btn.lm-active::before {
-      content:''; position:absolute; inset:0; z-index:-1; border-radius:inherit;
-      background:linear-gradient(180deg,#9A3B00,#3A1400);
+    .lm-shader::after {
+      content:''; position:absolute; inset:0; z-index:1;
+      background:linear-gradient(180deg, rgba(58,20,0,.5), rgba(28,9,0,.72));
+      mix-blend-mode:multiply;
     }
-    .lm-btn.lm-active:hover { background:transparent !important; }
-    .lm-btn.lm-active:hover::before { background:linear-gradient(180deg,#B24700,#4A1A00); }
+    .lm-label {
+      position:relative; z-index:2; display:inline-flex; align-items:center; gap:8px;
+      text-shadow:0 1px 3px rgba(0,0,0,.55);
+    }
+    .lm-btn.lm-active { background:#2A0D00 !important; }
+    .lm-btn.lm-active:hover { background:#2A0D00 !important; }
+    .lm-btn.lm-active:hover .lm-shader::after { background:linear-gradient(180deg, rgba(70,26,0,.42), rgba(32,11,0,.62)); }
 
     .bd-footer { background:#032C58; padding:20px 24px; text-align:center; }
     .bd-footer p { color:#B7C4D6; font-size:12.5px; margin-bottom:6px; }
