@@ -32,19 +32,18 @@
     .bd-hero { max-width:1160px; margin:0 auto; padding:56px 24px 40px; text-align:center; }
     .bd-eyebrow { font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FF710C; margin-bottom:14px; }
     .bd-hero h1 { font-size:clamp(30px,4.6vw,48px); font-weight:800; line-height:1.14; letter-spacing:-.01em; color:#0B2545; margin-bottom:18px; text-wrap:balance; }
+    /* A moving gradient sweep only lights up part of the phrase at any
+       instant by definition -- to make the whole phrase shine together,
+       pulse brightness + a soft glow uniformly across the entire span
+       instead of animating a highlight's position. */
     .bd-hero h1 .hl {
       display:inline-block; white-space:nowrap;
       color:#FF710C;
-      background:linear-gradient(100deg, #FF710C 40%, #FFDCB0 50%, #FF710C 60%);
-      background-size:220% 100%;
-      background-position:180% 0;
-      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-      animation:bdHeroShimmer 3.6s ease-in-out infinite;
+      animation:bdHeroShimmer 2.2s ease-in-out infinite;
     }
     @keyframes bdHeroShimmer {
-      0%   { background-position:180% 0; }
-      50%  { background-position:-120% 0; }
-      100% { background-position:180% 0; }
+      0%, 100% { filter:brightness(1) drop-shadow(0 0 0 rgba(255,150,60,0)); }
+      50%      { filter:brightness(1.45) drop-shadow(0 0 12px rgba(255,170,80,.9)); }
     }
     .bd-hero p { font-size:16px; line-height:1.65; color:#3A4A5C; max-width:66ch; margin:0 auto; }
     .bd-hero p .hl { color:#FF710C; font-weight:700; }
@@ -245,7 +244,7 @@
       .bd-buy-btn:hover, .bd-account-btn:hover { transform:none !important; }
       .bd-account-btn { animation:none !important; }
       .bd-card-badge .bd-badge-blob { animation:none !important; }
-      .bd-hero h1 .hl { animation:none !important; background-position:0 0 !important; }
+      .bd-hero h1 .hl { animation:none !important; filter:none !important; }
     }
 
     @media (max-width:760px) {
