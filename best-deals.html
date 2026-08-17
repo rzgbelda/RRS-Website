@@ -244,7 +244,9 @@
       .bd-buy-btn:hover, .bd-account-btn:hover { transform:none !important; }
       .bd-account-btn { animation:none !important; }
       .bd-card-badge .bd-badge-blob { animation:none !important; }
-      .bd-hero h1 .hl { animation:none !important; filter:none !important; }
+      /* Hero shimmer (.bd-hero h1 .hl) is intentionally exempt from this
+         block -- it's a brightness/glow pulse rather than motion that
+         could cause discomfort, so it runs even with reduce-motion on. */
     }
 
     @media (max-width:760px) {
