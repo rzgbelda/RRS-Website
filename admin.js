@@ -599,12 +599,38 @@ function openAddProduct() {
   document.getElementById("productFormError").style.display = "none";
   // form.reset() does not touch the hidden base-price field or the readonly
   // tier fields, so clear them explicitly before the panel is shown.
-  ["prodPrice", "prodPrice1", "prodPrice2", "prodPrice3"].forEach(id => {
+  ["prodPrice", "prodPrice1", "prodPrice2", "prodPrice3", "prodFlatPriceInput"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = "";
   });
+  const flatChk = document.getElementById("prodFlatPricing");
+  if (flatChk) flatChk.checked = false;
+  toggleFlatPricing();
   recalcTierPricing();
   openModal("productModal");
+}
+
+/**
+ * Toggles between the default cost/category-derived tier pricing and a
+ * single flat price for products that don't need volume tiers (a one-off
+ * deal item, a sample, anything priced the same at any quantity). Checked,
+ * this hides the cost/category requirement and takes one manual price
+ * instead -- unchecked (the default) leaves the existing cost-derived
+ * behavior untouched, so nothing about the normal workflow changes.
+ */
+function toggleFlatPricing() {
+  const flat = document.getElementById("prodFlatPricing")?.checked || false;
+  const flatRow = document.getElementById("flatPricingRow");
+  const tieredFields = document.getElementById("tieredPricingFields");
+  if (flatRow) flatRow.style.display = flat ? "" : "none";
+  if (tieredFields) tieredFields.style.display = flat ? "none" : "";
+  if (flat) syncFlatPrice();
+}
+
+function syncFlatPrice() {
+  const v = document.getElementById("prodFlatPriceInput")?.value || "";
+  const base = document.getElementById("prodPrice");
+  if (base) base.value = v;
 }
 
 /**
@@ -714,6 +740,14 @@ async function openEditProduct(id) {
   setChk("prodIsOnSale",   !!p.is_on_sale);
   setChk("prodFeatured",   !!p.is_featured);
   setChk("prodActive",     !!p.is_active);
+
+  // A product with a price but no tiers was saved as flat-price -- reopen
+  // it the same way instead of showing empty "calculated" tier fields.
+  const isFlat = !p.price_tier1 && !p.price_tier2 && !p.price_tier3 && Number(p.price) > 0;
+  setChk("prodFlatPricing", isFlat);
+  setVal("prodFlatPriceInput", isFlat ? p.price : "");
+  toggleFlatPricing();
+
   // Recompute from the stored cost. If the tiers on file are stale (a
   // supplier cost went up but prices were never redone) the corrected
   // figures appear immediately, which is the whole point of deriving them.
@@ -738,12 +772,23 @@ async function saveProduct() {
 
   if (!name) { errEl.textContent = "Product name is required."; errEl.style.display = "block"; return; }
 
-  // Tier prices are derived, so an empty 1-5 tier means the category or cost
-  // is missing. Saving anyway would publish a $0.00 product.
-  if (!(parseFloat(document.getElementById("prodPrice1")?.value) > 0)) {
-    errEl.textContent = "Pick a category and enter Cost Per Case — tier prices are calculated from them.";
-    errEl.style.display = "block";
-    return;
+  const isFlatPricing = document.getElementById("prodFlatPricing")?.checked || false;
+  const flatPrice     = parseFloat(document.getElementById("prodFlatPriceInput")?.value) || 0;
+
+  if (isFlatPricing) {
+    if (!(flatPrice > 0)) {
+      errEl.textContent = "Enter a price.";
+      errEl.style.display = "block";
+      return;
+    }
+  } else {
+    // Tier prices are derived, so an empty 1-5 tier means the category or
+    // cost is missing. Saving anyway would publish a $0.00 product.
+    if (!(parseFloat(document.getElementById("prodPrice1")?.value) > 0)) {
+      errEl.textContent = "Pick a category and enter Cost Per Case — tier prices are calculated from them. (Or check “Flat price” above if this product doesn't need volume tiers.)";
+      errEl.style.display = "block";
+      return;
+    }
   }
   errEl.style.display = "none";
 
@@ -755,10 +800,13 @@ async function saveProduct() {
     sku           : (document.getElementById("prodSku")?.value || "").trim() || null,
     category_name : (document.getElementById("prodCategory")?.value || "").trim(),
     description   : (document.getElementById("prodDescription")?.value || "").trim(),
-    price         : parseFloat(document.getElementById("prodPrice")?.value) || 0,
-    price_tier1   : parseFloat(document.getElementById("prodPrice1")?.value) || null,
-    price_tier2   : parseFloat(document.getElementById("prodPrice2")?.value) || null,
-    price_tier3   : parseFloat(document.getElementById("prodPrice3")?.value) || null,
+    // Flat-price products carry no tiers at all -- getTierPrice() (script.js)
+    // already falls back to the base price at any quantity when tier1/2/3
+    // are null, so this is the whole mechanism, not a partial one.
+    price         : isFlatPricing ? flatPrice : (parseFloat(document.getElementById("prodPrice")?.value) || 0),
+    price_tier1   : isFlatPricing ? null : (parseFloat(document.getElementById("prodPrice1")?.value) || null),
+    price_tier2   : isFlatPricing ? null : (parseFloat(document.getElementById("prodPrice2")?.value) || null),
+    price_tier3   : isFlatPricing ? null : (parseFloat(document.getElementById("prodPrice3")?.value) || null),
     sale_price    : isOnSale ? spRaw : null,
     is_on_sale    : isOnSale,
     retail_price  : parseFloat(document.getElementById("prodRetailPrice")?.value) || null,
