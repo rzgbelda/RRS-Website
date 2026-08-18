@@ -652,6 +652,7 @@ const CATEGORY_MARKUPS = {
   "Housekeeping Supplies":         [0.55, 0.45, 0.35],
   "Guest Amenities":               [0.70, 0.55, 0.40],
   "Gloves & PPE":                  [0.35, 0.28, 0.22],
+  "Laundry & Cleaning Chemicals":  [0.40, 0.32, 0.25],
 };
 
 /**
