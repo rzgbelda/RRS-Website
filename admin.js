@@ -1132,7 +1132,13 @@ function handleCsvFile(file) {
   reader.onload = e => {
     try {
       _csvRows = parseCsv(e.target.result);
-      if (!_csvRows.length) { showToast("No data rows found in CSV."); return; }
+      if (!_csvRows.length) {
+        const reason = _csvRows.blankNameSkips?.length
+          ? `Every row is missing a "name" value (row ${_csvRows.blankNameSkips.join(", ")}). Add a name to each row and re-upload.`
+          : "No data rows found in CSV.";
+        showToast(reason);
+        return;
+      }
       renderCsvPreview(_csvRows);
       showCsvStep(2);
       document.getElementById("csvImportBtn").style.display = "";
@@ -1183,18 +1189,25 @@ function parseCsv(text) {
   if (rawRows.length < 2) throw new Error("CSV must have a header row and at least one data row.");
 
   const headers = rawRows[0].map(h => h.trim().toLowerCase());
-  const nameIdx = headers.indexOf("name");
-  if (nameIdx === -1) throw new Error('CSV must have a "name" column.');
+  if (headers.indexOf("name")  === -1) throw new Error('CSV must have a "name" column.');
+  if (headers.indexOf("price") === -1) throw new Error('CSV must have a "price" column.');
 
+  // Rows missing the name used to be silently dropped with no trace, so a
+  // typo'd or blank cell just made a product vanish from the import with
+  // no way to tell why. Collect them (with their file row number, header
+  // row counted as row 1) so the caller can tell the user exactly which
+  // rows to fix instead of just importing fewer products than expected.
   const rows = [];
+  const blankNameSkips = [];
   for (let i = 1; i < rawRows.length; i++) {
     const vals = rawRows[i];
     if (vals.length === 1 && vals[0].trim() === "") continue; // fully-blank line
     const obj = {};
     headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
-    if (!obj.name) continue;   // skip blank name rows
+    if (!obj.name) { blankNameSkips.push(i + 1); continue; }
     rows.push(obj);
   }
+  rows.blankNameSkips = blankNameSkips;
   return rows;
 }
 
@@ -1235,6 +1248,28 @@ function renderCsvPreview(rows) {
   if (dupNote) dupNote.textContent = withSku
     ? `${withSku} have SKU — existing products with matching SKU will be updated.`
     : "No SKU column — all rows will be inserted as new products.";
+
+  /* Warn about missing required data *before* the user clicks Import,
+     rather than only after the fact in the results screen -- so they know
+     exactly what to fix in the spreadsheet and can re-upload once instead
+     of importing broken/incomplete rows first. */
+  const blankPriceRows = rows.filter(r => parseMoneyCell(r.price).empty);
+  const warnEl = document.getElementById("csvSkipWarning");
+  if (warnEl) {
+    const msgs = [];
+    if (rows.blankNameSkips?.length) {
+      msgs.push(`${rows.blankNameSkips.length} row(s) skipped — missing a name (row ${rows.blankNameSkips.join(", ")}). Add a name and re-upload if you want these included.`);
+    }
+    if (blankPriceRows.length) {
+      msgs.push(`${blankPriceRows.length} row(s) below are missing a price (${blankPriceRows.slice(0, 5).map(r => `"${r.name}"`).join(", ")}${blankPriceRows.length > 5 ? ", …" : ""}) — these will be skipped on import. Add a price and re-upload if you want them included.`);
+    }
+    if (msgs.length) {
+      warnEl.innerHTML = msgs.map(m => `⚠ ${escHtml(m)}`).join("<br>");
+      warnEl.style.display = "";
+    } else {
+      warnEl.style.display = "none";
+    }
+  }
 }
 
 /* Run the actual import in batches of 100 */
@@ -1281,10 +1316,21 @@ async function runCsvImport() {
      already caused a real pricing incident here. Reject those rows
      instead of importing them broken. */
   const rows = [];
+  let missingPriceCount = 0;
   let invalidPriceCount = 0;
   preValidationRows.forEach((r, idx) => {
     const priceInfo = parseMoneyCell(r.price);
     const saleInfo  = parseMoneyCell(r.sale_price);
+    // A blank price cell used to silently import at $0.00 -- price is
+    // required (unlike sale_price, where blank legitimately means "no
+    // sale"), so treat a missing price the same as a bad one: reject the
+    // row and say exactly what's missing, instead of shipping a live
+    // product priced at zero with no trace of why.
+    if (priceInfo.empty) {
+      missingPriceCount++;
+      errLines.push(`"${r.name}": price is missing — add a price for this row and re-upload.`);
+      return;
+    }
     if (priceInfo.invalid || saleInfo.invalid) {
       invalidPriceCount++;
       const badField = priceInfo.invalid ? "price" : "sale_price";
@@ -1294,13 +1340,14 @@ async function runCsvImport() {
     }
     rows.push(r);
   });
-  const skippedTotal = csvDupCount + dbDupCount + invalidPriceCount;
+  const skippedTotal = csvDupCount + dbDupCount + missingPriceCount + invalidPriceCount;
 
   if (skippedTotal) {
     const dupCount = csvDupCount + dbDupCount;
     const skipDesc = [
-      dupCount ? `${dupCount} duplicate(s)` : null,
-      invalidPriceCount ? `${invalidPriceCount} invalid price(s)` : null,
+      dupCount           ? `${dupCount} duplicate(s)`      : null,
+      missingPriceCount  ? `${missingPriceCount} missing price(s)` : null,
+      invalidPriceCount  ? `${invalidPriceCount} invalid price(s)` : null,
     ].filter(Boolean).join(", ");
     document.getElementById("csvProgressSub").textContent =
       `Skipped ${skippedTotal} row(s) — ${skipDesc} — importing ${rows.length} product(s)…`;
