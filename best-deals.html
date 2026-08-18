@@ -154,6 +154,13 @@
       display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
       padding-top:18px; border-top:1px dashed #ECE3DA;
     }
+    .bd-card-price-block { display:flex; flex-direction:column; gap:4px; }
+    .bd-card-retail { font-size:12.5px; font-weight:600; color:#8A99AB; display:flex; align-items:center; gap:8px; }
+    .bd-retail-strike { text-decoration:line-through; color:#8A99AB; }
+    .bd-savings-pill {
+      display:inline-block; background:#FFF1E6; color:#C2560A; font-weight:800;
+      font-size:11px; letter-spacing:.02em; padding:2px 8px; border-radius:999px;
+    }
     .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; line-height:1; }
     .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; margin-top:4px; }
     /* Soft-glow style, matched to the real Tailwind proportions of the
@@ -416,6 +423,12 @@
       const specs = [];
       specs.push(`<li>${BD_CHECK_SVG}<span><b>Item #</b> ${escBd(p.sku || '')}</span></li>`);
       if (p.case_qty) specs.push(`<li>${BD_CHECK_SVG}<span><b>Case Qty</b> ${escBd(p.case_qty)}</span></li>`);
+      // Retail Price is a separate "compare at" reference number the CEO
+      // sets per product -- never charged, never used elsewhere in the
+      // app -- so it's only shown when actually set, rather than falling
+      // back to something that would misrepresent it as a real list price.
+      const hasRetail = Number(p.retail_price) > 0 && p.price != null && Number(p.retail_price) > Number(p.price);
+      if (hasRetail) specs.push(`<li>${BD_CHECK_SVG}<span><b>Retail Price</b> <span class="bd-retail-strike">$${Number(p.retail_price).toFixed(2)}</span></span></li>`);
       const hasWeight = Number(p.weight) > 0.05;
       const hasDims = Number(p.length) > 0.05 && Number(p.width) > 0.05;
       if (hasWeight) specs.push(`<li>${BD_CHECK_SVG}<span><b>Weight</b> ${Number(p.weight)} lbs</span></li>`);
@@ -428,6 +441,7 @@
 
       const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (p.unit === 'Case' ? 'Case' : (p.unit || 'Case'));
       const price = p.price != null ? Number(p.price).toFixed(2) : '—';
+      const savingsPct = hasRetail ? Math.round((1 - Number(p.price) / Number(p.retail_price)) * 100) : null;
       const buyHref = p.slug ? `/product?item=${encodeURIComponent(p.slug)}` : '/catalog';
 
       return `
@@ -445,7 +459,10 @@
             <p class="bd-card-name">${escBd(p.name || '')}</p>
             <ul class="bd-card-specs">${specs.join('')}</ul>
             <div class="bd-card-price-row">
-              <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
+              <div class="bd-card-price-block">
+                ${hasRetail ? `<div class="bd-card-retail">Retail $${Number(p.retail_price).toFixed(2)}${savingsPct ? ` <span class="bd-savings-pill">Save ${savingsPct}%</span>` : ''}</div>` : ''}
+                <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
+              </div>
               <a class="bd-buy-btn" href="${buyHref}">Buy Now <span class="bd-arrow">&rarr;</span></a>
             </div>
           </div>
@@ -471,7 +488,7 @@
         const skus = [...new Set(deals.map(d => d.sku))];
         const { data: products, error: prodErr } = await window.sb
           .from('products')
-          .select('sku,name,slug,image_url,price,case_qty,pack_size,unit,weight,length,width,height')
+          .select('sku,name,slug,image_url,price,retail_price,case_qty,pack_size,unit,weight,length,width,height')
           .in('sku', skus);
         if (prodErr) throw prodErr;
         const bySku = Object.fromEntries((products || []).map(p => [p.sku, p]));

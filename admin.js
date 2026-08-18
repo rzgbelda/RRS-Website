@@ -701,6 +701,7 @@ async function openEditProduct(id) {
   setVal("prodPrice2",     p.price_tier2    || "");
   setVal("prodPrice3",     p.price_tier3    || "");
   setVal("prodSalePrice",  p.sale_price     || "");
+  setVal("prodRetailPrice",p.retail_price   || "");
   setVal("prodUnit",       p.unit           || "Case");
   setVal("prodCaseQty",    p.case_qty       || 1);
   setVal("prodPackSize",   p.pack_size      || 1);
@@ -760,6 +761,7 @@ async function saveProduct() {
     price_tier3   : parseFloat(document.getElementById("prodPrice3")?.value) || null,
     sale_price    : isOnSale ? spRaw : null,
     is_on_sale    : isOnSale,
+    retail_price  : parseFloat(document.getElementById("prodRetailPrice")?.value) || null,
     unit          : document.getElementById("prodUnit")?.value || "Case",
     case_qty      : parseInt(document.getElementById("prodCaseQty")?.value) || 1,
     pack_size     : parseInt(document.getElementById("prodPackSize")?.value) || 1,
@@ -817,6 +819,7 @@ const CVT_COLS = [
   { key:"description",   label:"Description" },
   { key:"price",         label:"Price",        required:true },
   { key:"sale_price",    label:"Sale Price" },
+  { key:"retail_price",  label:"Retail Price" },
   { key:"is_on_sale",    label:"Is On Sale" },
   { key:"category_name", label:"Category",     required:true },
   { key:"case_qty",      label:"Case Qty" },
@@ -923,8 +926,9 @@ function cvtAutoMap(cols) {
     name:          ["name","productname","title","item","itemname"],
     sku:           ["sku","skucode","itemcode","code","partnumber","id","productid"],
     description:   ["description","desc","details","info","notes"],
-    price:         ["price","cost","caseprice","unitprice","msrp","listprice"],
+    price:         ["price","cost","caseprice","unitprice"],
     sale_price:    ["saleprice","discountprice","specialprice","promoprice"],
+    retail_price:  ["retailprice","msrp","listprice","comparatprice","compareatprice"],
     is_on_sale:    ["isonsale","onsale","sale","discount","promo"],
     category_name: ["category","categoryname","dept","department","type","producttype","productcategory"],
     case_qty:      ["caseqty","casecount","quantitypercase","casesize","qtypercase"],
@@ -1319,22 +1323,24 @@ async function runCsvImport() {
   let missingPriceCount = 0;
   let invalidPriceCount = 0;
   preValidationRows.forEach((r, idx) => {
-    const priceInfo = parseMoneyCell(r.price);
-    const saleInfo  = parseMoneyCell(r.sale_price);
+    const priceInfo  = parseMoneyCell(r.price);
+    const saleInfo   = parseMoneyCell(r.sale_price);
+    const retailInfo = parseMoneyCell(r.retail_price);
     // A blank price cell used to silently import at $0.00 -- price is
-    // required (unlike sale_price, where blank legitimately means "no
-    // sale"), so treat a missing price the same as a bad one: reject the
-    // row and say exactly what's missing, instead of shipping a live
-    // product priced at zero with no trace of why.
+    // required (unlike sale_price/retail_price, where blank legitimately
+    // means "no sale" / "no retail comparison set"), so treat a missing
+    // price the same as a bad one: reject the row and say exactly what's
+    // missing, instead of shipping a live product priced at zero with no
+    // trace of why.
     if (priceInfo.empty) {
       missingPriceCount++;
       errLines.push(`"${r.name}": price is missing — add a price for this row and re-upload.`);
       return;
     }
-    if (priceInfo.invalid || saleInfo.invalid) {
+    if (priceInfo.invalid || saleInfo.invalid || retailInfo.invalid) {
       invalidPriceCount++;
-      const badField = priceInfo.invalid ? "price" : "sale_price";
-      const badVal   = priceInfo.invalid ? r.price : r.sale_price;
+      const badField = priceInfo.invalid ? "price" : (saleInfo.invalid ? "sale_price" : "retail_price");
+      const badVal   = priceInfo.invalid ? r.price : (saleInfo.invalid ? r.sale_price : r.retail_price);
       errLines.push(`"${r.name}": ${badField} "${badVal}" is not a valid number — row skipped, nothing imported for it.`);
       return;
     }
@@ -1378,6 +1384,7 @@ async function runCsvImport() {
     // falsy in JS, so a genuine $0.00 sale price used to silently become
     // null instead of staying 0.
     sale_price   : parseMoneyCell(r.sale_price).empty ? null : parseMoneyCell(r.sale_price).value,
+    retail_price : parseMoneyCell(r.retail_price).empty ? null : parseMoneyCell(r.retail_price).value,
     is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
     category_name: r.category_name || null,
     case_qty     : parseInt(r.case_qty)  || 1,
@@ -1477,7 +1484,7 @@ function downloadCsvTemplate() {
     /* ── Header row ── */
     [
       "name","sku","description",
-      "price","sale_price","is_on_sale",
+      "price","sale_price","retail_price","is_on_sale",
       "category_name","case_qty","pack_size","unit",
       "is_featured","is_active","image_url",
       "stock_qty","stock_status"
@@ -1486,7 +1493,7 @@ function downloadCsvTemplate() {
     /* ── Example 1: basic product ── */
     [
       q("Premium Bath Towels"), q("SKU-001"), q("Soft commercial-grade bath towels, white"),
-      n(24.99), n(""), b(false),
+      n(24.99), n(""), n(34.99), b(false),
       q("Towels and Linens"), n(12), n(1), q("Case"),
       b(false), b(true), q(""),
       n(100), q("in_stock")
@@ -1495,7 +1502,7 @@ function downloadCsvTemplate() {
     /* ── Example 2: sale product, featured ── */
     [
       q("Antibacterial Hand Soap 1L"), q("SKU-002"), q("Foam hand soap refill, fresh scent"),
-      n(18.50), n(15.99), b(true),
+      n(18.50), n(15.99), n(25.00), b(true),
       q("Hand Soap"), n(6), n(1), q("Case"),
       b(true), b(true), q(""),
       n(50), q("in_stock")
@@ -1504,7 +1511,7 @@ function downloadCsvTemplate() {
     /* ── Example 3: low stock ── */
     [
       q("C-Fold Paper Towels"), q("SKU-003"), q("2-ply C-fold paper towels, 12 packs per case"),
-      n(32.00), n(""), b(false),
+      n(32.00), n(""), n(""), b(false),
       q("Paper Towels"), n(12), n(150), q("Case"),
       b(false), b(true), q(""),
       n(8), q("low_stock")
@@ -1513,7 +1520,7 @@ function downloadCsvTemplate() {
     /* ── Example 4: out of stock, inactive ── */
     [
       q("Trash Liner 55 Gallon"), q("SKU-004"), q("Heavy-duty black trash liners, 1.5 mil"),
-      n(45.99), n(""), b(false),
+      n(45.99), n(""), n(""), b(false),
       q("Trash Liners"), n(100), n(1), q("Case"),
       b(false), b(false), q(""),
       n(0), q("out_of_stock")
@@ -1522,7 +1529,7 @@ function downloadCsvTemplate() {
     /* ── Example 5: pack unit ── */
     [
       q("Toilet Seat Cover Dispenser"), q("SKU-005"), q("Wall-mount dispenser for seat covers"),
-      n(12.75), n(""), b(false),
+      n(12.75), n(""), n(""), b(false),
       q("Facility Supplies"), n(1), n(1), q("EA"),
       b(false), b(true), q(""),
       n(25), q("in_stock")
