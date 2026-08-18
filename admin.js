@@ -4443,6 +4443,18 @@ function tierPriceForQty(product, qty) {
 }
 
 let _quoteComposerProducts = [];
+// Array-backed line items, source of truth for the composer -- rewritten
+// from the old DOM-NodeList-position approach specifically because that
+// approach had no way to add a line that didn't already exist in
+// r.requested_items (getComposerPayload pulled every item's *name* from
+// that array by position, not from any input on the page at all). That
+// meant a quote request with zero requested_items -- exactly what every
+// manually-entered quote has, since the admin hasn't typed products into
+// the composer yet -- rendered a "add them manually below" message with
+// no actual way to add anything. Each line now carries its own name, so
+// items can be added/removed/edited freely regardless of what the
+// customer originally requested (or didn't).
+let _quoteComposerLines = [];
 
 async function openQuoteComposer() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
@@ -4459,16 +4471,7 @@ async function openQuoteComposer() {
   document.getElementById("quoteInHouseFee").value = "0.00";
   toggleQuoteInHouse();
 
-  const items = r.requested_items || [];
-  const container = document.getElementById("quoteLineItems");
-
-  if (!items.length) {
-    container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">No products listed — add them manually below.</div>`;
-    document.getElementById("quoteComposerModal").style.display = "flex";
-    return;
-  }
-
-  container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Loading catalog pricing…</div>`;
+  document.getElementById("quoteLineItems").innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Loading catalog pricing…</div>`;
   document.getElementById("quoteComposerModal").style.display = "flex";
 
   const { data: products } = await window.sb
@@ -4477,69 +4480,162 @@ async function openQuoteComposer() {
     .eq("is_active", true);
   _quoteComposerProducts = products || [];
 
-  container.innerHTML = items.map((item, idx) => {
+  const dl = document.getElementById("quoteComposerProductList");
+  if (dl) dl.innerHTML = _quoteComposerProducts.map(p => `<option value="${esc(p.name)}">`).join("");
+
+  const requested = r.requested_items || [];
+  _quoteComposerLines = requested.map(item => {
     const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(item.name));
     // A customer's quote request can ask for less than a product's real
-    // minimum order (e.g. "1" wash cloth on a 25-dozen-case item) -- the
-    // composer used to show that raw "1" as-is, so a quote could go out
-    // priced and quantified below what we'd actually sell. Auto-bump the
-    // starting quantity up to the catalog minimum; staff can still raise
-    // it further, just never see a quote start below what's sellable.
+    // minimum order (e.g. "1" wash cloth on a 25-dozen-case item) -- auto-
+    // bump the starting quantity up to the catalog minimum; staff can
+    // still raise it further, just never see a quote start below what's
+    // actually sellable.
     const moq = match ? (parseInt(match.moq) || 1) : 1;
-    const effectiveQty = Math.max(parseInt(item.quantity) || 1, moq);
-    const autoPrice = match ? tierPriceForQty(match, effectiveQty) : null;
+    const requestedQty = parseInt(item.quantity) || 1;
+    const quantity = Math.max(requestedQty, moq);
+    const autoPrice = match ? tierPriceForQty(match, quantity) : null;
+    return {
+      name: item.name || "",
+      quantity,
+      unit_price: autoPrice != null ? Number(autoPrice.toFixed(2)) : null,
+      moq,
+      matched: !!match,
+      priceOverridden: false,
+      bumpedNote: match && moq > 1 && quantity > requestedQty,
+    };
+  });
+
+  renderQuoteComposerLines();
+}
+
+// Full re-render -- only called on add/remove/initial load, never on a
+// keystroke inside a line (that would blow away focus/cursor position on
+// every character typed). Per-line edits patch the DOM directly instead;
+// see onQuoteLineNameInput/QtyInput/PriceInput below.
+function renderQuoteComposerLines() {
+  const container = document.getElementById("quoteLineItems");
+  if (!_quoteComposerLines.length) {
+    container.innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">No products yet — click "Add Item" below.</div>`;
+    recalcQuoteTotal();
+    return;
+  }
+
+  container.innerHTML = _quoteComposerLines.map((line, idx) => {
+    const hint = !line.matched && line.name
+      ? `<br><small id="ql-hint-${idx}" style="color:#b45309;font-weight:600">Not in catalog — enter price manually</small>`
+      : line.bumpedNote
+        ? `<br><small id="ql-hint-${idx}" style="color:#0369a1;font-weight:600">Bumped up to the ${line.moq}-unit minimum order</small>`
+        : `<small id="ql-hint-${idx}"></small>`;
+    const autoStyled = line.unit_price != null && !line.priceOverridden;
     return `
-      <div style="display:grid;grid-template-columns:1fr 100px 120px 100px;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;align-items:center;background:${idx%2===0?"#fff":"#fafbfc"}">
-        <span style="font-size:13px;font-weight:500;color:#1e293b">${esc(item.name)}${!match ? `<br><small style="color:#b45309;font-weight:600">Not in catalog — enter price manually</small>` : ""}${match && moq > 1 && effectiveQty > (parseInt(item.quantity)||1) ? `<br><small style="color:#0369a1;font-weight:600">Bumped up to the ${moq}-unit minimum order</small>` : ""}</span>
+      <div style="display:grid;grid-template-columns:1fr 100px 120px 100px 32px;gap:10px;padding:10px 14px;border-top:1px solid #f1f5f9;align-items:center;background:${idx%2===0?"#fff":"#fafbfc"}">
+        <div>
+          <input type="text" id="ql-name-${idx}" value="${esc(line.name)}" placeholder="Product name" list="quoteComposerProductList"
+            oninput="onQuoteLineNameInput(${idx}, this.value)"
+            style="width:100%;box-sizing:border-box;padding:5px 8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px">
+          ${hint}
+        </div>
         <div style="text-align:center">
-          <input type="number" min="${moq}" step="${moq > 1 ? moq : 1}" value="${effectiveQty}" data-idx="${idx}" data-moq="${moq}" class="ql-qty"
-            style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center"
-            oninput="onQuoteQtyChange(${idx})">
+          <input type="number" id="ql-qty-${idx}" min="${line.moq || 1}" step="${line.moq > 1 ? line.moq : 1}" value="${line.quantity}"
+            oninput="onQuoteLineQtyInput(${idx}, this.value)"
+            style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center">
         </div>
         <div style="text-align:right">
-          <input type="number" min="0" step="0.01" value="${autoPrice ? autoPrice.toFixed(2) : ""}" placeholder="0.00"
-            data-idx="${idx}" data-auto-price="${autoPrice != null ? autoPrice.toFixed(2) : ""}" class="ql-price"
-            style="width:100px;padding:5px 8px;border:1.5px solid ${autoPrice ? "#bbf7d0" : "#e2e8f0"};background:${autoPrice ? "#f0fdf4" : "#fff"};border-radius:7px;font-size:13px;text-align:right"
-            oninput="onQuotePriceChange(${idx})" title="${autoPrice ? "Auto-filled from catalog tier pricing — edit to override" : ""}">
+          <input type="number" id="ql-price-${idx}" min="0" step="0.01" value="${line.unit_price != null ? line.unit_price.toFixed(2) : ""}" placeholder="0.00"
+            oninput="onQuoteLinePriceInput(${idx}, this.value)"
+            style="width:100px;padding:5px 8px;border:1.5px solid ${autoStyled ? "#bbf7d0" : "#e2e8f0"};background:${autoStyled ? "#f0fdf4" : "#fff"};border-radius:7px;font-size:13px;text-align:right"
+            title="${autoStyled ? "Auto-filled from catalog tier pricing — edit to override" : ""}">
         </div>
         <div style="text-align:right;font-size:13px;font-weight:700;color:#0d2c50" id="ql-line-${idx}">—</div>
+        <button type="button" onclick="removeQuoteLine(${idx})" title="Remove item"
+          style="width:28px;height:28px;border-radius:7px;border:1px solid #fecaca;background:#fff5f5;color:#dc2626;font-size:16px;cursor:pointer;line-height:1;flex-shrink:0">&times;</button>
       </div>`;
   }).join("");
 
   recalcQuoteTotal();
 }
 
-// Quantity changed: if staff never touched the price (it still matches
-// the last auto-filled value), recompute it for the new quantity -- e.g.
-// crossing from 4 to 6 cases should move from tier 1 to tier 2 pricing
-// automatically. A price staff have deliberately overridden is left alone.
-function onQuoteQtyChange(idx) {
-  const priceEl = document.querySelector(`.ql-price[data-idx="${idx}"]`);
-  const qtyEl   = document.querySelector(`.ql-qty[data-idx="${idx}"]`);
-  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
-  const item = r?.requested_items?.[idx];
-  if (priceEl && item) {
-    const wasAuto = priceEl.value === priceEl.dataset.autoPrice;
-    const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(item.name));
-    if (match && wasAuto) {
-      const newPrice = tierPriceForQty(match, qtyEl.value).toFixed(2);
-      priceEl.value = newPrice;
-      priceEl.dataset.autoPrice = newPrice;
+function addQuoteLine() {
+  _quoteComposerLines.push({ name: "", quantity: 1, unit_price: null, moq: 1, matched: false, priceOverridden: false, bumpedNote: false });
+  renderQuoteComposerLines();
+  document.getElementById(`ql-name-${_quoteComposerLines.length - 1}`)?.focus();
+}
+
+function removeQuoteLine(idx) {
+  _quoteComposerLines.splice(idx, 1);
+  renderQuoteComposerLines();
+}
+
+// Typed a product name: try to match the catalog for auto-pricing. Only
+// the affected line's own price/qty inputs are patched directly (not a
+// full re-render) so the name field the admin is actively typing into
+// never loses focus mid-word.
+function onQuoteLineNameInput(idx, value) {
+  const line = _quoteComposerLines[idx];
+  if (!line) return;
+  line.name = value;
+
+  const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(value));
+  line.matched = !!match;
+
+  if (match && !line.priceOverridden) {
+    line.moq = parseInt(match.moq) || 1;
+    line.quantity = Math.max(line.quantity || 1, line.moq);
+    line.unit_price = Number(tierPriceForQty(match, line.quantity).toFixed(2));
+
+    const qtyEl = document.getElementById(`ql-qty-${idx}`);
+    if (qtyEl) { qtyEl.value = line.quantity; qtyEl.min = line.moq; qtyEl.step = line.moq > 1 ? line.moq : 1; }
+    const priceEl = document.getElementById(`ql-price-${idx}`);
+    if (priceEl) {
+      priceEl.value = line.unit_price.toFixed(2);
+      priceEl.style.borderColor = "#bbf7d0";
+      priceEl.style.background = "#f0fdf4";
+      priceEl.title = "Auto-filled from catalog tier pricing — edit to override";
     }
   }
+
+  const hintEl = document.getElementById(`ql-hint-${idx}`);
+  if (hintEl) {
+    hintEl.textContent = !line.matched && line.name ? "Not in catalog — enter price manually" : "";
+    hintEl.style.color = "#b45309";
+  }
+
+  recalcQuoteTotal();
+}
+
+// Quantity changed: if staff never touched the price, recompute it for the
+// new quantity -- e.g. crossing from 4 to 6 cases should move from tier 1
+// to tier 2 pricing automatically. A price staff have deliberately
+// overridden is left alone.
+function onQuoteLineQtyInput(idx, value) {
+  const line = _quoteComposerLines[idx];
+  if (!line) return;
+  line.quantity = parseInt(value) || 1;
+
+  if (!line.priceOverridden) {
+    const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(line.name));
+    if (match) {
+      line.unit_price = Number(tierPriceForQty(match, line.quantity).toFixed(2));
+      const priceEl = document.getElementById(`ql-price-${idx}`);
+      if (priceEl) priceEl.value = line.unit_price.toFixed(2);
+    }
+  }
+
   recalcQuoteTotal();
 }
 
 // Staff typed into the price field directly -- from now on this line is a
-// manual override, so quantity changes must not silently overwrite it.
-function onQuotePriceChange(idx) {
-  const priceEl = document.querySelector(`.ql-price[data-idx="${idx}"]`);
-  if (priceEl) {
-    priceEl.dataset.autoPrice = "__overridden__";
-    priceEl.style.borderColor = "#e2e8f0";
-    priceEl.style.background = "#fff";
-    priceEl.title = "";
-  }
+// manual override, so quantity/name changes must not silently overwrite it.
+function onQuoteLinePriceInput(idx, value) {
+  const line = _quoteComposerLines[idx];
+  if (!line) return;
+  line.unit_price = parseFloat(value) || 0;
+  line.priceOverridden = true;
+
+  const priceEl = document.getElementById(`ql-price-${idx}`);
+  if (priceEl) { priceEl.style.borderColor = "#e2e8f0"; priceEl.style.background = "#fff"; priceEl.title = ""; }
+
   recalcQuoteTotal();
 }
 
@@ -4564,14 +4660,13 @@ function quoteInHouseFee() {
 
 function recalcQuoteTotal() {
   let total = 0;
-  document.querySelectorAll(".ql-price").forEach((priceEl, idx) => {
-    const qtyEl = document.querySelectorAll(".ql-qty")[idx];
-    const price = parseFloat(priceEl.value) || 0;
-    const qty   = parseInt(qtyEl?.value) || 0;
-    const line  = price * qty;
-    total += line;
+  _quoteComposerLines.forEach((line, idx) => {
+    const price = Number(line.unit_price) || 0;
+    const qty   = parseInt(line.quantity) || 0;
+    const lineTotal = price * qty;
+    total += lineTotal;
     const lineEl = document.getElementById(`ql-line-${idx}`);
-    if (lineEl) lineEl.textContent = line > 0 ? `$${line.toFixed(2)}` : "—";
+    if (lineEl) lineEl.textContent = lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : "—";
   });
   total += quoteInHouseFee();
   const el = document.getElementById("quoteGrandTotal");
@@ -4581,17 +4676,9 @@ function recalcQuoteTotal() {
 function getComposerPayload() {
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return null;
-  const items = [];
-  const priceEls = document.querySelectorAll(".ql-price");
-  const qtyEls   = document.querySelectorAll(".ql-qty");
-  const names     = (r.requested_items || []).map(i => i.name);
-  priceEls.forEach((el, idx) => {
-    const price = parseFloat(el.value);
-    const qty   = parseInt(qtyEls[idx]?.value) || 1;
-    if (price > 0) {
-      items.push({ name: names[idx] || `Item ${idx+1}`, quantity: qty, unit_price: price });
-    }
-  });
+  const items = _quoteComposerLines
+    .filter(l => l.name?.trim() && Number(l.unit_price) > 0)
+    .map(l => ({ name: l.name.trim(), quantity: parseInt(l.quantity) || 1, unit_price: Number(l.unit_price) }));
   const inHouse = document.getElementById("quoteInHouse").checked;
   return {
     quote_request_id: currentQuoteId,

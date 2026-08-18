@@ -944,7 +944,14 @@
               <span>Product</span><span style="text-align:center">Qty</span><span style="text-align:right">Unit Price</span><span style="text-align:right">Line Total</span>
             </div>
             <div id="quoteLineItems"></div>
+            <div style="padding:10px 14px;border-top:1px solid #f1f5f9">
+              <button type="button" onclick="addQuoteLine()" style="height:32px;padding:0 14px;border-radius:8px;border:1.5px dashed #cbd5e1;background:#fff;color:#0d2c50;font-size:12.5px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                Add Item
+              </button>
+            </div>
           </div>
+          <datalist id="quoteComposerProductList"></datalist>
 
           <!-- Total -->
           <div style="display:flex;justify-content:flex-end;margin-bottom:4px">
