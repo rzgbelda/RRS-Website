@@ -124,12 +124,34 @@ function buildSeoTitle(p) {
   return `Wholesale ${prefix}${cleanName}`;
 }
 
+function detectLeadingSizeToken(name) {
+  const words = name.split(' ');
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i];
+    const isNumericish = /\d/.test(w);
+    const isDimSep = (w === '×' || w === 'x') && i > 0 && /\d/.test(words[i - 1] || '');
+    if (isNumericish || isDimSep) { i++; continue; }
+    break;
+  }
+  if (i === 0) return { reserved: '', rest: name };
+  return { reserved: words.slice(0, i).join(' '), rest: words.slice(i).join(' ') };
+}
+
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
   const lead = 'Wholesale ';
-  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - prefix.length;
-  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(cleanName), nameBudget);
-  return `${lead}${prefix}${trimmedName}`;
+
+  let effectivePrefix = prefix;
+  let effectiveName = cleanName;
+  if (!effectivePrefix) {
+    const { reserved, rest } = detectLeadingSizeToken(cleanName);
+    if (reserved) { effectivePrefix = reserved + ' '; effectiveName = rest; }
+  }
+
+  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - effectivePrefix.length;
+  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(effectiveName), nameBudget);
+  return `${lead}${effectivePrefix}${trimmedName}`;
 }
 
 // Mirrors populateProductPage()'s metaDesc, including its quirk of

@@ -937,12 +937,43 @@ function buildSeoTitle(p) {
 // uses to tell SKUs apart. Dropped terms still appear in the page's H1
 // (buildSeoTitle above, untruncated), meta description and body copy, so
 // nothing is lost for ranking; only the search-result display is.
+// Many product names lead with their own size/weight/dimension as plain
+// text -- e.g. p.name = '40lb. Performance Plus™ Low Suds Powder Laundry
+// Detergent' -- rather than it living only in description/p.size. When
+// that's the case, computeTitleParts' `prefix` comes back empty (correctly
+// -- nameAlreadyHasSize is true, so nothing gets duplicated), which meant
+// that leading size token was just another word competing for trim
+// budget, and lost more often than not (confirmed against the live
+// catalog: 31 of 120 products). Detect and reserve it the same way an
+// explicit prefix is reserved, so it survives trimming here too.
+function detectLeadingSizeToken(name) {
+  const words = name.split(" ");
+  let i = 0;
+  while (i < words.length) {
+    const w = words[i];
+    const isNumericish = /\d/.test(w);
+    const isDimSep = (w === "×" || w === "x") && i > 0 && /\d/.test(words[i - 1] || "");
+    if (isNumericish || isDimSep) { i++; continue; }
+    break;
+  }
+  if (i === 0) return { reserved: "", rest: name };
+  return { reserved: words.slice(0, i).join(" "), rest: words.slice(i).join(" ") };
+}
+
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
   const lead = "Wholesale ";
-  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - prefix.length;
-  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(cleanName), nameBudget);
-  return `${lead}${prefix}${trimmedName}`;
+
+  let effectivePrefix = prefix;
+  let effectiveName = cleanName;
+  if (!effectivePrefix) {
+    const { reserved, rest } = detectLeadingSizeToken(cleanName);
+    if (reserved) { effectivePrefix = reserved + " "; effectiveName = rest; }
+  }
+
+  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - effectivePrefix.length;
+  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(effectiveName), nameBudget);
+  return `${lead}${effectivePrefix}${trimmedName}`;
 }
 
 function populateProductPage(product) {
