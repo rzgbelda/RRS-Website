@@ -1,6 +1,6 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
-const { sendCustomerConfirmation, sendInternalAlert } = require('./send-emails');
+const { sendCustomerConfirmation, sendInternalAlert } = require('./_lib/send-emails');
 
 function getRawBody(req) {
   return new Promise((resolve, reject) => {

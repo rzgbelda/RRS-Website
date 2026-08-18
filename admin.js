@@ -1688,6 +1688,33 @@ async function markPickedUp(orderId) {
   renderOrdersTable();
 }
 
+// One-time backfill for an order that was marked paid before proof-of-
+// payment capture existed (api/stripe-webhook.js only writes it at the
+// moment a payment actually completes). Searches Stripe directly for the
+// real transaction rather than fabricating anything -- see
+// api/lookup-payment-proof.js for how the match is found.
+async function lookupPaymentProof(orderId) {
+  const btn = document.getElementById("lookupProofBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Searching Stripe…"; }
+
+  try {
+    const res = await fetch("/api/lookup-payment-proof", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Lookup failed");
+
+    showToast(result.receipt_url ? "Found it — receipt attached." : "Found it — payment reference attached.");
+    openOrderModal(orderId);
+    renderOrdersTable();
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = "🔎 Look Up Payment"; }
+    alert("Couldn't find a matching Stripe payment: " + err.message);
+  }
+}
+
 async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
@@ -1828,6 +1855,11 @@ async function openOrderModal(id) {
             ${o.receipt_url ? "View Receipt" : "View in Stripe"} &rarr;
           </a>` : ""}
         ${o.payment_status === "paid" && o.paid_at ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">Paid ${fmt(o.paid_at)}</div>` : ""}
+        ${o.payment_status === "paid" && !o.stripe_payment_intent_id ? `
+          <button onclick="lookupPaymentProof('${o.id}')" id="lookupProofBtn"
+            style="margin-top:4px;height:24px;padding:0 9px;border-radius:6px;border:1px solid #d0d7e0;background:#fff;color:#475569;font-size:11px;font-weight:600;cursor:pointer">
+            🔎 Look Up Payment
+          </button>` : ""}
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Customer</span><br>${escHtml(o.customer_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
