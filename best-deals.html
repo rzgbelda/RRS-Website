@@ -218,8 +218,13 @@
        padding. */
     .bd-actions { display:flex; align-items:center; gap:10px; }
     .bd-cart-btn {
+      /* This button also carries the site-wide .add-btn class (so
+         script.js's setupAddToCartButtons() wires it up) -- that class
+         is written for full-width, stacked catalog buttons and carries
+         width:100%/margin-top:15px, which pushed this button down and
+         off-center next to Buy Now. Everything below overrides that. */
       display:inline-flex; align-items:center; justify-content:center;
-      width:48px; height:48px; box-sizing:border-box; flex:none;
+      width:48px; height:48px; box-sizing:border-box; flex:none; margin:0;
       background:#fff; color:#FF710C; border:1.5px solid #FFCFA3; border-radius:10px;
       box-shadow:0 6px 14px -4px rgba(11,37,69,.12);
       cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
