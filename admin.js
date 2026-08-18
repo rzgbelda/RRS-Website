@@ -890,15 +890,15 @@ function cvtHandleFile(file) {
         const wb = XLSX.read(new Uint8Array(e.target.result), { type:"array" });
         rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval:"" });
       } else {
-        /* CSV — re-use existing parseCsv but without requiring "name" col */
-        const text = e.target.result;
-        const lines = text.replace(/\r\n/g,"\n").replace(/\r/g,"\n").split("\n");
-        const headers = csvSplitLine(lines[0]).map(h => h.trim());
+        /* CSV — re-use the same full-text tokenizer as parseCsv, just
+           without requiring a "name" column. */
+        const rawRows = parseCsvRows(e.target.result);
+        const headers = (rawRows[0] || []).map(h => h.trim());
         rows = [];
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim(); if (!line) continue;
-          const vals = csvSplitLine(line);
-          const obj  = {};
+        for (let i = 1; i < rawRows.length; i++) {
+          const vals = rawRows[i];
+          if (vals.length === 1 && vals[0].trim() === "") continue;
+          const obj = {};
           headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
           rows.push(obj);
         }
@@ -1143,21 +1143,54 @@ function handleCsvFile(file) {
   reader.readAsText(file);
 }
 
-/* RFC 4180-compatible CSV parser */
-function parseCsv(text) {
-  const lines = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  if (lines.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+/* Full single-pass RFC 4180 tokenizer. The previous version pre-split the
+   file on "\n" and only parsed quotes within each resulting line -- a real
+   newline inside a quoted field (valid CSV, and something Excel/Sheets
+   exports routinely for multi-line cell text) was treated as a row
+   boundary, corrupting that row and misaligning every column in the next
+   one. Processing the whole text as one stream, tracking quote-state
+   across it, is what "RFC 4180-compatible" actually requires. */
+function parseCsvRows(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  const s = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        if (s[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else {
+        field += ch;
+      }
+    } else if (ch === '"') {
+      inQuotes = true;
+    } else if (ch === ",") {
+      row.push(field); field = "";
+    } else if (ch === "\n") {
+      row.push(field); field = "";
+      rows.push(row); row = [];
+    } else {
+      field += ch;
+    }
+  }
+  if (field.length || row.length) { row.push(field); rows.push(row); }
+  return rows;
+}
 
-  const headers = csvSplitLine(lines[0]).map(h => h.trim().toLowerCase());
+function parseCsv(text) {
+  const rawRows = parseCsvRows(text);
+  if (rawRows.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+
+  const headers = rawRows[0].map(h => h.trim().toLowerCase());
   const nameIdx = headers.indexOf("name");
   if (nameIdx === -1) throw new Error('CSV must have a "name" column.');
 
   const rows = [];
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const vals = csvSplitLine(line);
-    const obj  = {};
+  for (let i = 1; i < rawRows.length; i++) {
+    const vals = rawRows[i];
+    if (vals.length === 1 && vals[0].trim() === "") continue; // fully-blank line
+    const obj = {};
     headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
     if (!obj.name) continue;   // skip blank name rows
     rows.push(obj);
@@ -1165,22 +1198,20 @@ function parseCsv(text) {
   return rows;
 }
 
-function csvSplitLine(line) {
-  const result = [];
-  let cur = "", inQ = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') {
-      if (inQ && line[i + 1] === '"') { cur += '"'; i++; }
-      else inQ = !inQ;
-    } else if (ch === "," && !inQ) {
-      result.push(cur); cur = "";
-    } else {
-      cur += ch;
-    }
-  }
-  result.push(cur);
-  return result;
+// Strips currency formatting ($, thousands commas, whitespace) before
+// parsing -- plain parseFloat() stops at the first non-numeric character,
+// so "$44.99" silently became 0 and "1,299.99" silently became 1. Also
+// distinguishes "cell left blank" (0, not an error -- e.g. no sale price
+// set) from "cell has something that isn't a number" (flagged invalid, so
+// the caller can reject the row instead of silently importing it at $0 --
+// the exact failure mode that already caused a real pricing incident here).
+function parseMoneyCell(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  if (!s) return { value: 0, empty: true, invalid: false };
+  const cleaned = s.replace(/[$,\s]/g, "");
+  const n = parseFloat(cleaned);
+  if (isNaN(n)) return { value: 0, empty: false, invalid: true };
+  return { value: n, empty: false, invalid: false };
 }
 
 /* Preview — show first 5 rows */
@@ -1214,6 +1245,8 @@ async function runCsvImport() {
 
   showCsvStep(3);
 
+  const errLines = [];
+
   /* ── Deduplicate within the CSV itself ───────────────────── */
   const normName = s => (s || "").toLowerCase().trim();
   const seenSku  = new Map(); // sku → last row index
@@ -1231,13 +1264,37 @@ async function runCsvImport() {
   const noSkuRows = deduped.filter(r => !r.sku);
   let existingNames = new Set();
   if (noSkuRows.length) {
+    // .limit() explicit and generous: Supabase/PostgREST default-caps an
+    // unbounded select() at 1000 rows, which would silently stop detecting
+    // duplicates past the first 1000 products as the catalog grows.
     const { data: existingProds } = await window.sb
-      .from("products").select("name");
+      .from("products").select("name").limit(50000);
     if (existingProds) existingProds.forEach(p => existingNames.add(normName(p.name)));
   }
-  const rows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
-  const dbDupCount = deduped.length - rows.length;
-  const skippedTotal = csvDupCount + dbDupCount;
+  const preValidationRows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
+  const dbDupCount = deduped.length - preValidationRows.length;
+
+  /* ── Validate price/sale_price before anything gets imported ──────
+     A price cell that isn't blank but also isn't a real number (e.g. a
+     stray "TBD", or a currency format parseFloat can't handle on its own)
+     used to silently import at $0.00 -- the exact failure mode that
+     already caused a real pricing incident here. Reject those rows
+     instead of importing them broken. */
+  const rows = [];
+  let invalidPriceCount = 0;
+  preValidationRows.forEach((r, idx) => {
+    const priceInfo = parseMoneyCell(r.price);
+    const saleInfo  = parseMoneyCell(r.sale_price);
+    if (priceInfo.invalid || saleInfo.invalid) {
+      invalidPriceCount++;
+      const badField = priceInfo.invalid ? "price" : "sale_price";
+      const badVal   = priceInfo.invalid ? r.price : r.sale_price;
+      errLines.push(`"${r.name}": ${badField} "${badVal}" is not a valid number — row skipped, nothing imported for it.`);
+      return;
+    }
+    rows.push(r);
+  });
+  const skippedTotal = csvDupCount + dbDupCount + invalidPriceCount;
 
   if (skippedTotal) {
     document.getElementById("csvProgressSub").textContent =
@@ -1249,7 +1306,6 @@ async function runCsvImport() {
   const total   = rows.length;
   let inserted  = 0;
   let updated   = 0;
-  const errLines = [];
 
   const setProgress = (done) => {
     const pct = total ? Math.round((done / total) * 100) : 100;
@@ -1258,31 +1314,36 @@ async function runCsvImport() {
   };
   setProgress(0);
 
-  /* Process in chunks */
-  for (let start = 0; start < total; start += BATCH) {
-    const chunk  = rows.slice(start, start + BATCH);
-    const hasSku = chunk.some(r => r.sku);
-    const now    = new Date().toISOString();
+  const buildPayload = (r, now) => ({
+    name         : r.name,
+    sku          : r.sku  || null,
+    slug         : r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    description  : r.description  || null,
+    price        : parseMoneyCell(r.price).value,
+    // Already validated above (invalid rows never reach here) -- .empty
+    // distinguishes "blank cell" (stays null, no sale price set) from a
+    // real "0" (stays 0), which parseFloat(...) || null could not: 0 is
+    // falsy in JS, so a genuine $0.00 sale price used to silently become
+    // null instead of staying 0.
+    sale_price   : parseMoneyCell(r.sale_price).empty ? null : parseMoneyCell(r.sale_price).value,
+    is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
+    category_name: r.category_name || null,
+    case_qty     : parseInt(r.case_qty)  || 1,
+    pack_size    : parseInt(r.pack_size) || 1,
+    unit         : r.unit         || "Case",
+    is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
+    is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
+    image_url    : r.image_url   || null,
+    updated_at   : now,
+  });
 
-    const payloads = chunk.map(r => ({
-      name         : r.name,
-      sku          : r.sku  || null,
-      slug         : r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
-      description  : r.description  || null,
-      price        : parseFloat(r.price)      || 0,
-      sale_price   : parseFloat(r.sale_price) || null,
-      is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
-      category_name: r.category_name || null,
-      case_qty     : parseInt(r.case_qty)  || 1,
-      pack_size    : parseInt(r.pack_size) || 1,
-      unit         : r.unit         || "Case",
-      is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
-      is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
-      image_url    : r.image_url   || null,
-      updated_at   : now,
-    }));
+  /* Runs one Supabase call (upsert-by-sku or plain insert) for a group of
+     rows that are all the same "kind" (all have a SKU, or none do), and
+     folds the result into the running counters/inventory upserts. */
+  async function importGroup(groupRows, hasSku, now) {
+    if (!groupRows.length) return;
+    const payloads = groupRows.map(r => buildPayload(r, now));
 
-    /* Upsert on SKU if present, otherwise plain insert */
     let result;
     if (hasSku) {
       result = await window.sb
@@ -1294,29 +1355,38 @@ async function runCsvImport() {
     }
 
     if (result.error) {
-      errLines.push(`Rows ${start + 1}–${start + chunk.length}: ${result.error.message}`);
-      setProgress(start + chunk.length);
-      continue;
+      errLines.push(`"${groupRows[0].name}"${groupRows.length > 1 ? ` and ${groupRows.length - 1} more` : ""}: ${result.error.message}`);
+      return;
     }
 
-    /* Upsert inventory for each inserted/updated product */
     if (result.data?.length) {
       const invPayloads = result.data.map((p, i) => ({
         product_id : p.id,
-        stock_qty  : parseInt(chunk[i]?.stock_qty)  || 0,
-        status     : chunk[i]?.stock_status || "in_stock",
+        stock_qty  : parseInt(groupRows[i]?.stock_qty)  || 0,
+        status     : groupRows[i]?.stock_status || "in_stock",
         updated_at : now,
       }));
       await window.sb.from("inventory")
         .upsert(invPayloads, { onConflict: "product_id" });
     }
 
-    /* Count inserts vs updates (rough heuristic: upsert returns all) */
-    if (hasSku) {
-      updated   += result.data?.length || chunk.length;
-    } else {
-      inserted  += result.data?.length || chunk.length;
-    }
+    if (hasSku) updated  += result.data?.length || groupRows.length;
+    else        inserted += result.data?.length || groupRows.length;
+  }
+
+  /* Process in chunks. Each chunk is split into a with-SKU group (upsert)
+     and a without-SKU group (plain insert) rather than picking one mode
+     for the whole chunk based on whether ANY row has a SKU -- a mixed
+     chunk used to upsert every row, including no-SKU ones (sku: null),
+     onConflict:"sku" -- which doesn't error (NULL never conflicts with
+     NULL in Postgres), but silently mis-reports every one of those
+     brand-new inserts as an "Updated" product instead of "Inserted". */
+  for (let start = 0; start < total; start += BATCH) {
+    const chunk = rows.slice(start, start + BATCH);
+    const now   = new Date().toISOString();
+
+    await importGroup(chunk.filter(r => r.sku), true, now);
+    await importGroup(chunk.filter(r => !r.sku), false, now);
 
     setProgress(start + chunk.length);
     await new Promise(r => setTimeout(r, 30)); // tiny yield to keep UI responsive
