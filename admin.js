@@ -1478,11 +1478,13 @@ async function renderOrdersTable(filter) {
   filter = filter || "";
   const tbody = document.getElementById("ordersTableBody");
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="8" class="a-empty">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="9" class="a-empty">Loading…</td></tr>`;
   let q = window.sb.from("orders").select("*").order("created_at", { ascending: false });
   if (filter) q = q.or(`order_number.ilike.%${filter}%,customer_name.ilike.%${filter}%,business_name.ilike.%${filter}%`);
   const statusFilter = document.getElementById("orderStatusFilter")?.value;
   if (statusFilter) q = q.eq("status", statusFilter);
+  const paymentFilter = document.getElementById("orderPaymentFilter")?.value;
+  if (paymentFilter) q = q.eq("payment_status", paymentFilter);
   const { data: orders } = await q;
 
   tbody.innerHTML = (orders || []).map(o => {
@@ -1503,6 +1505,7 @@ async function renderOrdersTable(filter) {
           ).join("")}
         </select>
       </td>
+      <td><span class="a-badge ${paymentBadgeClass(o.payment_status)}">${paymentBadgeLabel(o.payment_status)}</span></td>
       <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button>
         ${o.label_url ? `<a href="${escHtml(o.label_url)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#0B1F38;color:#fff;text-decoration:none;">&#128438; Label</a>` : ""}
@@ -1514,6 +1517,7 @@ async function renderOrdersTable(filter) {
 
 document.getElementById("orderSearch")?.addEventListener("input", e => renderOrdersTable(e.target.value.trim()));
 document.getElementById("orderStatusFilter")?.addEventListener("change", () => renderOrdersTable(document.getElementById("orderSearch")?.value.trim()));
+document.getElementById("orderPaymentFilter")?.addEventListener("change", () => renderOrdersTable(document.getElementById("orderSearch")?.value.trim()));
 
 async function updateOrderStatus(orderId, status) {
   await window.sb.from("orders").update({ status, updated_at: new Date().toISOString() }).eq("id", orderId);
@@ -1745,6 +1749,7 @@ async function openOrderModal(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;margin-bottom:16px;">
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Order #</span><br><strong>${escHtml(o.order_number)}</strong></div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Status</span><br><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></div>
+      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Payment</span><br><span class="a-badge ${paymentBadgeClass(o.payment_status)}">${paymentBadgeLabel(o.payment_status)}</span></div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Customer</span><br>${escHtml(o.customer_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
@@ -3311,6 +3316,32 @@ function badgeClass(status) {
     in_stock:"a-badge-green", low_stock:"a-badge-yellow", out_of_stock:"a-badge-red",
   };
   return m[status] || "a-badge-gray";
+}
+
+// payment_status was never surfaced anywhere in the admin UI before this --
+// only the fulfillment status (pending/confirmed/shipped/...) was shown,
+// so there was no way to tell, at a glance, whether an emailed invoice had
+// actually been paid. pending_invoice specifically is the state every
+// invoice-based order sits in from the moment it's created until the
+// customer completes the Stripe Payment Link -- api/stripe-webhook.js
+// flips it to 'paid' the moment that happens, so this badge is a direct,
+// real-time read of that.
+function paymentBadgeClass(paymentStatus) {
+  const m = {
+    paid: "a-badge-green", captured: "a-badge-green",
+    pending_invoice: "a-badge-yellow", pending: "a-badge-yellow", requires_capture: "a-badge-yellow",
+    failed: "a-badge-red",
+    refunded: "a-badge-gray",
+  };
+  return m[paymentStatus] || "a-badge-gray";
+}
+function paymentBadgeLabel(paymentStatus) {
+  const m = {
+    paid: "Paid", captured: "Paid",
+    pending_invoice: "Awaiting Payment", pending: "Awaiting Payment", requires_capture: "Awaiting Payment",
+    failed: "Failed", refunded: "Refunded",
+  };
+  return m[paymentStatus] || (paymentStatus || "—");
 }
 
 

@@ -705,6 +705,13 @@
           <option value="delivered">Delivered</option>
           <option value="cancelled">Cancelled</option>
         </select>
+        <select id="orderPaymentFilter" class="a-select">
+          <option value="">All Payments</option>
+          <option value="paid">Paid</option>
+          <option value="pending_invoice">Awaiting Payment (Invoice)</option>
+          <option value="failed">Failed</option>
+          <option value="refunded">Refunded</option>
+        </select>
       </div>
 
       <div class="a-card">
@@ -719,11 +726,12 @@
                 <th>Total</th>
                 <th>Date</th>
                 <th>Status</th>
+                <th>Payment</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="ordersTableBody">
-              <tr><td colspan="8" class="a-empty">No orders yet.</td></tr>
+              <tr><td colspan="9" class="a-empty">No orders yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -2184,7 +2192,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=35"></script>
+<script src="admin.js?v=36"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {
