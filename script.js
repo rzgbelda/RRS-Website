@@ -1985,14 +1985,27 @@ function loadCheckoutProducts() {
     }).join("");
   }
 
-  const tax = subtotal * 0.07;
+  const checkoutState = document.getElementById('checkout-state')?.value || '';
+  const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
+  const tax = subtotal * taxRate;
   const taxEl = document.getElementById('summary-tax');
   if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
+  const taxRateEl = document.getElementById('summary-tax-rate');
+  if (taxRateEl) taxRateEl.textContent = checkoutState ? ` (${checkoutState} · ${(taxRate * 100).toFixed(2)}%)` : '';
 
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
   if (totalEl) totalEl.textContent = `$${(subtotal + tax).toFixed(2)}`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
+
+  // Recalculate tax live as the customer picks/changes their state. Bound
+  // once (not on every loadCheckoutProducts() call, which would stack a
+  // new listener each time and re-fire it that many times per change).
+  const stateEl = document.getElementById('checkout-state');
+  if (stateEl && !stateEl.dataset.taxListenerBound) {
+    stateEl.dataset.taxListenerBound = '1';
+    stateEl.addEventListener('change', loadCheckoutProducts);
+  }
 }
 
 function setupCheckoutOrderTypeToggle() {
@@ -2497,7 +2510,15 @@ function loadPaymentSummary() {
   // and silently re-charge freight if the element ever came back.
   const shippingCost = 0;
 
-  const tax = subtotal * 0.07;
+  // This function's own output is superseded by payment.html's inline
+  // loadSummary() (which also sets window._orderTax etc., the values that
+  // actually get charged) -- fixed here anyway so nothing ever flashes a
+  // stale/wrong tax figure between the two running, and so this stays
+  // correct if it's ever relied on directly for another page.
+  let checkoutState = '';
+  try { checkoutState = (JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}').state) || ''; } catch {}
+  const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
+  const tax = subtotal * taxRate;
   const taxEl = document.getElementById('payment-tax');
   if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
 

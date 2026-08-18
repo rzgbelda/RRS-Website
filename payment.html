@@ -227,7 +227,7 @@
 
 
           <div class="payment-summary-line">
-            <span>Tax (7%)</span>
+            <span>Tax<span id="payment-tax-rate"></span></span>
             <strong id="payment-tax">$0.00</strong>
           </div>
 
@@ -292,6 +292,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
+  <script src="tax-rates.js"></script>
   <script src="script.js"></script>
 
   <div id="orderModal" class="order-modal">
@@ -554,17 +555,21 @@
           '<span>' + item.name + ' x' + qty + '</span>' +
           '<span>$' + (price * qty).toFixed(2) + '</span></div>';
       }).join('');
-      var tax = subtotal * 0.07;
+      var checkoutForTax = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      var taxRate = checkoutForTax.state ? (window.getTaxRate ? (window.getTaxRate(checkoutForTax.state) || 0) : 0) : 0;
+      var tax = subtotal * taxRate;
       var total = subtotal + tax;
       document.getElementById('payment-subtotal').textContent = '$' + subtotal.toFixed(2);
       document.getElementById('payment-tax').textContent = '$' + tax.toFixed(2);
+      var taxRateEl = document.getElementById('payment-tax-rate');
+      if (taxRateEl) taxRateEl.textContent = checkoutForTax.state ? ' (' + checkoutForTax.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
       document.getElementById('payment-total').textContent = '$' + total.toFixed(2);
       window._orderSubtotal = subtotal;
       window._orderTax = tax;
       window._orderTotal = total;
       window._orderItems = cart;
 
-      var checkoutForShipping = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
+      var checkoutForShipping = checkoutForTax;
       var shipCostEl = document.getElementById('payment-shipping-cost');
       var shipLabelEl = document.getElementById('payment-shipping-label');
       if (checkoutForShipping.fulfillmentMethod === 'pickup' && shipCostEl && shipLabelEl) {

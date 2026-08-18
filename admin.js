@@ -4469,6 +4469,7 @@ async function openQuoteComposer() {
   document.getElementById("quoteNet30").checked = false;
   document.getElementById("quoteInHouse").checked = false;
   document.getElementById("quoteInHouseFee").value = "0.00";
+  document.getElementById("quoteShippingState").value = r.shipping_state || "";
   toggleQuoteInHouse();
 
   document.getElementById("quoteLineItems").innerHTML = `<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">Loading catalog pricing…</div>`;
@@ -4658,19 +4659,44 @@ function quoteInHouseFee() {
   return Math.max(0, parseFloat(document.getElementById("quoteInHouseFee")?.value) || 0);
 }
 
+// Subtotal (items + in-house delivery fee) -> tax by shipping state ->
+// grand total. Tax is 0 whenever no state is picked yet -- getTaxRate()
+// (tax-rates.js) already falls back to 0 for an empty/unrecognized code,
+// so this doesn't need its own guard, but the label reflects it either way
+// so staff never mistake "no state picked" for "this state has 0% tax".
+function quoteTaxRate() {
+  const state = document.getElementById("quoteShippingState")?.value || "";
+  return state ? (window.getTaxRate?.(state) || 0) : 0;
+}
+
 function recalcQuoteTotal() {
-  let total = 0;
+  let subtotal = 0;
   _quoteComposerLines.forEach((line, idx) => {
     const price = Number(line.unit_price) || 0;
     const qty   = parseInt(line.quantity) || 0;
     const lineTotal = price * qty;
-    total += lineTotal;
+    subtotal += lineTotal;
     const lineEl = document.getElementById(`ql-line-${idx}`);
     if (lineEl) lineEl.textContent = lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : "—";
   });
-  total += quoteInHouseFee();
-  const el = document.getElementById("quoteGrandTotal");
-  if (el) el.textContent = `$${total.toFixed(2)}`;
+  subtotal += quoteInHouseFee();
+
+  const rate = quoteTaxRate();
+  const tax = subtotal * rate;
+  const total = subtotal + tax;
+
+  const state = document.getElementById("quoteShippingState")?.value || "";
+  const taxLabelEl = document.getElementById("quoteTaxLabel");
+  if (taxLabelEl) {
+    taxLabelEl.textContent = state
+      ? `Sales Tax (${state} · ${(rate * 100).toFixed(2)}%)`
+      : "Sales Tax (select state)";
+  }
+
+  const setText2 = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  setText2("quoteSubtotal", `$${subtotal.toFixed(2)}`);
+  setText2("quoteTaxAmount", `$${tax.toFixed(2)}`);
+  setText2("quoteGrandTotal", `$${total.toFixed(2)}`);
 }
 
 function getComposerPayload() {
@@ -4688,6 +4714,7 @@ function getComposerPayload() {
     net_30_terms: document.getElementById("quoteNet30").checked,
     fulfillment_method: inHouse ? "in_house" : "ship",
     in_house_delivery_fee: inHouse ? quoteInHouseFee() : 0,
+    shipping_state: document.getElementById("quoteShippingState")?.value || "",
   };
 }
 
@@ -4737,6 +4764,8 @@ async function downloadQuotePreviewPdf() {
   try {
     const itemsTotal = payload.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const deliveryFee = payload.fulfillment_method === "in_house" ? (payload.in_house_delivery_fee || 0) : 0;
+    const taxRate = payload.shipping_state ? (window.getTaxRate?.(payload.shipping_state) || 0) : 0;
+    const taxAmount = (itemsTotal + deliveryFee) * taxRate;
 
     const res = await fetch("/api/quote-pdf", {
       method: "POST",
@@ -4753,7 +4782,10 @@ async function downloadQuotePreviewPdf() {
         quote_message: payload.message,
         net_30_terms: payload.net_30_terms,
         in_house_delivery_fee: deliveryFee,
-        grand_total: itemsTotal + deliveryFee,
+        shipping_state: payload.shipping_state,
+        tax_rate: taxRate,
+        tax_amount: taxAmount,
+        grand_total: itemsTotal + deliveryFee + taxAmount,
       }),
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
@@ -4778,6 +4810,7 @@ async function sendQuote() {
   if (!payload) return;
   if (!payload.items.length) { alert("Please enter at least one unit price before sending."); return; }
   if (!payload.valid_until) { alert("Please set a valid until date."); return; }
+  if (!payload.shipping_state) { alert("Please select the customer's shipping state so sales tax can be calculated."); return; }
 
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!confirm(`Send this quote to ${r?.email}?`)) return;
@@ -4788,6 +4821,7 @@ async function sendQuote() {
 async function sendQuoteFromPreview() {
   const payload = getComposerPayload();
   if (!payload) return;
+  if (!payload.shipping_state) { alert("Please select the customer's shipping state so sales tax can be calculated."); return; }
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!confirm(`Send this quote to ${r?.email}?`)) return;
   document.getElementById("quotePreviewOverlay").style.display = "none";

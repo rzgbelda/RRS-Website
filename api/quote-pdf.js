@@ -293,24 +293,36 @@ async function buildQuotePdf(q) {
     subtotal += deliveryFee;
   }
 
-  // ── Total ────────────────────────────────────────────────────────
-  // grand_total already includes the delivery fee; the subtotal fallback
-  // now does too, since the fee was added to it just above.
-  const grand = q.grand_total != null ? Number(q.grand_total) : subtotal;
-  ensure(46);
-  y -= 6;
-  page.drawRectangle({ x: MARGIN, y: y - 34, width: RIGHT - MARGIN, height: 34, color: NAVY });
-  page.drawText('TOTAL', { x: MARGIN + 12, y: y - 15, size: 9.5, font: bold, color: WHITE });
-  page.drawText('Before sales tax', { x: MARGIN + 12, y: y - 26, size: 7, font: reg, color: rgb(0.58, 0.71, 0.85) });
+  // ── Subtotal / Tax / Total ──────────────────────────────────────────
+  // grand_total already includes the delivery fee AND sales tax; the
+  // subtotal fallback now includes only the delivery fee (added above),
+  // with tax added back in separately so it still shows as its own line.
+  const taxAmount = Math.max(0, Number(q.tax_amount) || 0);
+  const grand = q.grand_total != null ? Number(q.grand_total) : subtotal + taxAmount;
+
+  ensure(30 + 46);
+  const subLbl = 'Subtotal', subVal = money(subtotal);
+  page.drawText(subLbl, { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
+  page.drawText(subVal, { x: rightOf(subVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
+  y -= 14;
+
+  const taxLbl = 'Sales Tax' + (q.shipping_state ? ` (${q.shipping_state}${q.tax_rate ? ' · ' + (Number(q.tax_rate) * 100).toFixed(2) + '%' : ''})` : '');
+  const taxVal = money(taxAmount);
+  page.drawText(fitText(taxLbl, 220, reg, 8.5), { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
+  page.drawText(taxVal, { x: rightOf(taxVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
+  y -= 18;
+
+  page.drawRectangle({ x: MARGIN, y: y - 30, width: RIGHT - MARGIN, height: 30, color: NAVY });
+  page.drawText('TOTAL', { x: MARGIN + 12, y: y - 19, size: 9.5, font: bold, color: WHITE });
   const gt = money(grand);
   page.drawText(gt, { x: rightOf(gt, RIGHT - 12, 15, bold), y: y - 21, size: 15, font: bold, color: ORANGE });
-  y -= 34 + 22;
+  y -= 30 + 22;
 
   if (q.message_at_bottom) drawMessageBlock();
 
   // ── Terms ────────────────────────────────────────────────────────
   const terms = [
-    'Prices shown are before sales tax; tax will be added at checkout or invoicing.',
+    'Sales tax is calculated based on the shipping state and included in the total above.',
     validUntil ? `Prices are per case and valid until ${validUntil}.` : 'Prices are per case.',
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
     deliveryFee > 0

@@ -126,7 +126,7 @@
       </div>
       <div style="margin-top:18px;border-top:2px solid #f1f5f9;padding-top:14px;">
         <div class="totals-row"><span>Subtotal</span><span id="confSubtotal">...</span></div>
-        <div class="totals-row"><span>Tax (7%)</span><span id="confTax">...</span></div>
+        <div class="totals-row"><span>Tax<span id="confTaxRate"></span></span><span id="confTax">...</span></div>
         <div class="totals-row"><span>Shipping</span><span style="color:#64748b;font-size:13px;">Freight quote to follow</span></div>
         <div class="totals-row total"><span>Total Charged</span><span id="confTotal">...</span></div>
       </div>
@@ -221,6 +221,7 @@
 
 </div>
 
+<script src="tax-rates.js"></script>
 <script>
 (function () {
   // Read order from localStorage (set by payment.html on success)
@@ -260,16 +261,21 @@
     itemsEl.innerHTML = '<p style="color:#94a3b8;font-size:14px;">Order details will be sent to your email.</p>';
   }
 
-  // Totals
+  // Totals. Back the tax out of the already-charged total by the actual
+  // rate for the state it shipped to -- not a fixed 7% assumption, which
+  // silently mis-split subtotal/tax for every other state's order.
   const total = lastOrder.total || 0;
-  const tax = total / 1.07 * 0.07;
+  const checkout = lastOrder.checkout || {};
+  const taxRate = checkout.state ? (window.getTaxRate ? (window.getTaxRate(checkout.state) || 0) : 0) : 0;
+  const tax = taxRate > 0 ? (total / (1 + taxRate) * taxRate) : 0;
   const subtotal = total - tax;
   document.getElementById('confSubtotal').textContent = '$' + subtotal.toFixed(2);
   document.getElementById('confTax').textContent = '$' + tax.toFixed(2);
+  const confTaxRateEl = document.getElementById('confTaxRate');
+  if (confTaxRateEl) confTaxRateEl.textContent = checkout.state ? ' (' + checkout.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
   document.getElementById('confTotal').textContent = '$' + total.toFixed(2);
 
   // Delivery info
-  const checkout = lastOrder.checkout || {};
   document.getElementById('confContact').textContent = checkout.contact || '...';
   document.getElementById('confBusiness').textContent = checkout.business || '...';
   document.getElementById('confEmail').textContent = checkout.email || '...';

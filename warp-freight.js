@@ -477,11 +477,13 @@ function updateShippingSummary(quote) {
   const price = quote.total_charge || quote.price || 0;
   shippingEl.textContent = `$${Number(price).toFixed(2)}`;
 
-  // Recalculate total (subtotal + shipping + 7% tax)
+  // Recalculate total (subtotal + shipping + tax by shipping state)
   const subtotalEl = document.getElementById('summary-subtotal');
   if (subtotalEl && totalEl) {
     const sub = parseFloat(subtotalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
-    const tax = sub * 0.07;
+    const state = document.getElementById('checkout-state')?.value || '';
+    const taxRate = state ? (window.getTaxRate?.(state) || 0) : 0;
+    const tax = sub * taxRate;
     totalEl.textContent = `$${(sub + Number(price) + tax).toFixed(2)}`;
   }
 }

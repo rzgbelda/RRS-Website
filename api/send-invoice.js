@@ -39,6 +39,13 @@ function invoiceEmailHtml(o) {
       : ''
   );
 
+  const taxAmount = Number(o.tax_amount) || 0;
+  const taxLabel = 'Sales Tax' + (o.shipping_state ? ' (' + esc(o.shipping_state) + (o.tax_rate ? ' · ' + (Number(o.tax_rate) * 100).toFixed(2) + '%' : '') + ')' : '');
+  const totalsRows =
+    '<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Subtotal</td><td style="padding:6px 0;font-size:13px;color:#334155;text-align:right;">$' + o.subtotal.toFixed(2) + '</td></tr>' +
+    '<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">' + taxLabel + '</td><td style="padding:6px 0;font-size:13px;color:#334155;text-align:right;">$' + taxAmount.toFixed(2) + '</td></tr>' +
+    '<tr style="border-top:2px solid #e2e8f0;"><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;">Total Due</td><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;text-align:right;">$' + o.total.toFixed(2) + '</td></tr>';
+
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">' +
     '<div style="max-width:600px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.08);">' +
@@ -61,7 +68,7 @@ function invoiceEmailHtml(o) {
     '</tr></thead><tbody>' + rows + '</tbody></table>' +
 
     '<table style="width:100%;border-collapse:collapse;margin-bottom:28px;">' +
-    '<tr style="border-top:2px solid #e2e8f0;"><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;">Total Due</td><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;text-align:right;">$' + o.total.toFixed(2) + '</td></tr>' +
+    totalsRows +
     '</table>' +
 
     '<a href="' + esc(o.payment_link) + '" style="display:block;background:' + BRAND.orange + ';color:#fff;text-decoration:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;margin-bottom:24px;">Pay Invoice Now &rarr;</a>' +
@@ -99,7 +106,7 @@ module.exports = async (req, res) => {
 
   const { data: q, error: qErr } = await supabase
     .from('quote_requests')
-    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee')
+    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_state, tax_rate, tax_amount')
     .eq('id', quote_request_id)
     .single();
 
@@ -126,11 +133,19 @@ module.exports = async (req, res) => {
 
   const itemsTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
+  // Sales tax was computed and snapshotted server-side when the quote was
+  // sent (send-quote edge function) -- trusted here rather than recomputed,
+  // so an invoice always matches the tax the customer already saw quoted.
+  // Quotes sent before this feature existed have tax_amount = 0/null,
+  // which is the correct behavior for them (nothing was ever promised).
+  const taxAmount = Math.max(0, parseFloat(q.tax_amount) || 0);
+
   // Prefer the stored grand_total, but some quotes were sent before the
   // send-quote edge function was fixed to save it -- quote_items has
   // everything needed to invoice regardless, so fall back to summing it.
-  // The fallback must add the fee back in; grand_total already includes it.
-  const total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee;
+  // The fallback must add the fee and tax back in; grand_total already
+  // includes both.
+  const total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + taxAmount;
   if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
 
   // Preview: render the exact email that would be sent, with no order
@@ -143,6 +158,10 @@ module.exports = async (req, res) => {
         customer_name: q.contact_name || 'there',
         business_name: q.business_name || '',
         items,
+        subtotal: itemsTotal + deliveryFee,
+        tax_amount: taxAmount,
+        shipping_state: q.shipping_state || '',
+        tax_rate: q.tax_rate || 0,
         total,
         delivery_fee: deliveryFee,
         payment_link: '#preview-only',
@@ -159,7 +178,11 @@ module.exports = async (req, res) => {
       customer_name:  q.contact_name || '',
       customer_email: q.email,
       business_name:  q.business_name || 'N/A',
-      subtotal:       total - deliveryFee,
+      // itemsTotal directly, not "total - deliveryFee" -- that subtraction
+      // used to correctly recover the item-only subtotal back when total
+      // had no tax in it, but now total also includes tax, so the old
+      // formula would have folded tax into what's labeled "subtotal".
+      subtotal:       itemsTotal,
       total:          total,
       payment_method: 'card',
       payment_status: 'pending_invoice',
@@ -169,6 +192,7 @@ module.exports = async (req, res) => {
       // the in-house delivery panel instead of the Estes freight flow.
       fulfillment_method:    q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
       in_house_delivery_fee: deliveryFee,
+      shipping_address: q.shipping_state ? { state: q.shipping_state } : null,
       notes:          q.quote_number ? ('Invoiced from quote ' + q.quote_number) : 'Invoiced from an admin quote request',
     })
     .select('id')
@@ -194,9 +218,10 @@ module.exports = async (req, res) => {
   let link;
   try {
     link = await stripe.paymentLinks.create({
-      // The delivery fee is appended as its own Stripe line so the amount
-      // charged matches the invoice total exactly. Without it Stripe would
-      // collect only the goods and we would eat the delivery cost.
+      // The delivery fee and sales tax are each appended as their own
+      // Stripe line so the amount charged matches the invoice total
+      // exactly. Without them Stripe would collect only the goods and we
+      // would eat the delivery cost / owe the tax out of pocket.
       line_items: items.map(i => ({
         price_data: {
           currency: 'usd',
@@ -209,6 +234,15 @@ module.exports = async (req, res) => {
           currency: 'usd',
           product_data: { name: 'In-House Delivery' },
           unit_amount: Math.round(deliveryFee * 100),
+        },
+        quantity: 1,
+      }] : []).concat(taxAmount > 0 ? [{
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: 'Sales Tax' + (q.shipping_state ? ' (' + q.shipping_state + (q.tax_rate ? ' · ' + (Number(q.tax_rate) * 100).toFixed(2) + '%' : '') + ')' : ''),
+          },
+          unit_amount: Math.round(taxAmount * 100),
         },
         quantity: 1,
       }] : []),
@@ -242,6 +276,10 @@ module.exports = async (req, res) => {
         customer_name: q.contact_name || 'there',
         business_name: q.business_name || '',
         items,
+        subtotal: itemsTotal + deliveryFee,
+        tax_amount: taxAmount,
+        shipping_state: q.shipping_state || '',
+        tax_rate: q.tax_rate || 0,
         total,
         delivery_fee: deliveryFee,
         payment_link: link.url,

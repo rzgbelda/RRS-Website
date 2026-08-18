@@ -10,6 +10,30 @@ const CORS = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// US state sales tax rates, keyed by USPS two-letter code. Deno Edge
+// Functions can't require() the site's shared tax-rates.js (that's for the
+// browser pages and Vercel API routes), so this is a duplicate copy -- must
+// be kept in sync with /tax-rates.js at the repo root if a rate ever
+// changes. Tax is computed here, server-side, rather than trusted from the
+// client payload: this is what actually gets emailed to the customer and
+// snapshotted as the quote's official total, so it has to be right
+// regardless of what the browser sent.
+const TAX_RATES: Record<string, number> = {
+  AL: 0.0400, AK: 0.0000, AZ: 0.0560, AR: 0.0650, CA: 0.0725,
+  CO: 0.0290, CT: 0.0635, DE: 0.0000, FL: 0.0600, GA: 0.0400,
+  HI: 0.0400, ID: 0.0600, IL: 0.0625, IN: 0.0700, IA: 0.0600,
+  KS: 0.0650, KY: 0.0600, LA: 0.0500, ME: 0.0550, MD: 0.0600,
+  MA: 0.0625, MI: 0.0600, MN: 0.0688, MS: 0.0700, MO: 0.0423,
+  MT: 0.0000, NE: 0.0550, NV: 0.0685, NH: 0.0000, NJ: 0.0663,
+  NM: 0.0488, NY: 0.0400, NC: 0.0475, ND: 0.0500, OH: 0.0575,
+  OK: 0.0450, OR: 0.0000, PA: 0.0600, RI: 0.0700, SC: 0.0600,
+  SD: 0.0420, TN: 0.0700, TX: 0.0625, UT: 0.0610, VT: 0.0600,
+  VA: 0.0530, WA: 0.0650, WV: 0.0600, WI: 0.0500, WY: 0.0400,
+};
+function getTaxRate(stateCode?: string): number {
+  return TAX_RATES[String(stateCode || "").trim().toUpperCase()] || 0;
+}
+
 const RRS = {
   name:    "Room Ready Supply",
   address: "609 Washington St, Plymouth, NC 27962",
@@ -28,11 +52,15 @@ function buildQuoteHtml(payload: {
   message?: string;
   net_30_terms?: boolean;
   in_house_delivery_fee?: number;
+  shipping_state?: string;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee } = payload;
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, shipping_state } = payload;
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const deliveryFee = Number(in_house_delivery_fee) || 0;
   const subtotal = itemsTotal + deliveryFee;
+  const taxRate = getTaxRate(shipping_state);
+  const tax = subtotal * taxRate;
+  const grandTotal = subtotal + tax;
 
   const rows = items.map((i, idx) => {
     const line = i.quantity * i.unit_price;
@@ -120,11 +148,17 @@ function buildQuoteHtml(payload: {
           <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right;border-bottom:1px solid #f1f5f9">$${deliveryFee.toFixed(2)}</td>
         </tr>` : ""}</tbody>
       <tfoot>
+        <tr style="background:#f8fafc">
+          <td colspan="3" style="padding:8px 16px;font-size:12px;color:#64748b;text-align:right;border-top:1px solid #e2e8f0">Subtotal</td>
+          <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right;border-top:1px solid #e2e8f0">$${subtotal.toFixed(2)}</td>
+        </tr>
+        <tr style="background:#f8fafc">
+          <td colspan="3" style="padding:8px 16px;font-size:12px;color:#64748b;text-align:right">Sales Tax${shipping_state ? ` (${shipping_state} · ${(taxRate * 100).toFixed(2)}%)` : ""}</td>
+          <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right">$${tax.toFixed(2)}</td>
+        </tr>
         <tr style="background:#0d2c50">
-          <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">
-            TOTAL<br><span style="font-size:10px;font-weight:500;color:#93c5fd">Before sales tax</span>
-          </td>
-          <td style="padding:14px 16px;font-size:16px;font-weight:800;color:#f59e0b;text-align:right">$${subtotal.toFixed(2)}</td>
+          <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">TOTAL</td>
+          <td style="padding:14px 16px;font-size:16px;font-weight:800;color:#f59e0b;text-align:right">$${grandTotal.toFixed(2)}</td>
         </tr>
       </tfoot>
     </table>
@@ -133,7 +167,7 @@ function buildQuoteHtml(payload: {
     <div style="margin-top:24px;padding:16px 20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
       <p style="margin:0 0 6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b">Terms & Conditions</p>
       <ul style="margin:0;padding-left:16px;font-size:12px;color:#64748b;line-height:1.8">
-        <li>Prices shown are before sales tax; tax will be added at checkout or invoicing.</li>
+        <li>Sales tax is calculated based on the shipping state and included in the total above.</li>
         <li>Prices are per case and valid until ${valid_until}.</li>
         ${net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
         ${deliveryFee > 0
@@ -168,10 +202,18 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { quote_request_id, items, message, preview_only, net_30_terms,
-            fulfillment_method, in_house_delivery_fee } = body;
+            fulfillment_method, in_house_delivery_fee, shipping_state } = body;
     const deliveryFee = Math.max(0, Number(in_house_delivery_fee) || 0);
     const isInHouse   = fulfillment_method === "in_house";
     let { valid_until } = body;
+
+    // The admin composer already blocks sending without a state picked;
+    // this is the server-side backstop so a real send can never go out
+    // silently taxed at 0% because that client-side check was bypassed --
+    // preview_only is exempt so staff can still preview before picking one.
+    if (!preview_only && !shipping_state) {
+      throw new Error("shipping_state is required to calculate sales tax");
+    }
 
     // Belt-and-suspenders: the admin composer has a client-side guard that
     // blocks sending without a date, but a quote reached the database with
@@ -215,6 +257,7 @@ serve(async (req) => {
       message,
       net_30_terms: !!net_30_terms,
       in_house_delivery_fee: isInHouse ? deliveryFee : 0,
+      shipping_state,
     });
 
     // Preview mode — just return the HTML
@@ -245,12 +288,22 @@ serve(async (req) => {
     }
 
     // Compute totals for snapshot. grand_total MUST include the in-house
-    // delivery fee: api/send-invoice.js builds the Stripe payment link from
-    // this number, so leaving the fee out here would silently undercharge
-    // the customer by exactly the delivery amount.
+    // delivery fee AND sales tax: api/send-invoice.js builds the Stripe
+    // payment link from this number, so leaving either out here would
+    // silently undercharge the customer. subtotal stays items-only (the
+    // pre-existing, documented convention api/send-invoice.js relies on --
+    // it recovers the item-only subtotal as total - deliveryFee) -- tax is
+    // computed on items + delivery fee together, but only tax_amount and
+    // grand_total reflect that, not subtotal itself. tax_rate/tax_amount
+    // are snapshotted (not recomputed live wherever grand_total is
+    // displayed later) so a future change to the site's rate table never
+    // silently changes what an already-sent quote says it charged.
     const fee_amt      = isInHouse ? deliveryFee : 0;
     const subtotal_amt = items.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0);
-    const grand_amt    = subtotal_amt + fee_amt;
+    const taxable_amt  = subtotal_amt + fee_amt;
+    const tax_rate      = getTaxRate(shipping_state);
+    const tax_amt       = taxable_amt * tax_rate;
+    const grand_amt      = taxable_amt + tax_amt;
 
     // Update status to quoted + save full quote snapshot for customer portal
     await sb.from("quote_requests").update({
@@ -263,6 +316,9 @@ serve(async (req) => {
       net_30_terms:     !!net_30_terms,
       fulfillment_method:    isInHouse ? "in_house" : "ship",
       in_house_delivery_fee: fee_amt,
+      shipping_state:   shipping_state || null,
+      tax_rate,
+      tax_amount:       tax_amt,
       subtotal:         subtotal_amt,
       grand_total:      grand_amt,
       customer_visible: true,
