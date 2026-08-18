@@ -856,6 +856,7 @@
                 order_type: checkout.orderType || 'one_time',
                 notes: checkout.notes || '',
                 fulfillment_method: checkout.fulfillmentMethod || 'ship',
+                stripe_payment_intent_id: pi.id,
               }),
             });
             var createBody = await createRes.json().catch(function () { return {}; });

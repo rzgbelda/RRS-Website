@@ -73,14 +73,31 @@ module.exports = async (req, res) => {
     const pi = event.data.object;
     const meta = pi.metadata || {};
 
+    // Real proof of payment, not just a status flag: pi.id is always
+    // present; the charge id/receipt url depend on the Stripe API version
+    // (newer versions expose latest_charge as a bare id string, older ones
+    // nest a full charges list) so both shapes are checked rather than
+    // assuming one. receipt_url is Stripe's own hosted receipt page --
+    // when present it's the most direct "proof the customer paid" link
+    // available, since it's rendered by Stripe itself, not this app.
+    const chargeObj  = pi.charges?.data?.[0] || null;
+    const paymentProof = {
+      stripe_payment_intent_id: pi.id || null,
+      stripe_charge_id: (typeof pi.latest_charge === 'string' ? pi.latest_charge : pi.latest_charge?.id) || chargeObj?.id || null,
+      receipt_url: chargeObj?.receipt_url || null,
+      stripe_livemode: typeof pi.livemode === 'boolean' ? pi.livemode : null,
+      paid_at: new Date().toISOString(),
+    };
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
     // Columns must match the live orders table. It has no amount_total,
-    // currency, items, tax_amount, po_number, stripe_* or shipping_status
-    // columns -- inserting those made this handler fail every time.
+    // currency, items, tax_amount, po_number, or shipping_status columns
+    // -- inserting those made this handler fail every time. stripe_* and
+    // paid_at DO exist as of the payment-proof migration above.
     const totalDollars = (pi.amount || 0) / 100;
     const taxDollars   = meta.tax_amount ? parseInt(meta.tax_amount) / 100 : 0;
 
@@ -99,6 +116,7 @@ module.exports = async (req, res) => {
       notes:          meta.notes || null,
       order_type:     meta.order_type || 'one_time',
       fulfillment_method: meta.fulfillment_method || 'ship',
+      ...paymentProof,
     };
 
     // Item detail no longer travels through Stripe metadata (it blew past
@@ -184,7 +202,7 @@ module.exports = async (req, res) => {
           .single();
 
         if (!fetchErr && existing && existing.payment_status !== 'paid') {
-          await supabase.from('orders').update({ payment_status: 'paid' }).eq('id', existing.id);
+          await supabase.from('orders').update({ payment_status: 'paid', ...paymentProof }).eq('id', existing.id);
 
           const { data: items } = await supabase
             .from('order_items')

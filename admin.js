@@ -1819,7 +1819,16 @@ async function openOrderModal(id) {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;margin-bottom:16px;">
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Order #</span><br><strong>${escHtml(o.order_number)}</strong></div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Status</span><br><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></div>
-      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Payment</span><br><span class="a-badge ${paymentBadgeClass(o.payment_status)}">${paymentBadgeLabel(o.payment_status)}</span></div>
+      <div>
+        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Payment</span><br>
+        <span class="a-badge ${paymentBadgeClass(o.payment_status)}">${paymentBadgeLabel(o.payment_status)}</span>
+        ${o.payment_status === "paid" && (o.receipt_url || o.stripe_payment_intent_id) ? `
+          <a href="${o.receipt_url ? escHtml(o.receipt_url) : `https://dashboard.stripe.com/${o.stripe_livemode === false ? "test/" : ""}payments/${escHtml(o.stripe_payment_intent_id)}`}"
+            target="_blank" rel="noopener" style="margin-left:6px;font-size:11.5px;font-weight:700;color:#16a34a;text-decoration:none">
+            ${o.receipt_url ? "View Receipt" : "View in Stripe"} &rarr;
+          </a>` : ""}
+        ${o.payment_status === "paid" && o.paid_at ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">Paid ${fmt(o.paid_at)}</div>` : ""}
+      </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Customer</span><br>${escHtml(o.customer_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>

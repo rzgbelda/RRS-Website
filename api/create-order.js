@@ -45,6 +45,16 @@ module.exports = async (req, res) => {
     order_type:         b.order_type || 'one_time',
     notes:              b.notes || '',
     fulfillment_method: b.fulfillment_method || 'ship',
+    // Real proof of payment for a card order paid directly at checkout
+    // (as opposed to an emailed invoice, which api/stripe-webhook.js
+    // captures separately once the customer pays the Payment Link). The
+    // browser already has this the moment Stripe confirms the charge --
+    // capturing it here means the webhook doesn't have to backfill it,
+    // which it wouldn't anyway: this insert already sets payment_status
+    // to 'paid' when Stripe succeeds, so the webhook's own guard
+    // (`payment_status !== 'paid'`) skips it as an intentional
+    // double-send prevention.
+    stripe_payment_intent_id: b.stripe_payment_intent_id || null,
   };
 
   if (!orderData.order_number) return res.status(400).json({ error: 'order_number is required' });
