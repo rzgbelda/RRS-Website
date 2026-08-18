@@ -648,15 +648,16 @@
                     </div>
                     <div class="uq-field">
                         <label for="qShippingStreet">Shipping Street Address</label>
-                        <input id="qShippingStreet" type="text" placeholder="123 Main St" autocomplete="street-address">
+                        <input id="qShippingStreet" type="text" placeholder="123 Main St" required autocomplete="street-address">
+                        <span id="qShippingAddrErr" class="uq-field-err">Please complete your full shipping address (street, city, state, and ZIP).</span>
                     </div>
                     <div class="uq-field">
                         <label for="qShippingCity">City</label>
-                        <input id="qShippingCity" type="text" placeholder="City" autocomplete="address-level2">
+                        <input id="qShippingCity" type="text" placeholder="City" required autocomplete="address-level2">
                     </div>
                     <div class="uq-field">
                         <label for="qShippingState">State</label>
-                        <select id="qShippingState" autocomplete="address-level1">
+                        <select id="qShippingState" required autocomplete="address-level1">
                             <option value="">... Select state ...</option>
                             <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
                             <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
@@ -679,7 +680,8 @@
                     </div>
                     <div class="uq-field">
                         <label for="qShippingZip">ZIP Code</label>
-                        <input id="qShippingZip" type="text" placeholder="12345" maxlength="10" autocomplete="postal-code">
+                        <input id="qShippingZip" type="text" placeholder="12345" maxlength="10" required autocomplete="postal-code">
+                        <span id="qShippingZipErr" class="uq-field-err">Please enter a valid 5-digit ZIP code.</span>
                     </div>
                 </div>
             </div>
@@ -1479,6 +1481,26 @@
     if (emailVal && !emailVal.includes('@')) {
       emailErr.style.display = 'block'; hasError = true;
     } else { emailErr.style.display = 'none'; }
+
+    // Shipping address: required so every quote arrives with somewhere to
+    // ship to and a state to base sales tax on, rather than staff having
+    // to chase it down (or add it by hand later) for every submission.
+    const streetVal = document.getElementById('qShippingStreet').value.trim();
+    const cityVal   = document.getElementById('qShippingCity').value.trim();
+    const stateVal  = document.getElementById('qShippingState').value;
+    const zipVal    = document.getElementById('qShippingZip').value.trim();
+    const addrErr   = document.getElementById('qShippingAddrErr');
+    const zipErr    = document.getElementById('qShippingZipErr');
+    const zipValid  = /^\d{5}(-\d{4})?$/.test(zipVal);
+    if (!streetVal || !cityVal || !stateVal || !zipVal) {
+      addrErr.style.display = 'block'; hasError = true;
+    } else { addrErr.style.display = 'none'; }
+    if (zipVal && !zipValid) {
+      zipErr.style.display = 'block'; hasError = true;
+    } else { zipErr.style.display = 'none'; }
+    if ((!streetVal || !cityVal || !stateVal || !zipVal || (zipVal && !zipValid))) {
+      document.getElementById('qShippingStreet').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
 
     const allItems = collectAllItems();
     const itemsError = document.getElementById('vqItemsError');
