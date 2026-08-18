@@ -196,7 +196,11 @@
       color:#fff; font-weight:700; font-size:14px;
       padding:0 22px; border-radius:10px; text-decoration:none;
       border:1.5px solid rgba(255,255,255,.4);
-      box-shadow:0 20px 25px -8px rgba(255,113,12,.45), 0 8px 10px -6px rgba(255,113,12,.4);
+      /* Tightened from a large 20px/25px-blur downward shadow -- the two
+         buttons' boxes were already the same 48px height, but that shadow's
+         glow hung well below the button, reading as if it were taller than
+         the cart button next to it even though the actual edges lined up. */
+      box-shadow:0 6px 14px -4px rgba(255,113,12,.5);
       transition:filter .2s ease;
     }
     .bd-buy-btn:hover { filter:brightness(1.12); }
@@ -209,13 +213,15 @@
        from script.js), so someone browsing several deals can add multiple
        and check out once, without leaving the page. Sized/aligned to match
        Buy Now exactly (same 48px box-sizing:border-box height, same flex
-       centering) rather than relying on padding to land at a similar
-       height, which drifted a few px off next to Buy Now's own padding. */
+       centering, same shadow weight) rather than relying on padding to land
+       at a similar height, which drifted a few px off next to Buy Now's own
+       padding. */
     .bd-actions { display:flex; align-items:center; gap:10px; }
     .bd-cart-btn {
       display:inline-flex; align-items:center; justify-content:center;
       width:48px; height:48px; box-sizing:border-box; flex:none;
       background:#fff; color:#FF710C; border:1.5px solid #FFCFA3; border-radius:10px;
+      box-shadow:0 6px 14px -4px rgba(11,37,69,.12);
       cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
     }
     .bd-cart-btn:hover { background:#FF710C; border-color:#FF710C; color:#fff; }
