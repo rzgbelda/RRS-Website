@@ -1297,8 +1297,13 @@ async function runCsvImport() {
   const skippedTotal = csvDupCount + dbDupCount + invalidPriceCount;
 
   if (skippedTotal) {
+    const dupCount = csvDupCount + dbDupCount;
+    const skipDesc = [
+      dupCount ? `${dupCount} duplicate(s)` : null,
+      invalidPriceCount ? `${invalidPriceCount} invalid price(s)` : null,
+    ].filter(Boolean).join(", ");
     document.getElementById("csvProgressSub").textContent =
-      `Skipped ${skippedTotal} duplicate(s) — importing ${rows.length} unique product(s)…`;
+      `Skipped ${skippedTotal} row(s) — ${skipDesc} — importing ${rows.length} product(s)…`;
     await new Promise(r => setTimeout(r, 800));
   }
 
@@ -1310,7 +1315,7 @@ async function runCsvImport() {
   const setProgress = (done) => {
     const pct = total ? Math.round((done / total) * 100) : 100;
     document.getElementById("csvProgressBar").style.width = pct + "%";
-    document.getElementById("csvProgressSub").textContent = `${done.toLocaleString()} / ${total.toLocaleString()} processed${skippedTotal ? ` (${skippedTotal} duplicates skipped)` : ""}`;
+    document.getElementById("csvProgressSub").textContent = `${done.toLocaleString()} / ${total.toLocaleString()} processed${skippedTotal ? ` (${skippedTotal} skipped)` : ""}`;
   };
   setProgress(0);
 
