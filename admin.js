@@ -4376,6 +4376,38 @@ function openQuoteDetail(id) {
         </div>`).join("")}
     </div>
 
+    <!-- Shipping state / sales tax -- editable independently of the
+         composer, so a quote sent before this field existed (or one whose
+         customer never gave a state) can get one added and its tax
+         recalculated without re-sending the whole quote to the customer. -->
+    <div style="margin-bottom:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
+      <div>
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0 0 4px">Shipping State <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(for sales tax)</span></p>
+        <select id="quoteDetailShippingState" class="a-select" style="width:190px;height:34px;border-radius:8px;font-size:12.5px;padding:0 8px">
+          <option value="">Not set — $0.00 tax</option>
+          <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
+          <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
+          <option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="DC">District of Columbia</option>
+          <option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option>
+          <option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option>
+          <option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option>
+          <option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option>
+          <option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option>
+          <option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option>
+          <option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option>
+          <option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option>
+          <option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option>
+          <option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option>
+          <option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option>
+          <option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option>
+          <option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option>
+          <option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option>
+        </select>
+      </div>
+      <button class="a-btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap" onclick="saveQuoteShippingState()">Save &amp; Recalculate Tax</button>
+      <span id="quoteDetailTaxNote" style="font-size:11.5px;color:#64748b"></span>
+    </div>
+
     <!-- Requested products -->
     <div style="margin-bottom:20px">
       <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;margin:0 0 4px">Requested Products</p>
@@ -4393,7 +4425,68 @@ function openQuoteDetail(id) {
   `;
 
   document.getElementById("quoteStatusSelect").value = r.status || "new";
+  document.getElementById("quoteDetailShippingState").value = r.shipping_state || "";
+  const taxNoteEl = document.getElementById("quoteDetailTaxNote");
+  if (taxNoteEl) {
+    taxNoteEl.textContent = r.tax_amount > 0
+      ? `Currently taxed at ${((r.tax_rate || 0) * 100).toFixed(2)}% ($${Number(r.tax_amount).toFixed(2)})`
+      : "";
+  }
   document.getElementById("quoteDetailModal").style.display = "flex";
+}
+
+// Sets/changes the shipping state on an already-created quote request
+// directly -- independent of the composer -- and recalculates tax from
+// the quote's existing subtotal + delivery fee. This is what lets a quote
+// sent before shipping_state existed (or one that never had a state) get
+// taxed correctly before it's invoiced, without re-sending the whole
+// quote email to the customer just to add a state.
+async function saveQuoteShippingState() {
+  if (!currentQuoteId) return;
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return;
+
+  const state = document.getElementById("quoteDetailShippingState").value;
+  const btn = document.querySelector('[onclick="saveQuoteShippingState()"]');
+  if (btn) { btn.textContent = "Saving…"; btn.disabled = true; }
+
+  // Tax applies to items + delivery fee, same base used everywhere else
+  // (composer, send-quote, invoice). subtotal is items-only by the
+  // established convention, so the fee has to be added back in here too.
+  const taxableBase = (Number(r.subtotal) || 0) + (Number(r.in_house_delivery_fee) || 0);
+  const rate = state ? (window.getTaxRate?.(state) || 0) : 0;
+  const taxAmount = taxableBase * rate;
+  const grandTotal = taxableBase + taxAmount;
+
+  const { error } = await window.sb.from("quote_requests").update({
+    shipping_state: state || null,
+    tax_rate: rate,
+    tax_amount: taxAmount,
+    // Only recompute grand_total if this quote already has real pricing
+    // (i.e. it's been quoted) -- for a not-yet-quoted request there's
+    // nothing to base a total on yet, and the composer will set it later.
+    ...(r.status === "quoted" || r.grand_total > 0 ? { grand_total: grandTotal } : {}),
+  }).eq("id", currentQuoteId);
+
+  if (btn) { btn.textContent = "Save & Recalculate Tax"; btn.disabled = false; }
+
+  if (error) {
+    alert("Error saving shipping state: " + error.message);
+    return;
+  }
+
+  r.shipping_state = state || null;
+  r.tax_rate = rate;
+  r.tax_amount = taxAmount;
+  if (r.status === "quoted" || r.grand_total > 0) r.grand_total = grandTotal;
+
+  const taxNoteEl = document.getElementById("quoteDetailTaxNote");
+  if (taxNoteEl) {
+    taxNoteEl.textContent = state
+      ? `Now taxed at ${(rate * 100).toFixed(2)}% ($${taxAmount.toFixed(2)}) — new total $${grandTotal.toFixed(2)}`
+      : "Tax cleared (no state set)";
+  }
+  showToast("Shipping state saved" + (state ? ` — tax recalculated at ${(rate * 100).toFixed(2)}%` : ""));
 }
 
 /* ── Quote Composer ─────────────────────────────────────────── */
