@@ -60,11 +60,55 @@ function slugify(s) {
   return String(s || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
-// Mirrors buildSeoTitle() in script.js. Kept character-for-character
-// equivalent so the server-rendered title and the one the browser sets a
-// moment later are identical -- a mismatch would flicker and give Google
-// two different titles for the same URL.
-function buildSeoTitle(p) {
+// Mirrors buildSeoTitle() in script.js -- including the trim helpers below
+// it. Kept character-for-character equivalent so the server-rendered
+// title and the one the browser sets a moment later are identical -- a
+// mismatch would flicker and give Google two different titles for the
+// same URL.
+const SEO_TITLE_BASE_BUDGET = 40;
+
+function stripTitleSpecClause(name) {
+  return name.replace(/\s[-–—]\s[A-Z][^,]*,.*$/, '').trim();
+}
+
+function stripTitleOrphanSymbol(s) {
+  return s.replace(/^[%×x&\-–—]\s+/, '').trim();
+}
+
+function trimTitleKeepingEnds(name, maxLen) {
+  if (name.length <= maxLen) return name;
+  const words = name.split(' ').filter(Boolean);
+
+  let endWords = [];
+  let used = 0;
+  for (let i = words.length - 1; i >= 0; i--) {
+    const add = words[i].length + (endWords.length ? 1 : 0);
+    if (used + add > maxLen) break;
+    endWords.unshift(words[i]);
+    used += add;
+  }
+
+  let startWords = [];
+  const availableStart = words.length - endWords.length;
+  for (let i = 0; i < availableStart; i++) {
+    const add = words[i].length + (startWords.length || used ? 1 : 0);
+    if (used + add > maxLen) break;
+    startWords.push(words[i]);
+    used += add;
+  }
+
+  const combined = [...startWords, ...endWords];
+  const result = combined.length ? combined.join(' ') : name.slice(0, maxLen).trim();
+  return stripTitleOrphanSymbol(result);
+}
+
+// Shared by buildSeoTitle() (the full name, used for og:title, JSON-LD
+// Product.name, and everything except the <title> element -- none of
+// which should ever be truncated, since that's crawler-facing product
+// identity, not just a search-result snippet) and buildSeoTitleTag() (the
+// <title> element specifically, which IS subject to Google's ~60-char
+// display cut).
+function computeTitleParts(p) {
   const desc = p.description || '';
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
@@ -72,7 +116,20 @@ function buildSeoTitle(p) {
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
   const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : '';
+  return { prefix, cleanName };
+}
+
+function buildSeoTitle(p) {
+  const { prefix, cleanName } = computeTitleParts(p);
   return `Wholesale ${prefix}${cleanName}`;
+}
+
+function buildSeoTitleTag(p) {
+  const { prefix, cleanName } = computeTitleParts(p);
+  const lead = 'Wholesale ';
+  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - prefix.length;
+  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(cleanName), nameBudget);
+  return `${lead}${prefix}${trimmedName}`;
 }
 
 // Mirrors populateProductPage()'s metaDesc, including its quirk of
@@ -163,6 +220,7 @@ function buildBreadcrumbJsonLd(p, pageUrl) {
 
 function injectMeta(html, p) {
   const seoTitle = buildSeoTitle(p);
+  const titleTag = buildSeoTitleTag(p);
   const metaDesc = buildMetaDesc(p);
   const slug = slugify(p.sku || p.name);
   const pageUrl = 'https://www.roomreadysupply.com/product?item=' + encodeURIComponent(slug);
@@ -170,7 +228,7 @@ function injectMeta(html, p) {
 
   let out = html.replace(
     /<title>[\s\S]*?<\/title>/i,
-    '<title>' + escText(seoTitle + ' | Room Ready Supply') + '</title>'
+    '<title>' + escText(titleTag + ' | Room Ready Supply') + '</title>'
   );
   out = setAttrById(out, 'metaDescription', 'content', metaDesc);
   out = setAttrById(out, 'canonicalUrl',    'href',    pageUrl);
@@ -262,6 +320,7 @@ module.exports = async (req, res) => {
 // be checked against real catalog rows without deploying.
 module.exports.injectMeta          = injectMeta;
 module.exports.buildSeoTitle       = buildSeoTitle;
+module.exports.buildSeoTitleTag    = buildSeoTitleTag;
 module.exports.buildMetaDesc       = buildMetaDesc;
 module.exports.buildProductJsonLd  = buildProductJsonLd;
 module.exports.buildBreadcrumbJsonLd = buildBreadcrumbJsonLd;

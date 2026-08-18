@@ -834,7 +834,77 @@ document.addEventListener('change', e => {
    PRODUCT PAGE
 ========================= */
 
-function buildSeoTitle(p) {
+// SEO Day 9: the previous "Wholesale <size> <name>" format (below) already
+// cut titles from 140-160 chars down to ~60-85 -- an improvement, but a
+// site-wide audit (tools/seo-audit.js) still found 94 of 120 product
+// titles running over Google's ~60-char display limit, since many product
+// names are themselves 50+ chars once brand + descriptor + type are all
+// included. " | Room Ready Supply" (appended where this is used) is 20 of
+// those 60 chars, leaving a 40-char budget for this function's own output.
+//
+// api/product-meta.js renders this same title server-side and MUST be
+// kept identical -- a mismatch hands Google two titles for one URL. Every
+// helper below is mirrored there too.
+const SEO_TITLE_BASE_BUDGET = 40;
+
+// Drops a trailing packaging/material spec clause introduced by " - "
+// when it's followed by a comma-separated list (color, case count,
+// material) -- e.g. "Wash Cloths - White, 50 Dozen Case - Made from 100%
+// Durable Cotton" becomes "Wash Cloths". A single-word variant like
+// "Mattress - King" is left alone (no comma after it), since that's the
+// actual distinguishing size, not droppable packaging text.
+function stripTitleSpecClause(name) {
+  return name.replace(/\s[-–—]\s[A-Z][^,]*,.*$/, "").trim();
+}
+
+// A lone symbol (%, ×, x, &, a dash) can survive at the edge of a trim if
+// its paired word got cut -- e.g. "100 % Waterproof" trimmed to just "%
+// Waterproof". Strip it rather than open (or close) a title on a bare
+// symbol.
+function stripTitleOrphanSymbol(s) {
+  return s.replace(/^[%×x&\-–—]\s+/, "").trim();
+}
+
+// Keeps both ends of the name -- the brand/first word(s) AND the trailing
+// head-noun phrase (almost always the actual product type people search
+// for: "...Laundry Detergent", "...Dishwashing Tabs", "...Dish Soap") --
+// dropping only the descriptive middle. A pure left-to-right or
+// right-to-left cut loses one or the other; this campaign of dropping the
+// middle instead keeps what a buyer actually scans a title for.
+function trimTitleKeepingEnds(name, maxLen) {
+  if (name.length <= maxLen) return name;
+  const words = name.split(" ").filter(Boolean);
+
+  let endWords = [];
+  let used = 0;
+  for (let i = words.length - 1; i >= 0; i--) {
+    const add = words[i].length + (endWords.length ? 1 : 0);
+    if (used + add > maxLen) break;
+    endWords.unshift(words[i]);
+    used += add;
+  }
+
+  let startWords = [];
+  const availableStart = words.length - endWords.length;
+  for (let i = 0; i < availableStart; i++) {
+    const add = words[i].length + (startWords.length || used ? 1 : 0);
+    if (used + add > maxLen) break;
+    startWords.push(words[i]);
+    used += add;
+  }
+
+  const combined = [...startWords, ...endWords];
+  const result = combined.length ? combined.join(" ") : name.slice(0, maxLen).trim();
+  return stripTitleOrphanSymbol(result);
+}
+
+// Shared by buildSeoTitle() (the full name, used for og:title, JSON-LD
+// Product.name, and the visible on-page product heading -- none of which
+// should ever be truncated, since that's customer- and crawler-facing
+// product identity, not just a search-result snippet) and
+// buildSeoTitleTag() (the <title> element specifically, which IS subject
+// to Google's ~60-char display cut).
+function computeTitleParts(p) {
   const desc = p.description || "";
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
@@ -847,30 +917,46 @@ function buildSeoTitle(p) {
   const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : "";
-  // "Wholesale" leads because that is how B2B buyers search, and it is
-  // the part that survives Google's ~60-character display cut. This
-  // previously appended "– Wholesale Pricing for Hotels & Motels" plus a
-  // material parenthetical, which pushed titles to 140-160 chars -- all
-  // of it truncated away in results. Those terms still appear in each
-  // page's H1, meta description and body copy, so nothing is lost for
-  // ranking; only the truncation is.
-  //
-  // api/product-meta.js renders this same title server-side and MUST be
-  // kept identical -- a mismatch hands Google two titles for one URL.
+  return { prefix, cleanName };
+}
+
+// "Wholesale" leads because that is how B2B buyers search. Full,
+// untruncated -- this is what actually identifies the product, so it's
+// used everywhere except the <title> element itself (see
+// buildSeoTitleTag below).
+function buildSeoTitle(p) {
+  const { prefix, cleanName } = computeTitleParts(p);
   return `Wholesale ${prefix}${cleanName}`;
+}
+
+// The <title> element specifically. Google displays only ~60 chars of it
+// in search results; "Wholesale" survives the cut because it leads, and
+// the size prefix (a dimension like `12" × 12"`, a weight like "40lb.",
+// or a word like "Small"/"Standard") is reserved outside the trim budget
+// and never dropped -- it's short and it's exactly the detail a B2B buyer
+// uses to tell SKUs apart. Dropped terms still appear in the page's H1
+// (buildSeoTitle above, untruncated), meta description and body copy, so
+// nothing is lost for ranking; only the search-result display is.
+function buildSeoTitleTag(p) {
+  const { prefix, cleanName } = computeTitleParts(p);
+  const lead = "Wholesale ";
+  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - prefix.length;
+  const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(cleanName), nameBudget);
+  return `${lead}${prefix}${trimmedName}`;
 }
 
 function populateProductPage(product) {
   const price = cleanPrice(product.price);
 
   const seoTitle = buildSeoTitle(product);
+  const titleTag = buildSeoTitleTag(product);
   const metaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
     (product.overview || "").length > 155 ? "…" : ""
   );
   const pageUrl = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
 
-  document.title = `${seoTitle} | Room Ready Supply`;
+  document.title = `${titleTag} | Room Ready Supply`;
 
   const setMeta = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
   setMeta("metaDescription", "content", metaDesc);
