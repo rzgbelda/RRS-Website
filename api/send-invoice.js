@@ -106,7 +106,7 @@ module.exports = async (req, res) => {
 
   const { data: q, error: qErr } = await supabase
     .from('quote_requests')
-    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_state, tax_rate, tax_amount')
+    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount')
     .eq('id', quote_request_id)
     .single();
 
@@ -192,7 +192,12 @@ module.exports = async (req, res) => {
       // the in-house delivery panel instead of the Estes freight flow.
       fulfillment_method:    q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
       in_house_delivery_fee: deliveryFee,
-      shipping_address: q.shipping_state ? { state: q.shipping_state } : null,
+      // Same shape regular checkout already writes to this column
+      // ({street, city, state, zip}), so fulfillment/admin order views
+      // don't need to special-case a quote-based order's address.
+      shipping_address: (q.shipping_street || q.shipping_city || q.shipping_state || q.shipping_zip)
+        ? { street: q.shipping_street || '', city: q.shipping_city || '', state: q.shipping_state || '', zip: q.shipping_zip || '' }
+        : null,
       notes:          q.quote_number ? ('Invoiced from quote ' + q.quote_number) : 'Invoiced from an admin quote request',
     })
     .select('id')

@@ -433,15 +433,24 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
       </div>
 
       <!-- Bill To -->
-      <div class="qv-bill-section">
-        <div class="qv-section-label">Bill To</div>
-        <div class="qv-bill-name">${q.business_name || '—'}</div>
-        <div class="qv-bill-detail">
-          ${q.contact_name ? q.contact_name + '<br>' : ''}
-          ${q.email || ''}
-          ${q.shipping_state ? '<br>Shipping State: ' + q.shipping_state : ''}
+      <div class="qv-bill-section" style="display:flex;gap:24px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <div class="qv-section-label">Bill To</div>
+          <div class="qv-bill-name">${q.business_name || '—'}</div>
+          <div class="qv-bill-detail">
+            ${q.contact_name ? q.contact_name + '<br>' : ''}
+            ${q.email || ''}
+          </div>
+          ${q.customer_type ? `<span class="qv-bill-type">${q.customer_type}</span>` : ''}
         </div>
-        ${q.customer_type ? `<span class="qv-bill-type">${q.customer_type}</span>` : ''}
+        ${(q.shipping_street || q.shipping_city || q.shipping_state) ? `
+        <div style="flex:1;min-width:200px">
+          <div class="qv-section-label">Ship To</div>
+          <div class="qv-bill-detail">
+            ${q.shipping_street ? q.shipping_street + '<br>' : ''}
+            ${[q.shipping_city, q.shipping_state, q.shipping_zip].filter(Boolean).join(', ')}
+          </div>
+        </div>` : ''}
       </div>
 
       <!-- Message -->

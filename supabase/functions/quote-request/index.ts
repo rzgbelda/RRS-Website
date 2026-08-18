@@ -27,6 +27,10 @@ serve(async (req) => {
       file_name,
       user_id,
       marketing_opt_in,
+      shipping_street,
+      shipping_city,
+      shipping_state,
+      shipping_zip,
     } = body;
 
     // ── 1. Save to Supabase ──────────────────────────────────────────────────
@@ -44,6 +48,10 @@ serve(async (req) => {
         file_url:         file_url         || null,
         file_name:        file_name        || null,
         marketing_opt_in: marketing_opt_in ?? true,
+        shipping_street:  shipping_street  || null,
+        shipping_city:    shipping_city    || null,
+        shipping_state:   shipping_state   || null,
+        shipping_zip:     shipping_zip     || null,
         status: "pending",
       })
       .select()
@@ -65,6 +73,8 @@ serve(async (req) => {
         ? `<p><strong>Attached file:</strong> <a href="${file_url}">${file_name}</a></p>`
         : "<p><em>No file attached.</em></p>";
 
+      const shippingAddr = [shipping_street, shipping_city, shipping_state, shipping_zip].filter(Boolean).join(", ");
+
       const html = `
         <h2>New Business Pricing Request</h2>
         <table cellpadding="6" style="border-collapse:collapse;font-family:sans-serif;font-size:14px;">
@@ -72,6 +82,7 @@ serve(async (req) => {
           <tr><td><strong>Customer Type</strong></td><td>${customer_type || "—"}</td></tr>
           <tr><td><strong>Contact Name</strong></td><td>${contact_name}</td></tr>
           <tr><td><strong>Email</strong></td><td>${email}</td></tr>
+          <tr><td><strong>Shipping Address</strong></td><td>${shippingAddr || "—"}</td></tr>
           <tr><td><strong>Notes</strong></td><td>${notes || "—"}</td></tr>
         </table>
         ${itemsSection}

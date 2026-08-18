@@ -4263,6 +4263,10 @@ function openManualQuoteModal() {
   document.getElementById("mqEmail").value = "";
   document.getElementById("mqPhone").value = "";
   document.getElementById("mqCustomerType").value = "";
+  document.getElementById("mqShippingStreet").value = "";
+  document.getElementById("mqShippingCity").value = "";
+  document.getElementById("mqShippingState").value = "";
+  document.getElementById("mqShippingZip").value = "";
   document.getElementById("mqNotes").value = "";
   openModal("manualQuoteModal");
 }
@@ -4285,6 +4289,10 @@ async function saveManualQuote() {
         email,
         phone_number:  document.getElementById("mqPhone").value.trim(),
         customer_type: document.getElementById("mqCustomerType").value,
+        shipping_street: document.getElementById("mqShippingStreet").value.trim(),
+        shipping_city:   document.getElementById("mqShippingCity").value.trim(),
+        shipping_state:  document.getElementById("mqShippingState").value,
+        shipping_zip:    document.getElementById("mqShippingZip").value.trim(),
         notes:         document.getElementById("mqNotes").value.trim(),
       }),
     });
@@ -4376,15 +4384,21 @@ function openQuoteDetail(id) {
         </div>`).join("")}
     </div>
 
-    <!-- Shipping state / sales tax -- editable independently of the
-         composer, so a quote sent before this field existed (or one whose
-         customer never gave a state) can get one added and its tax
-         recalculated without re-sending the whole quote to the customer. -->
-    <div style="margin-bottom:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe;display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap">
-      <div>
-        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0 0 4px">Shipping State <span style="color:#94a3b8;font-weight:500;text-transform:none;letter-spacing:0">(for sales tax)</span></p>
-        <select id="quoteDetailShippingState" class="a-select" style="width:190px;height:34px;border-radius:8px;font-size:12.5px;padding:0 8px">
-          <option value="">Not set — $0.00 tax</option>
+    <!-- Shipping address -- editable independently of the composer, so a
+         quote sent before these fields existed (or one whose customer
+         never gave an address) can get one added -- and tax recalculated
+         off the state -- without re-sending the whole quote to the
+         customer. Also the only place fulfillment knows where to ship a
+         quote-based order once it's invoiced. -->
+    <div style="margin-bottom:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#fbfcfe">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0 0 10px">Shipping Address</p>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:8px">
+        <input id="quoteDetailShippingStreet" class="a-input" placeholder="Street address" style="height:34px;font-size:12.5px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 140px 110px;gap:8px;margin-bottom:10px">
+        <input id="quoteDetailShippingCity" class="a-input" placeholder="City" style="height:34px;font-size:12.5px">
+        <select id="quoteDetailShippingState" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px">
+          <option value="">State</option>
           <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
           <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
           <option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="DC">District of Columbia</option>
@@ -4403,9 +4417,12 @@ function openQuoteDetail(id) {
           <option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option>
           <option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option>
         </select>
+        <input id="quoteDetailShippingZip" class="a-input" placeholder="ZIP" maxlength="10" style="height:34px;font-size:12.5px">
       </div>
-      <button class="a-btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap" onclick="saveQuoteShippingState()">Save &amp; Recalculate Tax</button>
-      <span id="quoteDetailTaxNote" style="font-size:11.5px;color:#64748b"></span>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="a-btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap" onclick="saveQuoteShippingAddress()">Save &amp; Recalculate Tax</button>
+        <span id="quoteDetailTaxNote" style="font-size:11.5px;color:#64748b"></span>
+      </div>
     </div>
 
     <!-- Requested products -->
@@ -4425,7 +4442,10 @@ function openQuoteDetail(id) {
   `;
 
   document.getElementById("quoteStatusSelect").value = r.status || "new";
+  document.getElementById("quoteDetailShippingStreet").value = r.shipping_street || "";
+  document.getElementById("quoteDetailShippingCity").value = r.shipping_city || "";
   document.getElementById("quoteDetailShippingState").value = r.shipping_state || "";
+  document.getElementById("quoteDetailShippingZip").value = r.shipping_zip || "";
   const taxNoteEl = document.getElementById("quoteDetailTaxNote");
   if (taxNoteEl) {
     taxNoteEl.textContent = r.tax_amount > 0
@@ -4435,19 +4455,22 @@ function openQuoteDetail(id) {
   document.getElementById("quoteDetailModal").style.display = "flex";
 }
 
-// Sets/changes the shipping state on an already-created quote request
+// Sets/changes the shipping address on an already-created quote request
 // directly -- independent of the composer -- and recalculates tax from
-// the quote's existing subtotal + delivery fee. This is what lets a quote
-// sent before shipping_state existed (or one that never had a state) get
-// taxed correctly before it's invoiced, without re-sending the whole
-// quote email to the customer just to add a state.
-async function saveQuoteShippingState() {
+// the state, off the quote's existing subtotal + delivery fee. This is
+// what lets a quote sent before these fields existed (or one that never
+// had an address) get a real ship-to and correct tax before it's
+// invoiced, without re-sending the whole quote email to the customer.
+async function saveQuoteShippingAddress() {
   if (!currentQuoteId) return;
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
-  const state = document.getElementById("quoteDetailShippingState").value;
-  const btn = document.querySelector('[onclick="saveQuoteShippingState()"]');
+  const street = document.getElementById("quoteDetailShippingStreet").value.trim();
+  const city   = document.getElementById("quoteDetailShippingCity").value.trim();
+  const state  = document.getElementById("quoteDetailShippingState").value;
+  const zip    = document.getElementById("quoteDetailShippingZip").value.trim();
+  const btn = document.querySelector('[onclick="saveQuoteShippingAddress()"]');
   if (btn) { btn.textContent = "Saving…"; btn.disabled = true; }
 
   // Tax applies to items + delivery fee, same base used everywhere else
@@ -4459,7 +4482,10 @@ async function saveQuoteShippingState() {
   const grandTotal = taxableBase + taxAmount;
 
   const { error } = await window.sb.from("quote_requests").update({
+    shipping_street: street || null,
+    shipping_city: city || null,
     shipping_state: state || null,
+    shipping_zip: zip || null,
     tax_rate: rate,
     tax_amount: taxAmount,
     // Only recompute grand_total if this quote already has real pricing
@@ -4471,11 +4497,14 @@ async function saveQuoteShippingState() {
   if (btn) { btn.textContent = "Save & Recalculate Tax"; btn.disabled = false; }
 
   if (error) {
-    alert("Error saving shipping state: " + error.message);
+    alert("Error saving shipping address: " + error.message);
     return;
   }
 
+  r.shipping_street = street || null;
+  r.shipping_city = city || null;
   r.shipping_state = state || null;
+  r.shipping_zip = zip || null;
   r.tax_rate = rate;
   r.tax_amount = taxAmount;
   if (r.status === "quoted" || r.grand_total > 0) r.grand_total = grandTotal;
@@ -4486,7 +4515,7 @@ async function saveQuoteShippingState() {
       ? `Now taxed at ${(rate * 100).toFixed(2)}% ($${taxAmount.toFixed(2)}) — new total $${grandTotal.toFixed(2)}`
       : "Tax cleared (no state set)";
   }
-  showToast("Shipping state saved" + (state ? ` — tax recalculated at ${(rate * 100).toFixed(2)}%` : ""));
+  showToast("Shipping address saved" + (state ? ` — tax recalculated at ${(rate * 100).toFixed(2)}%` : ""));
 }
 
 /* ── Quote Composer ─────────────────────────────────────────── */

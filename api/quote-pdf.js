@@ -145,11 +145,14 @@ async function buildQuotePdf(q) {
   y -= 30;
 
   // ── Prepared for ─────────────────────────────────────────────────
+  const shipToLine = [q.shipping_city, q.shipping_state, q.shipping_zip].filter(Boolean).join(', ');
   const billLines = [
     q.business_name,
     q.contact_name,
     q.email,
     q.customer_type,
+    q.shipping_street || null,
+    shipToLine ? `Ship to: ${shipToLine}` : null,
   ].filter(Boolean);
 
   const panelH = 24 + billLines.length * 12.5 + 8;

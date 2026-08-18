@@ -47,7 +47,7 @@ function buildQuoteHtml(payload: {
   quote_number: string;
   quote_date:   string;
   valid_until:  string;
-  customer: { business_name: string; contact_name: string; email: string; customer_type?: string };
+  customer: { business_name: string; contact_name: string; email: string; customer_type?: string; shipping_street?: string; shipping_city?: string; shipping_zip?: string };
   items: Array<{ name: string; quantity: number; unit_price: number }>;
   message?: string;
   net_30_terms?: boolean;
@@ -116,13 +116,21 @@ function buildQuoteHtml(payload: {
 
   <div style="padding:32px 40px">
 
-    <!-- Bill To -->
-    <div style="margin-bottom:28px;padding:20px 24px;border:1px solid #e2e8f0;border-radius:12px">
-      <p style="margin:0 0 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#e8621a">Bill To</p>
-      <p style="margin:0;font-size:15px;font-weight:800;color:#0d2c50">${customer.business_name}</p>
-      <p style="margin:3px 0 0;font-size:13px;color:#475569">${customer.contact_name}</p>
-      <p style="margin:3px 0 0;font-size:13px;color:#475569">${customer.email}</p>
-      ${customer.customer_type ? `<p style="margin:3px 0 0;font-size:12px;color:#94a3b8">${customer.customer_type}</p>` : ""}
+    <!-- Bill To / Ship To -->
+    <div style="margin-bottom:28px;display:flex;gap:20px;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px;padding:20px 24px;border:1px solid #e2e8f0;border-radius:12px">
+        <p style="margin:0 0 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#e8621a">Bill To</p>
+        <p style="margin:0;font-size:15px;font-weight:800;color:#0d2c50">${customer.business_name}</p>
+        <p style="margin:3px 0 0;font-size:13px;color:#475569">${customer.contact_name}</p>
+        <p style="margin:3px 0 0;font-size:13px;color:#475569">${customer.email}</p>
+        ${customer.customer_type ? `<p style="margin:3px 0 0;font-size:12px;color:#94a3b8">${customer.customer_type}</p>` : ""}
+      </div>
+      ${(customer.shipping_street || customer.shipping_city || shipping_state) ? `
+      <div style="flex:1;min-width:220px;padding:20px 24px;border:1px solid #e2e8f0;border-radius:12px">
+        <p style="margin:0 0 10px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#e8621a">Ship To</p>
+        ${customer.shipping_street ? `<p style="margin:0;font-size:13px;color:#475569">${customer.shipping_street}</p>` : ""}
+        <p style="margin:3px 0 0;font-size:13px;color:#475569">${[customer.shipping_city, shipping_state, customer.shipping_zip].filter(Boolean).join(", ")}</p>
+      </div>` : ""}
     </div>
 
     ${msgBlock}
@@ -252,6 +260,9 @@ serve(async (req) => {
         contact_name:  qr.contact_name,
         email:         qr.email,
         customer_type: qr.customer_type,
+        shipping_street: qr.shipping_street,
+        shipping_city:    qr.shipping_city,
+        shipping_zip:     qr.shipping_zip,
       },
       items,
       message,
