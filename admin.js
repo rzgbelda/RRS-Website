@@ -4251,6 +4251,57 @@ function termsStatusBadge(r) {
   </div>`;
 }
 
+// Manual quote entry -- for a customer the admin knows personally who has
+// no account and never submitted the public request form. Creates a
+// quote_requests row server-side (user_id: null, same shape a public guest
+// submission produces) via /api/admin-create-quote, then drops straight
+// into the normal detail/composer flow so nothing downstream needs to know
+// this quote didn't start from the public form.
+function openManualQuoteModal() {
+  document.getElementById("mqBusinessName").value = "";
+  document.getElementById("mqContactName").value = "";
+  document.getElementById("mqEmail").value = "";
+  document.getElementById("mqPhone").value = "";
+  document.getElementById("mqCustomerType").value = "";
+  document.getElementById("mqNotes").value = "";
+  openModal("manualQuoteModal");
+}
+
+async function saveManualQuote() {
+  const email = document.getElementById("mqEmail").value.trim();
+  if (!email) { showToast("Customer email is required"); return; }
+
+  const btn = document.getElementById("mqSaveBtn");
+  const originalLabel = btn.textContent;
+  btn.disabled = true; btn.textContent = "Creating…";
+
+  try {
+    const res = await fetch("/api/admin-create-quote", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        business_name: document.getElementById("mqBusinessName").value.trim(),
+        contact_name:  document.getElementById("mqContactName").value.trim(),
+        email,
+        phone_number:  document.getElementById("mqPhone").value.trim(),
+        customer_type: document.getElementById("mqCustomerType").value,
+        notes:         document.getElementById("mqNotes").value.trim(),
+      }),
+    });
+    const result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Failed to create quote");
+
+    closeModal("manualQuoteModal");
+    await renderQuoteRequestsTable();
+    openQuoteDetail(result.id);
+    showToast("Quote created — add products and pricing, then send when ready");
+  } catch (err) {
+    showToast("Couldn't create quote: " + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = originalLabel;
+  }
+}
+
 function openQuoteDetail(id) {
   const r = allQuoteRequests.find(x => x.id === id);
   if (!r) return;
