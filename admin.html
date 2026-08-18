@@ -460,7 +460,7 @@
                 </div>
                 <div class="csv-template-info">
                   <p class="csv-template-title">Download Template</p>
-                  <p class="csv-template-desc">Pre-filled with example rows & all 16 columns</p>
+                  <p class="csv-template-desc">Pre-filled with example rows & all 19 columns</p>
                 </div>
                 <button class="csv-template-btn" onclick="downloadCsvTemplate()">Download</button>
               </div>
@@ -492,6 +492,9 @@
                   <span class="csv-pill csv-pill-req">price</span>
                   <span class="csv-pill">sale_price</span>
                   <span class="csv-pill">retail_price</span>
+                  <span class="csv-pill" title="Optional. Leave blank for a flat price with no volume discount.">price_tier1</span>
+                  <span class="csv-pill" title="Optional. Leave blank for a flat price with no volume discount.">price_tier2</span>
+                  <span class="csv-pill" title="Optional. Leave blank for a flat price with no volume discount.">price_tier3</span>
                   <span class="csv-pill">is_on_sale</span>
                   <span class="csv-pill csv-pill-req">category_name</span>
                   <span class="csv-pill">case_qty</span>
@@ -503,6 +506,9 @@
                   <span class="csv-pill">stock_qty</span>
                   <span class="csv-pill">stock_status</span>
                 </div>
+                <p style="font-size:11px;color:#94a3b8;margin:8px 2px 0">
+                  price_tier1/2/3 = Price at 1&ndash;5 / 6&ndash;29 / 30+ cases. Optional &mdash; leave all three blank for one flat price at any quantity.
+                </p>
               </div>
 
             </div>
@@ -2223,7 +2229,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=41"></script>
+<script src="admin.js?v=42"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

@@ -868,6 +868,9 @@ const CVT_COLS = [
   { key:"price",         label:"Price",        required:true },
   { key:"sale_price",    label:"Sale Price" },
   { key:"retail_price",  label:"Retail Price" },
+  { key:"price_tier1",   label:"Price: 1-5 Cases" },
+  { key:"price_tier2",   label:"Price: 6-29 Cases" },
+  { key:"price_tier3",   label:"Price: 30+ Cases" },
   { key:"is_on_sale",    label:"Is On Sale" },
   { key:"category_name", label:"Category",     required:true },
   { key:"case_qty",      label:"Case Qty" },
@@ -977,6 +980,9 @@ function cvtAutoMap(cols) {
     price:         ["price","cost","caseprice","unitprice"],
     sale_price:    ["saleprice","discountprice","specialprice","promoprice"],
     retail_price:  ["retailprice","msrp","listprice","comparatprice","compareatprice"],
+    price_tier1:   ["pricetier1","tier1price","price15","price1to5","price15cases"],
+    price_tier2:   ["pricetier2","tier2price","price629","price6to29","price629cases"],
+    price_tier3:   ["pricetier3","tier3price","price30","price30plus","price30cases"],
     is_on_sale:    ["isonsale","onsale","sale","discount","promo"],
     category_name: ["category","categoryname","dept","department","type","producttype","productcategory"],
     case_qty:      ["caseqty","casecount","quantitypercase","casesize","qtypercase"],
@@ -1374,6 +1380,13 @@ async function runCsvImport() {
     const priceInfo  = parseMoneyCell(r.price);
     const saleInfo   = parseMoneyCell(r.sale_price);
     const retailInfo = parseMoneyCell(r.retail_price);
+    // Tier columns are entirely optional (blank means "no volume tiers,
+    // just use price" -- same as the flat-price option in the product
+    // editor), but if a value IS present it still has to be a real number,
+    // same as every other price column here.
+    const tier1Info = parseMoneyCell(r.price_tier1);
+    const tier2Info = parseMoneyCell(r.price_tier2);
+    const tier3Info = parseMoneyCell(r.price_tier3);
     // A blank price cell used to silently import at $0.00 -- price is
     // required (unlike sale_price/retail_price, where blank legitimately
     // means "no sale" / "no retail comparison set"), so treat a missing
@@ -1385,10 +1398,11 @@ async function runCsvImport() {
       errLines.push(`"${r.name}": price is missing — add a price for this row and re-upload.`);
       return;
     }
-    if (priceInfo.invalid || saleInfo.invalid || retailInfo.invalid) {
+    if (priceInfo.invalid || saleInfo.invalid || retailInfo.invalid || tier1Info.invalid || tier2Info.invalid || tier3Info.invalid) {
       invalidPriceCount++;
-      const badField = priceInfo.invalid ? "price" : (saleInfo.invalid ? "sale_price" : "retail_price");
-      const badVal   = priceInfo.invalid ? r.price : (saleInfo.invalid ? r.sale_price : r.retail_price);
+      const badField = priceInfo.invalid ? "price" : saleInfo.invalid ? "sale_price" : retailInfo.invalid ? "retail_price"
+        : tier1Info.invalid ? "price_tier1" : tier2Info.invalid ? "price_tier2" : "price_tier3";
+      const badVal   = r[badField];
       errLines.push(`"${r.name}": ${badField} "${badVal}" is not a valid number — row skipped, nothing imported for it.`);
       return;
     }
@@ -1433,6 +1447,15 @@ async function runCsvImport() {
     // null instead of staying 0.
     sale_price   : parseMoneyCell(r.sale_price).empty ? null : parseMoneyCell(r.sale_price).value,
     retail_price : parseMoneyCell(r.retail_price).empty ? null : parseMoneyCell(r.retail_price).value,
+    // Optional. Left blank, a product has no volume tiers -- getTierPrice()
+    // (script.js) falls back to `price` at any quantity, same as the
+    // "Flat price" option in the single-product editor. Filled in, these
+    // are what the storefront actually charges at 1-5 / 6-29 / 30+ cases;
+    // nothing here is derived or auto-calculated the way the admin editor's
+    // cost-per-case markup is -- CSV rows are trusted as typed.
+    price_tier1  : parseMoneyCell(r.price_tier1).empty ? null : parseMoneyCell(r.price_tier1).value,
+    price_tier2  : parseMoneyCell(r.price_tier2).empty ? null : parseMoneyCell(r.price_tier2).value,
+    price_tier3  : parseMoneyCell(r.price_tier3).empty ? null : parseMoneyCell(r.price_tier3).value,
     is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
     category_name: r.category_name || null,
     case_qty     : parseInt(r.case_qty)  || 1,
@@ -1532,25 +1555,28 @@ function downloadCsvTemplate() {
     /* ── Header row ── */
     [
       "name","sku","description",
-      "price","sale_price","retail_price","is_on_sale",
+      "price","sale_price","retail_price","price_tier1","price_tier2","price_tier3","is_on_sale",
       "category_name","case_qty","pack_size","unit",
       "is_featured","is_active","image_url",
       "stock_qty","stock_status"
     ].map(q),
 
-    /* ── Example 1: basic product ── */
+    /* ── Example 1: basic product, with real volume tiers -- price_tier1/2/3
+       are what a customer actually pays at 1-5 / 6-29 / 30+ cases. price
+       itself still has to be filled in (it's what shows before a quantity
+       is picked, and what a tier-less product falls back to). ── */
     [
       q("Premium Bath Towels"), q("SKU-001"), q("Soft commercial-grade bath towels, white"),
-      n(24.99), n(""), n(34.99), b(false),
+      n(24.99), n(""), n(34.99), n(24.99), n(22.50), n(19.99), b(false),
       q("Towels and Linens"), n(12), n(1), q("Case"),
       b(false), b(true), q(""),
       n(100), q("in_stock")
     ],
 
-    /* ── Example 2: sale product, featured ── */
+    /* ── Example 2: sale product, featured, no tiers (flat price at any qty) ── */
     [
       q("Antibacterial Hand Soap 1L"), q("SKU-002"), q("Foam hand soap refill, fresh scent"),
-      n(18.50), n(15.99), n(25.00), b(true),
+      n(18.50), n(15.99), n(25.00), n(""), n(""), n(""), b(true),
       q("Hand Soap"), n(6), n(1), q("Case"),
       b(true), b(true), q(""),
       n(50), q("in_stock")
@@ -1559,7 +1585,7 @@ function downloadCsvTemplate() {
     /* ── Example 3: low stock ── */
     [
       q("C-Fold Paper Towels"), q("SKU-003"), q("2-ply C-fold paper towels, 12 packs per case"),
-      n(32.00), n(""), n(""), b(false),
+      n(32.00), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Paper Towels"), n(12), n(150), q("Case"),
       b(false), b(true), q(""),
       n(8), q("low_stock")
@@ -1568,7 +1594,7 @@ function downloadCsvTemplate() {
     /* ── Example 4: out of stock, inactive ── */
     [
       q("Trash Liner 55 Gallon"), q("SKU-004"), q("Heavy-duty black trash liners, 1.5 mil"),
-      n(45.99), n(""), n(""), b(false),
+      n(45.99), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Trash Liners"), n(100), n(1), q("Case"),
       b(false), b(false), q(""),
       n(0), q("out_of_stock")
@@ -1577,7 +1603,7 @@ function downloadCsvTemplate() {
     /* ── Example 5: pack unit ── */
     [
       q("Toilet Seat Cover Dispenser"), q("SKU-005"), q("Wall-mount dispenser for seat covers"),
-      n(12.75), n(""), n(""), b(false),
+      n(12.75), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Facility Supplies"), n(1), n(1), q("EA"),
       b(false), b(true), q(""),
       n(25), q("in_stock")
