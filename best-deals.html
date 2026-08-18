@@ -154,15 +154,35 @@
       display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;
       padding-top:18px; border-top:1px dashed #ECE3DA;
     }
-    .bd-card-price-block { display:flex; flex-direction:column; gap:4px; }
-    .bd-card-retail { font-size:12.5px; font-weight:600; color:#8A99AB; display:flex; align-items:center; gap:8px; }
+    .bd-card-price-block { display:flex; flex-direction:column; gap:6px; }
+    .bd-card-retail { font-size:12.5px; font-weight:600; color:#8A99AB; }
     .bd-retail-strike { text-decoration:line-through; color:#8A99AB; }
+    .bd-price-line { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+    /* Bumped up from a small inline pill (11px, easy to miss next to the
+       big price) to a solid-fill badge sized close to the price itself --
+       "notice immediately" means it has to compete with a 30px number, not
+       sit quietly below it. */
     .bd-savings-pill {
-      display:inline-block; background:#FFF1E6; color:#C2560A; font-weight:800;
-      font-size:11px; letter-spacing:.02em; padding:2px 8px; border-radius:999px;
+      display:inline-flex; align-items:center; background:#FF710C; color:#fff; font-weight:800;
+      font-size:15px; letter-spacing:.01em; padding:5px 12px; border-radius:999px;
+      box-shadow:0 6px 14px -4px rgba(255,113,12,.55);
     }
-    .bd-card-price { font-size:26px; font-weight:800; color:#FF710C; line-height:1; }
-    .bd-card-price span { font-size:12px; font-weight:600; color:#8A99AB; display:block; margin-top:4px; }
+    .bd-card-price { font-size:30px; font-weight:800; color:#FF710C; line-height:1; }
+    .bd-card-price span.bd-price-label { font-size:12px; font-weight:600; color:#8A99AB; display:block; margin-top:4px; }
+    /* Shimmer lives on just the "$XX.XX" span, not the label underneath --
+       -webkit-text-fill-color/background-clip are inherited, so scoping it
+       to its own span (instead of the whole .bd-card-price block) keeps
+       the "Our Price / Case" caption a normal solid color. Same flowing
+       sweep as the hero's "Lower Costs." (.bd-hero h1 .hl), just slower
+       (7s vs 5s) so it doesn't compete as hard with the savings badge
+       sitting right next to it. */
+    .bd-price-amt {
+      display:inline-block;
+      background:linear-gradient(90deg, #FF710C 0%, #FF710C 38%, #FFE9C6 50%, #FF710C 62%, #FF710C 100%);
+      background-size:280% 100%;
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      animation:bdHeroShimmer 7s linear infinite;
+    }
     /* Soft-glow style, matched to the real Tailwind proportions of the
        reference component (shadow-xl shadow-primary/70 + a hairline ring)
        rather than a wide all-around halo -- that reference reads as
@@ -257,9 +277,10 @@
       .bd-buy-btn:hover, .bd-account-btn:hover { transform:none !important; }
       .bd-account-btn { animation:none !important; }
       .bd-card-badge .bd-badge-blob { animation:none !important; }
-      /* Hero shimmer (.bd-hero h1 .hl) is intentionally exempt from this
-         block -- it's a brightness/glow pulse rather than motion that
-         could cause discomfort, so it runs even with reduce-motion on. */
+      /* Hero shimmer (.bd-hero h1 .hl) and the price shimmer (.bd-price-amt)
+         are intentionally exempt from this block -- both are a
+         brightness/glow pulse rather than motion that could cause
+         discomfort, so they keep running even with reduce-motion on. */
     }
 
     @media (max-width:760px) {
@@ -460,8 +481,11 @@
             <ul class="bd-card-specs">${specs.join('')}</ul>
             <div class="bd-card-price-row">
               <div class="bd-card-price-block">
-                ${hasRetail ? `<div class="bd-card-retail">Retail $${Number(p.retail_price).toFixed(2)}${savingsPct ? ` <span class="bd-savings-pill">Save ${savingsPct}%</span>` : ''}</div>` : ''}
-                <div class="bd-card-price">$${price}<span>Our Price / ${unitLabel}</span></div>
+                ${hasRetail ? `<div class="bd-card-retail">Retail <span class="bd-retail-strike">$${Number(p.retail_price).toFixed(2)}</span></div>` : ''}
+                <div class="bd-price-line">
+                  <div class="bd-card-price"><span class="bd-price-amt">$${price}</span><span class="bd-price-label">Our Price / ${unitLabel}</span></div>
+                  ${savingsPct ? `<span class="bd-savings-pill">Save ${savingsPct}%</span>` : ''}
+                </div>
               </div>
               <a class="bd-buy-btn" href="${buyHref}">Buy Now <span class="bd-arrow">&rarr;</span></a>
             </div>
