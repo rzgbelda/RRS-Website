@@ -488,7 +488,14 @@
         const skus = [...new Set(deals.map(d => d.sku))];
         const { data: products, error: prodErr } = await window.sb
           .from('products')
-          .select('sku,name,slug,image_url,price,retail_price,case_qty,pack_size,unit,weight,length,width,height')
+          // "*" rather than an explicit column list: retail_price only
+          // exists on the live table once its migration has been run, and
+          // PostgREST hard-errors (42703) on a named column that isn't
+          // there yet -- which took this whole page down. Selecting "*"
+          // just returns whatever columns exist, so this can't break again
+          // if a future column gets added to the render logic before its
+          // migration lands.
+          .select('*')
           .in('sku', skus);
         if (prodErr) throw prodErr;
         const bySku = Object.fromEntries((products || []).map(p => [p.sku, p]));
