@@ -461,7 +461,7 @@
                 </div>
                 <div class="csv-template-info">
                   <p class="csv-template-title">Download Template</p>
-                  <p class="csv-template-desc">Pre-filled with example rows & all 19 columns</p>
+                  <p class="csv-template-desc">Pre-filled with example rows & all 28 columns</p>
                 </div>
                 <button class="csv-template-btn" onclick="downloadCsvTemplate()">Download</button>
               </div>
@@ -489,7 +489,12 @@
                 <div class="csv-cols-pills">
                   <span class="csv-pill csv-pill-req">name</span>
                   <span class="csv-pill">sku</span>
-                  <span class="csv-pill">description</span>
+                  <span class="csv-pill" title="Shown in the product's Specifications/description area.">description</span>
+                  <span class="csv-pill" title="Shown in the product's Overview tab. Leave blank to reuse description there instead.">overview</span>
+                  <span class="csv-pill">feature1</span>
+                  <span class="csv-pill">feature2</span>
+                  <span class="csv-pill">feature3</span>
+                  <span class="csv-pill">feature4</span>
                   <span class="csv-pill csv-pill-req">price</span>
                   <span class="csv-pill">sale_price</span>
                   <span class="csv-pill">retail_price</span>
@@ -504,11 +509,16 @@
                   <span class="csv-pill">is_featured</span>
                   <span class="csv-pill">is_active</span>
                   <span class="csv-pill">image_url</span>
+                  <span class="csv-pill">weight</span>
+                  <span class="csv-pill" title="Inches">length</span>
+                  <span class="csv-pill" title="Inches">width</span>
+                  <span class="csv-pill" title="Inches">height</span>
                   <span class="csv-pill">stock_qty</span>
                   <span class="csv-pill">stock_status</span>
                 </div>
                 <p style="font-size:11px;color:#94a3b8;margin:8px 2px 0">
-                  price_tier1/2/3 = Price at 1&ndash;5 / 6&ndash;29 / 30+ cases. Optional &mdash; leave all three blank for one flat price at any quantity.
+                  price_tier1/2/3 = Price at 1&ndash;5 / 6&ndash;29 / 30+ cases. Optional &mdash; leave all three blank for one flat price at any quantity.<br>
+                  weight is in lbs; length/width/height are in inches. All four optional.
                 </p>
               </div>
 
@@ -2231,7 +2241,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=43"></script>
+<script src="admin.js?v=44"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

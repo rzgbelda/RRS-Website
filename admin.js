@@ -866,6 +866,11 @@ const CVT_COLS = [
   { key:"name",          label:"Name",         required:true },
   { key:"sku",           label:"SKU" },
   { key:"description",   label:"Description" },
+  { key:"overview",      label:"Overview" },
+  { key:"feature1",      label:"Feature 1" },
+  { key:"feature2",      label:"Feature 2" },
+  { key:"feature3",      label:"Feature 3" },
+  { key:"feature4",      label:"Feature 4" },
   { key:"price",         label:"Price",        required:true },
   { key:"sale_price",    label:"Sale Price" },
   { key:"retail_price",  label:"Retail Price" },
@@ -880,6 +885,10 @@ const CVT_COLS = [
   { key:"is_featured",   label:"Is Featured" },
   { key:"is_active",     label:"Is Active" },
   { key:"image_url",     label:"Image URL" },
+  { key:"weight",        label:"Weight (lbs)" },
+  { key:"length",        label:"Length (in)" },
+  { key:"width",         label:"Width (in)" },
+  { key:"height",        label:"Height (in)" },
   { key:"stock_qty",     label:"Stock Qty" },
   { key:"stock_status",  label:"Stock Status" },
 ];
@@ -978,6 +987,11 @@ function cvtAutoMap(cols) {
     name:          ["name","productname","title","item","itemname"],
     sku:           ["sku","skucode","itemcode","code","partnumber","id","productid"],
     description:   ["description","desc","details","info","notes"],
+    overview:      ["overview","longdescription","fulldescription","productoverview"],
+    feature1:      ["feature1","feature1description","keyfeature1"],
+    feature2:      ["feature2","feature2description","keyfeature2"],
+    feature3:      ["feature3","feature3description","keyfeature3"],
+    feature4:      ["feature4","feature4description","keyfeature4"],
     price:         ["price","cost","caseprice","unitprice"],
     sale_price:    ["saleprice","discountprice","specialprice","promoprice"],
     retail_price:  ["retailprice","msrp","listprice","comparatprice","compareatprice"],
@@ -992,6 +1006,10 @@ function cvtAutoMap(cols) {
     is_featured:   ["isfeatured","featured","highlight","top","bestseller"],
     is_active:     ["isactive","active","status","enabled","available"],
     image_url:     ["imageurl","image","img","photo","picture","url","photourl"],
+    weight:        ["weight","weightlbs","weightlb","itemweight"],
+    length:        ["length","lengthin","itemlength"],
+    width:         ["width","widthin","itemwidth"],
+    height:        ["height","heightin","itemheight"],
     stock_qty:     ["stockqty","stock","quantity","qty","inventory","onhand","stockcount"],
     stock_status:  ["stockstatus","availability","instock","availabilitystatus"],
   };
@@ -1286,6 +1304,18 @@ function parseMoneyCell(raw) {
   return { value: n, empty: false, invalid: false };
 }
 
+// Same empty/invalid distinction as parseMoneyCell, for plain numeric
+// fields (weight in lbs, dimensions in inches) that aren't currency --
+// no $/comma stripping, since "$41 lbs" isn't a formatting convention
+// anyone actually uses here and stripping it would hide real typos.
+function parseNumCell(raw) {
+  const s = String(raw == null ? "" : raw).trim();
+  if (!s) return { value: 0, empty: true, invalid: false };
+  const n = parseFloat(s);
+  if (isNaN(n)) return { value: 0, empty: false, invalid: true };
+  return { value: n, empty: false, invalid: false };
+}
+
 /* Preview — show first 5 rows */
 function renderCsvPreview(rows) {
   const PREVIEW_COLS = ["name", "sku", "category_name", "price", "unit", "is_featured", "is_active"];
@@ -1376,7 +1406,7 @@ async function runCsvImport() {
      instead of importing them broken. */
   const rows = [];
   let missingPriceCount = 0;
-  let invalidPriceCount = 0;
+  let invalidValueCount = 0;
   preValidationRows.forEach((r, idx) => {
     const priceInfo  = parseMoneyCell(r.price);
     const saleInfo   = parseMoneyCell(r.sale_price);
@@ -1388,6 +1418,13 @@ async function runCsvImport() {
     const tier1Info = parseMoneyCell(r.price_tier1);
     const tier2Info = parseMoneyCell(r.price_tier2);
     const tier3Info = parseMoneyCell(r.price_tier3);
+    // Weight/dimensions are also optional, plain (non-currency) numbers --
+    // same treatment: blank is fine, present-but-garbage gets rejected
+    // rather than silently imported as 0.
+    const weightInfo = parseNumCell(r.weight);
+    const lengthInfo = parseNumCell(r.length);
+    const widthInfo  = parseNumCell(r.width);
+    const heightInfo = parseNumCell(r.height);
     // A blank price cell used to silently import at $0.00 -- price is
     // required (unlike sale_price/retail_price, where blank legitimately
     // means "no sale" / "no retail comparison set"), so treat a missing
@@ -1399,24 +1436,27 @@ async function runCsvImport() {
       errLines.push(`"${r.name}": price is missing — add a price for this row and re-upload.`);
       return;
     }
-    if (priceInfo.invalid || saleInfo.invalid || retailInfo.invalid || tier1Info.invalid || tier2Info.invalid || tier3Info.invalid) {
-      invalidPriceCount++;
-      const badField = priceInfo.invalid ? "price" : saleInfo.invalid ? "sale_price" : retailInfo.invalid ? "retail_price"
-        : tier1Info.invalid ? "price_tier1" : tier2Info.invalid ? "price_tier2" : "price_tier3";
-      const badVal   = r[badField];
-      errLines.push(`"${r.name}": ${badField} "${badVal}" is not a valid number — row skipped, nothing imported for it.`);
+    const badField =
+      priceInfo.invalid  ? "price"        : saleInfo.invalid   ? "sale_price"   :
+      retailInfo.invalid ? "retail_price" : tier1Info.invalid  ? "price_tier1"  :
+      tier2Info.invalid  ? "price_tier2"  : tier3Info.invalid  ? "price_tier3"  :
+      weightInfo.invalid ? "weight"       : lengthInfo.invalid ? "length"       :
+      widthInfo.invalid  ? "width"        : heightInfo.invalid ? "height"       : null;
+    if (badField) {
+      invalidValueCount++;
+      errLines.push(`"${r.name}": ${badField} "${r[badField]}" is not a valid number — row skipped, nothing imported for it.`);
       return;
     }
     rows.push(r);
   });
-  const skippedTotal = csvDupCount + dbDupCount + missingPriceCount + invalidPriceCount;
+  const skippedTotal = csvDupCount + dbDupCount + missingPriceCount + invalidValueCount;
 
   if (skippedTotal) {
     const dupCount = csvDupCount + dbDupCount;
     const skipDesc = [
       dupCount           ? `${dupCount} duplicate(s)`      : null,
       missingPriceCount  ? `${missingPriceCount} missing price(s)` : null,
-      invalidPriceCount  ? `${invalidPriceCount} invalid price(s)` : null,
+      invalidValueCount  ? `${invalidValueCount} invalid value(s)` : null,
     ].filter(Boolean).join(", ");
     document.getElementById("csvProgressSub").textContent =
       `Skipped ${skippedTotal} row(s) — ${skipDesc} — importing ${rows.length} product(s)…`;
@@ -1440,6 +1480,16 @@ async function runCsvImport() {
     sku          : r.sku  || null,
     slug         : r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
     description  : r.description  || null,
+    // A separate field from description, deliberately -- the product
+    // page's Overview tab falls back to description when this is blank
+    // (script.js), which is exactly why every CSV-imported product used
+    // to show identical text in both places: this column never existed
+    // in the importer before, so overview was always null.
+    overview     : r.overview     || null,
+    feature1     : r.feature1     || null,
+    feature2     : r.feature2     || null,
+    feature3     : r.feature3     || null,
+    feature4     : r.feature4     || null,
     price        : parseMoneyCell(r.price).value,
     // Already validated above (invalid rows never reach here) -- .empty
     // distinguishes "blank cell" (stays null, no sale price set) from a
@@ -1465,6 +1515,10 @@ async function runCsvImport() {
     is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
     is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
     image_url    : r.image_url   || null,
+    weight       : parseNumCell(r.weight).empty ? null : parseNumCell(r.weight).value,
+    length       : parseNumCell(r.length).empty ? null : parseNumCell(r.length).value,
+    width        : parseNumCell(r.width).empty  ? null : parseNumCell(r.width).value,
+    height       : parseNumCell(r.height).empty ? null : parseNumCell(r.height).value,
     updated_at   : now,
   });
 
@@ -1555,58 +1609,74 @@ function downloadCsvTemplate() {
   const rows = [
     /* ── Header row ── */
     [
-      "name","sku","description",
+      "name","sku","description","overview","feature1","feature2","feature3","feature4",
       "price","sale_price","retail_price","price_tier1","price_tier2","price_tier3","is_on_sale",
       "category_name","case_qty","pack_size","unit",
       "is_featured","is_active","image_url",
+      "weight","length","width","height",
       "stock_qty","stock_status"
     ].map(q),
 
     /* ── Example 1: basic product, with real volume tiers -- price_tier1/2/3
        are what a customer actually pays at 1-5 / 6-29 / 30+ cases. price
        itself still has to be filled in (it's what shows before a quantity
-       is picked, and what a tier-less product falls back to). ── */
+       is picked, and what a tier-less product falls back to). description
+       and overview are deliberately different: description is the short
+       line shown near the top of the page, overview is the longer pitch
+       in the Overview tab -- leaving overview blank just reuses
+       description there instead, it doesn't have to be written twice. ── */
     [
       q("Premium Bath Towels"), q("SKU-001"), q("Soft commercial-grade bath towels, white"),
+      q("Wholesale premium bath towels for hotels, motels, resorts, and commercial facilities. Ring-spun cotton holds up to high-volume commercial laundering without thinning or fraying."),
+      q("Ring-spun cotton construction"), q("Holds up to commercial laundering"), q("Quick-drying"), q("Fade-resistant white"),
       n(24.99), n(""), n(34.99), n(24.99), n(22.50), n(19.99), b(false),
       q("Towels and Linens"), n(12), n(1), q("Case"),
       b(false), b(true), q(""),
+      n(28), n(18), n(14), n(6),
       n(100), q("in_stock")
     ],
 
     /* ── Example 2: sale product, featured, no tiers (flat price at any qty) ── */
     [
       q("Antibacterial Hand Soap 1L"), q("SKU-002"), q("Foam hand soap refill, fresh scent"),
+      q(""), q(""), q(""), q(""), q(""),
       n(18.50), n(15.99), n(25.00), n(""), n(""), n(""), b(true),
       q("Hand Soap"), n(6), n(1), q("Case"),
       b(true), b(true), q(""),
+      n(""), n(""), n(""), n(""),
       n(50), q("in_stock")
     ],
 
     /* ── Example 3: low stock ── */
     [
       q("C-Fold Paper Towels"), q("SKU-003"), q("2-ply C-fold paper towels, 12 packs per case"),
+      q(""), q(""), q(""), q(""), q(""),
       n(32.00), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Paper Towels"), n(12), n(150), q("Case"),
       b(false), b(true), q(""),
+      n(""), n(""), n(""), n(""),
       n(8), q("low_stock")
     ],
 
     /* ── Example 4: out of stock, inactive ── */
     [
       q("Trash Liner 55 Gallon"), q("SKU-004"), q("Heavy-duty black trash liners, 1.5 mil"),
+      q(""), q(""), q(""), q(""), q(""),
       n(45.99), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Trash Liners"), n(100), n(1), q("Case"),
       b(false), b(false), q(""),
+      n(35), n(20), n(16), n(10),
       n(0), q("out_of_stock")
     ],
 
     /* ── Example 5: pack unit ── */
     [
       q("Toilet Seat Cover Dispenser"), q("SKU-005"), q("Wall-mount dispenser for seat covers"),
+      q(""), q(""), q(""), q(""), q(""),
       n(12.75), n(""), n(""), n(""), n(""), n(""), b(false),
       q("Facility Supplies"), n(1), n(1), q("EA"),
       b(false), b(true), q(""),
+      n(""), n(""), n(""), n(""),
       n(25), q("in_stock")
     ],
   ];
