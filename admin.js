@@ -1354,6 +1354,38 @@ function renderCsvPreview(rows) {
     ? `${withSku} have SKU — existing products with matching SKU will be updated.`
     : "No SKU column — all rows will be inserted as new products.";
 
+  /* Which optional columns actually matched a header in this file, and how
+     many rows have real (non-blank) data in each -- e.g. an "overview"
+     header with a typo, stray space, or wrong casing-that-somehow-slipped-
+     past normalizing would otherwise import silently with that field just
+     staying blank on every row, with nothing in this screen to show why. */
+  const colsEl = document.getElementById("csvColsDetected");
+  if (colsEl) {
+    const OPTIONAL_COLS = [
+      ["overview", "Overview"], ["feature1", "Feature 1"], ["feature2", "Feature 2"],
+      ["feature3", "Feature 3"], ["feature4", "Feature 4"], ["sale_price", "Sale Price"],
+      ["retail_price", "Retail Price"], ["price_tier1", "Tier Pricing"],
+      ["weight", "Weight"], ["length", "Dimensions"],
+    ];
+    const seen = new Set();
+    const detected = OPTIONAL_COLS.filter(([key, label]) => {
+      if (seen.has(label)) return false; // price_tier1/length stand in for the whole group
+      const withData = rows.filter(r => (r[key] || "").trim()).length;
+      if (!withData) return false;
+      seen.add(label);
+      return true;
+    }).map(([key, label]) => {
+      const withData = rows.filter(r => (r[key] || "").trim()).length;
+      return `${label} (${withData}/${rows.length})`;
+    });
+    if (detected.length) {
+      colsEl.textContent = `Columns detected with data: ${detected.join(", ")}.`;
+      colsEl.style.display = "";
+    } else {
+      colsEl.style.display = "none";
+    }
+  }
+
   /* Warn about missing required data *before* the user clicks Import,
      rather than only after the fact in the results screen -- so they know
      exactly what to fix in the spreadsheet and can re-upload once instead
