@@ -2030,6 +2030,9 @@ async function openOrderModal(id) {
   // a real, billable mistake.
   const isInHouse    = o.fulfillment_method === "in_house";
   const deliveryFee  = Number(o.in_house_delivery_fee || 0);
+  const itemsTotal   = (o.order_items || []).reduce((s, i) => s + Number(i.price ?? i.price_per_case ?? 0) * Number(i.quantity ?? 1), 0);
+  const taxAmount    = Number(o.tax_amount || 0);
+  const taxRate      = Number(o.tax_rate || 0);
 
   // Action bar — only show for actionable statuses
   let actionBar = "";
@@ -2236,6 +2239,12 @@ async function openOrderModal(id) {
           <td style="text-align:right;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${deliveryFee.toFixed(2)}</td>
         </tr>` : ""}
+        ${taxAmount > 0 ? `<tr style="border-top:1px solid #f0f4fa">
+          <td style="padding:9px 12px">Sales Tax${addr.state ? ` <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">${escHtml(addr.state)}${taxRate ? ` &middot; ${(taxRate * 100).toFixed(2)}%` : ""}</span>` : ""}</td>
+          <td style="text-align:center;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px;font-weight:600">$${taxAmount.toFixed(2)}</td>
+        </tr>` : ""}
       </tbody>
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
@@ -2260,6 +2269,36 @@ async function openOrderModal(id) {
       <span style="font-size:13px;color:#334155;">PRO: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
     </div>` : ""}
     ${o.payment_status !== "paid" ? `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Sales Tax</h4>
+    <p style="font-size:12.5px;color:#64748b;margin:0 0 10px;">Pick the ship-to state and the rate is looked up and applied automatically -- same table checkout and quotes use. Recalculating updates the order total and the invoice below.</p>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:2px">
+      <select id="orderTaxState" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px;width:auto">
+        <option value="">State</option>
+        <option value="AL">Alabama</option><option value="AK">Alaska</option><option value="AZ">Arizona</option>
+        <option value="AR">Arkansas</option><option value="CA">California</option><option value="CO">Colorado</option>
+        <option value="CT">Connecticut</option><option value="DE">Delaware</option><option value="DC">District of Columbia</option>
+        <option value="FL">Florida</option><option value="GA">Georgia</option><option value="HI">Hawaii</option>
+        <option value="ID">Idaho</option><option value="IL">Illinois</option><option value="IN">Indiana</option>
+        <option value="IA">Iowa</option><option value="KS">Kansas</option><option value="KY">Kentucky</option>
+        <option value="LA">Louisiana</option><option value="ME">Maine</option><option value="MD">Maryland</option>
+        <option value="MA">Massachusetts</option><option value="MI">Michigan</option><option value="MN">Minnesota</option>
+        <option value="MS">Mississippi</option><option value="MO">Missouri</option><option value="MT">Montana</option>
+        <option value="NE">Nebraska</option><option value="NV">Nevada</option><option value="NH">New Hampshire</option>
+        <option value="NJ">New Jersey</option><option value="NM">New Mexico</option><option value="NY">New York</option>
+        <option value="NC">North Carolina</option><option value="ND">North Dakota</option><option value="OH">Ohio</option>
+        <option value="OK">Oklahoma</option><option value="OR">Oregon</option><option value="PA">Pennsylvania</option>
+        <option value="RI">Rhode Island</option><option value="SC">South Carolina</option><option value="SD">South Dakota</option>
+        <option value="TN">Tennessee</option><option value="TX">Texas</option><option value="UT">Utah</option>
+        <option value="VT">Vermont</option><option value="VA">Virginia</option><option value="WA">Washington</option>
+        <option value="WV">West Virginia</option><option value="WI">Wisconsin</option><option value="WY">Wyoming</option>
+      </select>
+      <button onclick="saveOrderTax('${o.id}')"
+        style="height:34px;padding:0 14px;border-radius:8px;font-size:12.5px;font-weight:700;background:#0b2d52;color:#fff;border:none;cursor:pointer;white-space:nowrap;">
+        Save &amp; Recalculate Tax
+      </button>
+      <span style="font-size:11.5px;color:#64748b;">${taxAmount > 0 ? `Currently taxed at ${(taxRate * 100).toFixed(2)}% ($${taxAmount.toFixed(2)})` : ""}</span>
+    </div>
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
     <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Invoice &amp; Payment</h4>
     <p style="font-size:12.5px;color:#64748b;margin:0 0 10px;">This order hasn't been paid yet. Preview the invoice, then email it with a one-click Stripe pay link -- no site visit or login needed on her end.</p>
@@ -2290,7 +2329,56 @@ async function openOrderModal(id) {
     </div>
     <div id="resendResult" style="margin-top:8px;font-size:12.5px;display:none;"></div>
     <div id="orderActionResult" style="margin-top:14px;display:none;"></div>`;
+  const taxStateEl = document.getElementById("orderTaxState");
+  if (taxStateEl) taxStateEl.value = addr.state || "";
   openModal("orderModal");
+}
+
+// Applies real, stored sales tax to an order that hasn't been paid yet --
+// the orders table never had a working tax_amount column live (the
+// create-orders migration defines one, but it was never actually applied;
+// see the send-invoice.js comment for the same schema-drift issue). Tax
+// is calculated off items + delivery fee (same taxable base checkout,
+// quotes, and send-invoice.js all use), and the total is fully recomputed
+// from those three known-good numbers rather than adjusted incrementally
+// -- unlike the delivery fee, there's no "old tax" to back out first since
+// this is the first time tax has ever been a first-class, stored value
+// here rather than folded silently into whatever total already existed.
+async function saveOrderTax(orderId) {
+  const select = document.getElementById("orderTaxState");
+  if (!select) return;
+  const state = select.value;
+
+  const { data: o, error: readErr } = await window.sb
+    .from("orders").select("total, in_house_delivery_fee, payment_status, order_items(*)").eq("id", orderId).single();
+  if (readErr || !o) { alert("Could not load the order: " + (readErr?.message || "not found")); return; }
+  if (o.payment_status === "paid") {
+    alert("This order has already been paid — tax can't be changed anymore.");
+    openOrderModal(orderId);
+    return;
+  }
+
+  const itemsTotal = (o.order_items || []).reduce((s, i) => s + Number(i.price_per_case ?? i.price ?? 0) * Number(i.quantity ?? 1), 0);
+  const deliveryFee = Number(o.in_house_delivery_fee || 0);
+  const rate = state ? (window.getTaxRate?.(state) || 0) : 0;
+  const taxAmount = (itemsTotal + deliveryFee) * rate;
+  const newTotal = itemsTotal + deliveryFee + taxAmount;
+
+  const { error } = await window.sb.from("orders")
+    .update({ tax_rate: rate, tax_amount: taxAmount, total: newTotal, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) {
+    // 42703 = undefined column -- the tax_rate/tax_amount columns this
+    // needs (20260820_order_sales_tax.sql) haven't been added live yet.
+    alert(error.code === "42703"
+      ? "Sales tax isn't set up on the database yet — run the migration 20260820_order_sales_tax.sql in Supabase, then try again."
+      : "Could not save the tax: " + error.message);
+    return;
+  }
+
+  showToast(state ? `Tax set: ${state} at ${(rate * 100).toFixed(2)}% ($${taxAmount.toFixed(2)}).` : "Tax cleared (no state selected).");
+  openOrderModal(orderId);
+  if (typeof renderOrdersTable === "function") renderOrdersTable();
 }
 
 async function resendReceipt(orderId) {

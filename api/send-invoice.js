@@ -117,20 +117,21 @@ module.exports = async (req, res) => {
   let existingOrder = null;
 
   if (order_id) {
-    const { data: o, error: oErr } = await supabase
-      .from('orders')
-      // NOT tax_amount -- the create-orders migration defines it, but it
-      // does not actually exist on the live orders table (confirmed via a
-      // direct query: 42703). Selecting a column that isn't there fails
-      // the ENTIRE query, which a bare "oErr || !o" check below used to
-      // silently report as a generic "Order not found" -- a real,
-      // diagnosable error masquerading as a wrong-id problem. Schema
-      // drift between migration files and the live database is a known,
-      // recurring issue in this project; always confirm live before
-      // trusting a migration file.
-      .select('id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, shipping_address, order_items(*)')
-      .eq('id', order_id)
-      .single();
+    // tax_rate/tax_amount are now real columns (20260820_order_sales_tax.sql),
+    // but that migration may not have been run live yet -- try with them
+    // first and fall back to a column list without them (inferring tax
+    // from total - items - fee, as this endpoint always used to) rather
+    // than hard-failing the whole order-invoice feature on a timing gap.
+    // This is the SAME class of drift that already broke this exact query
+    // once before (see the old comment this replaced): a column a
+    // migration file claims exists is not proof it exists live.
+    const baseCols = 'id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, shipping_address, order_items(*)';
+    let o, oErr, hasTaxColumns = true;
+    ({ data: o, error: oErr } = await supabase.from('orders').select(baseCols + ', tax_rate, tax_amount').eq('id', order_id).single());
+    if (oErr && oErr.code === '42703') {
+      hasTaxColumns = false;
+      ({ data: o, error: oErr } = await supabase.from('orders').select(baseCols).eq('id', order_id).single());
+    }
 
     if (oErr) {
       // PGRST116 = "no rows" from .single() -- a real not-found. Anything
@@ -156,18 +157,26 @@ module.exports = async (req, res) => {
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
     total       = Math.max(0, parseFloat(o.total) || 0);
     if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
-    // Orders don't carry their own tax breakdown live (see note above) --
-    // recover the implied tax dollar amount as whatever's left of the real
-    // stored total once items and delivery are accounted for, so the
-    // Stripe line items and email still add up to the order's actual
-    // total exactly, even without a dedicated column to read it from.
-    taxAmount = Math.max(0, total - itemsTotal - deliveryFee);
+
+    if (hasTaxColumns && o.tax_amount != null) {
+      // Real, staff-set tax (saveOrderTax() in admin.js) -- trust it
+      // directly instead of re-deriving anything.
+      taxAmount = Math.max(0, parseFloat(o.tax_amount) || 0);
+      tax_rate  = Math.max(0, parseFloat(o.tax_rate) || 0);
+    } else {
+      // No tax columns yet (migration not run) or tax was never set on
+      // this order -- recover the implied tax dollar amount as whatever's
+      // left of the real stored total once items and delivery are
+      // accounted for, so the Stripe line items and email still add up to
+      // the order's actual total exactly either way.
+      taxAmount = Math.max(0, total - itemsTotal - deliveryFee);
+      tax_rate  = 0;
+    }
 
     contact_name   = o.customer_name || 'there';
     business_name  = o.business_name || '';
     email          = o.customer_email;
     shipping_state = o.shipping_address?.state || '';
-    tax_rate       = 0; // not stored per-order today; the dollar amount above is still exact
     existingOrder  = o;
   } else {
     const { data: q, error: qErr } = await supabase
