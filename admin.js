@@ -956,7 +956,7 @@ function cvtHandleFile(file) {
       } else {
         /* CSV — re-use the same full-text tokenizer as parseCsv, just
            without requiring a "name" column. */
-        const rawRows = parseCsvRows(e.target.result);
+        const rawRows = parseCsvRows(stripBom(e.target.result));
         const headers = (rawRows[0] || []).map(h => h.trim());
         rows = [];
         for (let i = 1; i < rawRows.length; i++) {
@@ -1261,8 +1261,24 @@ function parseCsvRows(text) {
   return rows;
 }
 
+// A UTF-8 file that's round-tripped through Excel/Sheets a couple of times
+// (downloaded, edited, re-saved) can pick up a corrupted byte-order-mark:
+// instead of surviving as the single invisible U+FEFF character real BOMs
+// normally decode to, its 3 raw bytes (EF BB BF) sometimes get individually
+// misread as three visible Latin-1 characters ("ï»¿") glued onto the very
+// first header cell. Either form silently breaks the "name"/"price" column
+// match below and makes the whole import fail with a confusing error --
+// confirmed on a real user-submitted file where this was the entire
+// problem; every other column (including a working "overview") parsed
+// perfectly once this was stripped.
+function stripBom(text) {
+  if (text.charCodeAt(0) === 0xFEFF) return text.slice(1);
+  if (text.slice(0, 3) === "ï»¿") return text.slice(3);
+  return text;
+}
+
 function parseCsv(text) {
-  const rawRows = parseCsvRows(text);
+  const rawRows = parseCsvRows(stripBom(text));
   if (rawRows.length < 2) throw new Error("CSV must have a header row and at least one data row.");
 
   const headers = rawRows[0].map(h => h.trim().toLowerCase());
