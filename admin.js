@@ -1929,6 +1929,41 @@ async function setFulfillmentMethod(orderId, method) {
   openOrderModal(orderId);
 }
 
+// Sets/updates the in-house delivery fee on an order that hasn't been
+// invoiced yet. Recomputes `total` around the change (rather than just
+// overwriting it) so a fee edited a second time doesn't stack on top of
+// the old one -- new total = current total with the OLD fee backed out,
+// plus the new fee. Blocked once an invoice has gone out (pending_invoice
+// or paid): the customer was already billed a fixed number at that point,
+// same reasoning setFulfillmentMethod() already documents for switching
+// fulfillment methods after the fact.
+async function saveInHouseDeliveryFee(orderId) {
+  const input = document.getElementById("inHouseFeeInput");
+  if (!input) return;
+  const newFee = Math.max(0, parseFloat(input.value) || 0);
+
+  const { data: o, error: readErr } = await window.sb
+    .from("orders").select("total, in_house_delivery_fee, payment_status").eq("id", orderId).single();
+  if (readErr || !o) { alert("Could not load the order: " + (readErr?.message || "not found")); return; }
+  if (o.payment_status === "paid" || o.payment_status === "pending_invoice") {
+    alert("This order already has an invoice out — the delivery fee can't be changed anymore.");
+    openOrderModal(orderId);
+    return;
+  }
+
+  const currentFee = Number(o.in_house_delivery_fee || 0);
+  const newTotal = Math.max(0, Number(o.total || 0) - currentFee + newFee);
+
+  const { error } = await window.sb.from("orders")
+    .update({ in_house_delivery_fee: newFee, total: newTotal, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) { alert("Could not save the delivery fee: " + error.message); return; }
+
+  showToast(`Delivery fee set to $${newFee.toFixed(2)}.`);
+  openOrderModal(orderId);
+  renderOrdersTable();
+}
+
 async function markPickedUp(orderId) {
   if (!confirm("Mark this order as picked up by the customer?")) return;
   const { error } = await window.sb.from("orders")
@@ -2020,13 +2055,30 @@ async function openOrderModal(id) {
         </div>
       </div>`;
   } else if (isPending && isInHouse) {
+    // Editable only pre-payment: once an invoice has gone out and possibly
+    // been paid, the customer was billed a fixed total -- changing the fee
+    // after that would silently disagree with what she already paid. Same
+    // reasoning setFulfillmentMethod()'s comment already documents.
+    const feeIsLocked = o.payment_status === "paid" || o.payment_status === "pending_invoice";
+    const feeEditor = feeIsLocked
+      ? (deliveryFee > 0 ? `<span style="font-size:12px;color:#7c3f12;">Delivery fee <strong>$${deliveryFee.toFixed(2)}</strong> is locked in — an invoice has already gone out for this order.</span>` : "")
+      : `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+           <label style="font-size:12px;font-weight:700;color:#7c3f12;white-space:nowrap;">Delivery Fee $</label>
+           <input id="inHouseFeeInput" type="number" min="0" step="0.01" value="${deliveryFee > 0 ? deliveryFee.toFixed(2) : ""}" placeholder="0.00"
+             style="width:100px;padding:7px 10px;border:1.5px solid #fed7aa;border-radius:8px;font-size:13px;outline:none;">
+           <button onclick="saveInHouseDeliveryFee('${o.id}')"
+             style="background:#0b2d52;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">
+             Save Fee
+           </button>
+         </div>`;
     actionBar = `
       <div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ea580c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
           <div>
             <strong style="font-size:14px;color:#9a3412;display:block;">In-House Delivery — No Carrier Needed</strong>
-            <span style="font-size:12px;color:#7c3f12;">We deliver this order ourselves${deliveryFee > 0 ? ` for <strong>$${deliveryFee.toFixed(2)}</strong>, already billed on the invoice` : ""}. Mark it delivered once it's dropped off.</span>
+            <span style="font-size:12px;color:#7c3f12;">We deliver this order ourselves${deliveryFee > 0 && feeIsLocked ? ` for <strong>$${deliveryFee.toFixed(2)}</strong>, already billed on the invoice` : ""}. Mark it delivered once it's dropped off.</span>
+            ${feeEditor}
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
