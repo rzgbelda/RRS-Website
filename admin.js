@@ -1929,14 +1929,14 @@ async function setFulfillmentMethod(orderId, method) {
   openOrderModal(orderId);
 }
 
-// Sets/updates the in-house delivery fee on an order that hasn't been
-// invoiced yet. Recomputes `total` around the change (rather than just
-// overwriting it) so a fee edited a second time doesn't stack on top of
-// the old one -- new total = current total with the OLD fee backed out,
-// plus the new fee. Blocked once an invoice has gone out (pending_invoice
-// or paid): the customer was already billed a fixed number at that point,
-// same reasoning setFulfillmentMethod() already documents for switching
-// fulfillment methods after the fact.
+// Sets/updates the in-house delivery fee on an order that hasn't been PAID
+// yet. Recomputes `total` around the change (rather than just overwriting
+// it) so a fee edited a second time doesn't stack on top of the old one --
+// new total = current total with the OLD fee backed out, plus the new fee.
+// Blocked only once the order is actually "paid" -- "pending_invoice" is
+// the normal, expected status for an order awaiting its first invoice, not
+// evidence one already went out; the fee can (and should) still be set
+// right up until real money has moved.
 async function saveInHouseDeliveryFee(orderId) {
   const input = document.getElementById("inHouseFeeInput");
   if (!input) return;
@@ -1945,8 +1945,8 @@ async function saveInHouseDeliveryFee(orderId) {
   const { data: o, error: readErr } = await window.sb
     .from("orders").select("total, in_house_delivery_fee, payment_status").eq("id", orderId).single();
   if (readErr || !o) { alert("Could not load the order: " + (readErr?.message || "not found")); return; }
-  if (o.payment_status === "paid" || o.payment_status === "pending_invoice") {
-    alert("This order already has an invoice out — the delivery fee can't be changed anymore.");
+  if (o.payment_status === "paid") {
+    alert("This order has already been paid — the delivery fee can't be changed anymore.");
     openOrderModal(orderId);
     return;
   }
@@ -2055,13 +2055,16 @@ async function openOrderModal(id) {
         </div>
       </div>`;
   } else if (isPending && isInHouse) {
-    // Editable only pre-payment: once an invoice has gone out and possibly
-    // been paid, the customer was billed a fixed total -- changing the fee
-    // after that would silently disagree with what she already paid. Same
-    // reasoning setFulfillmentMethod()'s comment already documents.
-    const feeIsLocked = o.payment_status === "paid" || o.payment_status === "pending_invoice";
+    // Editable until actually paid: "pending_invoice" just means this order
+    // is billed by invoice rather than checkout card capture -- it is the
+    // NORMAL, expected status for an order that still needs its delivery
+    // fee set before the (first) invoice goes out, not evidence one
+    // already did. Only a real "paid" means the customer was charged a
+    // fixed total already, which is the actual point past which changing
+    // the fee would silently disagree with money that already moved.
+    const feeIsLocked = o.payment_status === "paid";
     const feeEditor = feeIsLocked
-      ? (deliveryFee > 0 ? `<span style="font-size:12px;color:#7c3f12;">Delivery fee <strong>$${deliveryFee.toFixed(2)}</strong> is locked in — an invoice has already gone out for this order.</span>` : "")
+      ? (deliveryFee > 0 ? `<span style="font-size:12px;color:#7c3f12;">Delivery fee <strong>$${deliveryFee.toFixed(2)}</strong> is locked in — this order has already been paid.</span>` : "")
       : `<div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
            <label style="font-size:12px;font-weight:700;color:#7c3f12;white-space:nowrap;">Delivery Fee $</label>
            <input id="inHouseFeeInput" type="number" min="0" step="0.01" value="${deliveryFee > 0 ? deliveryFee.toFixed(2) : ""}" placeholder="0.00"
