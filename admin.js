@@ -5545,11 +5545,27 @@ async function previewOrderInvoice(orderId) {
     original = btn ? btn.innerHTML : null;
     if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
 
-    const res = await fetch("/api/send-invoice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: orderId, preview_only: true }),
-    });
+    // A stuck "Loading…" with no error at all (reported live) means the
+    // fetch itself never resolved or rejected -- normally that only
+    // happens on a genuinely hung connection, which a plain fetch() has no
+    // built-in limit for. This forces it to fail loudly after 20s instead
+    // of leaving the button spinning forever with nothing to go on.
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
+    let res;
+    try {
+      res = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: orderId, preview_only: true }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      if (fetchErr.name === "AbortError") throw new Error("Request timed out after 20 seconds — the server may be unreachable. Check your connection and try again.");
+      throw new Error("Network error: " + fetchErr.message);
+    } finally {
+      clearTimeout(timeoutId);
+    }
     let data;
     try { data = await res.json(); }
     catch (parseErr) { throw new Error(`Server returned an unexpected response (HTTP ${res.status}) -- ${parseErr.message}`); }
@@ -5574,13 +5590,27 @@ async function sendOrderInvoiceFromPreview() {
   const original = btn ? btn.textContent : null;
   if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
 
+  // Same reasoning as previewOrderInvoice()'s timeout: this call also
+  // creates a real Stripe Payment Link and sends a real email, so it's
+  // given a bit longer (30s) before giving up.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
   try {
-    const res = await fetch("/api/send-invoice", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ order_id: o.id }),
-    });
-    const data = await res.json();
+    let res;
+    try {
+      res = await fetch("/api/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ order_id: o.id }),
+        signal: controller.signal,
+      });
+    } catch (fetchErr) {
+      if (fetchErr.name === "AbortError") throw new Error("Request timed out after 30 seconds — the server may be unreachable. Check whether it actually sent before retrying.");
+      throw new Error("Network error: " + fetchErr.message);
+    }
+    let data;
+    try { data = await res.json(); }
+    catch (parseErr) { throw new Error(`Server returned an unexpected response (HTTP ${res.status}) -- ${parseErr.message}`); }
     if (!res.ok) throw new Error(data.error || "Send failed");
 
     document.getElementById("invoicePreviewOverlay").style.display = "none";
@@ -5592,6 +5622,7 @@ async function sendOrderInvoiceFromPreview() {
   } catch (err) {
     alert("Could not send the invoice: " + err.message);
   } finally {
+    clearTimeout(timeoutId);
     if (btn) { btn.disabled = false; btn.textContent = original; }
   }
 }
