@@ -5745,14 +5745,32 @@ function openTermsAgreementModal(quoteRequestId) {
 // quote_request_id is optional, so this just leaves it unset (nothing on
 // the backend requires a quote to exist).
 function openTermsAgreementModalForOrder(orderId) {
-  _termsQuoteRequestId = null;
-  const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+  // No error handling here previously -- a null element reference (or
+  // anything else unexpected) threw uncaught and silently stopped the
+  // function cold, before ever reaching the line that shows the modal.
+  // That failure mode is indistinguishable from "the button does
+  // nothing," which is exactly what got reported live.
+  try {
+    _termsQuoteRequestId = null;
+    const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+    if (!o) throw new Error("Order data isn't loaded — close and reopen this order, then try again.");
 
-  document.getElementById("taContactName").value  = o ? (o.customer_name  || "") : "";
-  document.getElementById("taBusinessName").value = o ? (o.business_name  || "") : "";
-  document.getElementById("taEmail").value        = o ? (o.customer_email || "") : "";
-  document.getElementById("taTotal").value        = o ? (Number(o.total) || "") : "";
-  document.getElementById("termsAgreementModal").style.display = "flex";
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (!el) throw new Error(`Missing form field #${id} -- the Terms Agreement modal may not have loaded correctly.`);
+      el.value = val;
+    };
+    setVal("taContactName",  o.customer_name  || "");
+    setVal("taBusinessName", o.business_name  || "");
+    setVal("taEmail",        o.customer_email || "");
+    setVal("taTotal",        Number(o.total) || "");
+
+    const modal = document.getElementById("termsAgreementModal");
+    if (!modal) throw new Error("Missing #termsAgreementModal element.");
+    modal.style.display = "flex";
+  } catch (err) {
+    alert("Couldn't open the Terms Agreement form: " + err.message);
+  }
 }
 
 function getTermsAgreementPayload() {
