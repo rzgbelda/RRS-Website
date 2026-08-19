@@ -44,7 +44,7 @@ module.exports = async (req, res) => {
 
     const { data: existing, error: fetchErr } = await supabase
       .from('terms_agreements')
-      .select('id, contact_name, business_name, email, total, status, quote_request_id')
+      .select('id, contact_name, business_name, email, total, status, quote_request_id, order_id')
       .eq('token', token)
       .single();
 
@@ -75,6 +75,13 @@ module.exports = async (req, res) => {
         .update({ terms_status: 'accepted', terms_accepted_at: new Date().toISOString() })
         .eq('id', existing.quote_request_id)
         .then(function (r) { if (r.error) console.error('[terms-agreement] quote_requests update failed:', r.error.message); });
+    }
+    if (existing.order_id) {
+      supabase
+        .from('orders')
+        .update({ terms_status: 'accepted', terms_accepted_at: new Date().toISOString() })
+        .eq('id', existing.order_id)
+        .then(function (r) { if (r.error) console.error('[terms-agreement] orders update failed:', r.error.message); });
     }
 
     // Best-effort internal notification -- staff should know without

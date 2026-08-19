@@ -77,7 +77,7 @@ function agreementEmailHtml(o) {
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { contact_name, business_name, email, total, quote_request_id, preview_only } = req.body || {};
+  const { contact_name, business_name, email, total, quote_request_id, order_id, preview_only } = req.body || {};
   if (!contact_name || !business_name || !email) {
     return res.status(400).json({ error: 'contact_name, business_name, and email are all required' });
   }
@@ -103,6 +103,7 @@ module.exports = async (req, res) => {
     total: total || null,
     status: 'pending',
     quote_request_id: quote_request_id || null,
+    order_id: order_id || null,
   });
 
   if (insertErr) {
@@ -110,14 +111,22 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: insertErr.message });
   }
 
-  // Denormalized onto the quote itself so admin.js's existing quote list
-  // read picks up status for free -- see the migration for why.
+  // Denormalized onto the quote/order itself so admin.js's existing list
+  // reads pick up status for free -- see the migration for why. A terms
+  // agreement is only ever tied to one or the other, never both.
   if (quote_request_id) {
     const { error: quoteUpdateErr } = await supabase
       .from('quote_requests')
       .update({ terms_status: 'pending', terms_sent_at: new Date().toISOString(), terms_token: token })
       .eq('id', quote_request_id);
     if (quoteUpdateErr) console.error('[send-terms-agreement] quote_requests update failed:', quoteUpdateErr.message);
+  }
+  if (order_id) {
+    const { error: orderUpdateErr } = await supabase
+      .from('orders')
+      .update({ terms_status: 'pending', terms_sent_at: new Date().toISOString(), terms_token: token })
+      .eq('id', order_id);
+    if (orderUpdateErr) console.error('[send-terms-agreement] orders update failed:', orderUpdateErr.message);
   }
 
   const accept_url = 'https://www.roomreadysupply.com/terms-agreement?token=' + token;

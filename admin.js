@@ -2157,8 +2157,16 @@ async function openOrderModal(id) {
       </div>`;
   }
 
+  // Same badge quotes show ("Sent — Awaiting Response" / "Accepted") --
+  // termsStatusBadge() just reads generic terms_status/terms_sent_at/
+  // terms_accepted_at field names, which orders now carry too
+  // (20260820b_order_terms_agreement.sql), so the exact same function
+  // works unmodified for either.
+  const termsBadge = termsStatusBadge(o);
+
   document.getElementById("orderModalBody").innerHTML = `
     ${actionBar}
+    ${termsBadge}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;margin-bottom:16px;">
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Order #</span><br><strong>${escHtml(o.order_number)}</strong></div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Status</span><br><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></div>
@@ -5723,14 +5731,17 @@ async function sendOrderInvoiceFromPreview() {
 // delivery, 10% late fee at the due date with no grace period, suspension
 // at day 40) -- those numbers are intentionally not editable per-send.
 
-// Tracks which quote (if any) this send is tied to, so acceptance status
-// can show up on that quote's own detail view instead of only living in
-// the standalone terms_agreements table. Opening from the toolbar (no
-// argument) sends an untied agreement, same as before.
+// Tracks which quote or order (if either) this send is tied to, so
+// acceptance status can show up on that quote/order's own detail view
+// instead of only living in the standalone terms_agreements table.
+// Opening from the toolbar (no argument) sends an untied agreement, same
+// as before. Only ever one or the other, never both.
 let _termsQuoteRequestId = null;
+let _termsOrderId = null;
 
 function openTermsAgreementModal(quoteRequestId) {
   _termsQuoteRequestId = quoteRequestId || null;
+  _termsOrderId = null;
   const r = quoteRequestId ? allQuoteRequests.find(x => x.id === quoteRequestId) : null;
 
   document.getElementById("taContactName").value  = r ? (r.contact_name || "") : "";
@@ -5752,6 +5763,7 @@ function openTermsAgreementModalForOrder(orderId) {
   // nothing," which is exactly what got reported live.
   try {
     _termsQuoteRequestId = null;
+    _termsOrderId = orderId;
     const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
     if (!o) throw new Error("Order data isn't loaded — close and reopen this order, then try again.");
 
@@ -5786,6 +5798,7 @@ function getTermsAgreementPayload() {
     contact_name, business_name, email,
     total: totalRaw ? Number(totalRaw) : null,
     quote_request_id: _termsQuoteRequestId,
+    order_id: _termsOrderId,
   };
 }
 
@@ -5843,6 +5856,9 @@ async function sendTermsAgreementFromPreview() {
     if (payload.quote_request_id) {
       await renderQuoteRequestsTable();
       openQuoteDetail(payload.quote_request_id);
+    } else if (payload.order_id) {
+      openOrderModal(payload.order_id);
+      if (typeof renderOrdersTable === "function") renderOrdersTable();
     }
   } catch (err) {
     alert("Could not send the agreement: " + err.message);
