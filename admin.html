@@ -1129,7 +1129,15 @@
     </div>
 
     <!-- -- Payment Terms Agreement Modal ----------------------- -->
-    <div id="termsAgreementModal" class="a-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+    <!-- z-index:9500 explicitly -- the .a-modal-overlay class alone gives
+         this the same z-index (9000) as orderModal, and this sits earlier
+         in the DOM than orderModal, so with a tied z-index the browser's
+         stacking fallback (later in DOM paints on top) put orderModal
+         ABOVE this whenever both are open at once -- exactly the case
+         when Terms Agreement is opened from an order, since the order
+         modal is never closed first. Any value above 9000 and below the
+         10000/10001 preview overlays fixes it regardless of DOM order. -->
+    <div id="termsAgreementModal" class="a-modal-overlay" style="display:none;z-index:9500" onclick="if(event.target===this)this.style.display='none'">
       <div class="a-modal" style="max-width:480px;width:95vw;border-radius:18px;overflow:hidden">
         <div class="a-modal-header" style="display:flex;align-items:center;justify-content:space-between;padding:22px 28px 16px">
           <div>
