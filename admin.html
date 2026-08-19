@@ -1101,7 +1101,22 @@
       <iframe id="quotePreviewFrame" style="flex:1;border:none;background:#f1f5f9"></iframe>
     </div>
 
-    <!-- -- Invoice Preview Overlay ---------------------------- -->
+    </div><!-- /quote-requests tab -->
+
+    <!-- -- Invoice Preview Overlay, Payment Terms Agreement Modal, and its
+         Preview Overlay all live HERE (top level, alongside orderModal),
+         NOT inside the quote-requests tab div above where they used to be.
+         Both the quote flow AND the order-invoice flow (openOrderModal's
+         "Invoice & Payment" section) open these -- but a tab's content div
+         is display:none whenever that tab isn't the active one, which
+         silently hid all three (and everything inside them) any time
+         staff triggered them from the Orders tab instead of Quote
+         Requests. Confirmed live: JS was correctly setting
+         invoicePreviewOverlay.style.display = "flex" (verified in
+         DevTools), yet getBoundingClientRect() came back 0x0 -- the
+         signature of a hidden ANCESTOR, not a bug in the code setting the
+         element's own display. Moving them out of any tab entirely is the
+         real fix, not just a workaround for the order case. -->
     <div id="invoicePreviewOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:10000;flex-direction:column">
       <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;background:#1e293b;flex-shrink:0">
         <span style="color:#fff;font-size:14px;font-weight:700">Invoice Preview — nothing has been sent or charged yet</span>
@@ -1156,8 +1171,6 @@
       </div>
       <iframe id="termsPreviewFrame" style="flex:1;border:none;background:#f1f5f9"></iframe>
     </div>
-
-    </div><!-- /quote-requests tab -->
 
     <!-- ============ USERS TAB ============ -->
     <div id="tab-users" class="a-tab" style="display:none">
