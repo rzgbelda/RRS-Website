@@ -2230,6 +2230,12 @@ async function openOrderModal(id) {
           <td style="text-align:right;padding:9px 8px">$${price.toFixed(2)}</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${(price * qty).toFixed(2)}</td>
         </tr>`; }).join("")}
+        ${isInHouse && deliveryFee > 0 ? `<tr style="border-top:1px solid #f0f4fa">
+          <td style="padding:9px 12px">In-House Delivery<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Delivered by Room Ready Supply</span></td>
+          <td style="text-align:center;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px;font-weight:600">$${deliveryFee.toFixed(2)}</td>
+        </tr>` : ""}
       </tbody>
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
@@ -5524,22 +5530,30 @@ async function sendInvoiceFromPreview() {
    the quote flow above, just pointed at an existing order via order_id
    instead of creating a new one from a quote) ─────────────────────── */
 async function previewOrderInvoice(orderId) {
-  _invoiceOrderMode = true;
-  const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
-  if (!o) { alert("Order data isn't loaded — close and reopen this order, then try again."); return; }
-
-  const btn = document.querySelector(`[onclick="previewOrderInvoice('${orderId}')"]`);
-  const original = btn ? btn.innerHTML : null;
-  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
-
+  // Everything from here down is inside try/catch -- a click that fails
+  // for ANY reason (a bad selector, a network error, a non-JSON error
+  // page from a crashed function) must still end in a visible alert
+  // instead of doing nothing, which is indistinguishable from the button
+  // being broken.
+  let btn, original;
   try {
+    _invoiceOrderMode = true;
+    const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+    if (!o) throw new Error("Order data isn't loaded — close and reopen this order, then try again.");
+
+    btn = document.querySelector(`[onclick="previewOrderInvoice('${orderId}')"]`);
+    original = btn ? btn.innerHTML : null;
+    if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+
     const res = await fetch("/api/send-invoice", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ order_id: orderId, preview_only: true }),
     });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || "Preview failed");
+    let data;
+    try { data = await res.json(); }
+    catch (parseErr) { throw new Error(`Server returned an unexpected response (HTTP ${res.status}) -- ${parseErr.message}`); }
+    if (!res.ok) throw new Error(data.error || `Preview failed (HTTP ${res.status})`);
 
     document.getElementById("invoicePreviewFrame").srcdoc = data.html;
     document.getElementById("invoicePreviewOverlay").style.display = "flex";
