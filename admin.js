@@ -1967,9 +1967,15 @@ async function lookupPaymentProof(orderId) {
   }
 }
 
+// Set on every openOrderModal() call so the invoice-preview/terms-agreement
+// flows below (shared with the quote-request modal) can read the currently
+// open order's email/business/total without a second query.
+let currentOrderData = null;
+
 async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
+  currentOrderData = o;
   const addr = o.shipping_address || {};
   const isPending    = o.status === "pending";
   const isConfirmed  = o.status === "confirmed";
@@ -2191,6 +2197,20 @@ async function openOrderModal(id) {
         &#128666; Track on Estes &rarr;
       </a>
       <span style="font-size:13px;color:#334155;">PRO: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
+    </div>` : ""}
+    ${o.payment_status !== "paid" ? `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Invoice &amp; Payment</h4>
+    <p style="font-size:12.5px;color:#64748b;margin:0 0 10px;">This order hasn't been paid yet. Preview the invoice, then email it with a one-click Stripe pay link -- no site visit or login needed on her end.</p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+      <button onclick="previewOrderInvoice('${o.id}')"
+        style="background:#16a34a;color:#fff;border:none;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;gap:6px;">
+        &#128179; Preview &amp; Email Invoice
+      </button>
+      <button onclick="openTermsAgreementModalForOrder('${o.id}')"
+        style="background:#fff;color:#0d1f38;border:1.5px solid #d0d7e0;border-radius:9px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">
+        &#128196; Terms Agreement
+      </button>
     </div>` : ""}
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
     <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Resend Receipt</h4>
@@ -5380,7 +5400,15 @@ async function doSendQuote(payload) {
 // Mirrors the existing Preview Quote / Send to Customer flow: nothing is
 // sent, no order is created and no Stripe Payment Link exists until staff
 // review the actual rendered email and its prices, then explicitly send.
+//
+// The same preview overlay/iframe and "Email This Invoice" button are
+// shared with the order-invoice flow below (previewOrderInvoice()) rather
+// than duplicating the whole modal -- this flag is how sendInvoiceFromPreview()
+// tells which of the two just opened it.
+let _invoiceOrderMode = false;
+
 async function previewInvoice() {
+  _invoiceOrderMode = false;
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
@@ -5407,6 +5435,8 @@ async function previewInvoice() {
 }
 
 async function sendInvoiceFromPreview() {
+  if (_invoiceOrderMode) return sendOrderInvoiceFromPreview();
+
   const r = allQuoteRequests.find(x => x.id === currentQuoteId);
   if (!r) return;
 
@@ -5428,6 +5458,68 @@ async function sendInvoiceFromPreview() {
     document.getElementById("invoicePreviewOverlay").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
     alert(`✅ Invoice ${data.order_number} emailed to ${r.email}.\n\nPayment link:\n${data.payment_link}`);
+  } catch (err) {
+    alert("Could not send the invoice: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = original; }
+  }
+}
+
+/* ── Order invoice/pay-link (same preview overlay + api/send-invoice.js as
+   the quote flow above, just pointed at an existing order via order_id
+   instead of creating a new one from a quote) ─────────────────────── */
+async function previewOrderInvoice(orderId) {
+  _invoiceOrderMode = true;
+  const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+  if (!o) { alert("Order data isn't loaded — close and reopen this order, then try again."); return; }
+
+  const btn = document.querySelector(`[onclick="previewOrderInvoice('${orderId}')"]`);
+  const original = btn ? btn.innerHTML : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+
+  try {
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId, preview_only: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Preview failed");
+
+    document.getElementById("invoicePreviewFrame").srcdoc = data.html;
+    document.getElementById("invoicePreviewOverlay").style.display = "flex";
+  } catch (err) {
+    alert("Preview error: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = original; }
+  }
+}
+
+async function sendOrderInvoiceFromPreview() {
+  const o = currentOrderData;
+  if (!o) return;
+
+  if (!confirm(`Email this invoice + payment link to ${o.customer_email}?\n\nThey will be able to pay by card directly from the email, no site visit needed.`)) return;
+
+  const btn = document.querySelector('#invoicePreviewOverlay button[onclick="sendInvoiceFromPreview()"]');
+  const original = btn ? btn.textContent : null;
+  if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
+
+  try {
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: o.id }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Send failed");
+
+    document.getElementById("invoicePreviewOverlay").style.display = "none";
+    alert(`✅ Invoice ${data.order_number} emailed to ${o.customer_email}.\n\nPayment link:\n${data.payment_link}`);
+    // Refresh so the modal reflects the new pending_invoice status, and the
+    // orders list picks up the change too.
+    openOrderModal(o.id);
+    if (typeof renderOrdersTable === "function") renderOrdersTable();
   } catch (err) {
     alert("Could not send the invoice: " + err.message);
   } finally {
@@ -5457,6 +5549,21 @@ function openTermsAgreementModal(quoteRequestId) {
   document.getElementById("taBusinessName").value = r ? (r.business_name || "") : "";
   document.getElementById("taEmail").value        = r ? (r.email || "") : "";
   document.getElementById("taTotal").value        = r ? (quoteItemsTotal(r) || "") : "";
+  document.getElementById("termsAgreementModal").style.display = "flex";
+}
+
+// Same modal/send flow as the quote version above, pre-filled from the
+// currently open order instead -- api/send-terms-agreement.js's
+// quote_request_id is optional, so this just leaves it unset (nothing on
+// the backend requires a quote to exist).
+function openTermsAgreementModalForOrder(orderId) {
+  _termsQuoteRequestId = null;
+  const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+
+  document.getElementById("taContactName").value  = o ? (o.customer_name  || "") : "";
+  document.getElementById("taBusinessName").value = o ? (o.business_name  || "") : "";
+  document.getElementById("taEmail").value        = o ? (o.customer_email || "") : "";
+  document.getElementById("taTotal").value        = o ? (Number(o.total) || "") : "";
   document.getElementById("termsAgreementModal").style.display = "flex";
 }
 

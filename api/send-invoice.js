@@ -101,67 +101,122 @@ module.exports = async (req, res) => {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
-  const { quote_request_id, preview_only } = req.body || {};
-  if (!quote_request_id) return res.status(400).json({ error: 'quote_request_id is required' });
+  const { quote_request_id, order_id, preview_only } = req.body || {};
+  if (!quote_request_id && !order_id) {
+    return res.status(400).json({ error: 'quote_request_id or order_id is required' });
+  }
 
-  const { data: q, error: qErr } = await supabase
-    .from('quote_requests')
-    .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount')
-    .eq('id', quote_request_id)
-    .single();
+  // Two entry points feed the same invoice/payment-link flow below:
+  // a quote being converted to a payable invoice for the first time (the
+  // original use of this endpoint -- creates a new order), or an EXISTING
+  // order that's already sitting unpaid (e.g. a reorder awaiting payment)
+  // getting a payment link sent for the first time -- no new order, the
+  // one that's already there just gets a Stripe link and an email.
+  let items, itemsTotal, deliveryFee, taxAmount, total;
+  let contact_name, business_name, email, shipping_state, tax_rate, notes;
+  let existingOrder = null;
 
-  if (qErr || !q) return res.status(404).json({ error: 'Quote request not found' });
-  if (!q.quote_items || !q.quote_items.length) return res.status(400).json({ error: 'This quote has no priced line items yet -- send the quote first.' });
-  if (!q.email) return res.status(400).json({ error: 'This quote request has no customer email on file.' });
+  if (order_id) {
+    const { data: o, error: oErr } = await supabase
+      .from('orders')
+      .select('id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, tax_amount, shipping_address, order_items(*)')
+      .eq('id', order_id)
+      .single();
 
-  const items = q.quote_items.map(i => ({
-    name: String(i.name || 'Item'),
-    quantity: Math.max(1, parseInt(i.quantity) || 1),
-    unit_price: Math.max(0, parseFloat(i.unit_price) || 0),
-  })).filter(i => i.unit_price > 0);
+    if (oErr || !o) return res.status(404).json({ error: 'Order not found' });
+    if (o.payment_status === 'paid') return res.status(400).json({ error: 'This order is already paid -- nothing to invoice.' });
+    if (!o.customer_email) return res.status(400).json({ error: 'This order has no customer email on file.' });
+    if (!o.order_items || !o.order_items.length) return res.status(400).json({ error: 'This order has no line items to invoice.' });
 
-  if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
+    items = o.order_items.map(i => ({
+      name: String(i.product_name || i.name || 'Item'),
+      quantity: Math.max(1, parseInt(i.quantity) || 1),
+      unit_price: Math.max(0, parseFloat(i.price_per_case ?? i.price) || 0),
+    })).filter(i => i.unit_price > 0);
+    if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
 
-  // In-house delivery: we deliver the order ourselves and charge a fee set
-  // by hand on the quote, instead of an Estes/Shippo carrier rate. It is a
-  // real payable line, so it has to reach the invoice total AND the Stripe
-  // payment link below -- billing only the items would undercharge by
-  // exactly the delivery amount.
-  const deliveryFee = q.fulfillment_method === 'in_house'
-    ? Math.max(0, parseFloat(q.in_house_delivery_fee) || 0)
-    : 0;
+    deliveryFee = o.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(o.in_house_delivery_fee) || 0) : 0;
+    itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    taxAmount   = Math.max(0, parseFloat(o.tax_amount) || 0);
+    // Prefer the order's own stored total (already includes tax/fee exactly
+    // as originally computed) over re-deriving it, same reasoning as the
+    // quote path below.
+    total = o.total > 0 ? o.total : itemsTotal + deliveryFee + taxAmount;
+    if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
 
-  const itemsTotal = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    contact_name   = o.customer_name || 'there';
+    business_name  = o.business_name || '';
+    email          = o.customer_email;
+    shipping_state = o.shipping_address?.state || '';
+    tax_rate       = 0; // not stored per-order today; the dollar amount above is still exact
+    existingOrder  = o;
+  } else {
+    const { data: q, error: qErr } = await supabase
+      .from('quote_requests')
+      .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount')
+      .eq('id', quote_request_id)
+      .single();
 
-  // Sales tax was computed and snapshotted server-side when the quote was
-  // sent (send-quote edge function) -- trusted here rather than recomputed,
-  // so an invoice always matches the tax the customer already saw quoted.
-  // Quotes sent before this feature existed have tax_amount = 0/null,
-  // which is the correct behavior for them (nothing was ever promised).
-  const taxAmount = Math.max(0, parseFloat(q.tax_amount) || 0);
+    if (qErr || !q) return res.status(404).json({ error: 'Quote request not found' });
+    if (!q.quote_items || !q.quote_items.length) return res.status(400).json({ error: 'This quote has no priced line items yet -- send the quote first.' });
+    if (!q.email) return res.status(400).json({ error: 'This quote request has no customer email on file.' });
 
-  // Prefer the stored grand_total, but some quotes were sent before the
-  // send-quote edge function was fixed to save it -- quote_items has
-  // everything needed to invoice regardless, so fall back to summing it.
-  // The fallback must add the fee and tax back in; grand_total already
-  // includes both.
-  const total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + taxAmount;
-  if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
+    items = q.quote_items.map(i => ({
+      name: String(i.name || 'Item'),
+      quantity: Math.max(1, parseInt(i.quantity) || 1),
+      unit_price: Math.max(0, parseFloat(i.unit_price) || 0),
+    })).filter(i => i.unit_price > 0);
+    if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
+
+    // In-house delivery: we deliver the order ourselves and charge a fee set
+    // by hand on the quote, instead of an Estes/Shippo carrier rate. It is a
+    // real payable line, so it has to reach the invoice total AND the Stripe
+    // payment link below -- billing only the items would undercharge by
+    // exactly the delivery amount.
+    deliveryFee = q.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(q.in_house_delivery_fee) || 0) : 0;
+    itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+
+    // Sales tax was computed and snapshotted server-side when the quote was
+    // sent (send-quote edge function) -- trusted here rather than recomputed,
+    // so an invoice always matches the tax the customer already saw quoted.
+    // Quotes sent before this feature existed have tax_amount = 0/null,
+    // which is the correct behavior for them (nothing was ever promised).
+    taxAmount = Math.max(0, parseFloat(q.tax_amount) || 0);
+
+    // Prefer the stored grand_total, but some quotes were sent before the
+    // send-quote edge function was fixed to save it -- quote_items has
+    // everything needed to invoice regardless, so fall back to summing it.
+    // The fallback must add the fee and tax back in; grand_total already
+    // includes both.
+    total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + taxAmount;
+    if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
+
+    contact_name   = q.contact_name || 'there';
+    business_name  = q.business_name || '';
+    email          = q.email;
+    shipping_state = q.shipping_state || '';
+    tax_rate       = q.tax_rate || 0;
+    notes          = q.quote_number ? ('Invoiced from quote ' + q.quote_number) : 'Invoiced from an admin quote request';
+
+    // Stashed on q for the insert below (quote path only).
+    var _q = q;
+  }
 
   // Preview: render the exact email that would be sent, with no order
-  // inserted, no Stripe Payment Link created, and no email dispatched --
-  // so staff can check prices and layout before anything real happens.
+  // inserted/touched, no Stripe Payment Link created, and no email
+  // dispatched -- so staff can check prices and layout before anything
+  // real happens.
   if (preview_only) {
     return res.status(200).json({
       html: invoiceEmailHtml({
-        order_number: '(assigned when sent)',
-        customer_name: q.contact_name || 'there',
-        business_name: q.business_name || '',
+        order_number: existingOrder ? existingOrder.order_number : '(assigned when sent)',
+        customer_name: contact_name,
+        business_name,
         items,
         subtotal: itemsTotal + deliveryFee,
         tax_amount: taxAmount,
-        shipping_state: q.shipping_state || '',
-        tax_rate: q.tax_rate || 0,
+        shipping_state,
+        tax_rate,
         total,
         delivery_fee: deliveryFee,
         payment_link: '#preview-only',
@@ -169,53 +224,70 @@ module.exports = async (req, res) => {
     });
   }
 
-  const order_number = 'RRS-INV-' + Date.now();
+  let order_number, orderRowId;
 
-  const { data: order, error: orderErr } = await supabase
-    .from('orders')
-    .insert({
-      order_number,
-      customer_name:  q.contact_name || '',
-      customer_email: q.email,
-      business_name:  q.business_name || 'N/A',
-      // itemsTotal directly, not "total - deliveryFee" -- that subtraction
-      // used to correctly recover the item-only subtotal back when total
-      // had no tax in it, but now total also includes tax, so the old
-      // formula would have folded tax into what's labeled "subtotal".
-      subtotal:       itemsTotal,
-      total:          total,
-      payment_method: 'card',
-      payment_status: 'pending_invoice',
-      status:         'pending',
-      order_type:     'invoice',
-      // Carries the choice onto the order so the admin order modal shows
-      // the in-house delivery panel instead of the Estes freight flow.
-      fulfillment_method:    q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
-      in_house_delivery_fee: deliveryFee,
-      // Same shape regular checkout already writes to this column
-      // ({street, city, state, zip}), so fulfillment/admin order views
-      // don't need to special-case a quote-based order's address.
-      shipping_address: (q.shipping_street || q.shipping_city || q.shipping_state || q.shipping_zip)
-        ? { street: q.shipping_street || '', city: q.shipping_city || '', state: q.shipping_state || '', zip: q.shipping_zip || '' }
-        : null,
-      notes:          q.quote_number ? ('Invoiced from quote ' + q.quote_number) : 'Invoiced from an admin quote request',
-    })
-    .select('id')
-    .single();
+  if (existingOrder) {
+    order_number = existingOrder.order_number;
+    orderRowId   = existingOrder.id;
+    // Mark it as having a live payment link out, same status the
+    // quote-created path below uses -- the webhook flips it to 'paid' the
+    // moment the customer completes payment either way. No-op if it's
+    // already pending_invoice (e.g. a link was already sent once before).
+    const { error: statusErr } = await supabase
+      .from('orders')
+      .update({ payment_status: 'pending_invoice' })
+      .eq('id', orderRowId);
+    if (statusErr) console.error('[send-invoice] order status update failed:', statusErr.message);
+  } else {
+    order_number = 'RRS-INV-' + Date.now();
 
-  if (orderErr) {
-    console.error('[send-invoice] order insert failed:', orderErr.message);
-    return res.status(500).json({ error: orderErr.message });
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .insert({
+        order_number,
+        customer_name:  contact_name,
+        customer_email: email,
+        business_name:  business_name || 'N/A',
+        // itemsTotal directly, not "total - deliveryFee" -- that subtraction
+        // used to correctly recover the item-only subtotal back when total
+        // had no tax in it, but now total also includes tax, so the old
+        // formula would have folded tax into what's labeled "subtotal".
+        subtotal:       itemsTotal,
+        total:          total,
+        payment_method: 'card',
+        payment_status: 'pending_invoice',
+        status:         'pending',
+        order_type:     'invoice',
+        // Carries the choice onto the order so the admin order modal shows
+        // the in-house delivery panel instead of the Estes freight flow.
+        fulfillment_method:    _q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
+        in_house_delivery_fee: deliveryFee,
+        // Same shape regular checkout already writes to this column
+        // ({street, city, state, zip}), so fulfillment/admin order views
+        // don't need to special-case a quote-based order's address.
+        shipping_address: (_q.shipping_street || _q.shipping_city || _q.shipping_state || _q.shipping_zip)
+          ? { street: _q.shipping_street || '', city: _q.shipping_city || '', state: _q.shipping_state || '', zip: _q.shipping_zip || '' }
+          : null,
+        notes,
+      })
+      .select('id')
+      .single();
+
+    if (orderErr) {
+      console.error('[send-invoice] order insert failed:', orderErr.message);
+      return res.status(500).json({ error: orderErr.message });
+    }
+    orderRowId = order.id;
+
+    const orderItems = items.map(i => ({
+      order_id: orderRowId,
+      product_name: i.name,
+      price_per_case: i.unit_price,
+      quantity: i.quantity,
+    }));
+    const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
+    if (itemsErr) console.error('[send-invoice] order_items insert failed:', itemsErr.message);
   }
-
-  const orderItems = items.map(i => ({
-    order_id: order.id,
-    product_name: i.name,
-    price_per_case: i.unit_price,
-    quantity: i.quantity,
-  }));
-  const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
-  if (itemsErr) console.error('[send-invoice] order_items insert failed:', itemsErr.message);
 
   const rawKey = (process.env.STRIPE_SECRET_KEY || '').trim().replace(/[\r\n\t]/g, '');
   const stripe = Stripe(rawKey);
@@ -245,14 +317,14 @@ module.exports = async (req, res) => {
         price_data: {
           currency: 'usd',
           product_data: {
-            name: 'Sales Tax' + (q.shipping_state ? ' (' + q.shipping_state + (q.tax_rate ? ' · ' + (Number(q.tax_rate) * 100).toFixed(2) + '%' : '') + ')' : ''),
+            name: 'Sales Tax' + (shipping_state ? ' (' + shipping_state + (tax_rate ? ' · ' + (Number(tax_rate) * 100).toFixed(2) + '%' : '') + ')' : ''),
           },
           unit_amount: Math.round(taxAmount * 100),
         },
         quantity: 1,
       }] : []),
       payment_intent_data: {
-        metadata: { order_number, order_type: 'invoice', quote_number: q.quote_number || '' },
+        metadata: { order_number, order_type: 'invoice', quote_number: existingOrder ? '' : (_q.quote_number || '') },
       },
       after_completion: {
         type: 'hosted_confirmation',
@@ -260,7 +332,7 @@ module.exports = async (req, res) => {
           custom_message: 'Thank you! Your payment has been received and our team will begin processing your order right away. A confirmation email is on its way.',
         },
       },
-      metadata: { order_number, business_name: q.business_name || '', quote_number: q.quote_number || '' },
+      metadata: { order_number, business_name: business_name || '', quote_number: existingOrder ? '' : (_q.quote_number || '') },
     });
   } catch (err) {
     console.error('[send-invoice] Stripe payment link failed:', err.message);
@@ -273,18 +345,18 @@ module.exports = async (req, res) => {
   try {
     await getResend().emails.send({
       from: 'Room Ready Supply <sales@roomreadysupply.com>',
-      to: q.email,
+      to: email,
       reply_to: 'sales@roomreadysupply.com',
       subject: 'Your Invoice ' + order_number + ' — Room Ready Supply',
       html: invoiceEmailHtml({
         order_number,
-        customer_name: q.contact_name || 'there',
-        business_name: q.business_name || '',
+        customer_name: contact_name,
+        business_name,
         items,
         subtotal: itemsTotal + deliveryFee,
         tax_amount: taxAmount,
-        shipping_state: q.shipping_state || '',
-        tax_rate: q.tax_rate || 0,
+        shipping_state,
+        tax_rate,
         total,
         delivery_fee: deliveryFee,
         payment_link: link.url,
