@@ -119,11 +119,28 @@ module.exports = async (req, res) => {
   if (order_id) {
     const { data: o, error: oErr } = await supabase
       .from('orders')
-      .select('id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, tax_amount, shipping_address, order_items(*)')
+      // NOT tax_amount -- the create-orders migration defines it, but it
+      // does not actually exist on the live orders table (confirmed via a
+      // direct query: 42703). Selecting a column that isn't there fails
+      // the ENTIRE query, which a bare "oErr || !o" check below used to
+      // silently report as a generic "Order not found" -- a real,
+      // diagnosable error masquerading as a wrong-id problem. Schema
+      // drift between migration files and the live database is a known,
+      // recurring issue in this project; always confirm live before
+      // trusting a migration file.
+      .select('id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, shipping_address, order_items(*)')
       .eq('id', order_id)
       .single();
 
-    if (oErr || !o) return res.status(404).json({ error: 'Order not found' });
+    if (oErr) {
+      // PGRST116 = "no rows" from .single() -- a real not-found. Anything
+      // else (bad column, RLS, connection) is a different problem and
+      // should say so rather than be reported as the wrong thing.
+      console.error('[send-invoice] order lookup failed:', oErr.message);
+      return res.status(oErr.code === 'PGRST116' ? 404 : 500)
+        .json({ error: oErr.code === 'PGRST116' ? 'Order not found' : ('Order lookup failed: ' + oErr.message) });
+    }
+    if (!o) return res.status(404).json({ error: 'Order not found' });
     if (o.payment_status === 'paid') return res.status(400).json({ error: 'This order is already paid -- nothing to invoice.' });
     if (!o.customer_email) return res.status(400).json({ error: 'This order has no customer email on file.' });
     if (!o.order_items || !o.order_items.length) return res.status(400).json({ error: 'This order has no line items to invoice.' });
@@ -137,12 +154,14 @@ module.exports = async (req, res) => {
 
     deliveryFee = o.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(o.in_house_delivery_fee) || 0) : 0;
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
-    taxAmount   = Math.max(0, parseFloat(o.tax_amount) || 0);
-    // Prefer the order's own stored total (already includes tax/fee exactly
-    // as originally computed) over re-deriving it, same reasoning as the
-    // quote path below.
-    total = o.total > 0 ? o.total : itemsTotal + deliveryFee + taxAmount;
+    total       = Math.max(0, parseFloat(o.total) || 0);
     if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
+    // Orders don't carry their own tax breakdown live (see note above) --
+    // recover the implied tax dollar amount as whatever's left of the real
+    // stored total once items and delivery are accounted for, so the
+    // Stripe line items and email still add up to the order's actual
+    // total exactly, even without a dedicated column to read it from.
+    taxAmount = Math.max(0, total - itemsTotal - deliveryFee);
 
     contact_name   = o.customer_name || 'there';
     business_name  = o.business_name || '';
