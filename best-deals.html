@@ -495,7 +495,18 @@
       const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (p.unit === 'Case' ? 'Case' : (p.unit || 'Case'));
       const price = p.price != null ? Number(p.price).toFixed(2) : '—';
       const savingsPct = hasRetail ? Math.round((1 - Number(p.price) / Number(p.retail_price)) * 100) : null;
-      const buyHref = p.slug ? `/product?item=${encodeURIComponent(p.slug)}` : '/catalog';
+      // NOT p.slug -- that's the raw products.slug DB column (generated
+      // from the product NAME when it was created in admin). The product
+      // page's own lookup (loadProductPage() in script.js) never reads
+      // that column at all: it matches against allProducts, where every
+      // product's "slug" is instead computed fresh from itemNumber (sku)
+      // first, name only as a fallback. For any product with a SKU (nearly
+      // all of them) those two are different strings, so linking with the
+      // stored column 404'd as "Product not found" -- this mirrors the
+      // exact computation script.js's mapDbProductToLegacyShape() uses so
+      // the two can never diverge again.
+      const buySlug = (p.sku || p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const buyHref = buySlug ? `/product?item=${encodeURIComponent(buySlug)}` : '/catalog';
 
       // Same .add-btn contract script.js's setupAddToCartButtons() already
       // wires up site-wide (catalog tiles, product page) -- reusing it here
