@@ -25,6 +25,33 @@
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
   <link rel="stylesheet" href="style.css" />
+  <!-- Inline (not in style.css) so this applies before the stylesheet
+       finishes loading -- the whole page's real content only exists after
+       a client-side fetch (loadProductPage() in script.js) resolves and
+       fills in the DOM. Without this, every visit briefly showed the raw
+       unpopulated markup as if it were real data: a literal "Product
+       Name" heading, a hardcoded 5-star rating, "$--.--" prices. Hiding
+       the real layout (visibility, not display, so it keeps its space and
+       nothing shifts when revealed) behind a loading state until script.js
+       actually has the product fixes that. -->
+  <style>
+    .product-page.ppg-loading .product-layout,
+    .product-page.ppg-loading .details-grid { visibility: hidden; }
+    .ppg-loader {
+      display: none; align-items: center; justify-content: center; gap: 12px;
+      flex-direction: column; padding: 90px 0; color: #5B6C7E; font-size: 14px;
+    }
+    .product-page.ppg-loading .ppg-loader { display: flex; }
+    .ppg-spinner {
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 3px solid #e2e8f0; border-top-color: #ED7226;
+      animation: ppg-spin .8s linear infinite;
+    }
+    @keyframes ppg-spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) {
+      .ppg-spinner { animation-duration: 2.2s; }
+    }
+  </style>
 </head>
 
 <body>
@@ -97,7 +124,12 @@
     <a href="/cart">My Cart</a>
   </nav>
 
-  <section class="product-page">
+  <section class="product-page ppg-loading">
+
+    <div class="ppg-loader">
+      <div class="ppg-spinner" aria-hidden="true"></div>
+      <p>Loading product&hellip;</p>
+    </div>
 
     <!-- Real links, not plain text: this is the trail Google follows from a
          product back up to its category, and the fastest way for a buyer to

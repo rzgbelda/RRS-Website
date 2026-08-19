@@ -50,6 +50,13 @@ document.addEventListener("DOMContentLoaded", () => {
     })
     .catch(error => {
       console.error("Error loading products:", error);
+      // loadProductPage() never runs on a fetch failure, so the product
+      // page's loading spinner (ppg-loading, product-template.html) would
+      // otherwise spin forever with no explanation instead of the usual
+      // "Product not found" message.
+      const nameEl = document.getElementById("productName");
+      if (nameEl) nameEl.textContent = "Couldn't load this product — please refresh the page.";
+      document.querySelector(".product-page")?.classList.remove("ppg-loading");
     });
 });
 
@@ -1261,11 +1268,20 @@ function loadProductPage() {
   const productNameEl = document.getElementById("productName");
   if (!productNameEl) return;
 
+  // The real content (and the "Product not found" message alike) stays
+  // hidden behind a loading spinner (product-template.html's ppg-loading
+  // class) until this function has actually decided what to show --
+  // otherwise a slow catalog fetch briefly shows the template's raw
+  // placeholder markup as if it were real data. Every return path below
+  // must reveal it, success or not.
+  const reveal = () => document.querySelector(".product-page")?.classList.remove("ppg-loading");
+
   const params = new URLSearchParams(window.location.search);
   const itemParam = params.get("item");
 
   if (!itemParam) {
     productNameEl.textContent = "Product not found";
+    reveal();
     return;
   }
 
@@ -1275,6 +1291,7 @@ function loadProductPage() {
 
   if (!product) {
     productNameEl.textContent = "Product not found";
+    reveal();
     return;
   }
 
@@ -1286,6 +1303,7 @@ function loadProductPage() {
   }
 
   populateProductPage(product);
+  reveal();
 }
 
 function setText(id, value) {
