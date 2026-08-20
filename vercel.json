@@ -5,6 +5,12 @@
       "includeFiles": "product-template.html"
     }
   },
+  "crons": [
+    {
+      "path": "/api/create-order",
+      "schedule": "0 13 * * *"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)\\.html",

@@ -299,6 +299,25 @@
   </label>
 </div>
 
+<div id="reorderFrequencySection" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin:14px 0 0">
+  <label style="display:block;font-size:13px;font-weight:700;color:#0d2c50;margin-bottom:8px">How often should we reorder this?</label>
+  <select id="checkoutReorderFrequency" class="a-select" style="width:100%;max-width:320px">
+    <option value="weekly">Weekly</option>
+    <option value="every_2_weeks">Every 2 Weeks</option>
+    <option value="monthly" selected>Monthly</option>
+    <option value="45_days">Every 45 Days</option>
+    <option value="60_days">Every 60 Days</option>
+    <option value="custom">Custom Schedule</option>
+  </select>
+  <div id="reorderCustomDatesWrap" style="display:none;margin-top:12px">
+    <label style="display:block;font-size:13px;font-weight:700;color:#0d2c50;margin-bottom:8px">Pick the dates you'd like this reordered</label>
+    <input type="text" id="checkoutReorderCustomDates" class="a-input" placeholder="Click to choose dates…" readonly style="width:100%;max-width:320px;background:#fff;cursor:pointer">
+  </div>
+  <p style="font-size:12px;color:#64748b;margin:12px 0 0;line-height:1.5">
+    On each due date we'll prepare your order and email you a secure link to review and pay &mdash; nothing is charged automatically. You can cancel this schedule any time from your account or by asking us.
+  </p>
+</div>
+
         <h3 class="product-list-title">Product List</h3>
 
 <div id="checkout-products"></div>
@@ -391,8 +410,63 @@ function onFulfillmentChange() {
   else if (typeof initFreightQuoting === 'function') initFreightQuoting();
 }
 
+// Reorder frequency UI: shown/hidden by setupCheckoutOrderTypeToggle /
+// setupOrderTypeToggle (script.js) via #reorderFrequencySection, which
+// previously didn't exist -- this file only wires the parts specific to it.
+let _checkoutReorderPicker = null;
+function initReorderFrequencyUI() {
+  const freqSel = document.getElementById('checkoutReorderFrequency');
+  const customWrap = document.getElementById('reorderCustomDatesWrap');
+  const customInput = document.getElementById('checkoutReorderCustomDates');
+  if (!freqSel || !customInput) return;
+
+  function updateCustomVisibility() {
+    const isCustom = freqSel.value === 'custom';
+    if (customWrap) customWrap.style.display = isCustom ? 'block' : 'none';
+    if (isCustom && !_checkoutReorderPicker && typeof flatpickr !== 'undefined') {
+      _checkoutReorderPicker = flatpickr(customInput, {
+        mode: 'multiple',
+        dateFormat: 'm/d/Y',
+        minDate: 'today',
+      });
+    }
+  }
+  freqSel.addEventListener('change', updateCustomVisibility);
+  updateCustomVisibility();
+}
+document.addEventListener('DOMContentLoaded', initReorderFrequencyUI);
+
+// First due date for a fixed-interval schedule started today.
+function computeFirstReorderDate(frequency) {
+  const days = { weekly: 7, every_2_weeks: 14, '45_days': 45, '60_days': 60 }[frequency];
+  const d = new Date();
+  if (frequency === 'monthly') d.setMonth(d.getMonth() + 1);
+  else d.setDate(d.getDate() + (days || 30));
+  return d.toISOString().slice(0, 10);
+}
+
 function saveCheckoutAndProceed() {
   const fulfillmentMethod = document.getElementById('fulfillPickup')?.checked ? 'pickup' : 'ship';
+  const orderType = document.getElementById('reorderOption')?.checked ? 'reorder' : 'one_time';
+
+  let reorderFrequency = null, reorderNextDate = null, reorderCustomDates = null;
+  if (orderType === 'reorder') {
+    reorderFrequency = document.getElementById('checkoutReorderFrequency')?.value || 'monthly';
+    if (reorderFrequency === 'custom') {
+      const raw = document.getElementById('checkoutReorderCustomDates')?.value.trim() || '';
+      const picked = raw ? raw.split(',').map(s => s.trim()).filter(Boolean) : [];
+      const isoDates = picked
+        .map(s => { const d = new Date(s); return isNaN(d) ? null : d.toISOString().slice(0, 10); })
+        .filter(Boolean)
+        .sort();
+      if (!isoDates.length) { alert('Pick at least one date for your custom reorder schedule.'); return; }
+      reorderCustomDates = isoDates;
+      reorderNextDate = isoDates[0];
+    } else {
+      reorderNextDate = computeFirstReorderDate(reorderFrequency);
+    }
+  }
+
   const data = {
     business: document.getElementById('checkout-business')?.value.trim() || '',
     contact:  document.getElementById('checkout-contact')?.value.trim()  || '',
@@ -403,7 +477,8 @@ function saveCheckoutAndProceed() {
     state:    fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-state')?.value          || ''),
     zip:      fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-zip')?.value.trim()    || ''),
     notes:    document.getElementById('checkout-notes')?.value.trim()    || '',
-    orderType: document.getElementById('reorderOption')?.checked ? 'reorder' : 'one_time',
+    orderType,
+    reorderFrequency, reorderNextDate, reorderCustomDates,
     referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',
     fulfillmentMethod,
   };

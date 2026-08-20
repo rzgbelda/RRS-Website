@@ -564,6 +564,14 @@
           <div class="order-card-left">
             <div class="order-num">${o.order_number}</div>
             <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
+            ${o.reorder_active ? `
+              <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#1e3a8a">
+                <span>🔁 Next reorder ${o.reorder_next_date ? "on " + new Date(o.reorder_next_date + "T00:00:00").toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}) : "soon"} — we'll email you a link to review and pay.</span>
+                <button onclick="cancelMyReorderSchedule('${o.id}', this)"
+                  style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
+                  Cancel Schedule
+                </button>
+              </div>` : ""}
             <button onclick="downloadOrderPdf('${o.id}', this)"
               style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
@@ -576,6 +584,30 @@
           </div>
         </div>`).join("");
     }
+
+    /** Cancels a customer's own active reorder schedule. Routed through the
+     *  service-role endpoint (not a direct window.sb update) so the check
+     *  that this is really her order happens server-side, not just trusted
+     *  from whatever's in this page's memory. */
+    window.cancelMyReorderSchedule = async function (orderId, btn) {
+      if (!confirm("Cancel this reorder schedule? No further automatic reorders will be generated.")) return;
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = "Cancelling…";
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        const res = await fetch('/api/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'cancel_reorder', order_id: orderId, requester_email: user?.email || '' }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || ('HTTP ' + res.status));
+        if (user) loadOrders(user.id, user.email);
+      } catch (err) {
+        alert("Couldn't cancel: " + err.message);
+        btn.disabled = false; btn.textContent = original;
+      }
+    };
 
     /** Download the branded receipt PDF for one of this customer's orders. */
     window.downloadOrderPdf = async function (orderId, btn) {

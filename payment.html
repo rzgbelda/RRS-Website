@@ -725,6 +725,10 @@
               order_type: checkout.orderType || 'one_time',
               notes: checkout.notes || '',
               fulfillment_method: checkout.fulfillmentMethod || 'ship',
+              reorder_frequency: checkout.orderType === 'reorder' ? (checkout.reorderFrequency || null) : null,
+              reorder_next_date: checkout.orderType === 'reorder' ? (checkout.reorderNextDate || null) : null,
+              reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
+              reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
             }),
           });
           var createBody = await createRes.json().catch(function () { return {}; });
@@ -872,6 +876,10 @@
                 order_type: checkout.orderType || 'one_time',
                 notes: checkout.notes || '',
                 fulfillment_method: checkout.fulfillmentMethod || 'ship',
+                reorder_frequency: checkout.orderType === 'reorder' ? (checkout.reorderFrequency || null) : null,
+                reorder_next_date: checkout.orderType === 'reorder' ? (checkout.reorderNextDate || null) : null,
+                reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
+                reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
                 stripe_payment_intent_id: pi.id,
               }),
             });

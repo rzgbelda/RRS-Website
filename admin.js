@@ -2223,6 +2223,47 @@ async function lookupPaymentProof(orderId) {
 // open order's email/business/total without a second query.
 let currentOrderData = null;
 
+const REORDER_FREQUENCY_LABELS = {
+  weekly: "Weekly", every_2_weeks: "Every 2 Weeks", monthly: "Monthly",
+  "45_days": "Every 45 Days", "60_days": "Every 60 Days", custom: "Custom Schedule",
+};
+
+// Shows either the live schedule (on the order that owns it) or a
+// provenance note (on a draft the daily sweep generated from one) --
+// never both, since a generated draft always carries reorder_active=false.
+function renderReorderPanel(o) {
+  if (o.reorder_active) {
+    const freqLabel = REORDER_FREQUENCY_LABELS[o.reorder_frequency] || o.reorder_frequency || "—";
+    return `
+      <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <strong style="font-size:13px;color:#1e3a8a;display:block">🔁 Reorder Schedule Active — ${escHtml(freqLabel)}</strong>
+          <span style="font-size:12px;color:#3b5f9e">Next order will be prepared and emailed ${o.reorder_next_date ? "on " + fmt(o.reorder_next_date) : "soon"}.</span>
+        </div>
+        <button onclick="cancelOrderReorderSchedule('${o.id}')"
+          style="background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">
+          Cancel Schedule
+        </button>
+      </div>`;
+  }
+  if (o.reorder_source_order_id) {
+    return `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#64748b">
+        🔁 Generated automatically by a reorder schedule. <a href="#" onclick="openOrderModal('${o.reorder_source_order_id}');return false" style="color:#0b2d52;font-weight:700">View original order &rarr;</a>
+      </div>`;
+  }
+  return "";
+}
+
+async function cancelOrderReorderSchedule(orderId) {
+  if (!confirm("Cancel this reorder schedule? No further automatic reorders will be generated.")) return;
+  const { error } = await window.sb.from("orders").update({ reorder_active: false }).eq("id", orderId);
+  if (error) { showToast("Error: " + error.message); return; }
+  showToast("Reorder schedule cancelled.");
+  openOrderModal(orderId);
+  renderOrdersTable();
+}
+
 async function openOrderModal(id) {
   const { data: o } = await window.sb.from("orders").select("*, order_items(*)").eq("id", id).single();
   if (!o) return;
@@ -2379,10 +2420,12 @@ async function openOrderModal(id) {
   // (20260820b_order_terms_agreement.sql), so the exact same function
   // works unmodified for either.
   const termsBadge = termsStatusBadge(o);
+  const reorderPanel = renderReorderPanel(o);
 
   document.getElementById("orderModalBody").innerHTML = `
     ${actionBar}
     ${termsBadge}
+    ${reorderPanel}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px 24px;font-size:13.5px;margin-bottom:16px;">
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Order #</span><br><strong>${escHtml(o.order_number)}</strong></div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Status</span><br><span class="a-badge ${badgeClass(o.status)}">${o.status}</span></div>
