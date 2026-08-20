@@ -2060,6 +2060,14 @@ body.admin-body {
 .tkt-dr-shot { margin-top: 14px; }
 .tkt-dr-shot img { max-width: 100%; border-radius: 10px; border: 1px solid #e2e8f0; display: block; }
 
+.tkt-attach-link {
+  display: inline-flex; align-items: center; gap: 7px;
+  margin-top: 12px; padding: 8px 13px;
+  background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 9px;
+  font-size: 13px; font-weight: 600; color: #0d2c50; text-decoration: none;
+}
+.tkt-attach-link:hover { border-color: #f58220; color: #f58220; }
+
 .tkt-dr-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; }
 .tkt-dr-facts > div { display: flex; flex-direction: column; gap: 3px; }
 .tkt-dr-facts span { font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #b3c0cf; }

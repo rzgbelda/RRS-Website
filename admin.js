@@ -3479,6 +3479,7 @@ function tktCard(t) {
         <span class="tkt-type ${ty.cls}">${ty.label}</span>
         <div class="tkt-card-meta">
           ${t.screenshot_url ? `<span class="tkt-chip" title="Has screenshot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>` : ""}
+          ${t.attachment_url ? `<span class="tkt-chip" title="Has attachment: ${escHtml(t.attachment_name || "")}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span>` : ""}
           ${cCount ? `<span class="tkt-chip" title="${cCount} comment${cCount>1?"s":""}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${cCount}</span>` : ""}
           ${tktAvatar(t.assignee_email, 24)}
         </div>
@@ -3559,6 +3560,8 @@ function openNewTicket() {
   document.getElementById("devTicketDescription").value = "";
   document.getElementById("devTicketScreenshotFile").value = "";
   clearTicketScreenshot();
+  document.getElementById("devTicketAttachFile").value = "";
+  clearTicketAttachment();
   document.getElementById("devTicketSaveBtn").textContent = "Create Ticket";
   pickTicketType("bug");
   pickTicketPriority("medium");
@@ -3630,6 +3633,47 @@ if (_tktDropzone) {
   });
 }
 
+const TKT_ATTACH_EXTS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"];
+
+function clearTicketAttachment(e) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  document.getElementById("devTicketAttachFile").value = "";
+  document.getElementById("devTicketAttachEmpty").style.display = "flex";
+  document.getElementById("devTicketAttachPreviewWrap").style.display = "none";
+}
+
+function showTicketAttachFile(file) {
+  if (!file) return;
+  const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
+  if (!TKT_ATTACH_EXTS.includes(ext)) {
+    showToast("Please attach a PDF, Word, or Excel file.");
+    return;
+  }
+  document.getElementById("devTicketAttachName").textContent = file.name;
+  document.getElementById("devTicketAttachEmpty").style.display = "none";
+  document.getElementById("devTicketAttachPreviewWrap").style.display = "flex";
+}
+
+document.getElementById("devTicketAttachFile")?.addEventListener("change", e => {
+  showTicketAttachFile(e.target.files[0]);
+});
+
+const _tktAttachDropzone = document.getElementById("devTicketAttachDropzone");
+if (_tktAttachDropzone) {
+  ["dragenter", "dragover"].forEach(evt => _tktAttachDropzone.addEventListener(evt, e => {
+    e.preventDefault(); _tktAttachDropzone.classList.add("dragover");
+  }));
+  ["dragleave", "drop"].forEach(evt => _tktAttachDropzone.addEventListener(evt, e => {
+    e.preventDefault(); _tktAttachDropzone.classList.remove("dragover");
+  }));
+  _tktAttachDropzone.addEventListener("drop", e => {
+    const file = e.dataTransfer.files[0];
+    if (!file) return;
+    document.getElementById("devTicketAttachFile").files = e.dataTransfer.files;
+    showTicketAttachFile(file);
+  });
+}
+
 async function saveDevTicket() {
   const title = document.getElementById("devTicketTitle").value.trim();
   const description = document.getElementById("devTicketDescription").value.trim();
@@ -3649,6 +3693,21 @@ async function saveDevTicket() {
       screenshot_url = path;
     }
 
+    // Same private bucket as screenshots -- just a different path prefix so
+    // the two kinds of upload never collide. Kept as its own column rather
+    // than overloading screenshot_url since this is offered as a download
+    // link, not rendered inline, and needs the original filename preserved.
+    const attachFile = document.getElementById("devTicketAttachFile").files[0];
+    let attachment_url = null, attachment_name = null;
+    if (attachFile) {
+      const ext  = (attachFile.name.split(".").pop() || "bin").toLowerCase();
+      const path = `tickets/attachments/${Date.now()}.${ext}`;
+      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, attachFile, { upsert:true });
+      if (upErr) throw upErr;
+      attachment_url  = path;
+      attachment_name = attachFile.name;
+    }
+
     const { data: { user } } = await window.sb.auth.getUser();
     const sel = document.getElementById("devTicketAssignee");
     const assignee_id = sel.value || null;
@@ -3665,6 +3724,7 @@ async function saveDevTicket() {
       reporter_email: user?.email || null,
     };
     if (screenshot_url) payload.screenshot_url = screenshot_url;
+    if (attachment_url) { payload.attachment_url = attachment_url; payload.attachment_name = attachment_name; }
 
     const { data: created, error } = await window.sb.from("dev_tickets").insert(payload).select().single();
     if (error) throw error;
@@ -3685,6 +3745,7 @@ async function deleteDevTicket(id) {
   if (!t) return;
   if (!confirm(`Delete ${t.ticket_number}? This also removes its comments and can't be undone.`)) return;
   if (t.screenshot_url) await window.sb.storage.from("dev-note-screenshots").remove([t.screenshot_url]);
+  if (t.attachment_url) await window.sb.storage.from("dev-note-screenshots").remove([t.attachment_url]);
   const { error } = await window.sb.from("dev_tickets").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
   closeTicketDrawer(true);
@@ -3759,6 +3820,7 @@ async function openTicketDrawer(id) {
       <p class="tkt-dr-desc">${escHtml(t.description)}</p>
       ${t.page_url ? `<p class="tkt-dr-meta">Page: <code>${escHtml(t.page_url)}</code></p>` : ""}
       ${t.screenshot_url ? `<div id="tktShot" class="tkt-dr-shot"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
+      ${t.attachment_url ? `<div id="tktAttach" class="tkt-dr-meta">Loading attachment…</div>` : ""}
     </div>
 
     <div class="tkt-dr-section tkt-dr-facts">
@@ -3815,6 +3877,21 @@ async function openTicketDrawer(id) {
       holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Screenshot attached to ${escHtml(t.ticket_number||"ticket")}"></a>`;
     } else if (holder) {
       holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
+    }
+  }
+
+  if (t.attachment_url) {
+    // Signed, not the public getPublicUrl -- this bucket is private (same
+    // one screenshots use), so a plain public URL would 404.
+    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(t.attachment_url, 3600, { download: t.attachment_name || true });
+    const holder = document.getElementById("tktAttach");
+    if (holder && data?.signedUrl) {
+      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener" class="tkt-attach-link">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
+        ${escHtml(t.attachment_name || "Download attachment")}
+      </a>`;
+    } else if (holder) {
+      holder.innerHTML = `<span class="tkt-dr-meta">Attachment unavailable.</span>`;
     }
   }
 
