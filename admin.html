@@ -62,6 +62,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5" rx="1"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
         Inventory
       </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="mix-match">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><path d="M10 6.5h4M6.5 10v4M17.5 10v4M10 17.5h4"/></svg>
+        Mix &amp; Match
+      </a>
 
       <span class="a-nav-section admin-only-nav">Operations</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="orders">
@@ -719,6 +723,68 @@
       </div>
 
     </div><!-- /inventory tab -->
+
+    <!-- ============ MIX & MATCH TAB ============
+         Groups aren't a separate table -- a "group" is just every product
+         that shares the same moq_group text (see the 20260821 migration).
+         This tab is a view over that: each card below is built by grouping
+         products.moq_group client-side, not by querying a groups table. -->
+    <div id="tab-mix-match" class="a-tab" style="display:none">
+
+      <div class="a-toolbar">
+        <p style="font-size:13px;color:#64748b;margin:0;flex:1;min-width:240px">
+          Tag several products with the same group so they pool toward one combined minimum
+          instead of each needing its own — enforced live on the catalog, cart, and checkout.
+        </p>
+        <button class="a-btn-primary" onclick="openMoqGroupModal(null)" style="width:auto">+ New Mix &amp; Match Group</button>
+      </div>
+
+      <div id="moqGroupCards" class="a-card-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px">
+        <div class="a-empty" style="grid-column:1/-1">Loading…</div>
+      </div>
+
+    </div><!-- /mix-match tab -->
+
+    <!-- Mix & Match group editor: create a group, rename its minimum, and
+         pick which products belong to it, all in one place. -->
+    <div id="moqGroupModal" class="a-modal-overlay" style="display:none" onclick="if(event.target===this)this.style.display='none'">
+      <div class="a-modal" style="max-width:640px;width:95vw;max-height:88vh;display:flex;flex-direction:column">
+        <div class="a-modal-header">
+          <h3 id="moqGroupModalTitle">New Mix &amp; Match Group</h3>
+          <button class="a-modal-close" onclick="closeModal('moqGroupModal')">&times;</button>
+        </div>
+        <div style="padding:20px;overflow-y:auto;flex:1">
+          <div class="a-form-col-2">
+            <div class="a-field">
+              <label>Group Tag</label>
+              <input type="text" id="moqGroupNameInput" placeholder="e.g. 5GAL-CHEMICALS">
+            </div>
+            <div class="a-field">
+              <label>Combined Minimum (units)</label>
+              <input type="number" id="moqGroupMinInput" min="1" step="1" placeholder="e.g. 36">
+            </div>
+          </div>
+          <p id="moqGroupModalError" style="display:none;color:#dc2626;font-size:13px;margin:4px 0 0"></p>
+
+          <div style="margin-top:16px">
+            <input type="text" id="moqGroupProductSearch" class="a-search" placeholder="Search products to add…" style="width:100%;margin-bottom:10px" oninput="renderMoqGroupProductPicker()">
+            <div id="moqGroupProductPicker" style="border:1px solid #e2e8f0;border-radius:10px;max-height:320px;overflow-y:auto">
+              <div class="a-empty">Loading…</div>
+            </div>
+            <p style="font-size:12px;color:#94a3b8;margin:8px 2px 0">
+              Check every product that should share this group's minimum. Unchecking a product removes it from the group (it goes back to being ordered independently) — it isn't deleted.
+            </p>
+          </div>
+        </div>
+        <div class="a-modal-footer" style="display:flex;justify-content:space-between;align-items:center">
+          <button id="moqGroupDeleteBtn" class="a-btn-outline" style="width:auto;color:#dc2626;border-color:#fca5a5;display:none" onclick="deleteMoqGroup()">Delete Group</button>
+          <div style="display:flex;gap:10px;margin-left:auto">
+            <button class="a-btn-outline" style="width:auto" onclick="closeModal('moqGroupModal')">Cancel</button>
+            <button class="a-btn-primary" style="width:auto" onclick="saveMoqGroup()">Save Group</button>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- ============ ORDERS TAB ============ -->
     <div id="tab-orders" class="a-tab" style="display:none">
@@ -2291,7 +2357,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=57"></script>
+<script src="admin.js?v=58"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

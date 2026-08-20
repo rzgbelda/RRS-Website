@@ -144,7 +144,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","orders","users","manage-hero","manage-about","settings","seo","best-deals"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals"];
 
 // A developer account is scoped to the ticket board and nothing else -- no
 // products, orders, customers, pricing, or revenue. Allow-list rather than
@@ -265,6 +265,7 @@ function switchTab(tab) {
   });
   document.getElementById("adminPageTitle").textContent =
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
+      "mix-match":"Mix & Match Groups",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
@@ -273,6 +274,7 @@ function switchTab(tab) {
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
   if (tab === "inventory")        renderInventoryTable();
+  if (tab === "mix-match")        renderMixMatchTab();
   if (tab === "orders")           renderOrdersTable();
   if (tab === "users")            renderUsersTable();
   if (tab === "reports")          renderReportsTab();
@@ -590,6 +592,163 @@ async function bulkDelete() {
 
 document.getElementById("productSearch")?.addEventListener("input", e => renderProductsTable(e.target.value.trim()));
 document.getElementById("productCategoryFilter")?.addEventListener("change", () => renderProductsTable(document.getElementById("productSearch")?.value.trim() || ""));
+
+/* ── Mix & Match MOQ Groups ───────────────────────────────────
+   No separate groups table exists (see the 20260821 migration comment) --
+   a "group" is purely products.moq_group values that happen to match. This
+   whole section is a view + bulk-editor over that column pair, so every
+   function here works by reading/writing moq_group / moq_group_min across
+   whichever products are checked, never a group row of its own. */
+
+let _moqEditingGroup = null; // group name being edited, or null while creating a new one
+let _moqAllProducts  = [];   // cached for the picker so search doesn't re-query
+
+async function renderMixMatchTab() {
+  const wrap = document.getElementById("moqGroupCards");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="grid-column:1/-1">Loading…</div>`;
+
+  const { data: products, error } = await window.sb
+    .from("products")
+    .select("id, name, moq_group, moq_group_min")
+    .not("moq_group", "is", null)
+    .eq("is_active", true);
+
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="grid-column:1/-1">Error loading groups: ${escHtml(error.message)}</div>`;
+    return;
+  }
+
+  const groups = {};
+  (products || []).forEach(p => {
+    if (!p.moq_group) return;
+    if (!groups[p.moq_group]) groups[p.moq_group] = { name: p.moq_group, min: Number(p.moq_group_min) || 0, count: 0 };
+    groups[p.moq_group].count++;
+    groups[p.moq_group].min = Math.max(groups[p.moq_group].min, Number(p.moq_group_min) || 0);
+  });
+
+  const list = Object.values(groups).sort((a, b) => a.name.localeCompare(b.name));
+
+  if (!list.length) {
+    wrap.innerHTML = `<div class="a-empty" style="grid-column:1/-1">No Mix &amp; Match groups yet. Click "+ New Mix &amp; Match Group" to tag your first set of products.</div>`;
+    return;
+  }
+
+  wrap.innerHTML = list.map(g => `
+    <div class="a-card" style="padding:16px;cursor:pointer" onclick="openMoqGroupModal('${escHtml(g.name).replace(/'/g, "\\'")}')">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:10px">
+        <strong style="font-size:14px;color:#0d2c50">${escHtml(g.name)}</strong>
+        <span class="a-badge a-badge-orange">MOQ ${g.min}</span>
+      </div>
+      <p style="font-size:13px;color:#64748b;margin:8px 0 0">${g.count} product${g.count === 1 ? "" : "s"} in this group</p>
+    </div>
+  `).join("");
+}
+
+async function openMoqGroupModal(groupName) {
+  _moqEditingGroup = groupName;
+  document.getElementById("moqGroupModalTitle").textContent = groupName ? "Edit Mix & Match Group" : "New Mix & Match Group";
+  document.getElementById("moqGroupNameInput").value = groupName || "";
+  document.getElementById("moqGroupNameInput").disabled = !!groupName; // renaming a group is a delete+recreate, not a rename
+  document.getElementById("moqGroupModalError").style.display = "none";
+  document.getElementById("moqGroupProductSearch").value = "";
+  document.getElementById("moqGroupDeleteBtn").style.display = groupName ? "" : "none";
+
+  const { data: products } = await window.sb
+    .from("products")
+    .select("id, name, sku, moq_group, moq_group_min")
+    .eq("is_active", true)
+    .order("name");
+  _moqAllProducts = products || [];
+
+  const current = groupName ? _moqAllProducts.find(p => p.moq_group === groupName) : null;
+  document.getElementById("moqGroupMinInput").value = current ? current.moq_group_min : "";
+
+  renderMoqGroupProductPicker();
+  openModal("moqGroupModal");
+}
+
+function renderMoqGroupProductPicker() {
+  const el = document.getElementById("moqGroupProductPicker");
+  if (!el) return;
+  const filter = (document.getElementById("moqGroupProductSearch")?.value || "").trim().toLowerCase();
+
+  const rows = _moqAllProducts.filter(p => !filter || p.name.toLowerCase().includes(filter) || (p.sku || "").toLowerCase().includes(filter));
+  if (!rows.length) { el.innerHTML = `<div class="a-empty">No products match.</div>`; return; }
+
+  el.innerHTML = rows.map(p => {
+    const inThisGroup  = _moqEditingGroup && p.moq_group === _moqEditingGroup;
+    const inOtherGroup = p.moq_group && p.moq_group !== _moqEditingGroup;
+    return `
+      <label style="display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid #f1f5f9;font-size:13px;cursor:${inOtherGroup ? "not-allowed" : "pointer"};${inOtherGroup ? "opacity:.5" : ""}">
+        <input type="checkbox" class="moq-product-cb" data-id="${p.id}" ${inThisGroup ? "checked" : ""} ${inOtherGroup ? "disabled" : ""} style="width:15px;height:15px;accent-color:#ED7226">
+        <span style="flex:1">${escHtml(p.name)}${p.sku ? ` <span style="color:#aaa">— ${escHtml(p.sku)}</span>` : ""}</span>
+        ${inOtherGroup ? `<span class="a-badge a-badge-gray" title="Already in another Mix & Match group">In "${escHtml(p.moq_group)}"</span>` : ""}
+      </label>`;
+  }).join("");
+}
+
+async function saveMoqGroup() {
+  const errEl = document.getElementById("moqGroupModalError");
+  const name  = (document.getElementById("moqGroupNameInput")?.value || "").trim();
+  const min   = parseInt(document.getElementById("moqGroupMinInput")?.value) || 0;
+
+  if (!name)     { errEl.textContent = "Enter a group tag.";      errEl.style.display = "block"; return; }
+  if (!(min > 0)) { errEl.textContent = "Enter a combined minimum greater than 0."; errEl.style.display = "block"; return; }
+
+  // Creating a new group under a name that already exists would silently
+  // merge the two -- reject it instead, same as the CSV importer's
+  // duplicate-SKU guard elsewhere in this file.
+  if (!_moqEditingGroup && _moqAllProducts.some(p => p.moq_group === name)) {
+    errEl.textContent = `A group named "${name}" already exists. Edit it from the Mix & Match tab instead.`;
+    errEl.style.display = "block";
+    return;
+  }
+
+  const checkedIds = [...document.querySelectorAll(".moq-product-cb:checked")].map(cb => cb.dataset.id);
+  if (!checkedIds.length) { errEl.textContent = "Select at least one product for this group."; errEl.style.display = "block"; return; }
+
+  errEl.style.display = "none";
+
+  // Everyone checked gets this group + minimum...
+  const { error: addErr } = await window.sb
+    .from("products")
+    .update({ moq_group: name, moq_group_min: min, updated_at: new Date().toISOString() })
+    .in("id", checkedIds);
+  if (addErr) { errEl.textContent = "Error: " + addErr.message; errEl.style.display = "block"; return; }
+
+  // ...and anyone who WAS in this group but got unchecked is released back
+  // to being an independent product, not left half-configured.
+  if (_moqEditingGroup) {
+    const removedIds = _moqAllProducts
+      .filter(p => p.moq_group === _moqEditingGroup && !checkedIds.includes(p.id))
+      .map(p => p.id);
+    if (removedIds.length) {
+      await window.sb.from("products")
+        .update({ moq_group: null, moq_group_min: null, updated_at: new Date().toISOString() })
+        .in("id", removedIds);
+    }
+  }
+
+  closeModal("moqGroupModal");
+  showToast(_moqEditingGroup ? "Group updated." : "Group created.");
+  renderMixMatchTab();
+}
+
+async function deleteMoqGroup() {
+  if (!_moqEditingGroup) return;
+  if (!confirm(`Delete the "${_moqEditingGroup}" group? Every product in it goes back to being ordered independently — nothing is deleted, just un-grouped.`)) return;
+
+  const { error } = await window.sb
+    .from("products")
+    .update({ moq_group: null, moq_group_min: null, updated_at: new Date().toISOString() })
+    .eq("moq_group", _moqEditingGroup);
+
+  if (error) { alert("Error: " + error.message); return; }
+  closeModal("moqGroupModal");
+  showToast("Group deleted.");
+  renderMixMatchTab();
+}
 
 /* ── Product Modal ─────────────────────────────────────────── */
 
