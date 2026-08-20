@@ -147,6 +147,14 @@ function mapDbProductToLegacyShape(row) {
     // case or each; dozen-sold products carry a real minimum (50 dz for
     // economy wash cloths, 2 dz for most linens) that the cart enforces.
     moq: Number(row.moq) || 1,
+    // Mix & Match group: several otherwise-independent products (e.g. 19
+    // 5-gallon chemical SKUs) can share a moqGroup tag and pool toward one
+    // combined moqGroupMin instead of each carrying its own minimum. Empty
+    // string (not null) so downstream `if (item.moqGroup)` checks and
+    // JSON.stringify round-trips through cart storage behave the same way
+    // every other optional string field on this object already does.
+    moqGroup: row.moq_group || "",
+    moqGroupMin: row.moq_group_min != null ? Number(row.moq_group_min) : 0,
     weight: row.weight != null ? String(row.weight) : "",
     length: row.length != null ? String(row.length) : "",
     width: row.width != null ? String(row.width) : "",
@@ -200,10 +208,11 @@ function saveCart(cart) {
 }
 
 function updateCartBadge() {
+  const cart = getCart();
+  updateMoqGroupBar(cart);
+
   const cartCount = document.getElementById("cart-count");
   if (!cartCount) return;
-
-  const cart = getCart();
 
   const totalItems = cart.reduce((total, item) => {
     return total + (Number(item.quantity) || 1);
@@ -211,6 +220,43 @@ function updateCartBadge() {
 
   cartCount.textContent = totalItems;
   cartCount.style.display = totalItems > 0 ? "flex" : "none";
+}
+
+// Floating bottom bar showing live progress toward any Mix & Match group's
+// combined minimum -- only appears once the cart actually holds an item
+// from a grouped product, and lists every such group at once (a cart can
+// hold items from more than one Mix & Match group simultaneously). Built
+// lazily so pages that never touch a grouped product (most of the site)
+// never pay for it.
+function updateMoqGroupBar(cart) {
+  const groups = cartMoqGroupTotals(cart || getCart());
+  let bar = document.getElementById("moqGroupBar");
+
+  if (!groups.length) {
+    if (bar) bar.style.display = "none";
+    return;
+  }
+
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "moqGroupBar";
+    bar.className = "moq-group-bar";
+    document.body.appendChild(bar);
+  }
+
+  bar.innerHTML = groups.map(g => {
+    const met = g.min > 0 && g.have >= g.min;
+    const pct = g.min > 0 ? Math.min(100, Math.round((g.have / g.min) * 100)) : 100;
+    return `
+      <div class="moq-group-bar-row${met ? " met" : ""}">
+        <div class="moq-group-bar-label">
+          <strong>${g.group}</strong> Mix &amp; Match
+          <span>${g.have} / ${g.min} units${met ? " — minimum met" : ""}</span>
+        </div>
+        <div class="moq-group-bar-track"><div class="moq-group-bar-fill" style="width:${pct}%"></div></div>
+      </div>`;
+  }).join("");
+  bar.style.display = "flex";
 }
 
 function cleanPrice(price) {
@@ -268,17 +314,27 @@ function enforceCartMinimums(cart) {
     return (Number(i.quantity) || 0) < productMoq(i);
   });
 
+  const groupShortfalls = cartMoqGroupShortfalls(cart);
+
   if (warn) {
-    warn.style.display = below.length ? "" : "none";
-    if (below.length) {
-      warn.innerHTML = below.length === 1
-        ? `<strong>${below[0].name}</strong> has a minimum order of ${productMoq(below[0])} dozen. Please increase the quantity to continue.`
-        : `${below.length} items are below their minimum order quantity. Please increase them to continue:<br>` +
-          below.map(i => `&bull; ${i.name} &mdash; minimum ${productMoq(i)} dozen`).join("<br>");
+    const hasAny = below.length || groupShortfalls.length;
+    warn.style.display = hasAny ? "" : "none";
+    if (hasAny) {
+      const lines = [];
+      if (below.length) {
+        lines.push(below.length === 1
+          ? `<strong>${below[0].name}</strong> has a minimum order of ${productMoq(below[0])} dozen. Please increase the quantity to continue.`
+          : `${below.length} items are below their minimum order quantity:<br>` +
+            below.map(i => `&bull; ${i.name} &mdash; minimum ${productMoq(i)} dozen`).join("<br>"));
+      }
+      groupShortfalls.forEach(g => {
+        lines.push(`<strong>${g.group}</strong> Mix &amp; Match minimum not met: need ${g.min} combined units, cart has ${g.have}. Add ${g.min - g.have} more from this group to continue.`);
+      });
+      warn.innerHTML = lines.join("<br>");
     }
   }
   if (btn) {
-    if (below.length) {
+    if (below.length || groupShortfalls.length) {
       btn.setAttribute("aria-disabled", "true");
       btn.style.pointerEvents = "none";
       btn.style.opacity = ".55";
@@ -289,6 +345,29 @@ function enforceCartMinimums(cart) {
     }
   }
   return below;
+}
+
+// Combined quantity in the cart for every Mix & Match group represented
+// there, regardless of how many distinct SKUs from that group are present --
+// this is the whole point of the feature: 19 different 5-gallon chemical
+// SKUs sharing one 36-unit minimum instead of each needing its own.
+function cartMoqGroupTotals(cart) {
+  const totals = {};
+  (cart || []).forEach(i => {
+    if (!i.moqGroup) return;
+    const key = i.moqGroup;
+    if (!totals[key]) totals[key] = { group: key, min: Number(i.moqGroupMin) || 0, have: 0 };
+    totals[key].have += Number(i.quantity) || 0;
+    // Every row tagged into the same group is expected to carry the same
+    // minimum (enforced at data-entry time in admin.js); if they somehow
+    // disagree, use the largest so the requirement is never under-enforced.
+    totals[key].min = Math.max(totals[key].min, Number(i.moqGroupMin) || 0);
+  });
+  return Object.values(totals);
+}
+
+function cartMoqGroupShortfalls(cart) {
+  return cartMoqGroupTotals(cart).filter(g => g.min > 0 && g.have < g.min);
 }
 
 function getTierPrice(item) {
@@ -424,6 +503,7 @@ function renderSingleCard(product) {
   return `
     <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
+        ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
         <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
@@ -455,6 +535,8 @@ function renderSingleCard(product) {
             data-price3="${cleanPrice(product.price3)}"
             data-unit="${product.priceBy || ''}"
             data-moq="${productMoq(product)}"
+            data-moq-group="${product.moqGroup || ''}"
+            data-moq-group-min="${product.moqGroupMin || ''}"
             data-image="${product.image}"
           >
             Add to Order
@@ -564,6 +646,8 @@ function renderVariantCard(variants) {
             data-price3="${cleanPrice(v.price3)}"
             data-unit="${v.priceBy || ''}"
             data-moq="${productMoq(v)}"
+            data-moq-group="${v.moqGroup || ''}"
+            data-moq-group-min="${v.moqGroupMin || ''}"
             data-image="${v.image}"
           >
             Add to Order
@@ -1171,6 +1255,8 @@ function populateProductPage(product) {
     // minimum, and so getTierPrice() knows not to apply case volume tiers.
     addBtn.dataset.unit        = product.priceBy || "";
     addBtn.dataset.moq         = productMoq(product);
+    addBtn.dataset.moqGroup    = product.moqGroup || "";
+    addBtn.dataset.moqGroupMin = product.moqGroupMin || "";
   }
 
   // Dozen-sold products cannot be bought below their minimum, so the
@@ -1347,6 +1433,8 @@ function setupAddToCartButtons() {
         // having to look the product up again.
         unit: button.dataset.unit || "",
         moq: itemMoq,
+        moqGroup: button.dataset.moqGroup || "",
+        moqGroupMin: Number(button.dataset.moqGroupMin) || 0,
         quantity: quantity
       };
 
@@ -2350,6 +2438,7 @@ function showFeaturedProducts() {
       <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
 
         <div class="product-image">
+          ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
           <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
         </div>
 
@@ -2389,6 +2478,8 @@ function showFeaturedProducts() {
           data-price3="${cleanPrice(product.price3)}"
           data-unit="${product.priceBy || ''}"
           data-moq="${productMoq(product)}"
+          data-moq-group="${product.moqGroup || ''}"
+          data-moq-group-min="${product.moqGroupMin || ''}"
           data-image="${product.image}"
         >
           <img src="assets/img/Cart.png" alt="">

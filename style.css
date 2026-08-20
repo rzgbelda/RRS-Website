@@ -2609,6 +2609,7 @@ textarea:focus {
 }
 
 .product-image {
+  position: relative;
   height: 210px;
   display: flex;
   align-items: center;
@@ -2620,6 +2621,92 @@ textarea:focus {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+/* Flags a product that only counts toward checkout once combined with
+   others sharing its Mix & Match group -- see cartMoqGroupTotals() in
+   script.js for the enforcement this promises. */
+.moq-group-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  background: #0d2c50;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(13,44,80,.3);
+}
+
+/* Live progress toward any Mix & Match group's combined minimum, injected
+   by updateMoqGroupBar() (script.js) the moment the cart holds a grouped
+   item, on any page -- catalog, product, cart, checkout alike. */
+.moq-group-bar {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 9400;
+  width: min(92vw, 480px);
+  background: #0d2c50;
+  color: #fff;
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.28);
+}
+
+.moq-group-bar-row + .moq-group-bar-row {
+  border-top: 1px solid rgba(255,255,255,.15);
+  padding-top: 10px;
+}
+
+.moq-group-bar-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 12.5px;
+  margin-bottom: 6px;
+}
+
+.moq-group-bar-label strong {
+  text-transform: uppercase;
+  letter-spacing: .02em;
+}
+
+.moq-group-bar-label span {
+  color: #cfe0f5;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.moq-group-bar-row.met .moq-group-bar-label span { color: #7ee2a8; }
+
+.moq-group-bar-track {
+  height: 7px;
+  border-radius: 99px;
+  background: rgba(255,255,255,.18);
+  overflow: hidden;
+}
+
+.moq-group-bar-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: #ED7226;
+  transition: width .3s ease;
+}
+
+.moq-group-bar-row.met .moq-group-bar-fill { background: #22c55e; }
+
+@media (max-width: 600px) {
+  .moq-group-bar { bottom: 12px; padding: 12px 14px; }
 }
 
 .product-content {

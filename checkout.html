@@ -410,6 +410,22 @@ function saveCheckoutAndProceed() {
   if (!data.business) { alert('Please enter your business name.'); return; }
   if (!data.phone)    { alert('Please enter your phone number.'); return; }
   if (fulfillmentMethod === 'ship' && !data.street) { alert('Please enter your delivery address.'); return; }
+
+  // Cart persists in localStorage across visits, and a Mix & Match minimum
+  // can change (or a group member can be removed) after items were added,
+  // so this has to be re-checked here rather than trusted from the cart
+  // page alone -- the same reasoning enforceCartMinimums already applies
+  // to dozen-sold minimums.
+  if (typeof cartMoqGroupShortfalls === 'function') {
+    const shortfalls = cartMoqGroupShortfalls(getCart());
+    if (shortfalls.length) {
+      alert(shortfalls.map(g =>
+        `${g.group} MOQ not met: Required ${g.min} combined units, cart has ${g.have}. Add ${g.min - g.have} more from this group before checking out.`
+      ).join('\n'));
+      return;
+    }
+  }
+
   localStorage.setItem('rrs_checkout_data', JSON.stringify(data));
   window.location.href = 'payment.html';
 }

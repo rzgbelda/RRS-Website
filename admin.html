@@ -515,10 +515,13 @@
                   <span class="csv-pill" title="Inches">height</span>
                   <span class="csv-pill">stock_qty</span>
                   <span class="csv-pill">stock_status</span>
+                  <span class="csv-pill" title="Products sharing the same moq_group text pool toward one combined moq_group_min. Leave both blank for a normal product.">moq_group</span>
+                  <span class="csv-pill" title="Combined-unit minimum across every product sharing this moq_group. Leave both blank for a normal product.">moq_group_min</span>
                 </div>
                 <p style="font-size:11px;color:#94a3b8;margin:8px 2px 0">
                   price_tier1/2/3 = Price at 1&ndash;5 / 6&ndash;29 / 30+ cases. Optional &mdash; leave all three blank for one flat price at any quantity.<br>
-                  weight is in lbs; length/width/height are in inches. All four optional.
+                  weight is in lbs; length/width/height are in inches. All four optional.<br>
+                  moq_group/moq_group_min: tag several products with the same moq_group text and moq_group_min number to require a combined minimum across all of them (Mix &amp; Match). Leave both blank for a normal, independently-orderable product.
                 </p>
               </div>
 
@@ -1930,6 +1933,23 @@
           </div>
         </div>
 
+        <!-- Row 4d: Mix & Match MOQ group -- tagging a product into a named
+             group (e.g. "5GAL-CHEMICALS") pools it with every other product
+             sharing that tag toward one combined minimum, enforced on the
+             catalog, cart, and checkout. Leave both blank for a normal,
+             independently-orderable product. -->
+        <div class="a-form-col-3">
+          <div class="a-field">
+            <label>Mix &amp; Match Group</label>
+            <input type="text" id="prodMoqGroup" placeholder="e.g. 5GAL-CHEMICALS" />
+            <small style="color:#94a3b8;font-size:11px">Same tag on multiple products pools them toward one minimum.</small>
+          </div>
+          <div class="a-field">
+            <label>Group Minimum (combined units)</label>
+            <input type="number" id="prodMoqGroupMin" placeholder="e.g. 36" min="1" step="1" />
+          </div>
+        </div>
+
         <!-- Row 5: Unit + Case Qty + Pack Size + Stock Qty + Stock Status -->
         <div class="a-form-col-3">
           <div class="a-field">
@@ -2041,6 +2061,8 @@
             <div><code>image_url</code></div>
             <div><code>stock_qty</code></div>
             <div><code>stock_status</code> <span class="csv-hint">in_stock/low_stock/out_of_stock</span></div>
+            <div><code>moq_group</code> <span class="csv-hint">Mix &amp; Match tag</span></div>
+            <div><code>moq_group_min</code> <span class="csv-hint">combined minimum</span></div>
           </div>
         </div>
       </div>
@@ -2269,7 +2291,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=55"></script>
+<script src="admin.js?v=56"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

@@ -729,6 +729,8 @@ async function openEditProduct(id) {
   setVal("prodPrice3",     p.price_tier3    || "");
   setVal("prodSalePrice",  p.sale_price     || "");
   setVal("prodRetailPrice",p.retail_price   || "");
+  setVal("prodMoqGroup",    p.moq_group     || "");
+  setVal("prodMoqGroupMin", p.moq_group_min || "");
   setVal("prodUnit",       p.unit           || "Case");
   setVal("prodCaseQty",    p.case_qty       || 1);
   setVal("prodPackSize",   p.pack_size      || 1);
@@ -795,6 +797,14 @@ async function saveProduct() {
 
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
+  // A group tag with no minimum (or a minimum with no tag) would silently
+  // pool the product into a group with an unenforceable threshold -- treat
+  // the pair as all-or-nothing rather than saving a half-configured group.
+  const moqGroupRaw = (document.getElementById("prodMoqGroup")?.value || "").trim();
+  const moqGroupMinRaw = parseInt(document.getElementById("prodMoqGroupMin")?.value) || null;
+  const moqGroup = moqGroupRaw && moqGroupMinRaw ? moqGroupRaw : null;
+  const moqGroupMin = moqGroupRaw && moqGroupMinRaw ? moqGroupMinRaw : null;
+
   const payload = {
     name,
     slug,
@@ -811,6 +821,8 @@ async function saveProduct() {
     sale_price    : isOnSale ? spRaw : null,
     is_on_sale    : isOnSale,
     retail_price  : parseFloat(document.getElementById("prodRetailPrice")?.value) || null,
+    moq_group     : moqGroup,
+    moq_group_min : moqGroupMin,
     unit          : document.getElementById("prodUnit")?.value || "Case",
     case_qty      : parseInt(document.getElementById("prodCaseQty")?.value) || 1,
     pack_size     : parseInt(document.getElementById("prodPackSize")?.value) || 1,
@@ -891,6 +903,8 @@ const CVT_COLS = [
   { key:"height",        label:"Height (in)" },
   { key:"stock_qty",     label:"Stock Qty" },
   { key:"stock_status",  label:"Stock Status" },
+  { key:"moq_group",     label:"Mix & Match Group" },
+  { key:"moq_group_min", label:"Mix & Match Group Minimum" },
 ];
 
 let _cvtSourceCols = [];
@@ -1012,6 +1026,8 @@ function cvtAutoMap(cols) {
     height:        ["height","heightin","itemheight"],
     stock_qty:     ["stockqty","stock","quantity","qty","inventory","onhand","stockcount"],
     stock_status:  ["stockstatus","availability","instock","availabilitystatus"],
+    moq_group:     ["moqgroup","mixmatchgroup","mixandmatchgroup","moqtag"],
+    moq_group_min: ["moqgroupmin","moqminimum","mixmatchminimum","moqgroupminimum","combinedminimum"],
   };
   for (const col of cols) {
     const n = norm(col);
@@ -1366,6 +1382,7 @@ function renderCsvPreview(rows) {
       ["feature3", "Feature 3"], ["feature4", "Feature 4"], ["sale_price", "Sale Price"],
       ["retail_price", "Retail Price"], ["price_tier1", "Tier Pricing"],
       ["weight", "Weight"], ["length", "Dimensions"],
+      ["moq_group", "Mix & Match Group"],
     ];
     const seen = new Set();
     const detected = OPTIONAL_COLS.filter(([key, label]) => {
@@ -1473,6 +1490,7 @@ async function runCsvImport() {
     const lengthInfo = parseNumCell(r.length);
     const widthInfo  = parseNumCell(r.width);
     const heightInfo = parseNumCell(r.height);
+    const moqMinInfo = parseNumCell(r.moq_group_min);
     // A blank price cell used to silently import at $0.00 -- price is
     // required (unlike sale_price/retail_price, where blank legitimately
     // means "no sale" / "no retail comparison set"), so treat a missing
@@ -1489,7 +1507,8 @@ async function runCsvImport() {
       retailInfo.invalid ? "retail_price" : tier1Info.invalid  ? "price_tier1"  :
       tier2Info.invalid  ? "price_tier2"  : tier3Info.invalid  ? "price_tier3"  :
       weightInfo.invalid ? "weight"       : lengthInfo.invalid ? "length"       :
-      widthInfo.invalid  ? "width"        : heightInfo.invalid ? "height"       : null;
+      widthInfo.invalid  ? "width"        : heightInfo.invalid ? "height"       :
+      moqMinInfo.invalid ? "moq_group_min" : null;
     if (badField) {
       invalidValueCount++;
       errLines.push(`"${r.name}": ${badField} "${r[badField]}" is not a valid number — row skipped, nothing imported for it.`);
@@ -1567,6 +1586,10 @@ async function runCsvImport() {
     length       : parseNumCell(r.length).empty ? null : parseNumCell(r.length).value,
     width        : parseNumCell(r.width).empty  ? null : parseNumCell(r.width).value,
     height       : parseNumCell(r.height).empty ? null : parseNumCell(r.height).value,
+    // Same all-or-nothing rule as the single-product editor: a group tag
+    // with no minimum (or vice versa) can't be enforced, so it doesn't count.
+    moq_group     : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? r.moq_group.trim() : null,
+    moq_group_min : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? parseInt(r.moq_group_min) : null,
     updated_at   : now,
   });
 
@@ -1662,7 +1685,8 @@ function downloadCsvTemplate() {
       "category_name","case_qty","pack_size","unit",
       "is_featured","is_active","image_url",
       "weight","length","width","height",
-      "stock_qty","stock_status"
+      "stock_qty","stock_status",
+      "moq_group","moq_group_min"
     ].map(q),
 
     /* ── Example 1: basic product, with real volume tiers -- price_tier1/2/3
@@ -1681,7 +1705,8 @@ function downloadCsvTemplate() {
       q("Towels and Linens"), n(12), n(1), q("Case"),
       b(false), b(true), q(""),
       n(28), n(18), n(14), n(6),
-      n(100), q("in_stock")
+      n(100), q("in_stock"),
+      q(""), n("")
     ],
 
     /* ── Example 2: sale product, featured, no tiers (flat price at any qty) ── */
@@ -1692,7 +1717,8 @@ function downloadCsvTemplate() {
       q("Hand Soap"), n(6), n(1), q("Case"),
       b(true), b(true), q(""),
       n(""), n(""), n(""), n(""),
-      n(50), q("in_stock")
+      n(50), q("in_stock"),
+      q(""), n("")
     ],
 
     /* ── Example 3: low stock ── */
@@ -1703,7 +1729,8 @@ function downloadCsvTemplate() {
       q("Paper Towels"), n(12), n(150), q("Case"),
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
-      n(8), q("low_stock")
+      n(8), q("low_stock"),
+      q(""), n("")
     ],
 
     /* ── Example 4: out of stock, inactive ── */
@@ -1714,7 +1741,8 @@ function downloadCsvTemplate() {
       q("Trash Liners"), n(100), n(1), q("Case"),
       b(false), b(false), q(""),
       n(35), n(20), n(16), n(10),
-      n(0), q("out_of_stock")
+      n(0), q("out_of_stock"),
+      q(""), n("")
     ],
 
     /* ── Example 5: pack unit ── */
@@ -1725,7 +1753,33 @@ function downloadCsvTemplate() {
       q("Facility Supplies"), n(1), n(1), q("EA"),
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
-      n(25), q("in_stock")
+      n(25), q("in_stock"),
+      q(""), n("")
+    ],
+
+    /* ── Examples 6-7: Mix & Match MOQ group -- two products that share a
+       moq_group tag pool toward one combined moq_group_min, instead of each
+       needing its own case minimum. Every product meant to share a minimum
+       needs the exact same moq_group text and the same moq_group_min. ── */
+    [
+      q("5-Gallon Laundry Detergent - Blue"), q("SKU-006"), q("Commercial liquid laundry detergent, 5-gallon pail"),
+      q(""), q(""), q(""), q(""), q(""),
+      n(89.00), n(""), n(""), n(""), n(""), n(""), b(false),
+      q("Laundry & Cleaning Chemicals"), n(1), n(1), q("Pail"),
+      b(false), b(true), q(""),
+      n(""), n(""), n(""), n(""),
+      n(40), q("in_stock"),
+      q("5GAL-CHEMICALS"), n(36)
+    ],
+    [
+      q("5-Gallon Laundry Detergent - Oxi"), q("SKU-007"), q("Commercial liquid laundry detergent with oxi boost, 5-gallon pail"),
+      q(""), q(""), q(""), q(""), q(""),
+      n(92.00), n(""), n(""), n(""), n(""), n(""), b(false),
+      q("Laundry & Cleaning Chemicals"), n(1), n(1), q("Pail"),
+      b(false), b(true), q(""),
+      n(""), n(""), n(""), n(""),
+      n(40), q("in_stock"),
+      q("5GAL-CHEMICALS"), n(36)
     ],
   ];
 

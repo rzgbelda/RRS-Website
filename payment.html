@@ -665,6 +665,22 @@
         return;
       }
 
+      // Last checkpoint before a card is actually charged (the card branch
+      // below charges it inside a .then(), too late to still say no) --
+      // re-check Mix & Match minimums here even though checkout.html
+      // already gated on the same thing, since this page can be reached
+      // directly (back button, bookmark) without passing through that gate.
+      if (typeof cartMoqGroupShortfalls === 'function') {
+        var moqShortfalls = cartMoqGroupShortfalls(cartItems);
+        if (moqShortfalls.length) {
+          errEl.textContent = moqShortfalls.map(function (g) {
+            return g.group + ' MOQ not met: Required ' + g.min + ' combined units, cart has ' + g.have + '.';
+          }).join(' ');
+          errEl.style.display = 'block';
+          return;
+        }
+      }
+
       if (method === 'invoice' || method === 'po') {
         btn.disabled = true;
         document.getElementById('submitBtnText').style.display = 'none';
