@@ -502,9 +502,11 @@ async function renderProductsTable(filter) {
   // dead rows from an old seed -- they read as duplicates of real products
   // at stale prices, which is exactly how they were reported.
   const showHidden = document.getElementById("showHiddenProducts")?.checked;
+  const category = document.getElementById("productCategoryFilter")?.value || "";
   let q = window.sb.from("products").select("*, inventory(stock_qty, status)").order("name");
   if (!showHidden) q = q.eq("is_active", true);
   if (filter) q = q.ilike("name", `%${filter}%`);
+  if (category) q = q.eq("category_name", category);
   const { data: products } = await q;
 
   tbody.innerHTML = (products || []).map(p => {
@@ -587,6 +589,7 @@ async function bulkDelete() {
 }
 
 document.getElementById("productSearch")?.addEventListener("input", e => renderProductsTable(e.target.value.trim()));
+document.getElementById("productCategoryFilter")?.addEventListener("change", () => renderProductsTable(document.getElementById("productSearch")?.value.trim() || ""));
 
 /* ── Product Modal ─────────────────────────────────────────── */
 
