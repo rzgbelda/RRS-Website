@@ -4065,19 +4065,27 @@ async function openTicketDrawer(id) {
     <div class="tkt-dr-section">
       <h4>Activity <span class="tkt-cnt">${(comments||[]).length}</span></h4>
       <div class="tkt-thread">
-        ${(comments||[]).map(c => `
-          <div class="tkt-comment">
+        ${(comments||[]).map(c => {
+          const canManage = tktIsAdmin() || c.author_email === window._adminUserEmail;
+          return `
+          <div class="tkt-comment" data-comment-id="${c.id}">
             ${tktAvatar(c.author_email, 30)}
             <div class="tkt-comment-body">
               <div class="tkt-comment-head">
                 <strong>${escHtml(c.author_email || "Unknown")}</strong>
                 ${c.author_role ? `<span class="tkt-role-tag">${escHtml(c.author_role)}</span>` : ""}
-                <span class="tkt-comment-time">${timeAgo(c.created_at)}</span>
+                <span class="tkt-comment-time">${timeAgo(c.created_at)}${c.edited_at ? " · edited" : ""}</span>
+                ${canManage ? `
+                  <span class="tkt-comment-actions">
+                    <button type="button" onclick="startEditTicketComment('${c.id}')" title="Edit">Edit</button>
+                    <button type="button" onclick="deleteTicketComment('${c.id}','${t.id}')" title="Delete">Delete</button>
+                  </span>` : ""}
               </div>
-              <p>${escHtml(c.body)}</p>
+              <p class="tkt-comment-text">${escHtml(c.body)}</p>
               ${c.screenshot_url ? `<div class="tkt-comment-shot" id="tktCommentShot-${c.id}"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
             </div>
-          </div>`).join("") || `<p class="tkt-dr-meta">No comments yet.</p>`}
+          </div>`;
+        }).join("") || `<p class="tkt-dr-meta">No comments yet.</p>`}
       </div>
 
       <div class="tkt-composer">
@@ -4196,6 +4204,57 @@ async function setTicketAssignee(id, sel) {
   renderTicketBoard();
   showToast(assignee_email ? "Assigned to " + assignee_email : "Unassigned.");
   if (t && assignee_email) notifyTicketEvent(t, "assigned", "You have been assigned this ticket.");
+}
+
+/* ── Edit / delete a ticket comment ─────────────────────────────
+   Gated the same way in the template above and here: the comment's own
+   author, or an admin (tktIsAdmin()) -- a regular developer account
+   can't edit/delete someone else's comment, but staff can moderate. */
+
+function startEditTicketComment(commentId) {
+  const wrap = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-text`);
+  if (!wrap) return;
+  const original = wrap.textContent;
+  wrap.dataset.original = original;
+  wrap.outerHTML = `
+    <div class="tkt-comment-text" data-comment-id="${commentId}">
+      <textarea class="a-input tkt-comment-edit-box" rows="3" style="resize:vertical;margin-bottom:6px">${escHtml(original)}</textarea>
+      <div style="display:flex;gap:8px">
+        <button class="a-btn-primary" style="width:auto;padding:5px 12px;font-size:12px" onclick="saveEditTicketComment('${commentId}')">Save</button>
+        <button class="a-btn-outline" style="width:auto;padding:5px 12px;font-size:12px" onclick="cancelEditTicketComment('${commentId}','${escHtml(original).replace(/'/g, "\\'")}')">Cancel</button>
+      </div>
+    </div>`;
+}
+
+function cancelEditTicketComment(commentId, original) {
+  const wrap = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-text`);
+  if (wrap) wrap.outerHTML = `<p class="tkt-comment-text">${escHtml(original)}</p>`;
+}
+
+async function saveEditTicketComment(commentId) {
+  const box = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-edit-box`);
+  const body = box?.value.trim();
+  if (!body) { showToast("Comment can't be empty."); return; }
+
+  const { error } = await window.sb.from("dev_ticket_comments")
+    .update({ body, edited_at: new Date().toISOString() })
+    .eq("id", commentId);
+  if (error) { showToast("Couldn't save: " + error.message); return; }
+
+  const wrap = box.closest(".tkt-comment-text");
+  if (wrap) wrap.outerHTML = `<p class="tkt-comment-text">${escHtml(body)}</p>`;
+  const timeEl = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-time`);
+  if (timeEl && !timeEl.textContent.includes("edited")) timeEl.textContent += " · edited";
+}
+
+async function deleteTicketComment(commentId, ticketId) {
+  if (!confirm("Delete this comment? This cannot be undone.")) return;
+  const { error } = await window.sb.from("dev_ticket_comments").delete().eq("id", commentId);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  showToast("Comment deleted.");
+  _tkt.comments[ticketId] = Math.max(0, (_tkt.comments[ticketId] || 1) - 1);
+  await openTicketDrawer(ticketId);
+  renderTicketBoard();
 }
 
 async function addTicketComment(ticketId) {
