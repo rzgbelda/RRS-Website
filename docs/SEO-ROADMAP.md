@@ -1,6 +1,6 @@
 # Room Ready Supply — SEO Roadmap
 
-Days 1–9 shipped real, measurable work — GA4, category pages, structured data, title fixes. No plan document survived from that work (only git commit messages), which is exactly the problem this file exists to prevent going forward. Update this file as days are completed instead of letting the record live only in commit history.
+Days 1–9 shipped real, measurable work — GA4, category pages, structured data, title fixes. A "30-day plan" is referenced in the Day 6 report as having existed at the time, but it could not be located when this file was written (confirmed lost, not just unsearched) — only git commit messages and one recovered day-report survived. That's exactly the problem this file exists to prevent going forward. Update this file as days are completed instead of letting the record live only in commit history.
 
 ## Where Days 1–9 actually left off
 
@@ -9,10 +9,13 @@ Reconstructed from git log, not a surviving plan doc:
 - **Day 3** — GA4 installed (`G-69R8R75Q3Y`), orders/quote_requests tracked as conversions
 - **Day 4** — Category landing pages, real taxonomy, internal linking
 - **Day 5** — Noindex on private pages, shorter category titles, `tools/seo-audit.js` created
+- **Day 6** — Server-rendered product page meta tags (title/description/OG image), fixing all 120 product pages that were sending search engines and link-preview crawlers an identical blank listing. Also fixed a duplicate-size bug in product titles ("22×44 Economy 22×44 Bath Towels"). Confirmed via a real report (`RRS-SEO-Day6-Report.html`, dated 11 Aug 2026) — the commit just wasn't labeled "SEO Day 6:" in git the way Days 5/7/8/9 were, which is why it didn't show up in the initial git-log reconstruction below.
 - **Day 7** — FAQ content + FAQPage schema on all 8 (now 9) category pages
 - **Day 8** — Server-rendered Product + BreadcrumbList JSON-LD
 - **Day 9** — Product page titles shortened under Google's 60-char limit
-- **Day 1–2, 6** — No trace in git history. Rather than invent fake retroactive work, Day 10 below absorbs the one real gap the audit found and the plan continues cleanly from there.
+- **Day 1–2** — No trace in git history or a surviving report. Likely pre-tooling setup (GA4 account creation, initial planning) that predates code changes.
+
+> **Known trap from the Day 6 report, worth re-checking periodically:** the fix required renaming the old static product page file, because the host's redirect rule only fires when the requested address doesn't already match an existing file — the old file was silently winning every time otherwise. A code comment warns against renaming it back. If product pages ever start serving blank listings again, check that file hasn't been reintroduced before debugging anything else.
 
 ## Audit findings behind this plan (as of 2026-08-22)
 
