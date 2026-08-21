@@ -12,6 +12,22 @@ const SEO_PAGES = [
   { path: "/privacy",         label: "Privacy Policy",     dynamic: false },
 ];
 
+// Every category page, not a sample -- there are only 9, so checking all
+// of them costs nothing. This is what would have caught
+// laundry-cleaning-chemicals sitting outside the sitemap for weeks (SEO
+// Day 10) if it had existed then: it's now audited the same as every
+// other category, not silently skipped.
+const CATEGORY_SLUGS = [
+  "bed-sheets-linens", "cleaning-chemicals", "laundry-cleaning-chemicals", "gloves-ppe",
+  "guest-amenities", "paper-products", "pillows-mattress-protectors", "towels", "trash-liners-can-liners",
+];
+
+// How many real product pages to sample per run -- checking all ~145 on
+// every "Run Audit" click would be slow and mostly redundant (they share
+// the same server-rendered template, see api/product-meta.js). Mirrors
+// tools/seo-audit.js's own --products default of 5.
+const PRODUCT_SAMPLE_SIZE = 5;
+
 const SEO_LIMITS = { titleMin: 30, titleMax: 60, descMin: 70, descMax: 160 };
 
 /* ── Audit a single page ───────────────────────────────────── */
@@ -94,6 +110,26 @@ async function auditSeoPage(page) {
   return Object.assign({}, page, { issues, score, title, desc });
 }
 
+// Real product URLs, sampled from the live sitemap rather than guessed --
+// keeps the dashboard checking actual catalog pages instead of only the
+// generic /product template, which never fails the same way a real
+// product with a too-long name or missing image can.
+async function sampleProductPages(n) {
+  try {
+    const res = await fetch("/sitemap-products.xml", { cache: "no-store" });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const paths = [...xml.matchAll(/<loc>[^<]*?(\/product\?[^<]*)<\/loc>/g)].map(m => m[1]);
+    // Product pages are now server-rendered per-item (see api/product-meta.js,
+    // SEO Day 6/8) rather than filled in client-side, so they're audited
+    // like any other static page -- dynamic:false actually validates title
+    // length, canonical, and OG tags instead of skipping those checks.
+    return paths.slice(0, n).map(path => ({
+      path, label: "Product — " + decodeURIComponent(path.split("item=")[1] || path), dynamic: false,
+    }));
+  } catch { return []; }
+}
+
 /* ── Run the full audit ────────────────────────────────────── */
 async function runSeoAudit() {
   const host = document.getElementById("seoAuditBody");
@@ -103,7 +139,13 @@ async function runSeoAudit() {
   if (btn) { btn.disabled = true; btn.textContent = "Scanning…"; }
   host.innerHTML = '<tr><td colspan="4" class="a-empty">Scanning pages…</td></tr>';
 
-  const results = await Promise.all(SEO_PAGES.map(auditSeoPage));
+  const categoryPages = CATEGORY_SLUGS.map(slug => ({
+    path: "/category/" + slug, label: "Category — " + slug, dynamic: false,
+  }));
+  const productPages = await sampleProductPages(PRODUCT_SAMPLE_SIZE);
+
+  const allPages = [...SEO_PAGES, ...categoryPages, ...productPages];
+  const results = await Promise.all(allPages.map(auditSeoPage));
   window._seoResults = results;
 
   const totalErrors = results.reduce((s, r) => s + r.issues.filter(i => i.level === "error").length, 0);
@@ -165,7 +207,7 @@ async function loadSeoSitemap() {
   if (!host) return;
   host.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Loading sitemaps…</p>';
 
-  const files = ["/sitemap.xml", "/sitemap-products.xml"];
+  const files = ["/sitemap.xml", "/sitemap-categories.xml", "/sitemap-products.xml"];
   const parts = [];
 
   for (const f of files) {
