@@ -2265,10 +2265,49 @@ function renderReorderPanel(o) {
    order_items live. */
 
 let _oiRowSeq = 0;
+let _oiProducts = null; // cached across rows/opens within a session -- catalog doesn't change mid-edit
+
+async function oiLoadProducts() {
+  if (_oiProducts) return _oiProducts;
+  const { data } = await window.sb.from("products")
+    .select("id, name, price, price_tier1")
+    .eq("is_active", true)
+    .order("name");
+  _oiProducts = data || [];
+  return _oiProducts;
+}
+
+// Selecting a catalog product fills in name + price (still hand-editable
+// afterward, since an invoice can carry a negotiated price that differs
+// from the current catalog one -- the dropdown is a fast starting point,
+// not a lock). "— Custom item —" (empty value) leaves both alone so a
+// free-goods or one-off line typed by hand isn't clobbered by the picker.
+function oiProductPicked(select) {
+  const row = select.closest(".oi-row");
+  const opt = select.selectedOptions[0];
+  if (!select.value || !opt) return;
+  row.querySelector(".oi-name").value = opt.textContent;
+  row.querySelector(".oi-price").value = Number(opt.dataset.price || 0).toFixed(2);
+}
 
 function oiRowHtml(id, name, qty, price) {
+  // Pre-select the dropdown when this row's name matches a real catalog
+  // product exactly (case-insensitive) -- existing order items were named
+  // from whatever the invoice/checkout captured at the time, so this is a
+  // best-effort match, not a guarantee; anything that doesn't match just
+  // starts on "Custom item" with its name/price already filled in as-is.
+  const matched = _oiProducts?.find(p => p.name.toLowerCase() === String(name || "").trim().toLowerCase());
+  const options = (_oiProducts || []).map(p => {
+    const unitPrice = p.price_tier1 ?? p.price ?? 0;
+    return `<option value="${p.id}" data-price="${unitPrice}"${matched?.id === p.id ? " selected" : ""}>${escHtml(p.name)}</option>`;
+  }).join("");
+
   return `
-    <div class="oi-row" data-row-id="${id}" style="display:grid;grid-template-columns:1fr 70px 100px 32px;gap:8px;align-items:center">
+    <div class="oi-row" data-row-id="${id}" style="display:grid;grid-template-columns:1.3fr 1fr 70px 100px 32px;gap:8px;align-items:center">
+      <select class="oi-product" onchange="oiProductPicked(this)" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;background:#fff">
+        <option value="">— Custom item —</option>
+        ${options}
+      </select>
       <input type="text" class="oi-name" value="${escHtml(name || "")}" placeholder="Product name" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px">
       <input type="number" class="oi-qty" value="${qty}" min="0" step="1" style="padding:8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center">
       <input type="number" class="oi-price" value="${Number(price).toFixed(2)}" min="0" step="0.01" style="padding:8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right">
@@ -2289,7 +2328,10 @@ async function openEditOrderItems(orderId) {
   wrap.innerHTML = `<div class="a-empty">Loading…</div>`;
   openModal("orderItemsModal");
 
-  const { data: items } = await window.sb.from("order_items").select("*").eq("order_id", orderId).order("created_at");
+  const [{ data: items }] = await Promise.all([
+    window.sb.from("order_items").select("*").eq("order_id", orderId).order("created_at"),
+    oiLoadProducts(),
+  ]);
   wrap.innerHTML = "";
   (items || []).forEach(i => addOrderItemRow(i.product_name || i.name, i.quantity, i.price_per_case ?? i.price));
   if (!items || !items.length) addOrderItemRow("", 1, 0);
