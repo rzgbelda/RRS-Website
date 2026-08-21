@@ -115,6 +115,9 @@ function mapDbProductToLegacyShape(row) {
     name,
     itemNumber,
     image: row.image_url || "",
+    // Extra gallery photos beyond the one cover image (RRS-13) -- always a
+    // real array, never null/undefined, so callers can spread it safely.
+    images: Array.isArray(row.images) ? row.images : [],
     description: row.description || "",
     overview: row.overview || "",
 
@@ -1067,6 +1070,13 @@ function buildSeoTitleTag(p) {
   return `${lead}${effectivePrefix}${trimmedName}`;
 }
 
+function selectProductImage(thumbEl, src) {
+  const mainImage = document.getElementById("mainProductImage");
+  if (mainImage) mainImage.src = src;
+  document.querySelectorAll(".thumb-row .thumb").forEach(t => t.classList.remove("active"));
+  thumbEl.classList.add("active");
+}
+
 function populateProductPage(product) {
   const price = cleanPrice(product.price);
 
@@ -1229,9 +1239,29 @@ function populateProductPage(product) {
 
   const altText = product.size ? `${product.name} – ${product.size}` : product.name;
   const mainImage = document.getElementById("mainProductImage");
-  const thumbImage = document.getElementById("thumbImage");
   if (mainImage) { mainImage.src = product.image; mainImage.alt = altText; }
-  if (thumbImage) { thumbImage.src = product.image; thumbImage.alt = altText; }
+
+  // RRS-13: products can now carry extra gallery photos beyond the one
+  // cover image -- .thumb-row already existed in the markup (built for
+  // this) but only ever rendered one hardcoded thumbnail since no product
+  // had more than one photo before. Cover image first, de-duped in case
+  // it was also added to the gallery by mistake; hidden entirely when
+  // there's nothing extra to show, same as before this existed.
+  const thumbRow = document.querySelector(".thumb-row");
+  if (thumbRow) {
+    const allImages = [...new Set([product.image, ...(product.images || [])].filter(Boolean))];
+    if (allImages.length > 1) {
+      thumbRow.innerHTML = allImages.map((src, i) => `
+        <img src="${src}" alt="${altText} – view ${i + 1}" class="thumb${i === 0 ? " active" : ""}"
+          loading="lazy" onerror="this.src='/assets/img/product-placeholder.svg'"
+          onclick="selectProductImage(this, '${String(src).replace(/'/g, "\\'")}')">
+      `).join("");
+      thumbRow.style.display = "";
+    } else {
+      thumbRow.innerHTML = "";
+      thumbRow.style.display = "none";
+    }
+  }
 
   const featuresList = document.getElementById("featuresList");
   if (featuresList) {

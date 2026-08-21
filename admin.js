@@ -759,6 +759,7 @@ function openAddProduct() {
   const prev = document.getElementById("prodImagePreview");
   if (prev) prev.src = "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
+  renderProdGallery([]);
   // form.reset() does not touch the hidden base-price field or the readonly
   // tier fields, so clear them explicitly before the panel is shown.
   ["prodPrice", "prodPrice1", "prodPrice2", "prodPrice3", "prodFlatPriceInput"].forEach(id => {
@@ -920,12 +921,52 @@ async function openEditProduct(id) {
   const prev = document.getElementById("prodImagePreview");
   if (prev) prev.src = p.image_url || "assets/img/product-placeholder.svg";
   document.getElementById("productFormError").style.display = "none";
+  renderProdGallery(Array.isArray(p.images) ? p.images : []);
   openModal("productModal");
 }
 
 document.getElementById("prodImage")?.addEventListener("input", e => {
   const prev = document.getElementById("prodImagePreview");
   if (prev) prev.src = e.target.value || "assets/img/product-placeholder.svg";
+});
+
+/* ── Gallery images (RRS-13) ────────────────────────────────────
+   image_url stays the one cover photo every other surface reads; this is
+   an independent, ordered list of EXTRA photos shown on the product page.
+   Tracked in memory while the modal is open (not read back out of the DOM
+   on save) since a thumbnail has no input element of its own to hold a URL. */
+let _prodGalleryImages = [];
+
+function renderProdGallery(urls) {
+  _prodGalleryImages = urls || [];
+  const wrap = document.getElementById("prodGalleryThumbs");
+  if (!wrap) return;
+  wrap.innerHTML = _prodGalleryImages.map((url, i) => `
+    <div style="position:relative;width:64px;height:64px">
+      <img src="${escHtml(url)}" onerror="this.src='assets/img/product-placeholder.svg'"
+        style="width:64px;height:64px;object-fit:cover;border-radius:8px;border:1.5px solid var(--border)">
+      <button type="button" onclick="removeProdGalleryImage(${i})" title="Remove"
+        style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#dc2626;color:#fff;border:2px solid #fff;font-size:11px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0">&times;</button>
+    </div>`).join("");
+}
+
+function removeProdGalleryImage(index) {
+  _prodGalleryImages.splice(index, 1);
+  renderProdGallery(_prodGalleryImages);
+}
+
+document.getElementById("prodGalleryFile")?.addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  e.target.value = ""; // allow picking the same filename again later
+  const ext  = file.name.split(".").pop();
+  const path = `products/${Date.now()}-gallery.${ext}`;
+  showToast("Uploading…");
+  const { error } = await window.sb.storage.from("product-images").upload(path, file, { upsert: true });
+  if (error) { showToast("Upload failed: " + error.message); return; }
+  const { data: { publicUrl } } = window.sb.storage.from("product-images").getPublicUrl(path);
+  renderProdGallery([..._prodGalleryImages, publicUrl]);
+  showToast("Image added!");
 });
 
 async function saveProduct() {
@@ -989,6 +1030,7 @@ async function saveProduct() {
     case_qty      : parseInt(document.getElementById("prodCaseQty")?.value) || 1,
     pack_size     : parseInt(document.getElementById("prodPackSize")?.value) || 1,
     image_url     : (document.getElementById("prodImage")?.value || "").trim() || null,
+    images        : _prodGalleryImages,
     cost_per_case : parseFloat(document.getElementById("prodCostPerCase")?.value) || null,
     landed_cost   : parseFloat(document.getElementById("prodLandedCost")?.value)  || null,
     truckload_qty : parseInt(document.getElementById("prodTruckloadQty")?.value)   || null,
@@ -1067,6 +1109,7 @@ const CVT_COLS = [
   { key:"stock_status",  label:"Stock Status" },
   { key:"moq_group",     label:"Mix & Match Group" },
   { key:"moq_group_min", label:"Mix & Match Group Minimum" },
+  { key:"images",        label:"Gallery Images (pipe-separated)" },
 ];
 
 let _cvtSourceCols = [];
@@ -1190,6 +1233,7 @@ function cvtAutoMap(cols) {
     stock_status:  ["stockstatus","availability","instock","availabilitystatus"],
     moq_group:     ["moqgroup","mixmatchgroup","mixandmatchgroup","moqtag"],
     moq_group_min: ["moqgroupmin","moqminimum","mixmatchminimum","moqgroupminimum","combinedminimum"],
+    images:        ["images","galleryimages","additionalimages","photos","extraimages"],
   };
   for (const col of cols) {
     const n = norm(col);
@@ -1544,7 +1588,7 @@ function renderCsvPreview(rows) {
       ["feature3", "Feature 3"], ["feature4", "Feature 4"], ["sale_price", "Sale Price"],
       ["retail_price", "Retail Price"], ["price_tier1", "Tier Pricing"],
       ["weight", "Weight"], ["length", "Dimensions"],
-      ["moq_group", "Mix & Match Group"],
+      ["moq_group", "Mix & Match Group"], ["images", "Gallery Images"],
     ];
     const seen = new Set();
     const detected = OPTIONAL_COLS.filter(([key, label]) => {
@@ -1744,6 +1788,10 @@ async function runCsvImport() {
     is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
     is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
     image_url    : r.image_url   || null,
+    // Extra gallery photos beyond the one cover image (RRS-13) -- pipe-
+    // separated so a single CSV cell can carry several URLs without
+    // conflicting with the comma-delimited format of the file itself.
+    images       : (r.images || "").split("|").map(s => s.trim()).filter(Boolean),
     weight       : parseNumCell(r.weight).empty ? null : parseNumCell(r.weight).value,
     length       : parseNumCell(r.length).empty ? null : parseNumCell(r.length).value,
     width        : parseNumCell(r.width).empty  ? null : parseNumCell(r.width).value,
@@ -1848,7 +1896,7 @@ function downloadCsvTemplate() {
       "is_featured","is_active","image_url",
       "weight","length","width","height",
       "stock_qty","stock_status",
-      "moq_group","moq_group_min"
+      "moq_group","moq_group_min","images"
     ].map(q),
 
     /* ── Example 1: basic product, with real volume tiers -- price_tier1/2/3
@@ -1868,7 +1916,7 @@ function downloadCsvTemplate() {
       b(false), b(true), q(""),
       n(28), n(18), n(14), n(6),
       n(100), q("in_stock"),
-      q(""), n("")
+      q(""), n(""), q("")
     ],
 
     /* ── Example 2: sale product, featured, no tiers (flat price at any qty) ── */
@@ -1880,7 +1928,7 @@ function downloadCsvTemplate() {
       b(true), b(true), q(""),
       n(""), n(""), n(""), n(""),
       n(50), q("in_stock"),
-      q(""), n("")
+      q(""), n(""), q("")
     ],
 
     /* ── Example 3: low stock ── */
@@ -1892,7 +1940,7 @@ function downloadCsvTemplate() {
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
       n(8), q("low_stock"),
-      q(""), n("")
+      q(""), n(""), q("")
     ],
 
     /* ── Example 4: out of stock, inactive ── */
@@ -1904,7 +1952,7 @@ function downloadCsvTemplate() {
       b(false), b(false), q(""),
       n(35), n(20), n(16), n(10),
       n(0), q("out_of_stock"),
-      q(""), n("")
+      q(""), n(""), q("")
     ],
 
     /* ── Example 5: pack unit ── */
@@ -1916,7 +1964,7 @@ function downloadCsvTemplate() {
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
       n(25), q("in_stock"),
-      q(""), n("")
+      q(""), n(""), q("")
     ],
 
     /* ── Examples 6-7: Mix & Match MOQ group -- two products that share a
@@ -1931,7 +1979,7 @@ function downloadCsvTemplate() {
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
       n(40), q("in_stock"),
-      q("5GAL-CHEMICALS"), n(36)
+      q("5GAL-CHEMICALS"), n(36), q("")
     ],
     [
       q("5-Gallon Laundry Detergent - Oxi"), q("SKU-007"), q("Commercial liquid laundry detergent with oxi boost, 5-gallon pail"),
@@ -1941,7 +1989,7 @@ function downloadCsvTemplate() {
       b(false), b(true), q(""),
       n(""), n(""), n(""), n(""),
       n(40), q("in_stock"),
-      q("5GAL-CHEMICALS"), n(36)
+      q("5GAL-CHEMICALS"), n(36), q("")
     ],
   ];
 

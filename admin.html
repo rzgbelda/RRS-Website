@@ -521,6 +521,7 @@
                   <span class="csv-pill">stock_status</span>
                   <span class="csv-pill" title="Products sharing the same moq_group text pool toward one combined moq_group_min. Leave both blank for a normal product.">moq_group</span>
                   <span class="csv-pill" title="Combined-unit minimum across every product sharing this moq_group. Leave both blank for a normal product.">moq_group_min</span>
+                  <span class="csv-pill" title="Extra gallery photos shown on the product page, beyond the main image_url. Separate multiple URLs with a pipe: url1|url2|url3">images</span>
                 </div>
                 <p style="font-size:11px;color:#94a3b8;margin:8px 2px 0">
                   price_tier1/2/3 = Price at 1&ndash;5 / 6&ndash;29 / 30+ cases. Optional &mdash; leave all three blank for one flat price at any quantity.<br>
@@ -2077,7 +2078,7 @@
             <input type="file" id="prodImageFile" accept="image/*" style="font-size:13px;padding:6px 0;" />
           </div>
           <div class="a-field" style="display:flex;flex-direction:column;gap:8px;">
-            <label>Preview</label>
+            <label>Preview <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(main/cover image)</span></label>
             <div style="display:flex;align-items:center;gap:14px;">
               <img id="prodImagePreview" src="assets/img/product-placeholder.svg" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;" onerror="this.src='assets/img/product-placeholder.svg'" alt="Preview" loading="lazy">
               <label class="a-checkbox-label">
@@ -2086,6 +2087,15 @@
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Additional gallery images -- the field above is the one cover
+             photo used everywhere (catalog cards, cart, etc.); these are
+             extra photos shown in a gallery on the product detail page. -->
+        <div class="a-field">
+          <label>Additional Gallery Images <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(optional — shown on the product page)</span></label>
+          <div id="prodGalleryThumbs" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:10px"></div>
+          <input type="file" id="prodGalleryFile" accept="image/*" style="font-size:13px;padding:6px 0;" />
         </div>
 
       </div>
@@ -2401,7 +2411,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=62"></script>
+<script src="admin.js?v=63"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {
