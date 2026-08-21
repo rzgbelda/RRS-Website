@@ -222,7 +222,7 @@ function showAccessDeniedOverlay() {
     '<p style="font-size:13px;color:#8a9bb5;margin:0 0 24px;line-height:1.6;">' +
       (window._adminRole === "developer"
         ? 'This section is only available to administrators. Your developer account has access to the Developer Tickets board.'
-        : 'This section is only available to administrators. Your partner account has access to Dashboard, Sub-Distributors, and Reports.') +
+        : 'This section is only available to administrators. Your partner account has access to Dashboard, Affiliates, and Reports.') +
     '</p>' +
     '<button onclick="document.getElementById(\'accessDeniedOverlay\').style.display=\'none\'" style="background:linear-gradient(135deg,#f58220,#e0711a);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>' +
     '</div>';
@@ -4807,7 +4807,7 @@ async function loadSdTable() {
     .order('created_at', { ascending: false });
 
   if (error || !sds || !sds.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="a-empty">No sub-distributors yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="a-empty">No affiliates yet.</td></tr>';
     return;
   }
 
@@ -4927,7 +4927,7 @@ function closeSdModal() {
 }
 
 function openSdModal(sd) {
-  document.getElementById('sdModalTitle').textContent = sd ? 'Edit Sub-Distributor' : 'Add Sub-Distributor';
+  document.getElementById('sdModalTitle').textContent = sd ? 'Edit Affiliate' : 'Add Affiliate';
   document.getElementById('sdEditId').value   = sd ? sd.id : '';
   document.getElementById('sdName').value     = sd ? (sd.name || '') : '';
   document.getElementById('sdContact').value  = sd ? (sd.contact_person || '') : '';
@@ -5017,10 +5017,10 @@ async function saveSdDistributor() {
 }
 
 async function deleteSd(id, name) {
-  if (!confirm('Delete sub-distributor "' + name + '"?')) return;
+  if (!confirm('Delete affiliate "' + name + '"?')) return;
   var result = await window.sb.from('sub_distributors').delete().eq('id', id);
   if (result.error) return showToast('Error: ' + result.error.message, 'error');
-  showToast('Sub-distributor deleted.');
+  showToast('Affiliate deleted.');
   loadSdTable();
   loadSdStats();
 }
@@ -5035,7 +5035,7 @@ function closeEmpModal() {
 async function openEmpModal(emp) {
   closeEmpModal();
   var sdsRes = await window.sb.from('sub_distributors').select('id,name').eq('status','active').order('name');
-  var sdOptions = '<option value="">Select parent sub-distributor…</option>';
+  var sdOptions = '<option value="">Select parent affiliate…</option>';
   (sdsRes.data||[]).forEach(function(s) {
     sdOptions += '<option value="' + s.id + '"' + (emp && emp.sub_distributor_id === s.id ? ' selected' : '') + '>' + esc(s.name) + '</option>';
   });
@@ -5054,7 +5054,7 @@ async function openEmpModal(emp) {
         '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Email</label><input id="empEmail" type="email" placeholder="jane@abc.com" value="' + (emp ? esc(emp.email||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
         '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Phone</label><input id="empPhone" type="text" placeholder="(555) 000-0000" value="' + (emp ? esc(emp.phone||'') : '') + '" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"></div>' +
         '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Referral Code *</label><div style="display:flex;gap:8px;"><input id="empCode" type="text" placeholder="JANE2024" value="' + (emp ? esc(emp.referral_code) : '') + '" style="flex:1;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;text-transform:uppercase;box-sizing:border-box;"><button type="button" onclick="generateEmpCode()" style="padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;background:#f8fafd;cursor:pointer;font-size:12px;white-space:nowrap;">Auto-Gen</button></div></div>' +
-        '<div style="grid-column:span 2;"><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Parent Sub-Distributor *</label><select id="empParent" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;">' + sdOptions + '</select></div>' +
+        '<div style="grid-column:span 2;"><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Parent Affiliate *</label><select id="empParent" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;">' + sdOptions + '</select></div>' +
         '<div><label style="font-size:12px;font-weight:600;color:#64748b;display:block;margin-bottom:5px;">Status</label><select id="empStatus" style="width:100%;padding:9px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box;"><option value="active"' + (emp && emp.status==='active'?' selected':'') + '>Active</option><option value="inactive"' + (emp && emp.status==='inactive'?' selected':'') + '>Inactive</option></select></div>' +
       '</div>' +
       '<div id="empModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:12px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>' +
@@ -5087,7 +5087,7 @@ async function saveEmployee() {
 
   function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!name)   return showErr('Name is required.');
-  if (!parent) return showErr('Please select a parent sub-distributor.');
+  if (!parent) return showErr('Please select a parent affiliate.');
   if (!code)   return showErr('Referral code is required.');
 
   var payload = {

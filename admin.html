@@ -98,7 +98,7 @@
       <span class="a-nav-section">Partners</span>
       <a href="#" class="a-nav-item" data-tab="sub-distributors">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="2"/><circle cx="15" cy="19" r="2"/><circle cx="19" cy="9" r="2"/><path d="M9 7v3l3 2"/><path d="M13 14l3-2v-3"/></svg>
-        Sub-Distributors
+        Affiliates
       </a>
 
       <span class="a-nav-section">System</span>
@@ -1759,13 +1759,13 @@
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
           </div>
           <div>
-            <h1 class="sd-hero-title">Sub-Distributors</h1>
+            <h1 class="sd-hero-title">Affiliates</h1>
             <p class="sd-hero-sub">Manage partners, referral codes &amp; commissions</p>
           </div>
         </div>
         <button type="button" id="btnOpenSdModal" class="a-btn-primary sd-hero-btn" onclick="openSdModal()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-          Add Sub-Distributor
+          Add Affiliate
         </button>
       </div>
 
@@ -1851,7 +1851,7 @@
         <div class="a-table-wrap">
           <table class="a-table" id="emp-table">
             <thead><tr>
-              <th>Name</th><th>Sub-Distributor</th><th>Referral Code</th>
+              <th>Name</th><th>Affiliate</th><th>Referral Code</th>
               <th>Orders</th><th>Revenue</th><th>Status</th><th style="text-align:center">Actions</th>
             </tr></thead>
             <tbody id="emp-table-body"><tr><td colspan="7" class="a-empty">Loading...</td></tr></tbody>
@@ -2322,7 +2322,7 @@
 <div id="sdModal" class="a-modal-overlay" style="display:none">
   <div class="a-modal" style="max-width:600px">
     <div class="a-modal-header">
-      <h3 id="sdModalTitle">Add Sub-Distributor</h3>
+      <h3 id="sdModalTitle">Add Affiliate</h3>
       <button class="a-modal-close" id="btnCloseSdX">&#x2715;</button>
     </div>
     <div class="a-modal-body">
@@ -2359,7 +2359,7 @@
     <div class="a-modal-footer">
       <button type="button" id="btnCloseSdModal" class="a-btn-outline" style="width:auto;display:inline-flex;align-items:center;">Cancel</button>
       <button type="button" id="btnSdCreateLogin" class="a-btn-outline" style="width:auto;display:none;color:#3b5bdb;border-color:#3b5bdb;">Create Login</button>
-      <button type="button" id="btnSaveSd" class="a-btn-primary">Save Sub-Distributor</button>
+      <button type="button" id="btnSaveSd" class="a-btn-primary">Save Affiliate</button>
     </div>
   </div>
 </div>
@@ -2377,7 +2377,7 @@
         <div class="a-form-col-2">
           <div class="a-field"><label>Name <span class="req">*</span></label><input type="text" id="empName" placeholder="Jane Doe"></div>
           <div class="a-field">
-            <label>Sub-Distributor <span class="req">*</span></label>
+            <label>Affiliate <span class="req">*</span></label>
             <select id="empParent"><option value="">Select...</option></select>
           </div>
         </div>
@@ -2411,7 +2411,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=64"></script>
+<script src="admin.js?v=65"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {
