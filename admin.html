@@ -2224,6 +2224,32 @@
   </div>
 </div>
 
+<!-- EDIT ORDER ITEMS MODAL -->
+<!-- Locked once an order is paid (see the payment_status check next to the
+     "Edit Items" button) -- changing what was billed after money actually
+     moved would silently disagree with a real charge/receipt. -->
+<div id="orderItemsModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal a-modal-lg">
+    <div class="a-modal-header">
+      <h3>Edit Order Items</h3>
+      <button class="a-modal-close" onclick="closeModal('orderItemsModal')">&#x2715;</button>
+    </div>
+    <div class="a-modal-body">
+      <input type="hidden" id="oiOrderId">
+      <div id="orderItemsRows" style="display:flex;flex-direction:column;gap:8px"></div>
+      <button onclick="addOrderItemRow()" style="margin-top:10px;background:#fff;color:#0b2d52;border:1.5px dashed #cbd5e1;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;width:100%">+ Add Item</button>
+      <p id="orderItemsError" style="display:none;color:#dc2626;font-size:13px;margin:12px 0 0"></p>
+      <p style="font-size:12px;color:#64748b;margin:12px 0 0;line-height:1.5">
+        Saving recalculates the subtotal and total (delivery fee and tax, if any, are kept as-is). If this order already has an invoice out, use "Preview &amp; Email Invoice" afterward to send the customer a corrected one.
+      </p>
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" style="width:auto" onclick="closeModal('orderItemsModal')">Cancel</button>
+      <button class="a-btn-primary" id="oiSaveBtn" style="width:auto" onclick="saveOrderItems()">Save Items</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT SHIP-TO ADDRESS MODAL -->
 <!-- Orders created from an invoice or payment-terms agreement never went
      through checkout's shipping form, so shipping_address is empty --
@@ -2375,7 +2401,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=60"></script>
+<script src="admin.js?v=61"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

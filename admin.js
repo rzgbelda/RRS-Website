@@ -2255,6 +2255,101 @@ function renderReorderPanel(o) {
   return "";
 }
 
+/* ── Edit Order Items ─────────────────────────────────────────
+   No matching UI existed at all before this -- order_items rendered as a
+   flat read-only table, so a corrected invoice (wrong qty, a discontinued
+   product swapped for another, a free-goods line) had nowhere to go except
+   a brand new order. This lets staff fix the SAME order's items in place;
+   re-sending the invoice afterward (the existing Preview & Email Invoice
+   button) picks up the new items automatically since that endpoint reads
+   order_items live. */
+
+let _oiRowSeq = 0;
+
+function oiRowHtml(id, name, qty, price) {
+  return `
+    <div class="oi-row" data-row-id="${id}" style="display:grid;grid-template-columns:1fr 70px 100px 32px;gap:8px;align-items:center">
+      <input type="text" class="oi-name" value="${escHtml(name || "")}" placeholder="Product name" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px">
+      <input type="number" class="oi-qty" value="${qty}" min="0" step="1" style="padding:8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center">
+      <input type="number" class="oi-price" value="${Number(price).toFixed(2)}" min="0" step="0.01" style="padding:8px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:right">
+      <button type="button" onclick="this.closest('.oi-row').remove()" title="Remove"
+        style="background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:7px;width:32px;height:32px;font-size:15px;cursor:pointer;line-height:1">&times;</button>
+    </div>`;
+}
+
+function addOrderItemRow(name, qty, price) {
+  const wrap = document.getElementById("orderItemsRows");
+  wrap.insertAdjacentHTML("beforeend", oiRowHtml(_oiRowSeq++, name || "", qty ?? 1, price ?? 0));
+}
+
+async function openEditOrderItems(orderId) {
+  document.getElementById("oiOrderId").value = orderId;
+  document.getElementById("orderItemsError").style.display = "none";
+  const wrap = document.getElementById("orderItemsRows");
+  wrap.innerHTML = `<div class="a-empty">Loading…</div>`;
+  openModal("orderItemsModal");
+
+  const { data: items } = await window.sb.from("order_items").select("*").eq("order_id", orderId).order("created_at");
+  wrap.innerHTML = "";
+  (items || []).forEach(i => addOrderItemRow(i.product_name || i.name, i.quantity, i.price_per_case ?? i.price));
+  if (!items || !items.length) addOrderItemRow("", 1, 0);
+}
+
+async function saveOrderItems() {
+  const errEl = document.getElementById("orderItemsError");
+  const orderId = document.getElementById("oiOrderId").value;
+  const btn = document.getElementById("oiSaveBtn");
+
+  const rows = [...document.querySelectorAll("#orderItemsRows .oi-row")].map(row => ({
+    name: row.querySelector(".oi-name").value.trim(),
+    quantity: parseInt(row.querySelector(".oi-qty").value) || 0,
+    price: parseFloat(row.querySelector(".oi-price").value) || 0,
+  })).filter(r => r.name && r.quantity > 0);
+
+  if (!rows.length) { errEl.textContent = "Add at least one item with a name and quantity."; errEl.style.display = "block"; return; }
+
+  errEl.style.display = "none";
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  try {
+    // Delete-then-insert rather than diffing row-by-row -- simplest correct
+    // way to handle adds/removes/edits together, and order_items carries no
+    // other data (no FKs pointing at a specific row) that a wholesale
+    // replace would orphan.
+    const { error: delErr } = await window.sb.from("order_items").delete().eq("order_id", orderId);
+    if (delErr) throw delErr;
+
+    const { error: insErr } = await window.sb.from("order_items").insert(
+      rows.map(r => ({ order_id: orderId, product_name: r.name, quantity: r.quantity, price_per_case: r.price }))
+    );
+    if (insErr) throw insErr;
+
+    // Total = new items + whatever delivery fee/tax were already on the
+    // order -- editing items shouldn't silently wipe out a delivery fee or
+    // tax that was set separately.
+    const { data: o } = await window.sb.from("orders").select("in_house_delivery_fee, fulfillment_method, tax_amount").eq("id", orderId).single();
+    const itemsTotal = rows.reduce((s, r) => s + r.price * r.quantity, 0);
+    const deliveryFee = o?.fulfillment_method === "in_house" ? Number(o.in_house_delivery_fee || 0) : 0;
+    const taxAmount = Number(o?.tax_amount || 0);
+    const newTotal = itemsTotal + deliveryFee + taxAmount;
+
+    const { error: updErr } = await window.sb.from("orders")
+      .update({ subtotal: itemsTotal, total: newTotal, updated_at: new Date().toISOString() })
+      .eq("id", orderId);
+    if (updErr) throw updErr;
+
+    closeModal("orderItemsModal");
+    showToast("Items updated.");
+    openOrderModal(orderId);
+    renderOrdersTable();
+  } catch (err) {
+    errEl.textContent = "Error: " + err.message;
+    errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Save Items";
+  }
+}
+
 async function cancelOrderReorderSchedule(orderId) {
   if (!confirm("Cancel this reorder schedule? No further automatic reorders will be generated.")) return;
   const { error } = await window.sb.from("orders").update({ reorder_active: false }).eq("id", orderId);
@@ -2485,7 +2580,12 @@ async function openOrderModal(id) {
       ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""}</div>` : ""}
     </div>
     <hr style="margin:16px 0;border:none;border-top:1px solid #f0f4fa">
-    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Items</h4>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <h4 style="margin:0;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Items</h4>
+      ${o.payment_status === "paid"
+        ? `<span style="font-size:11.5px;color:#94a3b8" title="This order is already paid -- items are locked.">🔒 Locked (paid)</span>`
+        : `<button onclick="openEditOrderItems('${o.id}')" style="background:#fff;color:#0b2d52;border:1.5px solid #cbd5e1;border-radius:8px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">✎ Edit Items</button>`}
+    </div>
     <table style="width:100%;font-size:13px;border-collapse:collapse">
       <thead><tr style="background:#f8fafd">
         <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Product</th>
