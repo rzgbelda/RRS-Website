@@ -1859,6 +1859,33 @@
         </div>
       </div>
 
+      <!-- Monthly commission payouts (RRS-9) -- tracks what's owed and
+           what's been paid; no bank info is ever collected or stored
+           here, payouts are settled by hand through the CEO's own bank
+           and just marked paid here for the record. -->
+      <div class="a-card sd-card">
+        <div class="sd-card-header">
+          <div class="sd-card-title-group">
+            <span class="sd-card-dot" style="background:#22c55e;"></span>
+            <span class="sd-card-title">Monthly Commission Payouts</span>
+          </div>
+          <div class="sd-card-actions">
+            <input type="month" id="affPayoutMonth" class="a-select" style="padding:8px 10px" onchange="renderAffiliatePayouts()">
+          </div>
+        </div>
+        <p style="font-size:12px;color:#64748b;margin:0;padding:0 20px 12px">
+          Tiered on that month's referred revenue: $1&ndash;$4,500 = 10%, $4,501&ndash;$9,000 = 15%, $9,001+ = 20%. Due by the 10th of the following month. Marking a payout Paid locks in the numbers so a later order edit or refund can't change what was already paid.
+        </p>
+        <div class="a-table-wrap">
+          <table class="a-table" id="aff-payout-table">
+            <thead><tr>
+              <th>Affiliate</th><th>Referred Revenue</th><th>Rate</th><th>Commission Due</th><th>Due Date</th><th>Status</th>
+            </tr></thead>
+            <tbody id="aff-payout-table-body"><tr><td colspan="6" class="a-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
     </div><!-- /sub-distributors tab -->
 
   </div><!-- /a-main -->
@@ -2411,7 +2438,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=65"></script>
+<script src="admin.js?v=66"></script>
 <script src="admin-seo.js?v=2"></script>
 <script>
   function toggleSidebar() {

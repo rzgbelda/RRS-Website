@@ -4770,7 +4770,134 @@ async function deleteBestDeal(id) {
 ============================================================ */
 
 async function renderSubDistributorsTab() {
-  await Promise.all([loadSdStats(), loadSdTable(), loadEmpTable()]);
+  const monthInput = document.getElementById('affPayoutMonth');
+  if (monthInput && !monthInput.value) {
+    // Default to last month, not the current one -- that's the period
+    // actually due by the 10th, which is what someone opening this tab
+    // is almost always here to check.
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    monthInput.value = d.toISOString().slice(0, 7);
+  }
+  await Promise.all([loadSdStats(), loadSdTable(), loadEmpTable(), renderAffiliatePayouts()]);
+}
+
+/* ── Monthly affiliate commission payouts (RRS-9) ─────────────────
+   Tiered on whichever bracket that month's TOTAL referred revenue falls
+   into (not a marginal/bracket-by-slice calculation like a tax table) --
+   e.g. $6,000 referred in a month pays 15% on the full $6,000, not 10% on
+   the first $4,500 and 15% on the rest. Company-wide, not configurable
+   per affiliate here -- if a negotiated flat rate is ever needed instead,
+   that's what sub_distributors.commission_pct already exists for. */
+const AFFILIATE_COMMISSION_TIERS = [
+  { max: 4500,      rate: 0.10 },
+  { max: 9000,      rate: 0.15 },
+  { max: Infinity,  rate: 0.20 },
+];
+
+function affiliateCommissionRate(revenue) {
+  const tier = AFFILIATE_COMMISSION_TIERS.find(t => revenue <= t.max) || AFFILIATE_COMMISSION_TIERS[AFFILIATE_COMMISSION_TIERS.length - 1];
+  return tier.rate;
+}
+
+async function renderAffiliatePayouts() {
+  const tbody = document.getElementById('aff-payout-table-body');
+  if (!tbody || !window.sb) return;
+  tbody.innerHTML = '<tr><td colspan="6" class="a-empty">Loading…</td></tr>';
+
+  const monthInput = document.getElementById('affPayoutMonth');
+  const monthStr = monthInput?.value || new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const periodStart = monthStr + '-01';
+  const periodEnd = new Date(new Date(periodStart + 'T00:00:00Z').getTime());
+  periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
+  const dueDate = new Date(periodEnd);
+  dueDate.setUTCDate(10);
+  const dueDateStr = dueDate.toISOString().slice(0, 10);
+
+  const [{ data: sds }, { data: referrals }, { data: payouts }] = await Promise.all([
+    window.sb.from('sub_distributors').select('id,name,status').order('name'),
+    window.sb.from('order_referrals').select('sub_distributor_id,orders(total,created_at)'),
+    window.sb.from('affiliate_payouts').select('*').eq('period_month', periodStart),
+  ]);
+
+  if (!sds || !sds.length) {
+    tbody.innerHTML = '<tr><td colspan="6" class="a-empty">No affiliates yet.</td></tr>';
+    return;
+  }
+
+  const revenueByAffiliate = {};
+  (referrals || []).forEach(r => {
+    const created = r.orders?.created_at;
+    if (!created || created < periodStart || created >= periodEnd.toISOString()) return;
+    revenueByAffiliate[r.sub_distributor_id] = (revenueByAffiliate[r.sub_distributor_id] || 0) + (parseFloat(r.orders?.total) || 0);
+  });
+
+  const payoutByAffiliate = {};
+  (payouts || []).forEach(p => { payoutByAffiliate[p.sub_distributor_id] = p; });
+
+  tbody.innerHTML = sds.map(sd => {
+    const paid = payoutByAffiliate[sd.id];
+    // Once paid, the locked-in numbers on the payout row are the source of
+    // truth -- an order edited or refunded after payout shouldn't silently
+    // change what the affiliate was actually already sent.
+    const revenue = paid ? Number(paid.referred_revenue) : (revenueByAffiliate[sd.id] || 0);
+    const rate = paid ? Number(paid.commission_rate) : affiliateCommissionRate(revenue);
+    const commission = paid ? Number(paid.commission_amount) : revenue * rate;
+
+    const statusCell = paid
+      ? `<span class="a-badge a-badge-green">Paid ${fmt(paid.paid_at)}</span>`
+      : (commission > 0
+          ? `<button class="a-btn-sm" onclick="markAffiliatePayoutPaid('${sd.id}','${escHtml(sd.name).replace(/'/g, "\\'")}','${monthStr}')">Mark Paid</button>`
+          : `<span class="a-badge a-badge-gray">Nothing due</span>`);
+
+    return `<tr>
+      <td><strong>${escHtml(sd.name)}</strong></td>
+      <td>$${revenue.toFixed(2)}</td>
+      <td>${(rate * 100).toFixed(0)}%</td>
+      <td><strong>$${commission.toFixed(2)}</strong></td>
+      <td>${fmt(dueDateStr)}</td>
+      <td>${statusCell}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function markAffiliatePayoutPaid(subDistributorId, name, monthStr) {
+  const periodStart = monthStr + '-01';
+  const periodEnd = new Date(new Date(periodStart + 'T00:00:00Z').getTime());
+  periodEnd.setUTCMonth(periodEnd.getUTCMonth() + 1);
+  const dueDate = new Date(periodEnd);
+  dueDate.setUTCDate(10);
+
+  const { data: referrals } = await window.sb
+    .from('order_referrals')
+    .select('orders(total,created_at)')
+    .eq('sub_distributor_id', subDistributorId);
+
+  const revenue = (referrals || []).reduce((s, r) => {
+    const created = r.orders?.created_at;
+    if (!created || created < periodStart || created >= periodEnd.toISOString()) return s;
+    return s + (parseFloat(r.orders?.total) || 0);
+  }, 0);
+  const rate = affiliateCommissionRate(revenue);
+  const commission = revenue * rate;
+
+  if (!(commission > 0)) { showToast('Nothing due for this affiliate this month.'); return; }
+  if (!confirm(`Mark ${name}'s ${monthStr} commission ($${commission.toFixed(2)}) as paid? This locks in the amount.`)) return;
+
+  const { error } = await window.sb.from('affiliate_payouts').upsert({
+    sub_distributor_id: subDistributorId,
+    period_month: periodStart,
+    referred_revenue: revenue,
+    commission_rate: rate,
+    commission_amount: commission,
+    due_date: dueDate.toISOString().slice(0, 10),
+    status: 'paid',
+    paid_at: new Date().toISOString(),
+  }, { onConflict: 'sub_distributor_id,period_month' });
+
+  if (error) { showToast('Error: ' + error.message); return; }
+  showToast('Marked paid.');
+  renderAffiliatePayouts();
 }
 
 async function loadSdStats() {
