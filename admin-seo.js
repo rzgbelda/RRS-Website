@@ -337,6 +337,90 @@ function saveSeoApiKey() {
   if (typeof showToast === "function") showToast(val ? "API key saved." : "API key cleared.");
 }
 
+/* ── Site traffic — real page views from GA4, by date range ──
+   "Clicks" in the everyday sense the CEO means it: how many times a page
+   was viewed, for the whole site or just one campaign page (e.g. Best
+   Deals), over whatever date range is picked. Backed by the Google
+   Analytics Data API through a new Supabase edge function
+   (supabase/functions/analytics) that reuses the same service-account
+   credential as Search Console -- that account additionally needs GA4
+   property-level Viewer access granted (separate from Search Console
+   access) before this will return real data instead of an error. */
+const GA4_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/analytics";
+const GA4_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
+
+// Path this campaign page is actually served at (no /best-deals rewrite
+// exists in vercel.json, so GA4 records it under the raw .html path).
+const BEST_DEALS_PATH = "/best-deals.html";
+
+function isoDaysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+async function loadSiteTraffic() {
+  const host = document.getElementById("seoTrafficBody");
+  const btn  = document.getElementById("seoTrafficBtn");
+  if (!host) return;
+
+  const start = document.getElementById("seoTrafficStart")?.value;
+  const end   = document.getElementById("seoTrafficEnd")?.value;
+  if (!start || !end) { host.innerHTML = '<p style="color:#ef4444;font-size:13px;">Pick both a start and end date.</p>'; return; }
+  if (start > end) { host.innerHTML = '<p style="color:#ef4444;font-size:13px;">Start date is after end date.</p>'; return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
+  host.innerHTML = '<p style="color:#94a3b8;font-size:13px;">Loading page views…</p>';
+
+  try {
+    const res = await fetch(`${GA4_ENDPOINT}?start=${start}&end=${end}`, {
+      headers: { Authorization: "Bearer " + GA4_ANON_KEY },
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
+
+    window._trafficResults = data;
+
+    const bestDeals = data.pages.find(p => p.path === BEST_DEALS_PATH);
+
+    const statsHtml = '' +
+      '<div class="a-stats-grid" style="margin-bottom:20px;">' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Total Page Views</p><p class="a-stat-value">' + data.totals.views.toLocaleString() + '</p></div></div>' +
+        '<div class="a-stat-card"><div><p class="a-stat-label">Total Sessions</p><p class="a-stat-value">' + data.totals.sessions.toLocaleString() + '</p></div></div>' +
+        '<div class="a-stat-card" style="border-color:#ED7226;"><div><p class="a-stat-label">Best Deals Page Views</p><p class="a-stat-value" style="color:#ED7226;">' + (bestDeals ? bestDeals.views.toLocaleString() : "0") + '</p></div></div>' +
+      '</div>';
+
+    if (!data.pages.length) {
+      host.innerHTML = statsHtml +
+        '<div style="padding:16px 18px;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:10px;text-align:center;">' +
+          '<p style="color:#64748b;font-size:13px;margin:0;">No page view data for this range.</p>' +
+        '</div>';
+      if (btn) { btn.disabled = false; btn.textContent = "Run Report"; }
+      return;
+    }
+
+    const rows = data.pages.map(p => '' +
+      '<tr' + (p.path === BEST_DEALS_PATH ? ' style="background:#fff7ed;"' : '') + '>' +
+        '<td>' + escHtml(p.path) + (p.path === BEST_DEALS_PATH ? ' <span class="a-badge a-badge-warning" style="margin-left:6px;">Best Deals</span>' : '') + '</td>' +
+        '<td>' + p.views.toLocaleString() + '</td>' +
+        '<td>' + p.sessions.toLocaleString() + '</td>' +
+      '</tr>').join("");
+
+    host.innerHTML = statsHtml +
+      '<h4 style="font-size:13px;color:#0b2d52;margin:0 0 10px;">Page Views by Page &mdash; ' + escHtml(start) + ' to ' + escHtml(end) + '</h4>' +
+      '<table class="a-table"><thead><tr><th>Page</th><th>Views</th><th>Sessions</th></tr></thead><tbody>' + rows + '</tbody></table>';
+  } catch (err) {
+    host.innerHTML =
+      '<div style="padding:14px 16px;background:#fef2f2;border:1.5px solid #fecaca;border-radius:10px;">' +
+        '<p style="color:#b91c1c;font-size:13px;margin:0 0 6px;font-weight:600;">Could not load site traffic</p>' +
+        '<p style="color:#7f1d1d;font-size:12px;margin:0;">' + escHtml(err.message) + '</p>' +
+        '<p style="color:#7f1d1d;font-size:11.5px;margin:8px 0 0;">If this says the property or credential is missing: the GA4 property ID and a service account with Viewer access on that property both need to be configured (Supabase Edge Function secrets GA4_PROPERTY_ID and GSC_SERVICE_ACCOUNT_B64).</p>' +
+      '</div>';
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = "Run Report"; }
+}
+
 /* ── Google Search Console — real keyword & traffic data ──── */
 const GSC_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/search-console";
 const GSC_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
@@ -469,6 +553,21 @@ function renderSeoTab() {
     '</div>' +
 
     '<div class="a-card" style="margin-top:24px;">' +
+      '<div class="a-card-header"><h3>Site Traffic</h3></div>' +
+      '<div style="padding:0 18px 16px;">' +
+        '<p style="color:#94a3b8;font-size:12.5px;margin:0 0 12px;">Real page views from Google Analytics, by date range &mdash; includes a highlighted total for the Best Deals campaign page.</p>' +
+        '<div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">' +
+          '<div><label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;">Start</label>' +
+            '<input type="date" id="seoTrafficStart" value="' + isoDaysAgo(28) + '" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>' +
+          '<div><label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px;">End</label>' +
+            '<input type="date" id="seoTrafficEnd" value="' + isoDaysAgo(0) + '" style="padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;"></div>' +
+          '<button id="seoTrafficBtn" class="a-btn-sm" onclick="loadSiteTraffic()">Run Report</button>' +
+        '</div>' +
+        '<div id="seoTrafficBody"><p style="color:#94a3b8;font-size:13px;">Loading page views…</p></div>' +
+      '</div>' +
+    '</div>' +
+
+    '<div class="a-card" style="margin-top:24px;">' +
       '<div class="a-card-header"><h3>Search Performance</h3>' +
         '<button id="seoGscBtn" class="a-btn-sm" onclick="loadSearchConsole()">Refresh</button>' +
       '</div>' +
@@ -479,5 +578,6 @@ function renderSeoTab() {
 
   runSeoAudit();
   loadSeoSitemap();
+  loadSiteTraffic();
   loadSearchConsole();
 }
