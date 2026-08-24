@@ -78,6 +78,7 @@
     .bd-card.flip .bd-card-media { order:2; }
     .bd-card.flip .bd-card-copy { order:1; }
     .bd-card-media {
+      position:relative;
       background:#fff; border-radius:16px; padding:28px;
       display:flex; align-items:center; justify-content:center;
       box-shadow:0 12px 30px -12px rgba(11,37,69,.16);
@@ -525,6 +526,8 @@
                 data-price3="${p.price_tier3 ?? ''}"
                 data-unit="${escBd(p.unit || 'Case')}"
                 data-moq="${p.moq || 1}"
+                data-moq-group="${escBd(p.moq_group || '')}"
+                data-moq-group-min="${p.moq_group_min || ''}"
                 data-image="${escBd(p.image_url || '')}"
                 title="Add to cart"
                 aria-label="Add ${escBd(p.name || 'item')} to cart"
@@ -535,6 +538,7 @@
       return `
       <article class="bd-card bd-reveal${idx % 2 === 1 ? ' flip' : ''}" style="--bd-delay:${Math.min(idx * 0.12, 0.36)}s">
         <div class="bd-card-media">
+          ${p.moq_group ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${p.moq_group_min}</span>` : ''}
           <img src="${escBd(p.image_url || '')}" alt="${escBd(p.name || '')}" loading="lazy">
         </div>
         <div class="bd-card-copy">

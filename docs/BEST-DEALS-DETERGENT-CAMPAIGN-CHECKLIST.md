@@ -22,8 +22,9 @@ Each item is tagged **[You]** — a business/account decision or manual step onl
 - [ ] **[Dev]** Add server-side Conversions API (CAPI) forwarding from `api/create-order.js` on real purchases — more reliable than the browser pixel alone, especially with ad blockers.
 - [ ] **[You]** Get the Pixel ID and a CAPI access token from Meta Events Manager and share them (these become new Vercel/Supabase secrets, same pattern as the Stripe/GA4 keys already in use).
 - [ ] **[Dev]** Configure the custom `Local-Cart-Conversion` event, firing only when the checkout shipping state/ZIP falls in the target NC range.
-- [ ] **[Dev]** Build the dedicated campaign landing page for the 5-gallon Mix & Match group — same pattern as the Best Deals page, filtered to this product group, with the live Mix & Match progress bar front and center.
-- [ ] **[Dev]** Confirm GA4 records the new landing page's real URL correctly (learned the hard way on Best Deals: check what the URL actually resolves to after any Vercel clean-URL redirect, don't assume the `.html` filename).
+- [x] **[Dev]** ~~Build a dedicated campaign landing page~~ — not needed. **The Best Deals page (`/best-deals`) is the landing page** — confirmed and fixed live (2026-08-24): its cart button now correctly carries the Mix & Match group data (it previously didn't — a real bug, would have let someone check out below the 36-bucket minimum from this exact page), and it now shows the same "MIX & MATCH MOQ: 36" badge the catalog does.
+- [ ] **[You]** Add each of the 20 five-gallon chemical SKUs as a Best Deals entry (Admin → Best Deals → Add Deal) with hook/pitch copy — they won't appear on the page at all until they're added there, it's a curated list, not automatic.
+- [ ] **[You]** Set a `retail_price` on each of those 20 products (Admin → Products → edit each) — none currently have one set, so today they'd show with no "Save X%" badge even once added as a deal.
 
 ## Phase 2 — Content production
 
