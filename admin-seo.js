@@ -349,9 +349,11 @@ function saveSeoApiKey() {
 const GA4_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/analytics";
 const GA4_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
-// Path this campaign page is actually served at (no /best-deals rewrite
-// exists in vercel.json, so GA4 records it under the raw .html path).
-const BEST_DEALS_PATH = "/best-deals.html";
+// Path this campaign page is actually served at. vercel.json has
+// "cleanUrls": true, which 308-redirects /best-deals.html -> /best-deals --
+// confirmed live -- so that's the URL visitors land on and what GA4
+// actually records under pagePath, not the raw .html filename.
+const BEST_DEALS_PATH = "/best-deals";
 
 function isoDaysAgo(n) {
   const d = new Date();
