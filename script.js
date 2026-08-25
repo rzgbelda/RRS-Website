@@ -846,6 +846,10 @@ function setupProductCardClicks() {
     card.onclick = e => {
       if (e.target.closest(".add-btn")) return;
       if (e.target.closest(".variant-pill")) return;
+      // RRS-11 introduced this dropdown; the card's own click-to-navigate
+      // handler didn't know about it, so opening/choosing from the select
+      // was bubbling up as a "click" and navigating to the product page.
+      if (e.target.closest(".variant-select")) return;
 
       const url = card.dataset.url;
       if (url) {
