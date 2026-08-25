@@ -14,7 +14,7 @@ Each item is tagged **[Marketing]** — a business/account decision or manual st
 
 ## Phase 1 — Technical foundation (must exist before filming/tagging)
 
-- [ ] **[Marketing]** Create or confirm a Meta Business Manager account for Room Ready Supply.
+- [x] **[Marketing]** ~~Create or confirm a Meta Business Manager account for Room Ready Supply~~ — already exists, confirmed 2026-08-26.
 - [ ] **[Marketing]** Create a Meta Commerce Manager catalog under that Business Manager.
 - [ ] **[Dev]** Build a Meta product feed (XML, auto-generated the same way `sitemap-products.xml` already is) so the 5-gallon chemical SKUs sync to that catalog automatically instead of being uploaded by hand.
 - [ ] **[Dev]** Install the base Meta Pixel site-wide (PageView).
