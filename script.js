@@ -456,6 +456,28 @@ function injectVariantCSS() {
       box-shadow: 0 2px 6px rgba(10, 50, 30, 0.22);
     }
 
+    /* -- Catalog card size dropdown (RRS-11) -- replaces what used to be a
+       row of size pills, which grew a card tall and uneven next to its
+       grid neighbors once a product had more than 3-4 sizes. One row,
+       fixed height, regardless of how many options a product has. -- */
+    .variant-select {
+      display: block;
+      width: 100%;
+      margin: 10px 0 12px;
+      padding: 7px 30px 7px 11px;
+      border: 1.5px solid #d8dce3;
+      border-radius: 7px;
+      background: #f8f9fa url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="%23505a68" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 11px center;
+      appearance: none; -webkit-appearance: none; -moz-appearance: none;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #1e2a38;
+      cursor: pointer;
+      transition: border-color 0.18s cubic-bezier(0.2,0,0.2,1), background-color 0.18s cubic-bezier(0.2,0,0.2,1);
+    }
+    .variant-select:hover { border-color: #1a6b4a; }
+    .variant-select:focus-visible { outline: 2px solid #1a6b4a; outline-offset: 1px; }
+
     /* -- Product page pills – larger, with a header label -- */
     #product-variant-selector {
       margin: 16px 0 20px;
@@ -596,10 +618,19 @@ function renderVariantCard(variants) {
     const label = vv.variantLabel || vv.size || "Option " + (i + 1);
     return seenLabels.get(label) === i;
   });
-  const pillsHtml = dedupedVariants.map((vv, i) => {
-    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
-    return `<button class="variant-pill${i === 0 ? " active" : ""}" data-vidx="${variants.indexOf(vv)}" onclick="selectVariant(this)">${label}</button>`;
-  }).join("");
+  // RRS-11: this used to be a flat grid of pills -- fine for 2-3 sizes, but
+  // a product like linen sheets with 6+ size/fold combinations turned the
+  // card into a tall, uneven block next to its neighbors in the grid. A
+  // dropdown holds the exact same choice in one fixed-height row regardless
+  // of how many sizes a product has. Skipped entirely when there's nothing
+  // to choose (a single real size, only color varies).
+  const sizeDropdownHtml = dedupedVariants.length > 1 ? `
+    <select class="variant-select" onchange="selectVariantFromDropdown(this)">
+      ${dedupedVariants.map((vv, i) => {
+        const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+        return `<option value="${variants.indexOf(vv)}"${i === 0 ? " selected" : ""}>${label}</option>`;
+      }).join("")}
+    </select>` : "";
 
   // Color pills: show unique colors (using first size's color variants as reference)
   let colorPillsHtml = "";
@@ -620,8 +651,8 @@ function renderVariantCard(variants) {
       </div>
       <div class="product-content">
         <h3>${v.productFamily || v.name}</h3>
-        <div class="variant-selector">${pillsHtml}</div>
-        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:6px;">${colorPillsHtml}</div>` : ""}
+        ${sizeDropdownHtml}
+        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
@@ -669,26 +700,11 @@ function renderVariantCard(variants) {
     </div>`;
 }
 
-function selectVariant(pillEl, legacyIdx) {
-  const card = pillEl.closest(".product-card");
-  const variants = JSON.parse(card.dataset.variants);
-  const idx = pillEl.dataset.vidx !== undefined ? parseInt(pillEl.dataset.vidx) : (legacyIdx ?? 0);
-  let v = variants[idx];
-
-  // If a color is actively selected, find the matching size+color variant
-  const activeColorPill = card.querySelector(".color-pill.active");
-  if (activeColorPill && v.colorLabel) {
-    const activeColorVariant = variants[parseInt(activeColorPill.dataset.vidx)];
-    const matched = variants.find(vv =>
-      vv.variantLabel === v.variantLabel && vv.colorLabel === activeColorVariant?.colorLabel
-    );
-    if (matched) v = matched;
-  }
-
-  card.querySelectorAll(".variant-pill:not(.color-pill)").forEach(p => {
-    p.classList.toggle("active", p === pillEl);
-  });
-
+// Shared by both the size dropdown and (indirectly, via selectVariantColor)
+// the color pills -- one place that updates everything on the card for
+// whichever variant is now current, so the two controls can never drift
+// out of sync with each other.
+function applyVariantToCard(card, v) {
   const displayPrice = cleanPrice(v.price);
   const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
   const price = displayPrice || cartPrice;
@@ -731,7 +747,26 @@ function selectVariant(pillEl, legacyIdx) {
   }
 }
 
-// Switches color while keeping the current active size
+function selectVariantFromDropdown(selectEl) {
+  const card = selectEl.closest(".product-card");
+  const variants = JSON.parse(card.dataset.variants);
+  let v = variants[parseInt(selectEl.value)];
+
+  // If a color is actively selected, find the matching size+color variant
+  // rather than just whatever's first for that size.
+  const activeColorPill = card.querySelector(".color-pill.active");
+  if (activeColorPill && v.colorLabel) {
+    const activeColorVariant = variants[parseInt(activeColorPill.dataset.vidx)];
+    const matched = variants.find(vv =>
+      vv.variantLabel === v.variantLabel && vv.colorLabel === activeColorVariant?.colorLabel
+    );
+    if (matched) v = matched;
+  }
+
+  applyVariantToCard(card, v);
+}
+
+// Switches color while keeping the current selected size
 function selectVariantColor(pillEl) {
   const card = pillEl.closest(".product-card");
   const variants = JSON.parse(card.dataset.variants);
@@ -747,9 +782,10 @@ function selectVariantColor(pillEl) {
   const img = card.querySelector(".product-image img");
   if (img) img.src = colorVariant.image;
 
-  // Update the product link to go to the color variant of the current active size
-  const activeSizePill = card.querySelector(".variant-pill:not(.color-pill).active");
-  const activeSizeIdx = activeSizePill ? parseInt(activeSizePill.dataset.vidx) : 0;
+  // Update the product link to go to the color variant of the currently
+  // selected size (read from the dropdown now, not an "active" pill class).
+  const sizeSelect = card.querySelector(".variant-select");
+  const activeSizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
   const activeSize = variants[activeSizeIdx];
   const target = variants.find(vv =>
     vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === colorVariant.colorLabel
