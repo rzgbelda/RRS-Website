@@ -37,8 +37,8 @@ Reconstructed from git log, not a surviving plan doc:
 | 10 | Recover the orphaned Laundry & Cleaning Chemicals category — add to `sitemap-categories.xml` and `tools/seo-audit.js`'s slug list | The one page actively being served with zero visibility into whether it's healthy | ✅ Done (2026-08-22) |
 | 11 | Auto-generate `sitemap.xml` and `sitemap-categories.xml` the same way products already are | A stale sitemap quietly tells Google nothing has changed, even when it has | ✅ Done (2026-08-22) — `tools/generate-sitemap.js` now regenerates all 3 sitemaps + the index; categories are read from the `category/` folder itself, not a hand-typed list, so Day 10's bug class can't recur silently |
 | 12 | Widen the SEO Health dashboard from 6 pages to the whole site (categories + products) | You're only ever checking ~4% of real pages from the dashboard you actually look at | ✅ Done (2026-08-22) — now checks all 9 categories + 5 real products sampled live from the sitemap (20 pages total); product pages audited as fully server-rendered per SEO Days 6/8, not skipped |
-| 13 | Fix inconsistent image lazy-loading across templates | Below-fold images loading eagerly wastes mobile bandwidth | Not started |
-| 14 | Modernize image formats to WebP (`<picture>` with fallback) | Next real load-time win after the 93% image-weight cut already done | Not started |
+| 13 | Fix inconsistent image lazy-loading across templates | Below-fold images loading eagerly wastes mobile bandwidth | ✅ Done (2026-08-25) — the "1/5 lazy" finding was mostly header logo/nav icons (correctly eager); the 2 real gaps (About feature icon, floating QR image on 6 pages) are now lazy |
+| 14 | Modernize image formats to WebP (`<picture>` with fallback) | Next real load-time win after the 93% image-weight cut already done | ✅ Done (2026-08-25) — logo/hero/about/best-deals banners converted to WebP with `<picture>` fallback across all 26 pages carrying the logo; `optimizeImageUrl()` added to script.js to auto-serve optimal format/quality for the ~98% of product photos that are Cloudinary-hosted, with zero new files needed |
 
 ### Days 15–16 — Local & trust signals
 
