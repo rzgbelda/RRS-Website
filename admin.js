@@ -590,6 +590,30 @@ async function bulkDelete() {
   renderProductsTable(document.getElementById("productSearch")?.value.trim() || "");
 }
 
+// RRS-15: "Hide" here means the same thing the existing "Show hidden"
+// filter already reads -- is_active:false, the same flag the single-
+// product editor's "Show on site" checkbox already sets. Bulk deactivate
+// is a much safer everyday action than bulk delete (product 90 rows of an
+// old seed used to only be reachable one row at a time), and un-hide
+// exists alongside it since a hide-only bulk action would be a dead end
+// for anyone who selects the wrong rows.
+async function bulkSetActive(active) {
+  const ids = [...document.querySelectorAll(".product-cb:checked")].map(cb => cb.dataset.id);
+  if (!ids.length) return;
+
+  const { error } = await window.sb.from("products")
+    .update({ is_active: active, updated_at: new Date().toISOString() })
+    .in("id", ids);
+
+  if (error) { showToast("Error: " + error.message); return; }
+  showToast(`${ids.length} product${ids.length > 1 ? "s" : ""} ${active ? "unhidden" : "hidden"}.`);
+  clearSelection();
+  renderProductsTable(document.getElementById("productSearch")?.value.trim() || "");
+}
+
+function bulkHide() { bulkSetActive(false); }
+function bulkShow() { bulkSetActive(true); }
+
 document.getElementById("productSearch")?.addEventListener("input", e => renderProductsTable(e.target.value.trim()));
 document.getElementById("productCategoryFilter")?.addEventListener("change", () => renderProductsTable(document.getElementById("productSearch")?.value.trim() || ""));
 
