@@ -337,7 +337,7 @@
 
   <header class="navbar">
     <a href="/" class="logo">
-      <img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" />
+      <picture><source srcset="assets/img/RR logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
     </a>
     <nav class="nav-links">
       <a href="/">Home</a>
@@ -390,7 +390,7 @@
     </section>
 
     <section class="bd-hero-photo bd-reveal">
-      <img src="assets/img/best-deals-hero.jpg" alt="Room Ready Supply warehouse shelving stocked with hospitality supplies" width="1600" height="639" />
+      <picture><source srcset="assets/img/best-deals-hero.webp" type="image/webp"><img src="assets/img/best-deals-hero.jpg" alt="Room Ready Supply warehouse shelving stocked with hospitality supplies" width="1600" height="639" /></picture>
     </section>
 
     <section class="bd-intro bd-reveal">
@@ -474,6 +474,11 @@
 
     function bdCardHtml(deal, product, idx) {
       const p = product || {};
+      // SEO Day 14: script.js's optimizeImageUrl() serves an auto-optimal
+      // format/quality for Cloudinary-hosted product photos -- this page
+      // queries products directly rather than through
+      // mapDbProductToLegacyShape(), so it needs the same call itself.
+      if (typeof optimizeImageUrl === "function") p.image_url = optimizeImageUrl(p.image_url);
       const specs = [];
       specs.push(`<li>${BD_CHECK_SVG}<span><b>Item #</b> ${escBd(p.sku || '')}</span></li>`);
       if (p.case_qty) specs.push(`<li>${BD_CHECK_SVG}<span><b>Case Qty</b> ${escBd(p.case_qty)}</span></li>`);

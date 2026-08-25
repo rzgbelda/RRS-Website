@@ -96,7 +96,7 @@
 
   <header class="navbar">
     <a href="/" class="logo">
-      <img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" />
+      <picture><source srcset="assets/img/RR logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
     </a>
 
     <nav class="nav-links">
@@ -181,7 +181,7 @@
     </section>
 
     <section class="hero-image">
-      <img fetchpriority="high" width="1600" height="900" src="assets/img/banner1.jpg" alt="Hero banner" id="heroBannerEl" />
+      <picture id="heroBannerPicture"><source srcset="assets/img/banner1.webp" type="image/webp"><img fetchpriority="high" width="1600" height="900" src="assets/img/banner1.jpg" alt="Hero banner" id="heroBannerEl" /></picture>
     </section>
   </main>
   <section class="supply-section">
@@ -857,7 +857,7 @@
 
     <!-- RIGHT: image with badge -->
     <div class="about-image">
-      <img width="1400" height="933" id="aboutBannerEl" src="assets/img/banner3.jpg" alt="Room Ready Supply warehouse stocked with hospitality essentials in North Carolina" loading="lazy">
+      <picture id="aboutBannerPicture"><source srcset="assets/img/banner3.webp" type="image/webp"><img width="1400" height="933" id="aboutBannerEl" src="assets/img/banner3.jpg" alt="Room Ready Supply warehouse stocked with hospitality essentials in North Carolina" loading="lazy"></picture>
       <div class="about-image-badge">
         <svg width="20" height="20" fill="none" stroke="#ED7226" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         <div>
@@ -1128,7 +1128,15 @@
     if (hero.description)  document.getElementById("heroDescEl").textContent  = hero.description;
     if (hero.btnPrimary)   document.getElementById("heroBtnPrimaryEl").childNodes[document.getElementById("heroBtnPrimaryEl").childNodes.length-1].textContent = " " + hero.btnPrimary;
     if (hero.btnSecondary) document.getElementById("heroBtnSecondaryEl").childNodes[document.getElementById("heroBtnSecondaryEl").childNodes.length-1].textContent = " " + hero.btnSecondary;
-    if (hero.bannerUrl)    document.getElementById("heroBannerEl").src = hero.bannerUrl;
+    if (hero.bannerUrl) {
+      document.getElementById("heroBannerEl").src = hero.bannerUrl;
+      // A <picture><source> pointing at the original static banner's WebP
+      // would otherwise keep winning over this new src in any browser that
+      // supports WebP, silently ignoring a banner uploaded here -- there's
+      // no WebP version of an arbitrary CMS upload, so drop the source and
+      // let the <img src> above be what actually renders.
+      document.querySelector("#heroBannerPicture source")?.remove();
+    }
 
     // About
     if (about.tag)       document.getElementById("aboutTagEl").textContent   = about.tag;
@@ -1136,12 +1144,15 @@
     if (about.p1)        document.getElementById("aboutP1El").textContent    = about.p1;
     if (about.p2)        document.getElementById("aboutP2El").textContent    = about.p2;
     if (about.p3)        document.getElementById("aboutP3El").textContent    = about.p3;
-    if (about.bannerUrl) document.getElementById("aboutBannerEl").src        = about.bannerUrl;
+    if (about.bannerUrl) {
+      document.getElementById("aboutBannerEl").src = about.bannerUrl;
+      document.querySelector("#aboutBannerPicture source")?.remove();
+    }
     if (about.features && about.features.length) {
       const icons = ["assets/icons/au1.svg","assets/icons/au2.svg","assets/icons/au3.svg"];
       document.getElementById("aboutFeaturesEl").innerHTML = about.features.map((f,i) => `
         <div class="about-feature">
-          <img src="${f.icon || icons[i] || 'assets/icons/au1.svg'}" alt="">
+          <img src="${f.icon || icons[i] || 'assets/icons/au1.svg'}" alt="" loading="lazy">
           <div><h3>${f.title}</h3><p>${f.desc}</p></div>
         </div>`).join("");
     }
@@ -1152,7 +1163,7 @@
 <!-- -- Floating Catalog QR Widget ----------------------------- -->
 <div id="catalogQR" style="position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
   <div id="catalogQRPanel" style="display:none;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);border:1.5px solid #f0f0f0;text-align:center;width:180px;">
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https%3A%2F%2Fwww.roomreadysupply.com%2FRoom_Ready_Supply_Catalog.pdf&color=0d2c50&bgcolor=ffffff" width="144" height="144" alt="Scan to download catalog" style="border-radius:8px;display:block;margin:0 auto;">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https%3A%2F%2Fwww.roomreadysupply.com%2FRoom_Ready_Supply_Catalog.pdf&color=0d2c50&bgcolor=ffffff" width="144" height="144" alt="Scan to download catalog" loading="lazy" style="border-radius:8px;display:block;margin:0 auto;">
     <p style="font-size:11px;color:#294868;font-weight:700;margin:10px 0 4px;letter-spacing:.3px;">SCAN TO DOWNLOAD</p>
     <p style="font-size:10px;color:#888;margin:0;">Full Product Catalog</p>
     <a href="/Room_Ready_Supply_Catalog.pdf" download style="display:inline-block;margin-top:10px;padding:7px 14px;background:#ED7226;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Download PDF</a>

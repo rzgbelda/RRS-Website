@@ -108,16 +108,29 @@ function syncCartPricesToCatalog() {
 const PRODUCTS_SUPABASE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co";
 const PRODUCTS_SUPABASE_ANON = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
+// SEO Day 14: ~98% of live product photos are hosted on Cloudinary
+// (res.cloudinary.com/ddx3g4yse/...), which supports serving a
+// browser-optimal format/quality at request time via URL transformation
+// flags -- no local conversion, no extra files, works for every product
+// image without anyone re-uploading anything. Non-Cloudinary URLs (a
+// product photo uploaded straight to Supabase Storage, or missing
+// entirely) pass through unchanged.
+function optimizeImageUrl(url) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
+  if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto")) return url; // already transformed
+  return url.replace("/upload/", "/upload/f_auto,q_auto/");
+}
+
 function mapDbProductToLegacyShape(row) {
   const itemNumber = row.sku || "";
   const name = row.name || "";
   return {
     name,
     itemNumber,
-    image: row.image_url || "",
+    image: optimizeImageUrl(row.image_url) || "",
     // Extra gallery photos beyond the one cover image (RRS-13) -- always a
     // real array, never null/undefined, so callers can spread it safely.
-    images: Array.isArray(row.images) ? row.images : [],
+    images: Array.isArray(row.images) ? row.images.map(optimizeImageUrl) : [],
     description: row.description || "",
     overview: row.overview || "",
 

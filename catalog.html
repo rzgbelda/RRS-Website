@@ -51,7 +51,7 @@
 
   <header class="navbar">
     <a href="/" class="logo">
-      <img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" />
+      <picture><source srcset="assets/img/RR logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
     </a>
 
     <nav class="nav-links">
@@ -260,7 +260,7 @@
 <!-- -- Floating Catalog QR Widget ----------------------------- -->
 <div id="catalogQR" style="position:fixed;bottom:24px;right:24px;z-index:9998;display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
   <div id="catalogQRPanel" style="display:none;background:#fff;border-radius:16px;padding:18px 18px 14px;box-shadow:0 12px 40px rgba(0,0,0,.18);border:1.5px solid #f0f0f0;text-align:center;width:180px;">
-    <img src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https%3A%2F%2Fwww.roomreadysupply.com%2FRoom_Ready_Supply_Catalog.pdf&color=0d2c50&bgcolor=ffffff" width="144" height="144" alt="Scan to download catalog" style="border-radius:8px;display:block;margin:0 auto;">
+    <img src="https://api.qrserver.com/v1/create-qr-code/?size=144x144&data=https%3A%2F%2Fwww.roomreadysupply.com%2FRoom_Ready_Supply_Catalog.pdf&color=0d2c50&bgcolor=ffffff" width="144" height="144" alt="Scan to download catalog" loading="lazy" style="border-radius:8px;display:block;margin:0 auto;">
     <p style="font-size:11px;color:#294868;font-weight:700;margin:10px 0 4px;letter-spacing:.3px;">SCAN TO DOWNLOAD</p>
     <p style="font-size:10px;color:#888;margin:0;">Full Product Catalog</p>
     <a href="/Room_Ready_Supply_Catalog.pdf" download style="display:inline-block;margin-top:10px;padding:7px 14px;background:#ED7226;color:#fff;border-radius:8px;font-size:11px;font-weight:700;text-decoration:none;">Download PDF</a>
