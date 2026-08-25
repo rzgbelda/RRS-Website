@@ -680,13 +680,24 @@ async function openMoqGroupModal(groupName) {
 
   const { data: products } = await window.sb
     .from("products")
-    .select("id, name, sku, moq_group, moq_group_min")
+    .select("id, name, sku, category_name, moq_group, moq_group_min")
     .eq("is_active", true)
     .order("name");
   _moqAllProducts = products || [];
 
   const current = groupName ? _moqAllProducts.find(p => p.moq_group === groupName) : null;
   document.getElementById("moqGroupMinInput").value = current ? current.moq_group_min : "";
+
+  // RRS-14: most groups map onto one real category (all the 5-gallon
+  // chemicals, say), so the filter list is built from whatever categories
+  // actually exist on active products rather than a hardcoded list that
+  // could drift from the real catalog.
+  const catSelect = document.getElementById("moqGroupCategoryFilter");
+  if (catSelect) {
+    const cats = [...new Set(_moqAllProducts.map(p => p.category_name).filter(Boolean))].sort();
+    catSelect.innerHTML = `<option value="">All Categories</option>` +
+      cats.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("");
+  }
 
   renderMoqGroupProductPicker();
   openModal("moqGroupModal");
@@ -696,8 +707,12 @@ function renderMoqGroupProductPicker() {
   const el = document.getElementById("moqGroupProductPicker");
   if (!el) return;
   const filter = (document.getElementById("moqGroupProductSearch")?.value || "").trim().toLowerCase();
+  const category = document.getElementById("moqGroupCategoryFilter")?.value || "";
 
-  const rows = _moqAllProducts.filter(p => !filter || p.name.toLowerCase().includes(filter) || (p.sku || "").toLowerCase().includes(filter));
+  const rows = _moqAllProducts.filter(p =>
+    (!filter || p.name.toLowerCase().includes(filter) || (p.sku || "").toLowerCase().includes(filter)) &&
+    (!category || p.category_name === category)
+  );
   if (!rows.length) { el.innerHTML = `<div class="a-empty">No products match.</div>`; return; }
 
   el.innerHTML = rows.map(p => {
@@ -710,6 +725,14 @@ function renderMoqGroupProductPicker() {
         ${inOtherGroup ? `<span class="a-badge a-badge-gray" title="Already in another Mix & Match group">In "${escHtml(p.moq_group)}"</span>` : ""}
       </label>`;
   }).join("");
+}
+
+// Checks every row currently visible in the picker (i.e. respects the
+// search/category filters already applied) -- doesn't touch rows hidden by
+// the filter, and never touches disabled rows already locked into another
+// group.
+function selectAllVisibleMoqProducts() {
+  document.querySelectorAll("#moqGroupProductPicker .moq-product-cb:not(:disabled)").forEach(cb => { cb.checked = true; });
 }
 
 async function saveMoqGroup() {

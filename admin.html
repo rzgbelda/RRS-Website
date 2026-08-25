@@ -770,7 +770,18 @@
           <p id="moqGroupModalError" style="display:none;color:#dc2626;font-size:13px;margin:4px 0 0"></p>
 
           <div style="margin-top:16px">
-            <input type="text" id="moqGroupProductSearch" class="a-search" placeholder="Search products to add…" style="width:100%;margin-bottom:10px" oninput="renderMoqGroupProductPicker()">
+            <div style="display:flex;gap:8px;margin-bottom:10px">
+              <input type="text" id="moqGroupProductSearch" class="a-search" placeholder="Search products to add…" style="flex:1" oninput="renderMoqGroupProductPicker()">
+              <select id="moqGroupCategoryFilter" class="a-select" style="width:auto;min-width:160px" onchange="renderMoqGroupProductPicker()">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            <!-- Most Mix & Match groups are really "everything in this
+                 category" (RRS-14) -- picking a category and one-clicking
+                 every visible row is much faster than checking 15-20 boxes
+                 by hand. Only affects rows currently shown by the search/
+                 category filters above, not the whole catalog. -->
+            <button type="button" class="a-btn-outline" style="width:auto;font-size:12px;padding:6px 12px;margin-bottom:10px" onclick="selectAllVisibleMoqProducts()">Select All Shown</button>
             <div id="moqGroupProductPicker" style="border:1px solid #e2e8f0;border-radius:10px;max-height:320px;overflow-y:auto">
               <div class="a-empty">Loading…</div>
             </div>
@@ -2440,7 +2451,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=67"></script>
+<script src="admin.js?v=68"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {
