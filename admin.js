@@ -5535,9 +5535,16 @@ async function renderQuoteRequestsTable() {
       closed:   "background:#f1f5f9;color:#475569",
     }[r.status] || "";
 
+    const fileBadge = r.file_url
+      ? `<a href="${esc(r.file_url)}" target="_blank" onclick="event.stopPropagation()" title="View attached file: ${esc(r.file_name||'file')}" style="display:inline-flex;align-items:center;gap:3px;margin-left:6px;padding:2px 7px;background:#fff7f0;border:1px solid #fed7aa;border-radius:10px;color:#e8621a;font-size:10.5px;font-weight:700;text-decoration:none;vertical-align:middle">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+          PDF
+        </a>`
+      : "";
+
     return `<tr>
       <td>${date}</td>
-      <td><strong>${esc(r.business_name)}</strong><br><small>${esc(r.customer_type||"")}</small></td>
+      <td><strong>${esc(r.business_name)}</strong>${fileBadge}<br><small>${esc(r.customer_type||"")}</small></td>
       <td>${esc(r.contact_name)}</td>
       <td><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></td>
       <td style="max-width:220px;font-size:12px;line-height:1.4">${itemsStr}</td>
