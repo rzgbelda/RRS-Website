@@ -8438,6 +8438,17 @@ input.qty-input:focus {
 .vq-item-qty::-webkit-outer-spin-button { -webkit-appearance: none; }
 .vq-remove-btn { background: none; border: none; color: #94a3b8; font-size: 20px; line-height: 1; cursor: pointer; padding: 0; transition: color .15s; }
 .vq-remove-btn:hover { color: #dc2626; }
+.vq-autocomplete-dropdown {
+  position: fixed; display: none; z-index: 4000;
+  background: #fff; border: 1.5px solid #e4eaf2; border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15,30,60,.12);
+  max-height: 240px; overflow-y: auto; padding: 6px;
+}
+.vq-autocomplete-item {
+  padding: 9px 12px; border-radius: 7px; font-size: 13.5px; color: #0B1F38;
+  cursor: pointer; transition: background .12s;
+}
+.vq-autocomplete-item:hover { background: #fff3ea; color: #ED7226; }
 .vq-source-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 20px; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
 .vq-badge-ai      { background: #ede9fe; color: #6d28d9; }
 .vq-badge-catalog { background: #dbeafe; color: #1d4ed8; }

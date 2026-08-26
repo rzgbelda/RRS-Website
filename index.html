@@ -726,7 +726,7 @@
                 </div>
                 <div class="uq-upload-layout">
                     <div class="uq-upload-main">
-                        <p class="uq-section-hint">Upload a competitor quote, invoice, or product list and our AI will match available products from the Room Ready Supply catalog.</p>
+                        <p class="uq-section-hint">Upload a competitor quote, invoice, or product list &mdash; our team will review it and match it to Room Ready Supply products for you.</p>
                         <div class="uq-drop-zone" id="competitorDropZone" tabindex="0" role="button" aria-label="Upload file &mdash; click or drag and drop">
                             <input type="file" id="competitorFile" accept=".pdf,.jpg,.jpeg,.png" style="display:none" aria-hidden="true">
                             <div class="uq-drop-icon">
@@ -736,22 +736,13 @@
                             <p class="uq-drop-sub">or <span class="uq-browse-link" onclick="document.getElementById('competitorFile').click()">browse to upload</span></p>
                             <p class="uq-drop-hint">PDF, JPG, PNG &mdash; Max 15 MB</p>
                         </div>
-                        <button type="button" id="analyzeCompetitorBtn" class="uq-analyze-btn" disabled>
-                            <span id="analyzeCompetitorBtnText">
-                                <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24" style="vertical-align:middle;margin-right:6px"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                                Analyze with AI
-                            </span>
-                            <span id="analyzeCompetitorBtnLoading" style="display:none">
-                                <span class="competitor-spinner"></span> Analyzing...
-                            </span>
-                        </button>
                         <div id="competitorError" class="uq-ai-error" role="alert"></div>
                         <div id="aiMatchResult" class="uq-ai-result" style="display:none;" role="status" aria-live="polite"></div>
                     </div>
                     <div class="uq-upload-benefits" aria-hidden="true">
                         <div class="uq-benefit-item">
                             <svg width="16" height="16" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-                            <span>AI matches products in our catalog</span>
+                            <span>Our team reviews it and matches it to our catalog</span>
                         </div>
                         <div class="uq-benefit-item">
                             <svg width="16" height="16" fill="none" stroke="#ED7226" stroke-width="2.2" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
@@ -1202,7 +1193,6 @@
 <script>
 (function () {
   const QUOTE_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/quote-request';
-  const MATCH_FN_URL  = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/match-competitor-quote';
   const BUCKET        = 'quote-files';
   const sb = window.sb;
 
@@ -1336,6 +1326,75 @@
     document.getElementById('vqItemsError').style.display = 'none';
     saveVqFormState();
   });
+
+  // -- Product name autocomplete ---------------------------------
+  // Customers previously had to type the exact product name from memory.
+  // This queries the real catalog as they type so they can pick a real
+  // product instead of guessing at spelling.
+  const vqDropdown = document.createElement('div');
+  vqDropdown.id = 'vqAutocompleteDropdown';
+  vqDropdown.className = 'vq-autocomplete-dropdown';
+  document.body.appendChild(vqDropdown);
+
+  let vqActiveInput = null;
+  let vqSearchToken = 0;
+
+  function hideVqDropdown() {
+    vqDropdown.style.display = 'none';
+    vqDropdown.innerHTML = '';
+    vqActiveInput = null;
+  }
+
+  function positionVqDropdown(input) {
+    const rect = input.getBoundingClientRect();
+    vqDropdown.style.left  = rect.left + 'px';
+    vqDropdown.style.top   = (rect.bottom + 4) + 'px';
+    vqDropdown.style.width = rect.width + 'px';
+  }
+
+  async function searchVqProducts(input, term) {
+    const token = ++vqSearchToken;
+    if (!term || term.trim().length < 2) { hideVqDropdown(); return; }
+    const { data, error } = await sb.from('products')
+      .select('name')
+      .eq('is_active', true)
+      .ilike('name', `%${term.trim()}%`)
+      .order('name')
+      .limit(8);
+    if (token !== vqSearchToken || document.activeElement !== input) return;
+    if (error || !data?.length) { hideVqDropdown(); return; }
+
+    vqActiveInput = input;
+    positionVqDropdown(input);
+    vqDropdown.innerHTML = data.map(p => `<div class="vq-autocomplete-item" data-name="${p.name.replace(/"/g,'&quot;')}">${p.name}</div>`).join('');
+    vqDropdown.style.display = 'block';
+  }
+
+  let vqDebounce;
+  document.getElementById('vqItemsList').addEventListener('input', (e) => {
+    if (!e.target.classList.contains('vq-item-name')) return;
+    clearTimeout(vqDebounce);
+    const input = e.target;
+    vqDebounce = setTimeout(() => searchVqProducts(input, input.value), 200);
+  });
+  document.getElementById('vqItemsList').addEventListener('focusin', (e) => {
+    if (!e.target.classList.contains('vq-item-name')) return;
+    if (e.target.value.trim().length >= 2) searchVqProducts(e.target, e.target.value);
+  });
+  document.getElementById('vqItemsList').addEventListener('focusout', () => {
+    // Delay so a click on a dropdown item registers before it's removed.
+    setTimeout(hideVqDropdown, 150);
+  });
+  vqDropdown.addEventListener('mousedown', (e) => {
+    const item = e.target.closest('.vq-autocomplete-item');
+    if (!item || !vqActiveInput) return;
+    e.preventDefault();
+    vqActiveInput.value = item.dataset.name;
+    saveVqFormState();
+    hideVqDropdown();
+  });
+  window.addEventListener('scroll', hideVqDropdown, true);
+  window.addEventListener('resize', () => { if (vqActiveInput) positionVqDropdown(vqActiveInput); });
   ['qBusinessName', 'qCustomerType', 'qCustomerTypeOther', 'qContactName', 'qEmail',
    'qShippingStreet', 'qShippingCity', 'qShippingState', 'qShippingZip', 'qNotes'].forEach(id => {
     document.getElementById(id)?.addEventListener('input', saveVqFormState);
@@ -1355,17 +1414,16 @@
     }
   })();
 
-  // -- AI Upload ------------------------------------------------
+  // -- File Upload ------------------------------------------------
+  // Uploads immediately on file selection (not gated behind a button the
+  // customer might never click) so the file always reaches file_url/file_name
+  // and is guaranteed to show up in the admin quote detail view.
   const competitorDrop  = document.getElementById('competitorDropZone');
   const competitorInput = document.getElementById('competitorFile');
   const competitorDropTx = document.getElementById('competitorDropText');
-  const analyzeBtn      = document.getElementById('analyzeCompetitorBtn');
-  const analyzeBtnTxt   = document.getElementById('analyzeCompetitorBtnText');
-  const analyzeBtnLoad  = document.getElementById('analyzeCompetitorBtnLoading');
   const competitorErr   = document.getElementById('competitorError');
   const aiMatchResult   = document.getElementById('aiMatchResult');
 
-  let competitorFileObj = null;
   let aiUploadedUrl     = null;
   let aiUploadedName    = null;
 
@@ -1376,14 +1434,15 @@
     e.preventDefault();
     competitorDrop.classList.remove('dragover');
     const f = e.dataTransfer.files[0];
-    if (f) setCompetitorFile(f);
+    if (f) uploadCompetitorFile(f);
   });
   competitorInput.addEventListener('change', () => {
-    if (competitorInput.files[0]) setCompetitorFile(competitorInput.files[0]);
+    if (competitorInput.files[0]) uploadCompetitorFile(competitorInput.files[0]);
   });
 
-  function setCompetitorFile(f) {
+  async function uploadCompetitorFile(f) {
     competitorErr.style.display = 'none';
+    aiMatchResult.style.display = 'none';
     if (!f.name.match(/\.(pdf|jpg|jpeg|png)$/i)) {
       competitorErr.textContent = 'Please upload a PDF, JPG, or PNG file.';
       competitorErr.style.display = 'block'; return;
@@ -1392,88 +1451,26 @@
       competitorErr.textContent = 'File must be under 15 MB.';
       competitorErr.style.display = 'block'; return;
     }
-    competitorFileObj = f;
-    competitorDrop.classList.add('has-file');
-    competitorDropTx.innerHTML = `<strong style="color:#16a34a">&#10003; ${f.name}</strong> <span style="color:#94a3b8;font-size:11px;">Click to change</span>`;
-    analyzeBtn.disabled = false;
-    aiMatchResult.style.display = 'none';
-  }
-
-  analyzeBtn.addEventListener('click', async () => {
-    if (!competitorFileObj) return;
-    analyzeBtn.disabled = true;
-    analyzeBtnTxt.style.display = 'none';
-    analyzeBtnLoad.style.display = 'inline';
-    competitorErr.style.display = 'none';
-    aiMatchResult.style.display = 'none';
-
+    competitorDropTx.innerHTML = `<span style="color:#94a3b8">Uploading&hellip;</span>`;
     try {
-      const ext  = competitorFileObj.name.split('.').pop();
+      const ext  = f.name.split('.').pop();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, competitorFileObj, { contentType: competitorFileObj.type, upsert: false });
+      const { error: upErr } = await sb.storage.from(BUCKET).upload(path, f, { contentType: f.type, upsert: false });
       if (upErr) throw new Error('Upload failed: ' + upErr.message);
       const { data: urlData } = sb.storage.from(BUCKET).getPublicUrl(path);
       aiUploadedUrl  = urlData.publicUrl;
-      aiUploadedName = competitorFileObj.name;
-
-      const res = await fetch(MATCH_FN_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
-        body: JSON.stringify({ file_url: aiUploadedUrl, file_name: aiUploadedName }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'AI matching failed');
-
-      injectAiResults(data);
-    } catch (err) {
-      competitorErr.textContent = err.message || 'Something went wrong. Please try again.';
-      competitorErr.style.display = 'block';
-    } finally {
-      analyzeBtn.disabled = false;
-      analyzeBtnTxt.style.display = 'inline';
-      analyzeBtnLoad.style.display = 'none';
-    }
-  });
-
-  function injectAiResults(data) {
-    const matches   = data.matches   || [];
-    const unmatched = data.unmatched || [];
-    const supplier  = data.supplier_name || '';
-    let added = 0;
-
-    matches.forEach(m => {
-      // Deduplicate: if same product name already exists as a row, merge qty
-      const existing = Array.from(document.querySelectorAll('.vq-item-row')).find(row => {
-        const nameEl = row.querySelector('.vq-item-name');
-        return nameEl && nameEl.value.trim().toLowerCase() === (m.rrs_name || '').trim().toLowerCase();
-      });
-      if (existing) {
-        const qtyEl = existing.querySelector('.vq-item-qty');
-        qtyEl.value = (parseInt(qtyEl.value) || 1) + (parseInt(m.competitor_qty) || 1);
-      } else {
-        // Remove the trailing blank row if it's empty
-        const rows = document.querySelectorAll('.vq-item-row');
-        const lastRow = rows[rows.length - 1];
-        if (lastRow && lastRow.querySelector('.vq-item-name').value.trim() === '') lastRow.remove();
-        addVqRow(m.rrs_name || m.line_item, m.competitor_qty || 1, 'ai');
-        added++;
-      }
-    });
-
-    const supplierLabel = supplier ? ` from <strong>${supplier}</strong>` : '';
-    if (added > 0) {
+      aiUploadedName = f.name;
+      competitorDrop.classList.add('has-file');
+      competitorDropTx.innerHTML = `<strong style="color:#16a34a">&#10003; ${f.name}</strong> <span style="color:#94a3b8;font-size:11px;">Click to change</span>`;
       aiMatchResult.style.display = 'block';
       aiMatchResult.className = 'uq-ai-result uq-ai-result--success';
-      aiMatchResult.innerHTML = `✓ AI matched <strong>${added}</strong> product${added !== 1 ? 's' : ''}${supplierLabel} and added ${added !== 1 ? 'them' : 'it'} to your product list.`
-        + (unmatched.length ? ` <span class="uq-ai-unmatched">${unmatched.length} item${unmatched.length !== 1 ? 's' : ''} could not be matched &mdash; add them manually in the notes.</span>` : '');
-    } else {
-      aiMatchResult.style.display = 'block';
-      aiMatchResult.className = 'uq-ai-result uq-ai-result--warn';
-      aiMatchResult.innerHTML = `No catalog matches found${supplierLabel}. Try adding items manually above or describe them in the notes.`;
+      aiMatchResult.innerHTML = `✓ File attached &mdash; our team will review it and match it to our catalog when preparing your quote.`;
+    } catch (err) {
+      competitorDrop.classList.remove('has-file');
+      competitorDropTx.textContent = 'Drop your file here';
+      competitorErr.textContent = err.message || 'Upload failed. Please try again.';
+      competitorErr.style.display = 'block';
     }
-
-    // Scroll to product list
-    setTimeout(() => document.getElementById('vqItemsList').scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 150);
   }
 
   // -- Form submit ----------------------------------------------
