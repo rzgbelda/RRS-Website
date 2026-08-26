@@ -4165,7 +4165,7 @@ async function openTicketDrawer(id) {
             ${tktAvatar(c.author_email, 30)}
             <div class="tkt-comment-body">
               <div class="tkt-comment-head">
-                <strong>${escHtml(c.author_email || "Unknown")}</strong>
+                <strong>${escHtml(c.author_name || c.author_email || "Unknown")}</strong>
                 ${c.author_role ? `<span class="tkt-role-tag">${escHtml(c.author_role)}</span>` : ""}
                 <span class="tkt-comment-time">${timeAgo(c.created_at)}${c.edited_at ? " · edited" : ""}</span>
                 ${canManage ? `
@@ -4370,10 +4370,16 @@ async function addTicketComment(ticketId) {
     }
 
     const { data: { user } } = await window.sb.auth.getUser();
+    let authorName = null;
+    if (user?.id) {
+      const { data: authorProfile } = await window.sb.from("profiles").select("full_name").eq("id", user.id).single();
+      authorName = authorProfile?.full_name || null;
+    }
     const payload = {
       ticket_id: ticketId,
       author_id: user?.id || null,
       author_email: user?.email || null,
+      author_name: authorName,
       author_role: window._adminRole || null,
       body,
     };
