@@ -5560,6 +5560,7 @@ span.flatpickr-weekday {
 /* -- Optional "Create an account" prompt on order-success screens -- */
 .acct-prompt {
   margin-top: 24px;
+  margin-bottom: 26px;
   padding: 20px 22px;
   background: #fff8f3;
   border: 1.5px solid #fed7aa;
