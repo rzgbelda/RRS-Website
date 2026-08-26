@@ -3430,24 +3430,59 @@ function nextBusinessDay() {
 
 /* ── Users ─────────────────────────────────────────────────── */
 
+// RRS-19: a customer can now have multiple businesses under one account
+// (public.businesses), so this lists one row PER BUSINESS instead of one
+// per account -- matching how the mockup's admin table shows the same
+// account twice for two different businesses. A customer with no
+// businesses row yet (pre-migration/legacy accounts) falls back to a
+// synthetic row built from their profile fields, same fallback account.html
+// uses, so nobody just disappears from this table.
 async function renderUsersTable(filter) {
   filter = filter || "";
   const tbody = document.getElementById("usersTableBody");
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Loading…</td></tr>`;
-  let q = window.sb.from("profiles").select("*").eq("role","customer").order("created_at",{ascending:false});
-  if (filter) q = q.ilike("business_name", `%${filter}%`);
-  const { data: users } = await q;
 
-  tbody.innerHTML = (users || []).map(u => `
+  const { data: users } = await window.sb.from("profiles").select("*").eq("role","customer").order("created_at",{ascending:false});
+  const userIds = (users || []).map(u => u.id);
+  const { data: businesses } = userIds.length
+    ? await window.sb.from("businesses").select("*").in("user_id", userIds).order("created_at")
+    : { data: [] };
+
+  const bizByUser = {};
+  (businesses || []).forEach(b => { (bizByUser[b.user_id] ||= []).push(b); });
+
+  let rows = [];
+  (users || []).forEach(u => {
+    const bizList = bizByUser[u.id]?.length ? bizByUser[u.id] : [{
+      id: null, profile_id: u.id, business_name: u.business_name, business_type: u.business_type,
+      contact_name: u.contact_name, phone: u.phone, email: u.email, created_at: u.created_at,
+    }];
+    bizList.forEach(b => rows.push({
+      profileId: u.id, bizId: b.id,
+      contact_name: b.contact_name || u.contact_name,
+      business_name: b.business_name,
+      business_type: b.business_type,
+      email: b.email || u.email,
+      phone: b.phone || u.phone,
+      created_at: b.created_at || u.created_at,
+    }));
+  });
+
+  if (filter) {
+    const f = filter.toLowerCase();
+    rows = rows.filter(r => (r.business_name || "").toLowerCase().includes(f));
+  }
+
+  tbody.innerHTML = rows.map(r => `
     <tr>
-      <td>${escHtml(u.contact_name  || "—")}</td>
-      <td>${escHtml(u.business_name || "—")}</td>
-      <td>${escHtml(u.business_type || "—")}</td>
-      <td>${escHtml(u.email         || "—")}</td>
-      <td>${escHtml(u.phone         || "—")}</td>
-      <td>${fmt(u.created_at)}</td>
-      <td><button class="a-btn-sm a-btn-danger" onclick="deleteUser('${u.id}')">Remove</button></td>
+      <td>${escHtml(r.contact_name  || "—")}</td>
+      <td>${escHtml(r.business_name || "—")}</td>
+      <td>${escHtml(r.business_type || "—")}</td>
+      <td>${escHtml(r.email         || "—")}</td>
+      <td>${escHtml(r.phone         || "—")}</td>
+      <td>${fmt(r.created_at)}</td>
+      <td><button class="a-btn-sm a-btn-danger" onclick="${r.bizId ? `removeBusinessRow('${r.bizId}')` : `deleteUser('${r.profileId}')`}">Remove</button></td>
     </tr>`).join("") || `<tr><td colspan="7" class="a-empty">No customers yet.</td></tr>`;
 }
 
@@ -3457,6 +3492,17 @@ async function deleteUser(id) {
   if (!confirm("Remove this user? This cannot be undone.")) return;
   await window.sb.from("profiles").delete().eq("id", id);
   showToast("User removed.");
+  renderUsersTable();
+}
+
+// Removes a single business under a customer's account -- not the account
+// itself. Their order/quote history is untouched (business_name is stored
+// as free text on those rows, not a foreign key to this table).
+async function removeBusinessRow(bizId) {
+  if (!confirm("Remove this business? The customer's past orders and quotes for it are unaffected.")) return;
+  const { error } = await window.sb.from("businesses").delete().eq("id", bizId);
+  if (error) { showToast("Couldn't remove business: " + error.message); return; }
+  showToast("Business removed.");
   renderUsersTable();
 }
 
