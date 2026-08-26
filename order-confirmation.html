@@ -84,6 +84,20 @@
     .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
 
     .icon-box { width: 34px; height: 34px; border-radius: 8px; background: rgba(237,114,38,.1); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+    /* Optional "create an account" prompt */
+    .acct-prompt-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; list-style: none; padding: 0; }
+    .acct-prompt-list li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #334155; font-weight: 600; }
+    .acct-prompt-list svg { flex-shrink: 0; color: #16a34a; }
+    .acct-prompt-btn {
+      display: inline-flex; align-items: center; justify-content: center; width: 100%;
+      background: #ED7226; color: #fff; border: none; border-radius: 10px;
+      padding: 12px; font-size: 14.5px; font-weight: 800; cursor: pointer;
+      font-family: inherit; text-decoration: none; transition: background .15s;
+    }
+    .acct-prompt-btn:hover { background: #d4611a; }
+    .acct-prompt-note { text-align: center; font-size: 11.5px; color: #94a3b8; margin: 8px 0 0; }
+    @media (max-width: 480px) { .acct-prompt-list { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -213,6 +227,29 @@
     </div>
   </div>
 
+  <!-- Optional "create an account" prompt, guest checkouts only -->
+  <div class="confirm-card" id="confirmAcctPrompt" style="display:none">
+    <div class="confirm-card-body">
+      <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:14px;">
+        <div class="icon-box" style="background:rgba(237,114,38,.1);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <p style="font-size:15px;font-weight:800;color:#0B1F38;margin:0 0 3px;">Want an easier way to manage your orders?</p>
+          <p style="font-size:13px;color:#64748b;margin:0;line-height:1.5;">Create a free account to keep this order and your future Room Ready Supply orders in one place.</p>
+        </div>
+      </div>
+      <ul class="acct-prompt-list" style="margin:0 0 16px;">
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Track order status</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>View order history</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Reorder faster</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Save business details</li>
+      </ul>
+      <button type="button" class="acct-prompt-btn" onclick="promptCreateAccountFromCheckout(_confirmCheckout)">Create Free Account</button>
+      <p class="acct-prompt-note">Optional &mdash; your order has already been submitted.</p>
+    </div>
+  </div>
+
   <!-- Actions -->
   <div class="confirm-actions">
     <a href="/catalog" class="btn-primary">Continue Shopping &#8594;</a>
@@ -221,8 +258,12 @@
 
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
+<script src="script.js"></script>
 <script>
+var _confirmCheckout = {};
 (function () {
   // Read order from localStorage (set by payment.html on success)
   const lastOrder = JSON.parse(localStorage.getItem('rrs_last_order') || '{}');
@@ -266,6 +307,7 @@
   // silently mis-split subtotal/tax for every other state's order.
   const total = lastOrder.total || 0;
   const checkout = lastOrder.checkout || {};
+  _confirmCheckout = checkout;
   const taxRate = checkout.state ? (window.getTaxRate ? (window.getTaxRate(checkout.state) || 0) : 0) : 0;
   const tax = taxRate > 0 ? (total / (1 + taxRate) * taxRate) : 0;
   const subtotal = total - tax;
@@ -282,6 +324,13 @@
   document.getElementById('confPhone').textContent = checkout.phone || '...';
   const addr = [checkout.street, checkout.city, checkout.state, checkout.zip].filter(Boolean).join(', ');
   document.getElementById('confAddress').textContent = addr || '...';
+
+  // Only offer account creation to guests -- a logged-in customer already has one.
+  if (window.sb) {
+    window.sb.auth.getSession().then(function (res) {
+      if (!res.data.session) document.getElementById('confirmAcctPrompt').style.display = 'block';
+    });
+  }
 })();
 </script>
 </body>

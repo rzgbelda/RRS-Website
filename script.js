@@ -3196,7 +3196,25 @@ function acceptConsentAndRegister() {
   _proceedWithRegistration();
 }
 
-function openRegisterModal() {
+// Shared by the optional "create an account" prompt on the order-success
+// screens (payment.html's invoice/PO modal, order-confirmation.html's card
+// flow). Stashes what the guest already typed at checkout so the signup
+// form on /login doesn't make them retype it, then hands off to login.html,
+// which reads this and opens the registration modal pre-filled.
+function promptCreateAccountFromCheckout(checkout) {
+  checkout = checkout || {};
+  const nameParts = (checkout.contact || '').trim().split(/\s+/);
+  localStorage.setItem('rrs_signup_prefill', JSON.stringify({
+    firstName: nameParts[0] || '',
+    lastName:  nameParts.slice(1).join(' ') || '',
+    business:  checkout.business || '',
+    email:     checkout.email || '',
+    phone:     checkout.phone || '',
+  }));
+  window.location.href = '/login?open=register';
+}
+
+function openRegisterModal(prefill) {
   const modal = document.getElementById('registerModal');
   if (!modal) return;
   document.body.appendChild(modal); // move to body to escape stacking context
@@ -3207,6 +3225,15 @@ function openRegisterModal() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  // Pre-fill from an optional create-account prompt (e.g. after guest
+  // checkout) so the customer doesn't have to retype what they already gave us.
+  if (prefill) {
+    if (prefill.firstName) document.getElementById('regFirstName').value = prefill.firstName;
+    if (prefill.lastName)  document.getElementById('regLastName').value  = prefill.lastName;
+    if (prefill.business)  document.getElementById('regBusiness').value  = prefill.business;
+    if (prefill.email)     document.getElementById('regEmail').value     = prefill.email;
+    if (prefill.phone)     document.getElementById('regPhone').value     = prefill.phone;
+  }
   document.getElementById('regSubDistNo').checked = true;
   toggleSubDistFields(false);
   const err = document.getElementById('regError');

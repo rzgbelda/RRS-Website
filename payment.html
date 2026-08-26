@@ -310,6 +310,26 @@
       Reference #: <strong id="orderRef"></strong>
     </div>
 
+    <div id="acctPrompt" class="acct-prompt" style="display:none">
+      <div class="acct-prompt-head">
+        <div class="acct-prompt-icon">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div>
+          <p class="acct-prompt-title">Want an easier way to manage your orders?</p>
+          <p class="acct-prompt-sub">Create a free account to keep this order and your future Room Ready Supply orders in one place.</p>
+        </div>
+      </div>
+      <ul class="acct-prompt-list">
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Track order status</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>View order history</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Reorder faster</li>
+        <li><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>Save business details</li>
+      </ul>
+      <button type="button" class="acct-prompt-btn" onclick="promptCreateAccountFromOrder()">Create Free Account</button>
+      <p class="acct-prompt-note">Optional &mdash; your order request has already been submitted.</p>
+    </div>
+
     <div class="modal-actions">
       <a href="/account#orders" class="modal-btn">
         View Orders
@@ -794,6 +814,7 @@
 
           localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
           document.getElementById('orderRef').textContent = orderNum;
+          if (!userId) showAcctPromptIfGuest(checkout);
           document.getElementById('orderModal').style.display = 'flex';
           trackOrderConversion(orderNum, method, window._orderTotal, window._orderItems);
           localStorage.removeItem('cart');
@@ -1028,6 +1049,19 @@
           window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
         }
       });
+    };
+
+    // Shows the optional "create an account" prompt on the order-success
+    // modal for guest checkouts only -- a logged-in customer already has an
+    // account, so the prompt would be pointless noise for them.
+    function showAcctPromptIfGuest(checkout) {
+      var el = document.getElementById('acctPrompt');
+      if (!el) return;
+      window._acctPromptCheckout = checkout || {};
+      el.style.display = 'block';
+    }
+    window.promptCreateAccountFromOrder = function () {
+      promptCreateAccountFromCheckout(window._acctPromptCheckout);
     };
 
     function showError(msg) {

@@ -5557,6 +5557,35 @@ span.flatpickr-weekday {
   background: #294868;
 }
 
+/* -- Optional "Create an account" prompt on order-success screens -- */
+.acct-prompt {
+  margin-top: 24px;
+  padding: 20px 22px;
+  background: #fff8f3;
+  border: 1.5px solid #fed7aa;
+  border-radius: 14px;
+  text-align: left;
+}
+.acct-prompt-head { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+.acct-prompt-icon {
+  width: 34px; height: 34px; border-radius: 9px; background: #fff0e2;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.acct-prompt-title { font-size: 15px; font-weight: 800; color: #0B1F38; margin: 0 0 3px; }
+.acct-prompt-sub { font-size: 13px; color: #64748b; margin: 0; line-height: 1.5; }
+.acct-prompt-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin: 14px 0 16px; list-style: none; padding: 0; }
+.acct-prompt-list li { display: flex; align-items: center; gap: 7px; font-size: 13px; color: #334155; font-weight: 600; }
+.acct-prompt-list svg { flex-shrink: 0; color: #16a34a; }
+.acct-prompt-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 100%;
+  background: #ED7226; color: #fff; border: none; border-radius: 10px;
+  padding: 12px; font-size: 14.5px; font-weight: 800; cursor: pointer;
+  font-family: inherit; text-decoration: none; transition: background .15s;
+}
+.acct-prompt-btn:hover { background: #d4611a; }
+.acct-prompt-note { text-align: center; font-size: 11.5px; color: #94a3b8; margin: 8px 0 0; }
+@media (max-width: 480px) { .acct-prompt-list { grid-template-columns: 1fr; } }
+
 .profile-panel-head {
   display: flex;
   justify-content: space-between;

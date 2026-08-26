@@ -747,4 +747,17 @@
   </div>
 </div>
 <!-- -- End Contact Modal ------------------------------------ -->
+
+<script>
+  // Auto-opens the Create Account modal, pre-filled, when arriving from the
+  // optional "create an account" prompt on an order-success screen.
+  (function () {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('open') !== 'register') return;
+    var prefill = null;
+    try { prefill = JSON.parse(localStorage.getItem('rrs_signup_prefill') || 'null'); } catch (e) {}
+    localStorage.removeItem('rrs_signup_prefill');
+    openRegisterModal(prefill);
+  })();
+</script>
 </body>
