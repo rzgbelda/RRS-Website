@@ -1,6 +1,6 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
-const { sendCustomerConfirmation, sendInternalAlert } = require('./_lib/send-emails');
+const { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert } = require('./_lib/send-emails');
 
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -223,6 +223,45 @@ module.exports = async (req, res) => {
           ]);
         }
       }
+    }
+  }
+
+  // A bank debit (ACH) can bounce days after checkout -- insufficient
+  // funds, closed account, etc. -- unlike a card, which declines instantly
+  // at checkout if it's going to fail at all. The order was already
+  // recorded as payment_status 'processing' at checkout time; this is what
+  // actually catches the failure and flags it for staff to follow up,
+  // since nothing else in this codebase ever will.
+  if (event.type === 'payment_intent.payment_failed') {
+    const pi = event.data.object;
+    const meta = pi.metadata || {};
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data: existing, error: fetchErr } = await supabase
+      .from('orders')
+      .select('id, order_number, payment_status, customer_name, customer_email, business_name, total')
+      .eq('stripe_payment_intent_id', pi.id)
+      .single();
+
+    // Guarded on payment_status !== 'paid': an order that already cleared
+    // (payment_intent.succeeded arrived first, or the browser's own charge
+    // confirmation already ran) must never be flipped back to failed by a
+    // late/out-of-order webhook delivery.
+    if (!fetchErr && existing && existing.payment_status !== 'paid' && existing.payment_status !== 'failed') {
+      await supabase.from('orders').update({ payment_status: 'failed' }).eq('id', existing.id);
+      console.log('[webhook] payment failed for', existing.order_number, '-', pi.last_payment_error?.message || 'no reason given');
+
+      sendPaymentFailedAlert({
+        order_number: existing.order_number || meta.order_number,
+        customer_name: existing.customer_name || meta.customer_name,
+        customer_email: existing.customer_email || meta.customer_email,
+        business_name: existing.business_name || meta.business_name,
+        amount_total: pi.amount,
+        payment_failure_reason: pi.last_payment_error?.message || 'No reason given by the bank.',
+      }).catch(function (e) { console.error('Payment-failure alert email failed:', e.message); });
     }
   }
 

@@ -4970,6 +4970,11 @@ function paymentBadgeClass(paymentStatus) {
   const m = {
     paid: "a-badge-green", captured: "a-badge-green",
     pending_invoice: "a-badge-yellow", pending: "a-badge-yellow", requires_capture: "a-badge-yellow",
+    // ACH sits here from checkout until the bank debit actually clears,
+    // days later (api/stripe-webhook.js flips it to 'paid' at that point) --
+    // distinct blue from the yellow "awaiting payment" states above, since
+    // this already has a real payment attempt in flight, not an unpaid invoice.
+    processing: "a-badge-blue",
     failed: "a-badge-red",
     refunded: "a-badge-gray",
   };
@@ -4979,6 +4984,7 @@ function paymentBadgeLabel(paymentStatus) {
   const m = {
     paid: "Paid", captured: "Paid",
     pending_invoice: "Awaiting Payment", pending: "Awaiting Payment", requires_capture: "Awaiting Payment",
+    processing: "Bank Processing",
     failed: "Failed", refunded: "Refunded",
   };
   return m[paymentStatus] || (paymentStatus || "—");

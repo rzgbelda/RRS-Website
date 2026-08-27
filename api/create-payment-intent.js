@@ -20,16 +20,32 @@ module.exports = async (req, res) => {
   const stripe = Stripe(stripeKey);
 
   try {
-    const { amount, currency = 'usd', metadata = {} } = req.body;
+    const { amount, currency = 'usd', metadata = {}, method } = req.body;
 
     if (!amount || amount < 50) {
       return res.status(400).json({ error: 'Invalid amount' });
     }
 
+    // ACH (us_bank_account) gets its own PaymentIntent, kept entirely
+    // separate from the card one -- a single intent's payment_method_types
+    // is fixed at creation, and the card checkout already renders its own
+    // dedicated Card Element, so a shared intent would make Stripe's
+    // Payment Element show a second, redundant card entry form alongside
+    // it. The frontend only ever creates this one lazily, when the
+    // customer actually picks "Bank Account (ACH)".
+    const isAch = method === 'ach';
+
+    // Stripe does not support manual-capture (the auth-hold used here for
+    // orders over $10,000) on ACH -- a bank debit is fully async already,
+    // there is no "authorize now, capture later" step to hold. ACH orders
+    // of any size settle automatically once the debit clears.
+    const captureMethod = isAch ? 'automatic' : (amount > 1000000 ? 'manual' : 'automatic');
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount), // cents
       currency,
-      capture_method: amount > 1000000 ? 'manual' : 'automatic', // manual auth for orders > $10,000
+      payment_method_types: isAch ? ['us_bank_account'] : ['card'],
+      capture_method: captureMethod,
       metadata: {
         order_source: 'roomreadysupply.com',
         ...metadata,

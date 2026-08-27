@@ -168,4 +168,36 @@ async function sendInternalAlert(order) {
   });
 }
 
-module.exports = { sendCustomerConfirmation, sendInternalAlert };
+function paymentFailedHtml(order) {
+  return '<!DOCTYPE html><html><head><meta charset="UTF-8"></head>' +
+    '<body style="font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;padding:32px;background:#f1f5f9;">' +
+    '<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:12px;padding:28px;border:1.5px solid #e2e8f0;">' +
+    '<div style="background:#7f1d1d;color:#fff;border-radius:8px;padding:14px 20px;margin-bottom:20px;">' +
+    '<p style="margin:0;font-size:11px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fca5a5;">Bank Payment Failed</p>' +
+    '<h2 style="margin:4px 0 0;font-size:20px;font-weight:900;">' + order.order_number + '</h2>' +
+    '</div>' +
+
+    '<p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 20px;">An ACH bank debit for this order did not go through. The order is on hold at <strong>payment_status: failed</strong> — follow up with the customer to arrange another payment method before shipping anything.</p>' +
+
+    '<table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:20px;">' +
+    '<tr><td style="padding:7px 0;color:#64748b;width:140px;">Amount</td><td style="font-weight:800;color:#0B1F38;font-size:16px;">' + formatCurrency(order.amount_total || 0) + '</td></tr>' +
+    '<tr><td style="padding:7px 0;color:#64748b;">Reason (from bank)</td><td style="color:#b91c1c;font-weight:700;">' + (order.payment_failure_reason || 'No reason given') + '</td></tr>' +
+    '<tr><td style="padding:7px 0;color:#64748b;">Customer</td><td>' + (order.customer_name || '—') + '</td></tr>' +
+    '<tr><td style="padding:7px 0;color:#64748b;">Business</td><td>' + (order.business_name || '—') + '</td></tr>' +
+    '<tr><td style="padding:7px 0;color:#64748b;">Email</td><td><a href="mailto:' + (order.customer_email || '') + '" style="color:#ED7226;">' + (order.customer_email || '—') + '</a></td></tr>' +
+    '</table>' +
+
+    '<a href="https://www.roomreadysupply.com/admin" style="display:block;background:#ED7226;color:#fff;text-decoration:none;text-align:center;padding:12px 24px;border-radius:8px;font-weight:800;font-size:14px;">View in Admin Panel →</a>' +
+    '</div></body></html>';
+}
+
+async function sendPaymentFailedAlert(order) {
+  return getResend().emails.send({
+    from: 'Room Ready Supply Orders <orders@roomreadysupply.com>',
+    to: process.env.INTERNAL_ALERT_EMAIL || 'eric@roomreadysupply.com',
+    subject: '[Payment Failed] ' + order.order_number + ' — bank debit did not clear',
+    html: paymentFailedHtml(order),
+  });
+}
+
+module.exports = { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert };
