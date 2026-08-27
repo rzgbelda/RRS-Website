@@ -18,6 +18,19 @@
 -- policy) -- Postgres OR's permissive policies together, so this can only
 -- ever grant access, never remove or narrow anything that exists today.
 
+drop policy if exists "marketing_manage_products"       on public.products;
+drop policy if exists "marketing_manage_product_images" on public.product_images;
+drop policy if exists "marketing_manage_categories"     on public.categories;
+drop policy if exists "marketing_manage_inventory"      on public.inventory;
+drop policy if exists "marketing_manage_orders"         on public.orders;
+drop policy if exists "marketing_manage_order_items"    on public.order_items;
+drop policy if exists "marketing_manage_sub_distributors" on public.sub_distributors;
+drop policy if exists "marketing_manage_sd_employees"     on public.sub_distributor_employees;
+drop policy if exists "marketing_manage_sd_links"         on public.customer_sub_distributor_links;
+drop policy if exists "marketing_manage_order_referrals"  on public.order_referrals;
+drop policy if exists "marketing_manage_best_deals"       on public.best_deals;
+drop policy if exists "marketing_read_profiles"           on public.profiles;
+
 create policy "marketing_manage_products"       on public.products       for all using (public.is_marketing()) with check (public.is_marketing());
 create policy "marketing_manage_product_images" on public.product_images for all using (public.is_marketing()) with check (public.is_marketing());
 create policy "marketing_manage_categories"     on public.categories     for all using (public.is_marketing()) with check (public.is_marketing());
@@ -41,12 +54,7 @@ create policy "marketing_manage_best_deals" on public.best_deals for all using (
 -- account-management portal.
 create policy "marketing_read_profiles" on public.profiles for select using (public.is_marketing());
 
--- affiliate_payouts (RRS-9's commission ledger) had RLS never enabled at
--- all -- found while widening this access, not something this change
--- introduced. With RLS off, that table was readable/writable by ANY
--- signed-in user via the public anon key, not just staff. Closing that now:
--- admin+marketing manage it, matching every other affiliate table above.
-alter table public.affiliate_payouts enable row level security;
-create policy "crm_staff_manage_affiliate_payouts" on public.affiliate_payouts
-  for all using (public.is_admin() or public.is_marketing())
-  with check (public.is_admin() or public.is_marketing());
+-- affiliate_payouts: see 20260828e_affiliate_payouts_rls.sql. Split into its
+-- own migration -- a live check found that table returning 404 from the
+-- API (it may never have actually been created), and a failure partway
+-- through this script would roll back every policy above it too.
