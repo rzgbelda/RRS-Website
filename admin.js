@@ -3633,7 +3633,7 @@ function renderCrmStats() {
   if (!el) return;
   el.innerHTML = CRM_STATUS.map(col => {
     const n = _crm.leads.filter(l => l.status === col.key).length;
-    return `<div class="tkt-stat"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
+    return `<div class="tkt-stat tkt-stat-${col.key}"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
   }).join("");
 }
 
@@ -3693,20 +3693,20 @@ function crmCard(l) {
   const rep = _crm.reps.find(r => r.id === l.assigned_to);
   const aCount = _crm.activityCounts[l.id] || 0;
   return `
-    <article class="tkt-card" draggable="true"
+    <article class="tkt-card crm-l-${l.status}" draggable="true"
       ondragstart="crmDragStart(event,'${l.id}')" ondragend="crmDragEnd(event)"
       onclick="openCrmDrawer('${l.id}')">
       <div class="tkt-card-top">
-        <span class="tkt-num">${escHtml(l.customer_type || "—")}</span>
+        <span class="tkt-num">${escHtml(l.customer_type || "General")}</span>
         ${l.lead_source ? `<span class="tkt-pri tkt-p-enhancement">${escHtml(l.lead_source)}</span>` : ""}
       </div>
       <p class="tkt-card-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</p>
+      ${l.contact_name || l.email ? `<p class="tkt-card-sub">${escHtml(l.contact_name || "")}${l.contact_name && l.email ? " · " : ""}${escHtml(l.email || "")}</p>` : ""}
       <div class="tkt-card-foot">
-        <span class="tkt-type tkt-t-bug">${escHtml(l.contact_name || l.email || "")}</span>
         <div class="tkt-card-meta">
           ${aCount ? `<span class="tkt-chip" title="${aCount} activity entr${aCount>1?"ies":"y"}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${aCount}</span>` : ""}
-          ${tktAvatar(rep?.email, 24)}
         </div>
+        ${tktAvatar(rep?.email, 24)}
       </div>
     </article>`;
 }
@@ -3846,12 +3846,14 @@ async function openCrmDrawer(id) {
             </div>
           </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No activity logged yet.</p>`}
       </div>
-      <div style="margin-top:14px">
-        <select id="crmActivityType" class="a-input" style="width:140px;display:inline-block;margin-bottom:8px">
-          ${CRM_ACTIVITY_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
-        </select>
-        <textarea id="crmActivityBody" class="a-input" rows="3" placeholder="Log a call, email, note, or follow-up…" style="resize:vertical"></textarea>
-        <button class="a-btn-primary" style="margin-top:8px" onclick="submitCrmActivity('${l.id}')">Log Activity</button>
+      <div class="tkt-composer">
+        <textarea id="crmActivityBody" class="tkt-composer-input" rows="2" placeholder="Log a call, email, note, or follow-up…"></textarea>
+        <div class="tkt-composer-foot">
+          <select id="crmActivityType" class="tkt-composer-type">
+            ${CRM_ACTIVITY_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
+          </select>
+          <button class="a-btn-primary" onclick="submitCrmActivity('${l.id}')">Log Activity</button>
+        </div>
       </div>
     </div>
   `;
