@@ -53,28 +53,61 @@ module.exports = async (req, res) => {
       return res.status(403).json({ error: 'Only an administrator can create staff accounts.' });
     }
 
-    // --- Create the account ---------------------------------------------
+    // --- Create the account, OR promote an existing one ------------------
+    // A staff member is often already a real customer/user in the system
+    // (they placed an order, or an account was made for them some other
+    // way) before they're made staff -- createUser then fails with "already
+    // registered" instead of doing anything useful. Rather than dead-end
+    // there, find that existing auth user and promote them: set their role,
+    // and reset their password to the one just entered here (this modal
+    // exists specifically to hand someone a temporary password, so that's
+    // the expected outcome either way).
+    let userId;
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
     });
-    if (createErr) return res.status(400).json({ error: createErr.message });
+
+    if (createErr) {
+      const alreadyExists = /already.*registered|already.*exists/i.test(createErr.message || '');
+      if (!alreadyExists) return res.status(400).json({ error: createErr.message });
+
+      // supabase-js has no getUserByEmail -- page through listUsers() to
+      // find them. Fine at this business's scale; if it ever isn't, this is
+      // the first place to revisit.
+      let match = null;
+      for (let page = 1; page <= 20 && !match; page++) {
+        const { data: pageData, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+        if (listErr) return res.status(400).json({ error: listErr.message });
+        match = (pageData?.users || []).find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+        if (!pageData?.users?.length || pageData.users.length < 200) break; // last page
+      }
+      if (!match) return res.status(400).json({ error: 'A user with this email already exists, but could not be found to promote. Double-check the email address.' });
+
+      const { error: pwErr } = await admin.auth.admin.updateUserById(match.id, { password });
+      if (pwErr) return res.status(400).json({ error: 'Found the existing account but could not reset its password: ' + pwErr.message });
+      userId = match.id;
+    } else {
+      userId = created.user.id;
+    }
 
     const { error: profileErr } = await admin.from('profiles').upsert({
-      id: created.user.id,
+      id: userId,
       email,
       role,
       contact_name: full_name || email,
     });
 
     if (profileErr) {
-      // Don't leave a login that can't be authorized: undo the auth user.
-      await admin.auth.admin.deleteUser(created.user.id).catch(() => {});
+      // Only safe to undo the auth user if we just created it -- an
+      // existing account being promoted must NOT be deleted on a profile
+      // write failure.
+      if (created?.user) await admin.auth.admin.deleteUser(userId).catch(() => {});
       return res.status(400).json({ error: profileErr.message });
     }
 
-    return res.status(200).json({ success: true, user_id: created.user.id, email, role });
+    return res.status(200).json({ success: true, user_id: userId, email, role, promoted: !created?.user });
   } catch (err) {
     console.error('create-dev-user failed:', err);
     return res.status(500).json({ error: String(err.message || err) });

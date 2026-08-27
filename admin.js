@@ -4849,7 +4849,10 @@ async function createStaffAccount() {
     const out = await res.json();
     if (!res.ok) throw new Error(out.error || "Request failed");
 
-    showToast((role === "marketing" ? "Marketing" : "Developer") + " account created for " + email);
+    const roleLabel = role === "marketing" ? "Marketing" : "Developer";
+    showToast(out.promoted
+      ? `${email} already had an account -- promoted to ${roleLabel} and password reset.`
+      : `${roleLabel} account created for ${email}`);
     openDevTeamModal(); // re-fetch so the new account shows in the list without a full close/reopen
     document.getElementById("devTeamEmail").value = "";
     document.getElementById("devTeamName").value = "";

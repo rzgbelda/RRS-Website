@@ -1999,7 +1999,8 @@ body.admin-body {
 .tkt-avatar {
   display: inline-flex; align-items: center; justify-content: center;
   border-radius: 50%; color: #fff; font-size: 10.5px; font-weight: 800;
-  letter-spacing: .02em; flex: none; user-select: none;
+  line-height: 1; letter-spacing: .02em; flex-shrink: 0; user-select: none;
+  box-sizing: border-box; overflow: hidden; text-align: center;
 }
 .tkt-avatar-empty { background: #eef2f7; color: #b3c0cf; border: 1px dashed #cbd5e1; }
 
