@@ -1,10 +1,15 @@
-// Creates a developer account for the ticket board.
+// Creates a staff account (developer or marketing) for the admin panel.
 //
 // This endpoint mints a login that can reach the admin panel, so it verifies
 // the CALLER is an admin before doing anything -- using their access token
 // against the database, never a role claim sent in the request body. Follows
 // the same shape as the existing create-subdist-user Edge Function, but lives
 // as a Vercel function so it deploys with the site.
+//
+// Handles both developer and marketing accounts (not just developer, despite
+// the filename) rather than adding a second near-identical endpoint --
+// Vercel's Hobby plan caps serverless functions at 12, and this project was
+// already at 11 before the Marketing Account work started.
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -23,6 +28,7 @@ module.exports = async (req, res) => {
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
     const { email, password, full_name } = body;
+    const role = body.role === 'marketing' ? 'marketing' : 'developer'; // allow-list, not a passthrough
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });
@@ -44,7 +50,7 @@ module.exports = async (req, res) => {
       .from('profiles').select('role').eq('id', caller.user.id).single();
 
     if (callerProfile?.role !== 'admin') {
-      return res.status(403).json({ error: 'Only an administrator can create developer accounts.' });
+      return res.status(403).json({ error: 'Only an administrator can create staff accounts.' });
     }
 
     // --- Create the account ---------------------------------------------
@@ -58,7 +64,7 @@ module.exports = async (req, res) => {
     const { error: profileErr } = await admin.from('profiles').upsert({
       id: created.user.id,
       email,
-      role: 'developer',
+      role,
       contact_name: full_name || email,
     });
 
@@ -68,7 +74,7 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: profileErr.message });
     }
 
-    return res.status(200).json({ success: true, user_id: created.user.id, email });
+    return res.status(200).json({ success: true, user_id: created.user.id, email, role });
   } catch (err) {
     console.error('create-dev-user failed:', err);
     return res.status(500).json({ error: String(err.message || err) });

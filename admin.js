@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Allow "admin" full access, "sub_distributor" limited access,
   // and "developer" the ticket board only
-  if (role !== "admin" && role !== "sub_distributor" && role !== "developer") {
+  if (role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
@@ -89,7 +89,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "admin" && role !== "sub_distributor" && role !== "developer") {
+  if (role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
@@ -144,21 +144,30 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm"];
 
 // A developer account is scoped to the ticket board and nothing else -- no
 // products, orders, customers, pricing, or revenue. Allow-list rather than
 // deny-list, so any tab added later is closed to developers by default.
 const DEVELOPER_TABS = ["dev-tickets"];
 
+// A marketing account is scoped to the CRM/lead pipeline and nothing else --
+// same allow-list reasoning as DEVELOPER_TABS above. Deliberately does NOT
+// include dev-tickets or seo: those stay developer/admin-only per the
+// requested scoping, even though marketing and developer are both "staff".
+const MARKETING_TABS = ["dashboard", "crm"];
+
 function isTabAllowed(tab) {
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
+  if (window._adminRole === "marketing") return MARKETING_TABS.includes(tab);
   if (window._adminRole === "admin") return true;
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
 function landingTabFor(role) {
-  return role === "developer" ? "dev-tickets" : "dashboard";
+  if (role === "developer") return "dev-tickets";
+  if (role === "marketing") return "crm";
+  return "dashboard";
 }
 
 function resetRoleRestrictions() {
@@ -173,11 +182,12 @@ function applyRoleRestrictions(role) {
   resetRoleRestrictions(); // always reset first
   if (role === "admin") return; // full access — nothing to hide
 
-  if (role === "developer") {
-    // Hide every nav item except the ticket board, and every section
+  if (role === "developer" || role === "marketing") {
+    // Hide every nav item except this role's allow-list, and every section
     // heading that ends up with nothing under it.
+    const allowed = role === "developer" ? DEVELOPER_TABS : MARKETING_TABS;
     document.querySelectorAll(".a-nav-item").forEach(el => {
-      if (!DEVELOPER_TABS.includes(el.dataset.tab)) el.style.display = "none";
+      if (!allowed.includes(el.dataset.tab)) el.style.display = "none";
     });
     document.querySelectorAll(".a-nav-section").forEach(el => {
       let sib = el.nextElementSibling, keep = false;
@@ -187,7 +197,7 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge("Developer Portal");
+    addRoleBadge(role === "developer" ? "Developer Portal" : "Marketing Portal");
     return;
   }
 
@@ -269,7 +279,7 @@ function switchTab(tab) {
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
-      "best-deals":"Best Deals Campaign" }[tab] || tab;
+      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -285,6 +295,7 @@ function switchTab(tab) {
   if (tab === "quote-requests")   renderQuoteRequestsTable();
   if (tab === "dev-tickets")      renderDevTicketsTab();
   if (tab === "best-deals")       renderBestDealsTab();
+  if (tab === "crm")              renderCrmTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -3511,6 +3522,360 @@ async function removeBusinessRow(bizId) {
   renderUsersTable();
 }
 
+/* ── CRM & Leads (Marketing Account, Phase 1) ─────────────────
+   A "lead" is a quote_requests row, not a separate record -- see the note
+   at the top of the 20260828_marketing_crm.sql migration for why. This
+   board follows the exact same board/drawer/drag-drop shape as the dev
+   ticket board above (reuses its .tkt-board/.tkt-card/.tkt-drawer CSS),
+   just against quote_requests + crm_activity_log instead of dev_tickets +
+   dev_ticket_comments. */
+
+const CRM_STATUS = [
+  { key:"new",             label:"New Lead" },
+  { key:"contacted",       label:"Contacted" },
+  { key:"quote_sent",      label:"Quote Sent" },
+  { key:"customer",        label:"Customer" },
+  { key:"repeat_customer", label:"Repeat Customer" },
+];
+const CRM_STATUS_LABEL = Object.fromEntries(CRM_STATUS.map(s => [s.key, s.label]));
+const CRM_SOURCES = ["Seamless","Landing Page","Website Checkout","Referral","Cold Call","Trade Show","Other"];
+const CRM_ACTIVITY_TYPES = [
+  { key:"call",      label:"Call" },
+  { key:"email",      label:"Email" },
+  { key:"note",       label:"Note" },
+  { key:"follow_up",  label:"Follow-Up" },
+  { key:"other",      label:"Other" },
+];
+
+const _crm = {
+  leads: [],
+  activityCounts: {},   // quote_request_id -> count
+  reps: [],              // admin + marketing profiles, for the assigned-rep dropdown
+  filters: { source:"all", rep:"all", q:"" },
+};
+
+async function renderCrmTab() {
+  const panel = document.getElementById("tab-crm");
+  if (!panel) return;
+  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading leads…</div>`;
+
+  const [leadsRes, activityRes, repsRes] = await Promise.all([
+    window.sb.from("quote_requests").select("*").order("created_at", { ascending:false }),
+    window.sb.from("crm_activity_log").select("quote_request_id"),
+    window.sb.from("profiles").select("id,email,full_name,role").in("role", ["admin","marketing"]),
+  ]);
+
+  if (leadsRes.error) {
+    panel.innerHTML = `<div class="a-empty" style="padding:50px">Couldn't load leads: ${escHtml(leadsRes.error.message)}<br><span style="font-size:12px;color:#94a3b8">If this says a column is missing, run the 20260828_marketing_crm.sql migration.</span></div>`;
+    return;
+  }
+
+  _crm.leads = leadsRes.data || [];
+  _crm.reps  = repsRes.data || [];
+  _crm.activityCounts = {};
+  (activityRes.data || []).forEach(a => { _crm.activityCounts[a.quote_request_id] = (_crm.activityCounts[a.quote_request_id] || 0) + 1; });
+
+  // A lead's status only ever gets typed in here by staff, so a legacy or
+  // externally-inserted row can carry something outside the 5-stage
+  // pipeline (most commonly the older quote/detail workflow's own status
+  // values) -- fall back to "new" for the board rather than dropping it.
+  _crm.leads.forEach(l => { if (!CRM_STATUS_LABEL[l.status]) l.status = "new"; });
+
+  panel.innerHTML = `
+    <div class="tkt-header">
+      <div>
+        <h1 class="a-page-title">CRM &amp; Leads</h1>
+        <p class="a-page-sub">Every quotation request, tracked from first contact through repeat business.</p>
+      </div>
+      <div class="tkt-header-actions">
+        ${window._adminRole === "admin" ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
+      </div>
+    </div>
+
+    <div class="tkt-statstrip" id="crmStats"></div>
+
+    <div class="tkt-filterbar">
+      <div class="tkt-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="crmSearch" type="text" placeholder="Search business or contact…" value="${escHtml(_crm.filters.q)}" oninput="setCrmFilter('q', this.value)">
+      </div>
+      <select class="tkt-filtersel" onchange="setCrmFilter('source', this.value)">
+        <option value="all">All sources</option>
+        ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${_crm.filters.source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
+      </select>
+      <select class="tkt-filtersel" onchange="setCrmFilter('rep', this.value)">
+        <option value="all">All reps</option>
+        <option value="unassigned"${_crm.filters.rep==="unassigned"?" selected":""}>Unassigned</option>
+        ${_crm.reps.map(r => `<option value="${r.id}"${_crm.filters.rep===r.id?" selected":""}>${escHtml(r.full_name || r.email)}</option>`).join("")}
+      </select>
+    </div>
+
+    <div id="crmBoardWrap"></div>
+  `;
+
+  renderCrmStats();
+  renderCrmBoard();
+  updateCrmNavCount();
+}
+
+function renderCrmStats() {
+  const el = document.getElementById("crmStats");
+  if (!el) return;
+  el.innerHTML = CRM_STATUS.map(col => {
+    const n = _crm.leads.filter(l => l.status === col.key).length;
+    return `<div class="tkt-stat"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
+  }).join("");
+}
+
+function setCrmFilter(key, value) {
+  _crm.filters[key] = value;
+  renderCrmBoard();
+}
+
+function crmVisibleLeads() {
+  const q = _crm.filters.q.trim().toLowerCase();
+  return _crm.leads.filter(l => {
+    if (_crm.filters.source !== "all" && (l.lead_source || "") !== _crm.filters.source) return false;
+    if (_crm.filters.rep === "unassigned" && l.assigned_to) return false;
+    if (_crm.filters.rep !== "all" && _crm.filters.rep !== "unassigned" && l.assigned_to !== _crm.filters.rep) return false;
+    if (q) {
+      const hay = `${l.business_name || ""} ${l.contact_name || ""} ${l.email || ""}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderCrmBoard() {
+  const wrap = document.getElementById("crmBoardWrap");
+  if (!wrap) return;
+  const visible = crmVisibleLeads();
+
+  if (!_crm.leads.length) {
+    wrap.innerHTML = `<div class="tkt-empty">
+      <div class="tkt-empty-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+      </div>
+      <h3>No leads yet</h3>
+      <p>Quotation requests submitted from the site will show up here automatically.</p>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="tkt-board">${CRM_STATUS.map(col => {
+    const items = visible.filter(l => l.status === col.key);
+    return `
+      <section class="tkt-col" data-status="${col.key}"
+        ondragover="crmDragOver(event)" ondragleave="crmDragLeave(event)" ondrop="crmDrop(event,'${col.key}')">
+        <header class="tkt-col-head">
+          <span class="tkt-col-dot tkt-dot-${col.key}"></span>
+          <span class="tkt-col-title">${escHtml(col.label)}</span>
+          <span class="tkt-col-count">${items.length}</span>
+        </header>
+        <div class="tkt-col-body">
+          ${items.map(crmCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
+        </div>
+      </section>`;
+  }).join("")}</div>`;
+}
+
+function crmCard(l) {
+  const rep = _crm.reps.find(r => r.id === l.assigned_to);
+  const aCount = _crm.activityCounts[l.id] || 0;
+  return `
+    <article class="tkt-card" draggable="true"
+      ondragstart="crmDragStart(event,'${l.id}')" ondragend="crmDragEnd(event)"
+      onclick="openCrmDrawer('${l.id}')">
+      <div class="tkt-card-top">
+        <span class="tkt-num">${escHtml(l.customer_type || "—")}</span>
+        ${l.lead_source ? `<span class="tkt-pri tkt-p-enhancement">${escHtml(l.lead_source)}</span>` : ""}
+      </div>
+      <p class="tkt-card-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</p>
+      <div class="tkt-card-foot">
+        <span class="tkt-type tkt-t-bug">${escHtml(l.contact_name || l.email || "")}</span>
+        <div class="tkt-card-meta">
+          ${aCount ? `<span class="tkt-chip" title="${aCount} activity entr${aCount>1?"ies":"y"}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${aCount}</span>` : ""}
+          ${tktAvatar(rep?.email, 24)}
+        </div>
+      </div>
+    </article>`;
+}
+
+/* Drag & drop between columns -- moving a card updates status immediately
+   and logs a status_change activity entry, same as a manual status edit in
+   the drawer would. */
+let _crmDragId = null;
+function crmDragStart(e, id) { _crmDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
+function crmDragEnd(e)       { _crmDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
+function crmDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
+function crmDragLeave(e)     { e.currentTarget.classList.remove("over"); }
+async function crmDrop(e, status) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("over");
+  if (!_crmDragId) return;
+  const id = _crmDragId; _crmDragId = null;
+  await setCrmLeadStatus(id, status);
+}
+
+async function setCrmLeadStatus(id, status) {
+  const lead = _crm.leads.find(x => x.id === id);
+  if (!lead || lead.status === status) return;
+  const from = lead.status;
+  const { error } = await window.sb.from("quote_requests").update({ status }).eq("id", id);
+  if (error) { showToast("Couldn't update lead: " + error.message); return; }
+  lead.status = status;
+  await logCrmActivity(id, "status_change", `Moved from "${CRM_STATUS_LABEL[from] || from}" to "${CRM_STATUS_LABEL[status] || status}"`, true);
+  renderCrmStats();
+  renderCrmBoard();
+}
+
+async function logCrmActivity(quoteRequestId, type, body, silent) {
+  const { data: { user } } = await window.sb.auth.getUser();
+  let authorName = null;
+  if (user?.id) {
+    const { data: p } = await window.sb.from("profiles").select("full_name").eq("id", user.id).single();
+    authorName = p?.full_name || null;
+  }
+  const { error } = await window.sb.from("crm_activity_log").insert({
+    quote_request_id: quoteRequestId,
+    author_id: user?.id || null,
+    author_name: authorName,
+    activity_type: type,
+    body,
+  });
+  if (error) { if (!silent) showToast("Couldn't log activity: " + error.message); return; }
+  _crm.activityCounts[quoteRequestId] = (_crm.activityCounts[quoteRequestId] || 0) + 1;
+}
+
+function updateCrmNavCount() {
+  const el = document.getElementById("crmNavCount");
+  if (!el) return;
+  const n = _crm.leads.filter(l => l.status === "new").length;
+  el.textContent = n;
+  el.style.display = n ? "inline-flex" : "none";
+}
+
+/* ── Lead detail drawer ───────────────────────────────────────── */
+
+async function openCrmDrawer(id) {
+  const overlay = document.getElementById("crmDrawerOverlay");
+  const body    = document.getElementById("crmDrawerBody");
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  const l = _crm.leads.find(x => x.id === id);
+  if (!l) { body.innerHTML = `<div class="a-empty" style="padding:60px">Lead not found.</div>`; return; }
+
+  const { data: activity } = await window.sb
+    .from("crm_activity_log").select("*").eq("quote_request_id", id).order("created_at", { ascending:false });
+
+  const items = Array.isArray(l.requested_items) ? l.requested_items : [];
+
+  body.innerHTML = `
+    <header class="tkt-dr-head">
+      <div class="tkt-dr-headtop">
+        <span class="tkt-num tkt-num-lg">Lead</span>
+        <button class="tkt-iconbtn" title="Close" onclick="closeCrmDrawer(true)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <h2 class="tkt-dr-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</h2>
+      <div class="tkt-dr-badges">
+        <span class="tkt-type tkt-t-bug">${escHtml(l.customer_type || "—")}</span>
+        <span class="tkt-status-pill tkt-dotbg-${l.status}">${escHtml(CRM_STATUS_LABEL[l.status] || l.status)}</span>
+      </div>
+    </header>
+
+    <div class="tkt-dr-controls">
+      <label class="tkt-dr-ctl">
+        <span>Status</span>
+        <select class="a-input" onchange="setCrmLeadStatus('${l.id}', this.value)">
+          ${CRM_STATUS.map(s => `<option value="${s.key}"${l.status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Lead Source</span>
+        <select class="a-input" onchange="setCrmField('${l.id}','lead_source', this.value)">
+          <option value=""${!l.lead_source?" selected":""}>— Not set —</option>
+          ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${l.lead_source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Assigned Rep</span>
+        <select class="a-input" onchange="setCrmField('${l.id}','assigned_to', this.value || null)">
+          <option value=""${!l.assigned_to?" selected":""}>Unassigned</option>
+          ${_crm.reps.map(r => `<option value="${r.id}"${l.assigned_to===r.id?" selected":""}>${escHtml(r.full_name || r.email)}</option>`).join("")}
+        </select>
+      </label>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Contact</h4>
+      <p class="tkt-dr-desc">${escHtml(l.contact_name || "—")}${l.email ? ` &middot; <a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a>` : ""}${(l.phone_number || l.phone) ? ` &middot; ${escHtml(l.phone_number || l.phone)}` : ""}</p>
+      ${items.length ? `<p class="tkt-dr-meta">Requested items: ${items.map(i => escHtml(`${i.name || ""} ×${i.quantity || 1}`)).join(", ")}</p>` : ""}
+      ${l.notes ? `<p class="tkt-dr-meta">Notes: ${escHtml(l.notes)}</p>` : ""}
+    </div>
+
+    <div class="tkt-dr-section tkt-dr-facts">
+      <div><span>Created</span><strong>${fmt(l.created_at)}</strong></div>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Activity <span class="tkt-cnt">${(activity||[]).length}</span></h4>
+      <div class="tkt-thread">
+        ${(activity||[]).length ? activity.map(a => `
+          <div class="tkt-comment">
+            ${tktAvatar(a.author_name || "?", 30)}
+            <div class="tkt-comment-body">
+              <div class="tkt-comment-head">
+                <strong>${escHtml(a.author_name || "Staff")}</strong>
+                <span class="tkt-role-tag">${escHtml((CRM_ACTIVITY_TYPES.find(t=>t.key===a.activity_type)||{}).label || a.activity_type)}</span>
+                <span class="tkt-comment-time">${timeAgo(a.created_at)}</span>
+              </div>
+              <p>${escHtml(a.body)}</p>
+            </div>
+          </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No activity logged yet.</p>`}
+      </div>
+      <div style="margin-top:14px">
+        <select id="crmActivityType" class="a-input" style="width:140px;display:inline-block;margin-bottom:8px">
+          ${CRM_ACTIVITY_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
+        </select>
+        <textarea id="crmActivityBody" class="a-input" rows="3" placeholder="Log a call, email, note, or follow-up…" style="resize:vertical"></textarea>
+        <button class="a-btn-primary" style="margin-top:8px" onclick="submitCrmActivity('${l.id}')">Log Activity</button>
+      </div>
+    </div>
+  `;
+}
+
+function closeCrmDrawer(force) {
+  if (force !== true && force && force.target && force.target.id !== "crmDrawerOverlay") return;
+  const overlay = document.getElementById("crmDrawerOverlay");
+  overlay.classList.remove("open");
+  setTimeout(() => { overlay.style.display = "none"; }, 180);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("crmDrawerOverlay")?.style.display === "flex") closeCrmDrawer(true);
+});
+
+async function setCrmField(id, field, value) {
+  const lead = _crm.leads.find(x => x.id === id);
+  const { error } = await window.sb.from("quote_requests").update({ [field]: value }).eq("id", id);
+  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (lead) lead[field] = value;
+  renderCrmBoard();
+}
+
+async function submitCrmActivity(id) {
+  const typeEl = document.getElementById("crmActivityType");
+  const bodyEl = document.getElementById("crmActivityBody");
+  const body = (bodyEl?.value || "").trim();
+  if (!body) return;
+  await logCrmActivity(id, typeEl?.value || "note", body);
+  bodyEl.value = "";
+  openCrmDrawer(id); // re-render the thread with the new entry
+}
+
 /* ── Reports ───────────────────────────────────────────────── */
 
 async function renderReportsTab() {
@@ -3683,7 +4048,7 @@ async function renderDevTicketsTab() {
             List
           </button>
         </div>
-        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Developers</button>` : ""}
+        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
         <button class="a-btn-primary" onclick="openNewTicket()">+ New Ticket</button>
       </div>
     </div>
@@ -4419,31 +4784,49 @@ function updateDevTicketNavCount() {
 
 /* ── Developer accounts ────────────────────────────────────── */
 
-function openDevTeamModal() {
-  const devs = _tkt.developers.filter(d => d.role === "developer");
-  document.getElementById("devTeamList").innerHTML = devs.length
-    ? devs.map(d => `
+const STAFF_ROLE_HINTS = {
+  developer: "They sign in at this same admin address, but only ever see the ticket board — no products, orders, customers, or revenue.",
+  marketing: "They sign in at this same admin address, but only ever see the CRM/leads board — no products, orders, customers, or revenue.",
+};
+
+function updateDevTeamRoleHint() {
+  const role = document.getElementById("devTeamRole")?.value || "developer";
+  const hint = document.getElementById("devTeamRoleHint");
+  if (hint) hint.textContent = STAFF_ROLE_HINTS[role] || "";
+}
+
+async function openDevTeamModal() {
+  document.getElementById("devTeamList").innerHTML = `<p class="tkt-dr-meta" style="margin:0">Loading…</p>`;
+  document.getElementById("devTeamRole").value = "developer";
+  updateDevTeamRoleHint();
+  document.getElementById("devTeamEmail").value = "";
+  document.getElementById("devTeamName").value = "";
+  document.getElementById("devTeamPassword").value = "";
+  document.getElementById("devTeamError").style.display = "none";
+  openModal("devTeamModal");
+
+  // Not _tkt.developers -- that list is scoped to developer+admin for the
+  // ticket-assignee dropdown specifically. This modal manages every staff
+  // account type (developer AND marketing), so it fetches its own list.
+  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","marketing"]).order("created_at");
+  document.getElementById("devTeamList").innerHTML = staff?.length
+    ? staff.map(d => `
         <div class="tkt-teamrow">
           ${tktAvatar(d.email, 32)}
           <div style="flex:1;min-width:0">
             <strong>${escHtml(d.full_name || d.email || "")}</strong>
             <span>${escHtml(d.email || "")}</span>
           </div>
-          <span class="tkt-role-tag">developer</span>
+          <span class="tkt-role-tag">${escHtml(d.role)}</span>
         </div>`).join("")
-    : `<p class="tkt-dr-meta" style="margin:0">No developer accounts yet. Create one below.</p>`;
-
-  document.getElementById("devTeamEmail").value = "";
-  document.getElementById("devTeamName").value = "";
-  document.getElementById("devTeamPassword").value = "";
-  document.getElementById("devTeamError").style.display = "none";
-  openModal("devTeamModal");
+    : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet. Create one below.</p>`;
 }
 
-async function createDeveloperAccount() {
+async function createStaffAccount() {
   const email = document.getElementById("devTeamEmail").value.trim();
   const full_name = document.getElementById("devTeamName").value.trim();
   const password = document.getElementById("devTeamPassword").value;
+  const role = document.getElementById("devTeamRole")?.value || "developer";
   const errEl = document.getElementById("devTeamError");
   errEl.style.display = "none";
 
@@ -4461,14 +4844,16 @@ async function createDeveloperAccount() {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + (session?.access_token || ""),
       },
-      body: JSON.stringify({ email, password, full_name }),
+      body: JSON.stringify({ email, password, full_name, role }),
     });
     const out = await res.json();
     if (!res.ok) throw new Error(out.error || "Request failed");
 
-    closeModal("devTeamModal");
-    showToast("Developer account created for " + email);
-    renderDevTicketsTab();
+    showToast((role === "marketing" ? "Marketing" : "Developer") + " account created for " + email);
+    openDevTeamModal(); // re-fetch so the new account shows in the list without a full close/reopen
+    document.getElementById("devTeamEmail").value = "";
+    document.getElementById("devTeamName").value = "";
+    document.getElementById("devTeamPassword").value = "";
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = "block";

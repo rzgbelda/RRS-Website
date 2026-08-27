@@ -1982,6 +1982,19 @@ body.admin-body {
 .tkt-dotbg-done         { background: #dcfce7; color: #15803d; }
 .tkt-dotbg-not_possible { background: #ede9fe; color: #6d28d9; }
 
+/* CRM lead-pipeline colors (reuses the .tkt-board/.tkt-col/.tkt-card shell
+   above -- same board mechanics, different status set/colors). */
+.tkt-dot-new              { background: #64748b; }
+.tkt-dot-contacted        { background: #3b82f6; }
+.tkt-dot-quote_sent       { background: #f58220; }
+.tkt-dot-customer         { background: #22a565; }
+.tkt-dot-repeat_customer  { background: #a855f7; }
+.tkt-dotbg-new             { background: #f1f5f9; color: #475569; }
+.tkt-dotbg-contacted       { background: #dbeafe; color: #1d4ed8; }
+.tkt-dotbg-quote_sent      { background: #ffedd5; color: #c2410c; }
+.tkt-dotbg-customer        { background: #dcfce7; color: #15803d; }
+.tkt-dotbg-repeat_customer { background: #f3e8ff; color: #7e22ce; }
+
 /* Avatar ---------------------------------------------------- */
 .tkt-avatar {
   display: inline-flex; align-items: center; justify-content: center;
