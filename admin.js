@@ -3992,18 +3992,12 @@ const _tkt = {
 };
 
 function tktIsAdmin()    { return window._adminRole === "admin"; }
-function tktInitials(email) {
-  if (!email) return "?";
-  const name = email.split("@")[0].replace(/[._-]+/g, " ").trim();
-  const parts = name.split(" ").filter(Boolean);
-  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || "")).toUpperCase() || email[0].toUpperCase();
-}
 function tktAvatar(email, size) {
   const s = size || 26;
   if (!email) return `<span class="tkt-avatar tkt-avatar-empty" style="width:${s}px;height:${s}px" title="Unassigned">–</span>`;
   // Deterministic hue from the address so each person keeps the same colour.
   let h = 0; for (let i = 0; i < email.length; i++) h = (h * 31 + email.charCodeAt(i)) % 360;
-  return `<span class="tkt-avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 62% 42%)" title="${escHtml(email)}">${escHtml(tktInitials(email))}</span>`;
+  return `<span class="tkt-avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 62% 42%)" title="${escHtml(email)}"></span>`;
 }
 
 async function renderDevTicketsTab() {
