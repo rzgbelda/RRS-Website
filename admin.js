@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Allow "admin" full access, "sub_distributor" limited access,
   // and "developer" the ticket board only
-  if (role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
@@ -63,7 +63,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.querySelectorAll("[data-goto]").forEach(btn => {
     btn.addEventListener("click", () => switchTab(btn.dataset.goto));
   });
-  if (role === "admin") setupSettings(session.user.id);
+  if (role === "owner") setupSettings(session.user.id);
 
   // Wire sub-distributor modal buttons via addEventListener (avoids inline onclick issues)
   bindSdButtons();
@@ -89,7 +89,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
@@ -101,7 +101,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
   applyRoleRestrictions(role);
   showDashboard();
   switchTab(landingTabFor(role));
-  if (role === "admin") setupSettings(data.user.id);
+  if (role === "owner") setupSettings(data.user.id);
   bindSdButtons();
 });
 
@@ -153,30 +153,32 @@ const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","ma
 // so any tab added later is closed to developers by default.
 const DEVELOPER_TABS = ["dev-tickets", "seo"];
 
-// Marketing now owns full day-to-day operations -- everything EXCEPT
-// account/user management (a separate, narrower "Admin" role handles that)
-// and the dev ticket board. Per direct CEO instruction: "full access, admin
-// shouldn't have access to this, we're separating it" -- the plain admin
-// role stays the unrestricted CEO/Owner account (unchanged, already grants
-// everything below via isTabAllowed's admin branch), while a still-to-build
-// narrower "account_admin" role will be the Azure-style user/security
-// portal that does NOT get this list.
+// Marketing owns full day-to-day operations -- everything except
+// account/user management and the dev ticket board.
 const MARKETING_TABS = [
   "dashboard", "crm", "products", "inventory", "mix-match", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports",
 ];
 
+// Per direct CEO instruction: role='admin' is now the narrow, Azure-style
+// account-management portal -- Users, Dev Tickets, and the two content
+// sections, nothing else. Full unrestricted access moved to a NEW role,
+// 'owner' (see isTabAllowed below) -- 'admin' no longer means that.
+const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "manage-about"];
+
 function isTabAllowed(tab) {
+  if (window._adminRole === "owner") return true; // full, unrestricted access
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
   if (window._adminRole === "marketing") return MARKETING_TABS.includes(tab);
-  if (window._adminRole === "admin") return true;
+  if (window._adminRole === "admin") return ADMIN_ROLE_TABS.includes(tab);
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
 function landingTabFor(role) {
   if (role === "developer") return "dev-tickets";
   if (role === "marketing") return "crm";
+  if (role === "admin") return "users";
   return "dashboard";
 }
 
@@ -190,12 +192,12 @@ function resetRoleRestrictions() {
 
 function applyRoleRestrictions(role) {
   resetRoleRestrictions(); // always reset first
-  if (role === "admin") return; // full access — nothing to hide
+  if (role === "owner") return; // full access — nothing to hide
 
-  if (role === "developer" || role === "marketing") {
+  if (role === "developer" || role === "marketing" || role === "admin") {
     // Hide every nav item except this role's allow-list, and every section
     // heading that ends up with nothing under it.
-    const allowed = role === "developer" ? DEVELOPER_TABS : MARKETING_TABS;
+    const allowed = role === "developer" ? DEVELOPER_TABS : role === "marketing" ? MARKETING_TABS : ADMIN_ROLE_TABS;
     document.querySelectorAll(".a-nav-item").forEach(el => {
       if (!allowed.includes(el.dataset.tab)) el.style.display = "none";
     });
@@ -207,7 +209,7 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge(role === "developer" ? "Developer Portal" : "Marketing Portal");
+    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : "Admin Portal");
     return;
   }
 
@@ -3516,9 +3518,23 @@ document.getElementById("userSearch")?.addEventListener("input", e => renderUser
 
 async function deleteUser(id) {
   if (!confirm("Remove this user? This cannot be undone.")) return;
-  await window.sb.from("profiles").delete().eq("id", id);
-  showToast("User removed.");
-  renderUsersTable();
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/create-dev-user", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + (session?.access_token || ""),
+      },
+      body: JSON.stringify({ action: "delete_user", user_id: id }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+    showToast("User removed.");
+    renderUsersTable();
+  } catch (err) {
+    showToast("Couldn't remove user: " + err.message);
+  }
 }
 
 // Removes a single business under a customer's account -- not the account
@@ -3572,7 +3588,7 @@ async function renderCrmTab() {
   const [leadsRes, activityRes, repsRes] = await Promise.all([
     window.sb.from("quote_requests").select("*").order("created_at", { ascending:false }),
     window.sb.from("crm_activity_log").select("quote_request_id"),
-    window.sb.from("profiles").select("id,email,full_name,role").in("role", ["admin","marketing"]),
+    window.sb.from("profiles").select("id,email,full_name,role").in("role", ["owner","marketing"]),
   ]);
 
   if (leadsRes.error) {
@@ -3598,7 +3614,7 @@ async function renderCrmTab() {
         <p class="a-page-sub">Every quotation request, tracked from first contact through repeat business.</p>
       </div>
       <div class="tkt-header-actions">
-        ${window._adminRole === "admin" ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
+        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
       </div>
     </div>
 
@@ -4003,7 +4019,7 @@ const _tkt = {
   filters: { priority:"all", type:"all", assignee:"all", q:"" },
 };
 
-function tktIsAdmin()    { return window._adminRole === "admin"; }
+function tktIsAdmin()    { return window._adminRole === "admin" || window._adminRole === "owner"; }
 function tktAvatar(email, size) {
   const s = size || 26;
   if (!email) return `<span class="tkt-avatar tkt-avatar-empty" style="width:${s}px;height:${s}px" title="Unassigned">–</span>`;
@@ -4021,7 +4037,7 @@ async function renderDevTicketsTab() {
     window.sb.from("dev_tickets").select("*").order("created_at", { ascending:false }),
     window.sb.from("dev_ticket_comments").select("ticket_id"),
     tktIsAdmin()
-      ? window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","admin"])
+      ? window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","admin","owner"])
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -4793,6 +4809,7 @@ function updateDevTicketNavCount() {
 const STAFF_ROLE_HINTS = {
   developer: "They sign in at this same admin address, but only ever see the ticket board and SEO — no products, orders, customers, or revenue.",
   marketing: "They sign in at this same admin address, with full day-to-day operations access: CRM, products, inventory, orders, quote requests, affiliates, content, best deals, SEO, and reports. No access to Users, Settings, or the dev ticket board.",
+  admin: "They sign in at this same admin address, scoped to account management: Users (including creating/removing staff), Dev Tickets, Hero Section, and About Section only — no products, orders, pricing, or revenue.",
 };
 
 function updateDevTeamRoleHint() {
@@ -4814,7 +4831,7 @@ async function openDevTeamModal() {
   // Not _tkt.developers -- that list is scoped to developer+admin for the
   // ticket-assignee dropdown specifically. This modal manages every staff
   // account type (developer AND marketing), so it fetches its own list.
-  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","marketing"]).order("created_at");
+  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","marketing","admin"]).order("created_at");
   document.getElementById("devTeamList").innerHTML = staff?.length
     ? staff.map(d => `
         <div class="tkt-teamrow">
