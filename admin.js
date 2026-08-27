@@ -146,16 +146,26 @@ async function saveMyProfile() {
 
 const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm"];
 
-// A developer account is scoped to the ticket board and nothing else -- no
-// products, orders, customers, pricing, or revenue. Allow-list rather than
-// deny-list, so any tab added later is closed to developers by default.
-const DEVELOPER_TABS = ["dev-tickets"];
+// A developer account is scoped to the ticket board -- plus SEO, shared
+// with marketing per the CEO's explicit instruction ("determine which SEO
+// features... can be shared with the Marketing Account"). No products,
+// orders, customers, pricing, or revenue. Allow-list rather than deny-list,
+// so any tab added later is closed to developers by default.
+const DEVELOPER_TABS = ["dev-tickets", "seo"];
 
-// A marketing account is scoped to the CRM/lead pipeline and nothing else --
-// same allow-list reasoning as DEVELOPER_TABS above. Deliberately does NOT
-// include dev-tickets or seo: those stay developer/admin-only per the
-// requested scoping, even though marketing and developer are both "staff".
-const MARKETING_TABS = ["dashboard", "crm"];
+// Marketing now owns full day-to-day operations -- everything EXCEPT
+// account/user management (a separate, narrower "Admin" role handles that)
+// and the dev ticket board. Per direct CEO instruction: "full access, admin
+// shouldn't have access to this, we're separating it" -- the plain admin
+// role stays the unrestricted CEO/Owner account (unchanged, already grants
+// everything below via isTabAllowed's admin branch), while a still-to-build
+// narrower "account_admin" role will be the Azure-style user/security
+// portal that does NOT get this list.
+const MARKETING_TABS = [
+  "dashboard", "crm", "products", "inventory", "mix-match", "orders",
+  "quote-requests", "manage-hero", "manage-about", "best-deals",
+  "sub-distributors", "seo", "reports",
+];
 
 function isTabAllowed(tab) {
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
@@ -4779,8 +4789,8 @@ function updateDevTicketNavCount() {
 /* ── Developer accounts ────────────────────────────────────── */
 
 const STAFF_ROLE_HINTS = {
-  developer: "They sign in at this same admin address, but only ever see the ticket board — no products, orders, customers, or revenue.",
-  marketing: "They sign in at this same admin address, but only ever see the CRM/leads board — no products, orders, customers, or revenue.",
+  developer: "They sign in at this same admin address, but only ever see the ticket board and SEO — no products, orders, customers, or revenue.",
+  marketing: "They sign in at this same admin address, with full day-to-day operations access: CRM, products, inventory, orders, quote requests, affiliates, content, best deals, SEO, and reports. No access to Users, Settings, or the dev ticket board.",
 };
 
 function updateDevTeamRoleHint() {
