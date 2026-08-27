@@ -939,6 +939,7 @@ async function openEditProduct(id) {
   setVal("prodPrice3",     p.price_tier3    || "");
   setVal("prodSalePrice",  p.sale_price     || "");
   setVal("prodRetailPrice",p.retail_price   || "");
+  setVal("prodMoq",         p.moq           || "");
   setVal("prodMoqGroup",    p.moq_group     || "");
   setVal("prodMoqGroupMin", p.moq_group_min || "");
   setVal("prodUnit",       p.unit           || "Case");
@@ -1071,6 +1072,10 @@ async function saveProduct() {
     sale_price    : isOnSale ? spRaw : null,
     is_on_sale    : isOnSale,
     retail_price  : parseFloat(document.getElementById("prodRetailPrice")?.value) || null,
+    // Case/dozen ordering minimum -- e.g. "50" for a wash cloth sold in a
+    // 50-dozen case, so the storefront can't sell a partial case. Distinct
+    // from moq_group below, which pools several different SKUs together.
+    moq           : parseInt(document.getElementById("prodMoq")?.value) || null,
     moq_group     : moqGroup,
     moq_group_min : moqGroupMin,
     unit          : document.getElementById("prodUnit")?.value || "Case",

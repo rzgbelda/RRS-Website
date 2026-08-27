@@ -325,9 +325,15 @@ function enforceCartMinimums(cart) {
   const warn = document.getElementById("cartMoqWarning");
   if (!btn && !warn) return [];
 
+  // Below the case minimum, OR not a whole multiple of it -- a cart
+  // persists in localStorage, so a partial-case quantity added before this
+  // check existed (or a minimum that changed since) has to be caught here,
+  // not just prevented at the +/- buttons.
   const below = (cart || []).filter(i => {
     if (!isSoldByDozen(i)) return false;
-    return (Number(i.quantity) || 0) < productMoq(i);
+    const moq = productMoq(i);
+    const qty = Number(i.quantity) || 0;
+    return qty < moq || qty % moq !== 0;
   });
 
   const groupShortfalls = cartMoqGroupShortfalls(cart);
@@ -338,10 +344,16 @@ function enforceCartMinimums(cart) {
     if (hasAny) {
       const lines = [];
       if (below.length) {
+        const describe = i => {
+          const moq = productMoq(i);
+          const qty = Number(i.quantity) || 0;
+          return qty < moq
+            ? `${i.name} &mdash; must order at least ${moq} dozen`
+            : `${i.name} &mdash; must be a whole multiple of ${moq} dozen (currently ${qty})`;
+        };
         lines.push(below.length === 1
-          ? `<strong>${below[0].name}</strong> has a minimum order of ${productMoq(below[0])} dozen. Please increase the quantity to continue.`
-          : `${below.length} items are below their minimum order quantity:<br>` +
-            below.map(i => `&bull; ${i.name} &mdash; minimum ${productMoq(i)} dozen`).join("<br>"));
+          ? `<strong>${below[0].name}</strong> ${describe(below[0]).split(' &mdash; ')[1]}. Please adjust the quantity to continue.`
+          : `${below.length} items need adjusting:<br>` + below.map(i => `&bull; ${describe(i)}`).join("<br>"));
       }
       groupShortfalls.forEach(g => {
         lines.push(`<strong>${g.group}</strong> Mix &amp; Match minimum not met: need ${g.min} combined units, cart has ${g.have}. Add ${g.min - g.have} more from this group to continue.`);
@@ -1935,7 +1947,8 @@ function setupCartButtons() {
 
       if (!cart[index]) return;
 
-      cart[index].quantity = (Number(cart[index].quantity) || 1) + 1;
+      const step = isSoldByDozen(cart[index]) ? productMoq(cart[index]) : 1;
+      cart[index].quantity = (Number(cart[index].quantity) || step) + step;
 
       saveCart(cart);
       updateCartBadge();
@@ -1950,8 +1963,12 @@ function setupCartButtons() {
 
       if (!cart[index]) return;
 
-      if ((Number(cart[index].quantity) || 1) > 1) {
-        cart[index].quantity -= 1;
+      // Dozen-sold items step (and floor) by their case minimum -- e.g. a
+      // 50-dozen-minimum wash cloth can't sit at 49, only 0/50/100/...
+      const step = isSoldByDozen(cart[index]) ? productMoq(cart[index]) : 1;
+      const floor = step;
+      if ((Number(cart[index].quantity) || step) > floor) {
+        cart[index].quantity -= step;
       }
 
       saveCart(cart);
@@ -1972,7 +1989,15 @@ function setupCartButtons() {
       if (!cart[index]) return;
 
       const typed = parseInt(input.value, 10);
-      const qty = Number.isFinite(typed) && typed > 0 ? typed : 1;
+      let qty = Number.isFinite(typed) && typed > 0 ? typed : 1;
+
+      // Dozen-sold items must land on a whole multiple of their case
+      // minimum (e.g. 50, 100, 150 dozen -- never 51) so a typed number
+      // can't slip in a partial case. Round up to the nearest valid one.
+      if (isSoldByDozen(cart[index])) {
+        const step = productMoq(cart[index]);
+        if (step > 1) qty = Math.max(step, Math.ceil(qty / step) * step);
+      }
 
       if (qty === Number(cart[index].quantity)) {
         input.value = qty;   // unchanged, but normalise what's displayed

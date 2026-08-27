@@ -2058,6 +2058,19 @@
           </div>
         </div>
 
+        <!-- Row 4c: single-product minimum order / case increment -- e.g. a
+             wash cloth sold "by the dozen" but only in 50-dozen cases: set
+             this to 50 and the storefront blocks any quantity that isn't a
+             whole multiple of it (50, 100, 150...). Leave blank for products
+             with no case-size constraint (most Unit=Case/Each products). -->
+        <div class="a-form-col-3">
+          <div class="a-field">
+            <label>Order Increment / Case Minimum</label>
+            <input type="number" id="prodMoq" placeholder="e.g. 50" min="1" step="1" />
+            <small style="color:#94a3b8;font-size:11px">For dozen-sold items only: the case size the product ships in. Orders must be a whole multiple of this.</small>
+          </div>
+        </div>
+
         <!-- Row 4d: Mix & Match MOQ group -- tagging a product into a named
              group (e.g. "5GAL-CHEMICALS") pools it with every other product
              sharing that tag toward one combined minimum, enforced on the
