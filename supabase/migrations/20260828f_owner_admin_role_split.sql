@@ -15,10 +15,25 @@
 -- 'admin' is repurposed to mean the narrow Users/Dev-Tickets/Hero/About
 -- account-management portal described above.
 
+-- The check constraint has to allow 'owner' BEFORE anything gets set to it
+-- below, or the UPDATE two statements down fails a constraint that doesn't
+-- know about 'owner' yet.
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check
+  check (role in ('customer','owner','admin','developer','sub_distributor','marketing'));
+
 -- Promote every existing admin account to 'owner' FIRST, before is_admin()'s
 -- meaning changes -- so nobody's current access silently disappears
--- mid-migration.
+-- mid-migration. Bracketed with disable/enable trigger: the OLD
+-- guard_profile_role_change (it isn't redefined until further down this
+-- same script) blocks any role change whose caller isn't already an admin
+-- via auth.uid() -- which is null for this SQL-editor session (it runs as
+-- the postgres superuser, not through a real login), so the bare UPDATE
+-- would otherwise be rejected by its own safety trigger before ever
+-- reaching the fix for that same trigger.
+alter table public.profiles disable trigger guard_profile_role_change;
 update public.profiles set role = 'owner' where role = 'admin';
+alter table public.profiles enable trigger guard_profile_role_change;
 
 create or replace function public.is_owner()
 returns boolean language sql security definer stable as $$
@@ -72,10 +87,8 @@ begin
   return new;
 end $$;
 
--- profiles_role_check (added 20260828b) needs 'owner' added.
-alter table public.profiles drop constraint if exists profiles_role_check;
-alter table public.profiles add constraint profiles_role_check
-  check (role in ('customer','owner','admin','developer','sub_distributor','marketing'));
+-- (profiles_role_check was already widened to include 'owner' at the top of
+-- this file, before the UPDATE that needed it.)
 
 -- The Users tab (admin.js renderUsersTable) is the narrow Admin role's job
 -- now -- it needs its own grant on profiles, since is_admin() no longer
