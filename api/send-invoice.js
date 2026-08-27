@@ -323,6 +323,12 @@ module.exports = async (req, res) => {
   let link;
   try {
     link = await stripe.paymentLinks.create({
+      // Explicit rather than left to omit-and-let-Stripe-decide: offers ACH
+      // bank payment alongside card on Stripe's own hosted page, no custom
+      // UI needed here since Stripe fully hosts and renders this page
+      // itself (unlike the on-site checkout, which built its own bank
+      // Element -- Payment Links don't need any of that).
+      payment_method_types: ['card', 'us_bank_account'],
       // The delivery fee and sales tax are each appended as their own
       // Stripe line so the amount charged matches the invoice total
       // exactly. Without them Stripe would collect only the goods and we
