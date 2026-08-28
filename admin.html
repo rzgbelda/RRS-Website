@@ -87,6 +87,10 @@
         CRM &amp; Leads
         <span id="crmNavCount" class="a-nav-count" style="display:none"></span>
       </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="campaigns">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v3M16 3v3"/></svg>
+        Campaigns
+      </a>
 
       <span class="a-nav-section admin-only-nav">Content</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="manage-hero">
@@ -1374,6 +1378,49 @@
       </div>
     </div>
 
+    <div id="tab-campaigns" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderCampaignsTab() in admin.js -->
+    </div><!-- /campaigns tab -->
+
+    <!-- CAMPAIGN DETAIL DRAWER -->
+    <div id="campDrawerOverlay" class="tkt-drawer-overlay" style="display:none" onclick="closeCampDrawer(event)">
+      <div class="tkt-drawer" onclick="event.stopPropagation()">
+        <div id="campDrawerBody"><!-- Populated by openCampDrawer() --></div>
+      </div>
+    </div>
+
+    <!-- EMAIL TEMPLATES MODAL -->
+    <div id="emailTemplatesModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:640px">
+        <div class="a-modal-header">
+          <h3>Email Templates</h3>
+          <button class="a-modal-close" onclick="closeModal('emailTemplatesModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <div id="emailTemplateList" class="tkt-teamlist" style="margin-bottom:20px"></div>
+          <div class="tkt-teamdivider"><span id="tplFormTitle">New Template</span></div>
+          <input type="hidden" id="tplEditId">
+          <div class="cms-form-group">
+            <label class="cms-label">Template Name</label>
+            <input id="tplName" class="a-input" placeholder="e.g. Monthly Restock Reminder">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Subject Line</label>
+            <input id="tplSubject" class="a-input" placeholder="e.g. Time to restock — 10% off this week">
+          </div>
+          <div class="cms-form-group" style="margin-bottom:0">
+            <label class="cms-label">Body (HTML) <span class="cms-label-hint">plain text works too — line breaks aren't preserved in HTML email, so wrap paragraphs in &lt;p&gt; tags</span></label>
+            <textarea id="tplBody" class="a-input" rows="8" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi there,</p><p>...</p>"></textarea>
+          </div>
+          <p id="tplError" class="tkt-formerror" style="display:none"></p>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" id="tplCancelBtn" style="display:none" onclick="resetTemplateForm()">Cancel Edit</button>
+          <button class="a-btn-primary" id="tplSaveBtn" onclick="saveEmailTemplate()">Save Template</button>
+        </div>
+      </div>
+    </div>
+
     <!-- NEW TICKET MODAL -->
     <div id="devTicketModal" class="a-modal-overlay" style="display:none">
       <div class="a-modal tkt-modal" style="max-width:580px">
@@ -2490,7 +2537,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=70"></script>
+<script src="admin.js?v=71"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

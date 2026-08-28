@@ -144,7 +144,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -156,7 +156,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 // Marketing owns full day-to-day operations -- everything except
 // account/user management and the dev ticket board.
 const MARKETING_TABS = [
-  "dashboard", "crm", "products", "inventory", "mix-match", "orders",
+  "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports",
 ];
@@ -291,7 +291,7 @@ function switchTab(tab) {
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
-      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads" }[tab] || tab;
+      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -308,6 +308,7 @@ function switchTab(tab) {
   if (tab === "dev-tickets")      renderDevTicketsTab();
   if (tab === "best-deals")       renderBestDealsTab();
   if (tab === "crm")              renderCrmTab();
+  if (tab === "campaigns")        renderCampaignsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -4050,6 +4051,553 @@ async function submitCrmActivity(id) {
   await logCrmActivity(id, typeEl?.value || "note", body);
   bodyEl.value = "";
   openCrmDrawer(id); // re-render the thread with the new entry
+}
+
+/* ── Campaigns (Marketing Account, Phase 2/3) ─────────────────
+   Campaign tracking + content calendar + email template library + segmented
+   one-off email sends. Reuses the exact board/drawer shell as CRM/Dev
+   Tickets. True automated drip funnels are NOT built here -- that needs a
+   scheduled trigger system, a separate and meaningfully bigger piece of
+   work; this covers planning, scheduling, and manual sends. */
+
+const CAMP_STATUS = [
+  { key:"draft",     label:"Draft" },
+  { key:"scheduled", label:"Scheduled" },
+  { key:"active",    label:"Active" },
+  { key:"completed", label:"Completed" },
+  { key:"archived",  label:"Archived" },
+];
+const CAMP_STATUS_LABEL = Object.fromEntries(CAMP_STATUS.map(s => [s.key, s.label]));
+const CAMP_TYPES = [
+  { key:"email",         label:"Email" },
+  { key:"social",        label:"Social" },
+  { key:"landing_page",  label:"Landing Page" },
+  { key:"product_promo", label:"Product Promo" },
+  { key:"other",         label:"Other" },
+];
+const CAMP_CONTENT_TYPES = [
+  { key:"email",       label:"Email" },
+  { key:"social_post", label:"Social Post" },
+  { key:"other",       label:"Other" },
+];
+
+const _camp = { campaigns: [], filters: { status: "all", q: "" } };
+
+async function renderCampaignsTab() {
+  const panel = document.getElementById("tab-campaigns");
+  if (!panel) return;
+  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading campaigns…</div>`;
+
+  const { data, error } = await window.sb.from("campaigns").select("*").order("created_at", { ascending:false });
+  if (error) {
+    panel.innerHTML = `<div class="a-empty" style="padding:50px">Couldn't load campaigns: ${escHtml(error.message)}<br><span style="font-size:12px;color:#94a3b8">If this says a table is missing, run the 20260829_marketing_campaigns.sql migration.</span></div>`;
+    return;
+  }
+  _camp.campaigns = data || [];
+
+  panel.innerHTML = `
+    <div class="tkt-header">
+      <div>
+        <h1 class="a-page-title">Campaigns</h1>
+        <p class="a-page-sub">Plan, schedule, and send marketing campaigns — linked to real products and promotions.</p>
+      </div>
+      <div class="tkt-header-actions">
+        <button class="a-btn-secondary" onclick="openEmailTemplatesModal()">Email Templates</button>
+        <button class="a-btn-primary" onclick="createNewCampaign()">+ New Campaign</button>
+      </div>
+    </div>
+
+    <div class="tkt-statstrip" id="campStats"></div>
+
+    <div class="tkt-filterbar">
+      <div class="tkt-search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="campSearch" type="text" placeholder="Search campaigns…" value="${escHtml(_camp.filters.q)}" oninput="setCampFilter('q', this.value)">
+      </div>
+    </div>
+
+    <div id="campBoardWrap"></div>
+  `;
+
+  renderCampStats();
+  renderCampBoard();
+}
+
+function renderCampStats() {
+  const el = document.getElementById("campStats");
+  if (!el) return;
+  el.innerHTML = CAMP_STATUS.map(col => {
+    const n = _camp.campaigns.filter(c => c.status === col.key).length;
+    return `<div class="tkt-stat tkt-stat-camp-${col.key}"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
+  }).join("");
+}
+
+function setCampFilter(key, value) {
+  _camp.filters[key] = value;
+  renderCampBoard();
+}
+
+function campVisible() {
+  const q = _camp.filters.q.trim().toLowerCase();
+  if (!q) return _camp.campaigns;
+  return _camp.campaigns.filter(c => (c.name || "").toLowerCase().includes(q));
+}
+
+function renderCampBoard() {
+  const wrap = document.getElementById("campBoardWrap");
+  if (!wrap) return;
+  const visible = campVisible();
+
+  if (!_camp.campaigns.length) {
+    wrap.innerHTML = `<div class="tkt-empty">
+      <div class="tkt-empty-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+      </div>
+      <h3>No campaigns yet</h3>
+      <p>Create your first campaign to start planning and tracking marketing activity.</p>
+      <button class="a-btn-primary" onclick="createNewCampaign()">+ New Campaign</button>
+    </div>`;
+    return;
+  }
+
+  wrap.innerHTML = `<div class="tkt-board" style="grid-template-columns:repeat(5, minmax(220px, 1fr))">${CAMP_STATUS.map(col => {
+    const items = visible.filter(c => c.status === col.key);
+    return `
+      <section class="tkt-col" data-status="${col.key}"
+        ondragover="campDragOver(event)" ondragleave="campDragLeave(event)" ondrop="campDrop(event,'${col.key}')">
+        <header class="tkt-col-head">
+          <span class="tkt-col-dot" style="background:${campDotColor(col.key)}"></span>
+          <span class="tkt-col-title">${escHtml(col.label)}</span>
+          <span class="tkt-col-count">${items.length}</span>
+        </header>
+        <div class="tkt-col-body">
+          ${items.map(campCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
+        </div>
+      </section>`;
+  }).join("")}</div>`;
+}
+
+function campDotColor(status) {
+  return { draft:"#94a3b8", scheduled:"#3b82f6", active:"#22a565", completed:"#0d1f38", archived:"#94739b" }[status] || "#94a3b8";
+}
+
+function campCard(c) {
+  const type = CAMP_TYPES.find(t => t.key === c.campaign_type) || CAMP_TYPES[0];
+  const dateRange = [c.start_date, c.end_date].filter(Boolean).map(d => new Date(d + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})).join(" – ");
+  return `
+    <article class="tkt-card" draggable="true"
+      ondragstart="campDragStart(event,'${c.id}')" ondragend="campDragEnd(event)"
+      onclick="openCampDrawer('${c.id}')">
+      <div class="tkt-card-top">
+        <span class="tkt-type tkt-t-bug">${escHtml(type.label)}</span>
+        ${c.emails_sent ? `<span class="tkt-pri tkt-p-enhancement">${c.emails_sent} sent</span>` : ""}
+      </div>
+      <p class="tkt-card-title">${escHtml(c.name)}</p>
+      ${c.audience_segment ? `<p class="tkt-card-sub">${escHtml(c.audience_segment)}</p>` : ""}
+      <div class="tkt-card-foot">
+        <span class="tkt-chip">${dateRange ? escHtml(dateRange) : "No dates set"}</span>
+      </div>
+    </article>`;
+}
+
+let _campDragId = null;
+function campDragStart(e, id) { _campDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
+function campDragEnd(e)       { _campDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
+function campDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
+function campDragLeave(e)     { e.currentTarget.classList.remove("over"); }
+async function campDrop(e, status) {
+  e.preventDefault();
+  e.currentTarget.classList.remove("over");
+  if (!_campDragId) return;
+  const id = _campDragId; _campDragId = null;
+  await setCampField(id, "status", status);
+  renderCampStats();
+  renderCampBoard();
+}
+
+async function createNewCampaign() {
+  const { data, error } = await window.sb.from("campaigns").insert({ name: "Untitled Campaign", campaign_type: "email", status: "draft" }).select().single();
+  if (error) { showToast("Couldn't create campaign: " + error.message); return; }
+  _camp.campaigns.unshift(data);
+  renderCampStats();
+  renderCampBoard();
+  openCampDrawer(data.id);
+}
+
+async function setCampField(id, field, value) {
+  const c = _camp.campaigns.find(x => x.id === id);
+  const { error } = await window.sb.from("campaigns").update({ [field]: value }).eq("id", id);
+  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (c) c[field] = value;
+}
+
+/* ── Campaign detail drawer ───────────────────────────────────── */
+
+async function openCampDrawer(id) {
+  const overlay = document.getElementById("campDrawerOverlay");
+  const body    = document.getElementById("campDrawerBody");
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  const c = _camp.campaigns.find(x => x.id === id);
+  if (!c) { body.innerHTML = `<div class="a-empty" style="padding:60px">Campaign not found.</div>`; return; }
+
+  const [{ data: content }, { data: products }, { data: deals }, { data: templates }] = await Promise.all([
+    window.sb.from("campaign_content").select("*").eq("campaign_id", id).order("scheduled_date"),
+    window.sb.from("products").select("sku,name").eq("is_active", true).order("name").limit(500),
+    window.sb.from("best_deals").select("id,hook_title").eq("is_active", true),
+    window.sb.from("email_templates").select("id,name,subject,body_html").order("name"),
+  ]);
+  _camp._products = products || [];
+  _camp._deals = deals || [];
+  _camp._templates = templates || [];
+
+  body.innerHTML = `
+    <header class="tkt-dr-head">
+      <div class="tkt-dr-headtop">
+        <span class="tkt-num tkt-num-lg">Campaign</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="tkt-iconbtn" title="Delete campaign" onclick="deleteCampaign('${c.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+          <button class="tkt-iconbtn" title="Close" onclick="closeCampDrawer(true)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+      <input id="campNameInput" value="${escHtml(c.name)}" onchange="setCampField('${c.id}','name',this.value); document.getElementById('campNameHeading').textContent=this.value;"
+        style="font-size:19px;font-weight:800;color:#0d1f38;border:none;outline:none;width:100%;padding:0;margin:0 0 12px;font-family:inherit" id="campNameHeading">
+      <div class="tkt-dr-badges">
+        <span class="tkt-status-pill tkt-dotbg-${c.status === "active" ? "customer" : c.status === "completed" ? "done" : "new"}">${escHtml(CAMP_STATUS_LABEL[c.status] || c.status)}</span>
+      </div>
+    </header>
+
+    <div class="tkt-dr-controls">
+      <label class="tkt-dr-ctl">
+        <span>Status</span>
+        <select class="a-input" onchange="setCampField('${c.id}','status',this.value); renderCampStats(); renderCampBoard();">
+          ${CAMP_STATUS.map(s => `<option value="${s.key}"${c.status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Type</span>
+        <select class="a-input" onchange="setCampField('${c.id}','campaign_type',this.value)">
+          ${CAMP_TYPES.map(t => `<option value="${t.key}"${c.campaign_type===t.key?" selected":""}>${escHtml(t.label)}</option>`).join("")}
+        </select>
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>Start Date</span>
+        <input class="a-input" type="date" value="${c.start_date || ""}" onchange="setCampField('${c.id}','start_date',this.value || null); renderCampBoard();">
+      </label>
+      <label class="tkt-dr-ctl">
+        <span>End Date</span>
+        <input class="a-input" type="date" value="${c.end_date || ""}" onchange="setCampField('${c.id}','end_date',this.value || null); renderCampBoard();">
+      </label>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Audience Segment</h4>
+      <p class="tkt-dr-meta" style="margin:0 0 10px">Who this campaign targets — used to build the live recipient list when you send an email below. Leave a filter blank to not narrow by it.</p>
+      <div class="tkt-dr-controls" style="padding:0;background:none;border:none">
+        <label class="tkt-dr-ctl">
+          <span>Customer Type</span>
+          <select class="a-input" id="segCustomerType-${c.id}" onchange="setCampField('${c.id}','segment_customer_type',this.value || null); updateRecipientPreview('${c.id}')">
+            <option value=""${!c.segment_customer_type?" selected":""}>Any</option>
+            ${["Hotel","Motel","Short-Term Rental","Cleaning Company","Restaurant","Campground","RV Park","Facility Manager","Property Manager","Apartment Complex","Student Housing","Senior Living","Other"].map(t => `<option value="${escHtml(t)}"${c.segment_customer_type===t?" selected":""}>${escHtml(t)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="tkt-dr-ctl">
+          <span>Lead Stage</span>
+          <select class="a-input" id="segLeadStatus-${c.id}" onchange="setCampField('${c.id}','segment_lead_status',this.value || null); updateRecipientPreview('${c.id}')">
+            <option value=""${!c.segment_lead_status?" selected":""}>Any</option>
+            ${CRM_STATUS.map(s => `<option value="${s.key}"${c.segment_lead_status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="tkt-dr-ctl">
+          <span>Lead Source</span>
+          <select class="a-input" id="segLeadSource-${c.id}" onchange="setCampField('${c.id}','segment_lead_source',this.value || null); updateRecipientPreview('${c.id}')">
+            <option value=""${!c.segment_lead_source?" selected":""}>Any</option>
+            ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${c.segment_lead_source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <div class="cms-form-group" style="margin-top:10px">
+        <label class="cms-label">Note (shown on the card)</label>
+        <input class="a-input" value="${escHtml(c.audience_segment || "")}" placeholder="e.g. Hotels, New Leads, from Trade Show"
+          onchange="setCampField('${c.id}','audience_segment',this.value || null); renderCampBoard();">
+      </div>
+      <p id="recipientPreview-${c.id}" style="font-size:13px;color:#475569;margin:10px 0 0"></p>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Linked Product / Promotion</h4>
+      <div class="tkt-dr-controls" style="padding:0;background:none;border:none">
+        <label class="tkt-dr-ctl">
+          <span>Product</span>
+          <select class="a-input" onchange="setCampField('${c.id}','linked_product_sku',this.value || null)">
+            <option value="">None</option>
+            ${_camp._products.map(p => `<option value="${escHtml(p.sku)}"${c.linked_product_sku===p.sku?" selected":""}>${escHtml(p.name)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="tkt-dr-ctl">
+          <span>Best Deal</span>
+          <select class="a-input" onchange="setCampField('${c.id}','linked_best_deal_id',this.value || null)">
+            <option value="">None</option>
+            ${_camp._deals.map(d => `<option value="${d.id}"${c.linked_best_deal_id===d.id?" selected":""}>${escHtml(d.hook_title)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="tkt-dr-ctl">
+          <span>Mix &amp; Match Group</span>
+          <input class="a-input" value="${escHtml(c.linked_moq_group || "")}" placeholder="e.g. 5GAL-CHEMICALS" onchange="setCampField('${c.id}','linked_moq_group',this.value || null)">
+        </label>
+      </div>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Content Calendar</h4>
+      <div id="campContentList-${c.id}">${renderCampContentListHtml(content || [])}</div>
+      <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
+        <input type="date" id="ccDate-${c.id}" class="a-input" style="width:140px">
+        <select id="ccType-${c.id}" class="a-input" style="width:120px">
+          ${CAMP_CONTENT_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
+        </select>
+        <input type="text" id="ccTitle-${c.id}" class="a-input" placeholder="What's scheduled…" style="flex:1;min-width:140px">
+        <button class="a-btn-primary" style="padding:8px 14px;font-size:12.5px" onclick="addCampContentItem('${c.id}')">+ Add</button>
+      </div>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>A/B Testing &amp; Notes</h4>
+      <textarea class="a-input" rows="3" placeholder="Subject lines tried, offers tested, what won…" onchange="setCampField('${c.id}','notes',this.value || null)">${escHtml(c.notes || "")}</textarea>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Send Campaign Email</h4>
+      <div class="cms-form-group">
+        <label class="cms-label">Template</label>
+        <select class="a-input" id="sendTplSelect-${c.id}" onchange="onSendTemplateChange('${c.id}')">
+          <option value="">— Write inline —</option>
+          ${_camp._templates.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join("")}
+        </select>
+      </div>
+      <div class="cms-form-group">
+        <label class="cms-label">Subject</label>
+        <input class="a-input" id="sendSubject-${c.id}" placeholder="Subject line">
+      </div>
+      <div class="cms-form-group" style="margin-bottom:0">
+        <label class="cms-label">Body (HTML)</label>
+        <textarea class="a-input" id="sendBody-${c.id}" rows="6" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi there,</p>..."></textarea>
+      </div>
+      <p id="sendError-${c.id}" class="tkt-formerror" style="display:none"></p>
+      <button class="a-btn-primary" style="margin-top:12px" onclick="sendCampaignEmail('${c.id}')" id="sendCampBtn-${c.id}">Send to Segment</button>
+      ${c.emails_sent ? `<p class="tkt-dr-meta">Last sent ${fmt(c.last_sent_at)} — ${c.emails_sent} email${c.emails_sent===1?"":"s"} total.</p>` : ""}
+    </div>
+
+    <div class="tkt-dr-section tkt-dr-facts">
+      <div><span>Created</span><strong>${fmt(c.created_at)}</strong></div>
+    </div>
+  `;
+  updateRecipientPreview(id);
+}
+
+function closeCampDrawer(force) {
+  if (force !== true && force && force.target && force.target.id !== "campDrawerOverlay") return;
+  const overlay = document.getElementById("campDrawerOverlay");
+  overlay.classList.remove("open");
+  setTimeout(() => { overlay.style.display = "none"; }, 180);
+  renderCampBoard();
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("campDrawerOverlay")?.style.display === "flex") closeCampDrawer(true);
+});
+
+async function deleteCampaign(id) {
+  if (!confirm("Delete this campaign? Its content calendar entries go with it.")) return;
+  const { error } = await window.sb.from("campaigns").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  _camp.campaigns = _camp.campaigns.filter(c => c.id !== id);
+  closeCampDrawer(true);
+  renderCampStats();
+  renderCampBoard();
+  showToast("Campaign deleted.");
+}
+
+/* ── Content calendar ─────────────────────────────────────────── */
+
+function renderCampContentListHtml(items) {
+  if (!items.length) return `<p class="tkt-dr-meta" style="margin:0">Nothing scheduled yet.</p>`;
+  return items.map(i => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f1f5f9">
+      <span style="font-size:11.5px;color:#94a3b8;white-space:nowrap;width:70px">${new Date(i.scheduled_date + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+      <span class="tkt-type tkt-t-bug" style="flex-shrink:0">${escHtml((CAMP_CONTENT_TYPES.find(t=>t.key===i.content_type)||{}).label || i.content_type)}</span>
+      <span style="flex:1;font-size:13px;color:#334155">${escHtml(i.title)}</span>
+      <button onclick="deleteCampContentItem('${i.campaign_id}','${i.id}')" style="background:none;border:none;color:#cbd5e1;cursor:pointer;font-size:14px" title="Remove">&times;</button>
+    </div>`).join("");
+}
+
+async function addCampContentItem(campaignId) {
+  const date = document.getElementById("ccDate-" + campaignId).value;
+  const type = document.getElementById("ccType-" + campaignId).value;
+  const title = document.getElementById("ccTitle-" + campaignId).value.trim();
+  if (!date || !title) { showToast("Pick a date and enter what's scheduled."); return; }
+
+  const { data, error } = await window.sb.from("campaign_content").insert({
+    campaign_id: campaignId, scheduled_date: date, content_type: type, title,
+  }).select().single();
+  if (error) { showToast("Couldn't add: " + error.message); return; }
+
+  const { data: content } = await window.sb.from("campaign_content").select("*").eq("campaign_id", campaignId).order("scheduled_date");
+  document.getElementById("campContentList-" + campaignId).innerHTML = renderCampContentListHtml(content || []);
+  document.getElementById("ccTitle-" + campaignId).value = "";
+}
+
+async function deleteCampContentItem(campaignId, itemId) {
+  const { error } = await window.sb.from("campaign_content").delete().eq("id", itemId);
+  if (error) { showToast("Couldn't remove: " + error.message); return; }
+  const { data: content } = await window.sb.from("campaign_content").select("*").eq("campaign_id", campaignId).order("scheduled_date");
+  document.getElementById("campContentList-" + campaignId).innerHTML = renderCampContentListHtml(content || []);
+}
+
+/* ── Segmented recipient list + send ──────────────────────────── */
+
+// Builds the live recipient list from quote_requests (the same table CRM
+// leads live in -- see 20260828_marketing_crm.sql) using whichever of the
+// three segment filters are set. Distinct emails only -- a lead can have
+// multiple quote_requests rows over time.
+async function computeSegmentRecipients(c) {
+  let q = window.sb.from("quote_requests").select("email").not("email", "is", null);
+  if (c.segment_customer_type) q = q.eq("customer_type", c.segment_customer_type);
+  if (c.segment_lead_status)   q = q.eq("status", c.segment_lead_status);
+  if (c.segment_lead_source)   q = q.eq("lead_source", c.segment_lead_source);
+  const { data, error } = await q;
+  if (error) return { emails: [], error };
+  const emails = [...new Set((data || []).map(r => (r.email || "").trim().toLowerCase()).filter(Boolean))];
+  return { emails, error: null };
+}
+
+async function updateRecipientPreview(campaignId) {
+  const el = document.getElementById("recipientPreview-" + campaignId);
+  if (!el) return;
+  el.textContent = "Calculating recipients…";
+  const c = _camp.campaigns.find(x => x.id === campaignId);
+  if (!c) return;
+  const { emails, error } = await computeSegmentRecipients(c);
+  el.textContent = error ? ("Couldn't calculate: " + error.message) : `${emails.length} recipient${emails.length===1?"":"s"} match this segment right now.`;
+}
+
+function onSendTemplateChange(campaignId) {
+  const tplId = document.getElementById("sendTplSelect-" + campaignId).value;
+  const tpl = _camp._templates.find(t => t.id === tplId);
+  document.getElementById("sendSubject-" + campaignId).value = tpl ? tpl.subject : "";
+  document.getElementById("sendBody-" + campaignId).value = tpl ? tpl.body_html : "";
+}
+
+async function sendCampaignEmail(campaignId) {
+  const errEl = document.getElementById("sendError-" + campaignId);
+  errEl.style.display = "none";
+  const c = _camp.campaigns.find(x => x.id === campaignId);
+  if (!c) return;
+  const subject = document.getElementById("sendSubject-" + campaignId).value.trim();
+  const body_html = document.getElementById("sendBody-" + campaignId).value.trim();
+  if (!subject || !body_html) { errEl.textContent = "Subject and body are required."; errEl.style.display = "block"; return; }
+
+  const { emails, error: segErr } = await computeSegmentRecipients(c);
+  if (segErr) { errEl.textContent = "Couldn't calculate recipients: " + segErr.message; errEl.style.display = "block"; return; }
+  if (!emails.length) { errEl.textContent = "No recipients match this segment right now."; errEl.style.display = "block"; return; }
+  if (!confirm(`Send this email to ${emails.length} recipient${emails.length===1?"":"s"}? This cannot be undone.`)) return;
+
+  const btn = document.getElementById("sendCampBtn-" + campaignId);
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({ action: "send_campaign", campaign_id: campaignId, subject, body_html, recipients: emails }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+
+    showToast(`Sent to ${out.sent} recipient${out.sent===1?"":"s"}${out.failed ? ` (${out.failed} failed)` : ""}.`);
+    c.emails_sent = (c.emails_sent || 0) + out.sent;
+    c.last_sent_at = new Date().toISOString();
+    openCampDrawer(campaignId); // re-render with the updated send count
+  } catch (err) {
+    errEl.textContent = err.message; errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Send to Segment";
+  }
+}
+
+/* ── Email template library ───────────────────────────────────── */
+
+async function openEmailTemplatesModal() {
+  resetTemplateForm();
+  await renderEmailTemplateList();
+  openModal("emailTemplatesModal");
+}
+
+async function renderEmailTemplateList() {
+  const el = document.getElementById("emailTemplateList");
+  const { data, error } = await window.sb.from("email_templates").select("*").order("name");
+  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load templates: ${escHtml(error.message)}</p>`; return; }
+  el.innerHTML = (data && data.length) ? data.map(t => `
+    <div class="tkt-teamrow">
+      <div style="flex:1;min-width:0">
+        <strong>${escHtml(t.name)}</strong>
+        <span>${escHtml(t.subject)}</span>
+      </div>
+      <button class="a-btn-sm" onclick='editEmailTemplate(${JSON.stringify(t).replace(/'/g, "&#39;")})'>Edit</button>
+      <button class="a-btn-sm a-btn-danger" onclick="deleteEmailTemplate('${t.id}')">Delete</button>
+    </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No templates yet — create one below.</p>`;
+}
+
+function resetTemplateForm() {
+  document.getElementById("tplEditId").value = "";
+  document.getElementById("tplName").value = "";
+  document.getElementById("tplSubject").value = "";
+  document.getElementById("tplBody").value = "";
+  document.getElementById("tplFormTitle").textContent = "New Template";
+  document.getElementById("tplCancelBtn").style.display = "none";
+  document.getElementById("tplError").style.display = "none";
+}
+
+function editEmailTemplate(t) {
+  document.getElementById("tplEditId").value = t.id;
+  document.getElementById("tplName").value = t.name;
+  document.getElementById("tplSubject").value = t.subject;
+  document.getElementById("tplBody").value = t.body_html;
+  document.getElementById("tplFormTitle").textContent = "Editing: " + t.name;
+  document.getElementById("tplCancelBtn").style.display = "inline-block";
+}
+
+async function saveEmailTemplate() {
+  const errEl = document.getElementById("tplError");
+  errEl.style.display = "none";
+  const id = document.getElementById("tplEditId").value;
+  const name = document.getElementById("tplName").value.trim();
+  const subject = document.getElementById("tplSubject").value.trim();
+  const body_html = document.getElementById("tplBody").value.trim();
+  if (!name || !subject || !body_html) { errEl.textContent = "Name, subject, and body are all required."; errEl.style.display = "block"; return; }
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  const payload = { name, subject, body_html, created_by: session?.user?.id || null };
+  const { error } = id
+    ? await window.sb.from("email_templates").update(payload).eq("id", id)
+    : await window.sb.from("email_templates").insert(payload);
+  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+
+  resetTemplateForm();
+  await renderEmailTemplateList();
+  showToast("Template saved.");
+}
+
+async function deleteEmailTemplate(id) {
+  if (!confirm("Delete this template?")) return;
+  const { error } = await window.sb.from("email_templates").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  await renderEmailTemplateList();
 }
 
 /* ── Reports ───────────────────────────────────────────────── */

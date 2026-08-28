@@ -94,12 +94,66 @@ function invoiceEmailHtml(o) {
  */
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  if (!Stripe) return res.status(500).json({ error: 'stripe module not available' });
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+
+  // Campaign broadcast send -- dispatched from this same file rather than a
+  // new one (Vercel's Hobby plan caps serverless functions at 12, and this
+  // project is already at that cap). Unlike the rest of this file (a single
+  // transactional invoice email, tied to a real order/quote the recipient
+  // is already expecting), this sends real marketing email to a whole
+  // segment at once, so it verifies the caller is actual marketing staff
+  // via their access token -- this file otherwise has no auth check at all.
+  if (req.body?.action === 'send_campaign') {
+    const { campaign_id, subject, body_html, recipients } = req.body;
+    if (!subject || !body_html) return res.status(400).json({ error: 'subject and body_html are required.' });
+    if (!Array.isArray(recipients) || !recipients.length) return res.status(400).json({ error: 'At least one recipient is required.' });
+    if (recipients.length > 500) return res.status(400).json({ error: 'Send in batches of 500 or fewer at a time.' });
+
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!token) return res.status(401).json({ error: 'Not signed in.' });
+    const { data: caller, error: callerErr } = await supabase.auth.getUser(token);
+    if (callerErr || !caller?.user) return res.status(401).json({ error: 'Invalid session.' });
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.user.id).single();
+    if (!['owner', 'marketing'].includes(callerProfile?.role)) {
+      return res.status(403).json({ error: 'Only Owner or Marketing accounts can send campaign emails.' });
+    }
+
+    let resend;
+    try { resend = getResend(); } catch (e) { return res.status(500).json({ error: e.message }); }
+
+    // Sent as individual emails (not one email with everyone in BCC) --
+    // each recipient gets a real, individually-addressed message, and one
+    // bad address can't affect anyone else's send. Resend has no native
+    // "send to a list" call being used here; this is a plain loop over the
+    // existing single-send API, same call every other email in this
+    // codebase already uses.
+    const results = await Promise.allSettled(recipients.map(email =>
+      resend.emails.send({
+        from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+        to: email,
+        subject,
+        html: body_html,
+      })
+    ));
+    const sent = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.length - sent;
+
+    if (campaign_id) {
+      const { data: existing } = await supabase.from('campaigns').select('emails_sent').eq('id', campaign_id).single();
+      await supabase.from('campaigns').update({
+        emails_sent: (existing?.emails_sent || 0) + sent,
+        last_sent_at: new Date().toISOString(),
+      }).eq('id', campaign_id);
+    }
+
+    return res.status(200).json({ success: true, sent, failed });
+  }
+
+  if (!Stripe) return res.status(500).json({ error: 'stripe module not available' });
 
   const { quote_request_id, order_id, preview_only } = req.body || {};
   if (!quote_request_id && !order_id) {

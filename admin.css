@@ -1906,6 +1906,13 @@ body.admin-body {
 .tkt-stat-customer::before        { background: #22a565; }
 .tkt-stat-repeat_customer::before { background: #a855f7; }
 
+/* Campaign pipeline colors (same board/stat shell as CRM/tickets above) */
+.tkt-stat-camp-draft::before     { background: #94a3b8; }
+.tkt-stat-camp-scheduled::before { background: #3b82f6; }
+.tkt-stat-camp-active::before    { background: #22a565; }
+.tkt-stat-camp-completed::before { background: #0d1f38; }
+.tkt-stat-camp-archived::before  { background: #94739b; }
+
 /* Filter bar ------------------------------------------------ */
 .tkt-filterbar {
   display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;
