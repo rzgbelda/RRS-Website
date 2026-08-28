@@ -2268,6 +2268,41 @@ async function setFulfillmentMethod(orderId, method) {
   openOrderModal(orderId);
 }
 
+// Manual business-name correction on an order (requested directly): not
+// every customer checks her account or uses the checkout picker -- some
+// just call in and say what business this order is under. No lock on this
+// one regardless of payment_status -- unlike the delivery fee, this never
+// affects money owed, it's purely a label so staff can find the order
+// later by the name she actually recognizes it by.
+function toggleOrderBizEdit(orderId) {
+  const view = document.getElementById("orderBizView-" + orderId);
+  const edit = document.getElementById("orderBizEdit-" + orderId);
+  if (!view || !edit) return;
+  const opening = edit.style.display === "none";
+  view.style.display = opening ? "none" : "flex";
+  edit.style.display = opening ? "flex" : "none";
+  if (opening) document.getElementById("orderBizNameInput-" + orderId)?.focus();
+}
+
+async function saveOrderBusinessName(orderId) {
+  const input = document.getElementById("orderBizNameInput-" + orderId);
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) { showToast("Business name can't be empty."); return; }
+
+  const { error } = await window.sb.from("orders").update({ business_name: name }).eq("id", orderId);
+  if (error) { showToast("Couldn't save business name: " + error.message); return; }
+
+  document.getElementById("orderBizNameText-" + orderId).textContent = name;
+  if (currentOrderData && currentOrderData.id === orderId) currentOrderData.business_name = name;
+  toggleOrderBizEdit(orderId);
+  showToast("Business name updated.");
+  // Refresh the table underneath so the column matches without needing to
+  // close and reopen the modal first.
+  const search = document.getElementById("orderSearch");
+  renderOrdersTable(search ? search.value.trim() : "");
+}
+
 // Sets/updates the in-house delivery fee on an order that hasn't been PAID
 // yet. Recomputes `total` around the change (rather than just overwriting
 // it) so a fee edited a second time doesn't stack on top of the old one --
@@ -2705,7 +2740,20 @@ async function openOrderModal(id) {
           </button>` : ""}
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Customer</span><br>${escHtml(o.customer_name || "—")}</div>
-      <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>${escHtml(o.business_name || "—")}</div>
+      <div>
+        <span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Business</span><br>
+        <div id="orderBizView-${o.id}" style="display:flex;align-items:center;gap:6px">
+          <span id="orderBizNameText-${o.id}">${escHtml(o.business_name || "—")}</span>
+          <button onclick="toggleOrderBizEdit('${o.id}')" title="A customer who calls in without checking her account may not know/use the exact saved name -- correct or set it here so it labels the order the way she'd recognize it."
+            style="border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:0">&#9998;</button>
+        </div>
+        <div id="orderBizEdit-${o.id}" style="display:none;align-items:center;gap:6px;margin-top:4px">
+          <input id="orderBizNameInput-${o.id}" type="text" value="${escHtml(o.business_name || "")}" placeholder="Business name"
+            style="padding:6px 9px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:13px;width:170px">
+          <button onclick="saveOrderBusinessName('${o.id}')" style="background:#0b2d52;color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer">Save</button>
+          <button onclick="toggleOrderBizEdit('${o.id}')" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Cancel</button>
+        </div>
+      </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Phone</span><br>${escHtml(o.phone || "—")}</div>
       <div style="grid-column:span 2">
