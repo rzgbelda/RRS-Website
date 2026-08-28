@@ -2274,20 +2274,76 @@ async function setFulfillmentMethod(orderId, method) {
 // one regardless of payment_status -- unlike the delivery fee, this never
 // affects money owed, it's purely a label so staff can find the order
 // later by the name she actually recognizes it by.
-function toggleOrderBizEdit(orderId) {
+//
+// If the order belongs to a logged-in account with saved businesses
+// (RRS-19), staff pick from HER real list instead of retyping a name that
+// then has to match hers exactly for the "Orders" jump-link on the Users
+// tab to find it -- with a manual "Other" fallback for a guest order, an
+// account with no saved businesses, or a business she genuinely hasn't
+// saved yet. Loaded once per order (cached), not re-fetched on every toggle.
+const _orderBizOptionsCache = {};
+
+async function toggleOrderBizEdit(orderId) {
   const view = document.getElementById("orderBizView-" + orderId);
   const edit = document.getElementById("orderBizEdit-" + orderId);
   if (!view || !edit) return;
   const opening = edit.style.display === "none";
   view.style.display = opening ? "none" : "flex";
   edit.style.display = opening ? "flex" : "none";
-  if (opening) document.getElementById("orderBizNameInput-" + orderId)?.focus();
+  if (!opening) return;
+
+  if (!(orderId in _orderBizOptionsCache)) {
+    const userId = currentOrderData?.id === orderId ? currentOrderData.user_id : null;
+    _orderBizOptionsCache[orderId] = userId
+      ? (await window.sb.from("businesses").select("business_name").eq("user_id", userId).order("is_default", { ascending: false })).data || []
+      : [];
+  }
+  const businesses = _orderBizOptionsCache[orderId];
+  const currentName = (currentOrderData?.id === orderId ? currentOrderData.business_name : "") || "";
+  const selectWrap = document.getElementById("orderBizSelectWrap-" + orderId);
+  const inputWrap  = document.getElementById("orderBizInputWrap-" + orderId);
+  const select     = document.getElementById("orderBizSelect-" + orderId);
+  const input      = document.getElementById("orderBizNameInput-" + orderId);
+
+  if (businesses.length) {
+    const matchesSaved = businesses.some(b => b.business_name.trim().toLowerCase() === currentName.trim().toLowerCase());
+    select.innerHTML = businesses.map(b =>
+      `<option value="${escHtml(b.business_name)}"${matchesSaved && b.business_name === currentName ? " selected" : ""}>${escHtml(b.business_name)}</option>`
+    ).join("") + `<option value="__other__"${matchesSaved ? "" : " selected"}>Other (type manually)</option>`;
+    selectWrap.style.display = "flex";
+    inputWrap.style.display  = matchesSaved ? "none" : "flex";
+    (matchesSaved ? select : input)?.focus();
+  } else {
+    // No saved businesses on this account (or a guest order) -- same plain
+    // text field as before, nothing to choose from.
+    selectWrap.style.display = "none";
+    inputWrap.style.display  = "flex";
+    input?.focus();
+  }
+}
+
+function onOrderBizSelectChange(orderId) {
+  const select = document.getElementById("orderBizSelect-" + orderId);
+  const inputWrap = document.getElementById("orderBizInputWrap-" + orderId);
+  const input = document.getElementById("orderBizNameInput-" + orderId);
+  if (select.value === "__other__") {
+    inputWrap.style.display = "flex";
+    input.value = "";
+    input.focus();
+  } else {
+    inputWrap.style.display = "none";
+  }
 }
 
 async function saveOrderBusinessName(orderId) {
-  const input = document.getElementById("orderBizNameInput-" + orderId);
-  if (!input) return;
-  const name = input.value.trim();
+  const select     = document.getElementById("orderBizSelect-" + orderId);
+  const input      = document.getElementById("orderBizNameInput-" + orderId);
+  const selectWrap = document.getElementById("orderBizSelectWrap-" + orderId);
+  // The dropdown is authoritative only while it's actually shown AND not
+  // set to "Other" -- otherwise whatever's in the free-text field wins
+  // (that's the field visibly in front of the user in every other case).
+  const usingSelect = selectWrap && selectWrap.style.display !== "none" && select && select.value !== "__other__";
+  const name = (usingSelect ? select.value : input?.value || "").trim();
   if (!name) { showToast("Business name can't be empty."); return; }
 
   const { error } = await window.sb.from("orders").update({ business_name: name }).eq("id", orderId);
@@ -2747,11 +2803,17 @@ async function openOrderModal(id) {
           <button onclick="toggleOrderBizEdit('${o.id}')" title="A customer who calls in without checking her account may not know/use the exact saved name -- correct or set it here so it labels the order the way she'd recognize it."
             style="border:none;background:none;color:#94a3b8;cursor:pointer;font-size:12px;padding:0">&#9998;</button>
         </div>
-        <div id="orderBizEdit-${o.id}" style="display:none;align-items:center;gap:6px;margin-top:4px">
-          <input id="orderBizNameInput-${o.id}" type="text" value="${escHtml(o.business_name || "")}" placeholder="Business name"
-            style="padding:6px 9px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:13px;width:170px">
-          <button onclick="saveOrderBusinessName('${o.id}')" style="background:#0b2d52;color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer">Save</button>
-          <button onclick="toggleOrderBizEdit('${o.id}')" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Cancel</button>
+        <div id="orderBizEdit-${o.id}" style="display:none;flex-direction:column;gap:6px;margin-top:4px">
+          <div id="orderBizSelectWrap-${o.id}" style="display:none;align-items:center;gap:6px">
+            <select id="orderBizSelect-${o.id}" onchange="onOrderBizSelectChange('${o.id}')"
+              style="padding:6px 9px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:13px;width:180px"></select>
+          </div>
+          <div id="orderBizInputWrap-${o.id}" style="display:flex;align-items:center;gap:6px">
+            <input id="orderBizNameInput-${o.id}" type="text" value="${escHtml(o.business_name || "")}" placeholder="Business name"
+              style="padding:6px 9px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:13px;width:170px">
+            <button onclick="saveOrderBusinessName('${o.id}')" style="background:#0b2d52;color:#fff;border:none;border-radius:7px;padding:6px 11px;font-size:12px;font-weight:700;cursor:pointer">Save</button>
+            <button onclick="toggleOrderBizEdit('${o.id}')" style="background:none;border:none;color:#94a3b8;font-size:12px;cursor:pointer">Cancel</button>
+          </div>
         </div>
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Email</span><br>${escHtml(o.customer_email || "—")}</div>
