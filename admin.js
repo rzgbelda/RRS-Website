@@ -3863,7 +3863,12 @@ function crmCard(l) {
       onclick="openCrmDrawer('${l.id}')">
       <div class="tkt-card-top">
         <span class="tkt-num">${escHtml(l.customer_type || "General")}</span>
-        ${l.lead_source ? `<span class="tkt-pri tkt-p-enhancement">${escHtml(l.lead_source)}</span>` : ""}
+        <div style="display:flex;align-items:center;gap:6px">
+          ${l.lead_source ? `<span class="tkt-pri tkt-p-enhancement">${escHtml(l.lead_source)}</span>` : ""}
+          <button class="tkt-card-del" onclick="event.stopPropagation(); deleteCrmLead('${l.id}')" title="Delete lead">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
       <p class="tkt-card-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</p>
       ${l.contact_name || l.email ? `<p class="tkt-card-sub">${escHtml(l.contact_name || "")}${l.contact_name && l.email ? " · " : ""}${escHtml(l.email || "")}</p>` : ""}
@@ -3902,6 +3907,24 @@ async function setCrmLeadStatus(id, status) {
   await logCrmActivity(id, "status_change", `Moved from "${CRM_STATUS_LABEL[from] || from}" to "${CRM_STATUS_LABEL[status] || status}"`, true);
   renderCrmStats();
   renderCrmBoard();
+}
+
+// Deletes the underlying quote_requests row -- this IS the lead record (see
+// the note at the top of 20260828_marketing_crm.sql), so removing it also
+// cascades to crm_activity_log. Callable either from a card's quick-delete
+// button (drawer isn't open yet) or from inside the open drawer.
+async function deleteCrmLead(id) {
+  const l = _crm.leads.find(x => x.id === id);
+  if (!l) return;
+  if (!confirm(`Delete the lead "${l.business_name || l.contact_name || "Unnamed lead"}"? This also removes its activity log and can't be undone.`)) return;
+  const { error } = await window.sb.from("quote_requests").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  _crm.leads = _crm.leads.filter(x => x.id !== id);
+  const overlay = document.getElementById("crmDrawerOverlay");
+  if (overlay && overlay.classList.contains("open")) closeCrmDrawer(true);
+  renderCrmStats();
+  renderCrmBoard();
+  showToast("Lead deleted.");
 }
 
 async function logCrmActivity(quoteRequestId, type, body, silent) {
@@ -3950,9 +3973,14 @@ async function openCrmDrawer(id) {
     <header class="tkt-dr-head">
       <div class="tkt-dr-headtop">
         <span class="tkt-num tkt-num-lg">Lead</span>
-        <button class="tkt-iconbtn" title="Close" onclick="closeCrmDrawer(true)">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="tkt-iconbtn" title="Delete lead" onclick="deleteCrmLead('${l.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>
+          <button class="tkt-iconbtn" title="Close" onclick="closeCrmDrawer(true)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
       </div>
       <h2 class="tkt-dr-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</h2>
       <div class="tkt-dr-badges">

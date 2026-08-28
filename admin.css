@@ -2009,6 +2009,17 @@ body.admin-body {
 .tkt-card-sub { font-size: 11.5px; color: #94a3b8; margin: 0 0 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tkt-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 9px; }
 .tkt-card-meta { display: flex; align-items: center; gap: 7px; }
+
+/* Quick-delete on a CRM lead card -- hidden until the card is hovered so it
+   doesn't clutter the board, but always reachable without opening the
+   drawer (e.g. to clear out test leads). */
+.tkt-card-del {
+  background: none; border: none; color: #cbd5e1; cursor: pointer;
+  width: 20px; height: 20px; border-radius: 6px; flex-shrink: 0; opacity: 0;
+  display: flex; align-items: center; justify-content: center; transition: opacity .15s, background .15s, color .15s;
+}
+.tkt-card:hover .tkt-card-del { opacity: 1; }
+.tkt-card-del:hover { background: #fef2f2; color: #dc2626; }
 .tkt-chip {
   display: inline-flex; align-items: center; gap: 3px;
   font-size: 11px; font-weight: 700; color: #94a3b8;
