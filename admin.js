@@ -2351,8 +2351,30 @@ async function saveOrderBusinessName(orderId) {
 
   document.getElementById("orderBizNameText-" + orderId).textContent = name;
   if (currentOrderData && currentOrderData.id === orderId) currentOrderData.business_name = name;
+
+  // Staff can now add a business to HER account on her behalf -- she called
+  // in and said the name, staff is entering it for her, same as any other
+  // detail staff takes down over the phone. Only for a genuinely new name
+  // (not already one of her saved ones, which is what usingSelect means)
+  // and only when this order actually belongs to a real account.
+  let savedToAccount = false;
+  const userId = currentOrderData?.id === orderId ? currentOrderData.user_id : null;
+  if (!usingSelect && userId) {
+    const { error: bizErr } = await window.sb.from("businesses").insert({
+      user_id: userId,
+      business_name: name,
+      is_default: !(_orderBizOptionsCache[orderId]?.length),
+    });
+    if (!bizErr) {
+      savedToAccount = true;
+      (_orderBizOptionsCache[orderId] ||= []).push({ business_name: name });
+    } else {
+      console.error("[order biz] could not save to customer's account:", bizErr.message);
+    }
+  }
+
   toggleOrderBizEdit(orderId);
-  showToast("Business name updated.");
+  showToast(savedToAccount ? "Business name updated and added to her account." : "Business name updated.");
   // Refresh the table underneath so the column matches without needing to
   // close and reopen the modal first.
   const search = document.getElementById("orderSearch");
