@@ -297,7 +297,7 @@ function switchTab(tab) {
   if (tab === "products")         renderProductsTable();
   if (tab === "inventory")        renderInventoryTable();
   if (tab === "mix-match")        renderMixMatchTab();
-  if (tab === "orders")           renderOrdersTable();
+  if (tab === "orders")           renderOrdersTable(document.getElementById("orderSearch")?.value.trim() || "");
   if (tab === "users")            renderUsersTable();
   if (tab === "reports")          renderReportsTab();
   if (tab === "seo")              renderSeoTab();
@@ -3510,8 +3510,24 @@ async function renderUsersTable(filter) {
       <td>${escHtml(r.email         || "—")}</td>
       <td>${escHtml(r.phone         || "—")}</td>
       <td>${fmt(r.created_at)}</td>
-      <td><button class="a-btn-sm a-btn-danger" onclick="${r.bizId ? `removeBusinessRow('${r.bizId}')` : `deleteUser('${r.profileId}')`}">Remove</button></td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap">
+        ${r.business_name ? `<button class="a-btn-sm" onclick="viewOrdersForBusiness('${escHtml(r.business_name).replace(/'/g, "\\'")}')" title="See orders placed under this business name">Orders</button>` : ""}
+        <button class="a-btn-sm a-btn-danger" onclick="${r.bizId ? `removeBusinessRow('${r.bizId}')` : `deleteUser('${r.profileId}')`}">Remove</button>
+      </td>
     </tr>`).join("") || `<tr><td colspan="7" class="a-empty">No customers yet.</td></tr>`;
+}
+
+// Lets staff jump from a customer's business record straight to every order
+// placed under that exact business name -- e.g. when she calls in and says
+// "this is under my ABC Hotel account," instead of scrolling the whole
+// Orders tab hunting for it by hand. Sets the search box BEFORE switching
+// tabs so switchTab's own render call (which reads the search box's
+// current value) already comes back filtered -- avoids a race between two
+// separate renderOrdersTable() calls landing in an unpredictable order.
+function viewOrdersForBusiness(businessName) {
+  const search = document.getElementById("orderSearch");
+  if (search) { search.value = businessName; }
+  switchTab("orders");
 }
 
 document.getElementById("userSearch")?.addEventListener("input", e => renderUsersTable(e.target.value.trim()));
