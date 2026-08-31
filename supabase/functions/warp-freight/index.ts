@@ -295,7 +295,16 @@ serve(async (req) => {
     const { action, payload } = await req.json();
 
     let result;
-    if (action === "quote") {
+    if (action === "debug") {
+      // Temporary, safe diagnostic -- never logs/returns the real secret,
+      // only enough to confirm the env var actually reached this instance.
+      result = {
+        warp_api_key_length: WARP_API_KEY.length,
+        warp_api_key_prefix: WARP_API_KEY.slice(0, 4),
+        test_mode: USE_TEST,
+        base: BASE,
+      };
+    } else if (action === "quote") {
       result = await handleQuote(payload);
     } else if (action === "book") {
       result = await handleBook(payload);
