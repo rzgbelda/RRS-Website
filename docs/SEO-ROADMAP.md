@@ -40,6 +40,10 @@ Reconstructed from git log, not a surviving plan doc:
 | 13 | Fix inconsistent image lazy-loading across templates | Below-fold images loading eagerly wastes mobile bandwidth | ✅ Done (2026-08-25) — the "1/5 lazy" finding was mostly header logo/nav icons (correctly eager); the 2 real gaps (About feature icon, floating QR image on 6 pages) are now lazy |
 | 14 | Modernize image formats to WebP (`<picture>` with fallback) | Next real load-time win after the 93% image-weight cut already done | ✅ Done (2026-08-25) — logo/hero/about/best-deals banners converted to WebP with `<picture>` fallback across all 26 pages carrying the logo; `optimizeImageUrl()` added to script.js to auto-serve optimal format/quality for the ~98% of product photos that are Cloudinary-hosted, with zero new files needed |
 
+### Backend gap closed outside the day-by-day plan
+
+- **2026-09-01** — Product meta title/description became editable per-product from admin (`meta_title`/`meta_description` columns, `20260901c_products_meta_override.sql`). Day 6 gave every product page real server-rendered tags, but 100% auto-generated with nothing manually overridable — this was that gap. Blank stays blank (same auto-generated behavior); JSON-LD's Product name/description deliberately keep using the real auto-generated values regardless, so a marketing-crafted SEO title never makes a product's own rich-result entry disagree with what it actually is.
+
 ### Days 15–16 — Local & trust signals
 
 | Day | Task | Why |
