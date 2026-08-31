@@ -48,7 +48,7 @@ Reconstructed from git log, not a surviving plan doc:
 
 | Day | Task | Why |
 |---|---|---|
-| 15 | Claim/verify Google Business Profile, add `sameAs` to homepage schema | Highest-leverage local-SEO move available, currently missing entirely |
+| 15 | Claim/verify Google Business Profile, add `sameAs` to homepage schema | Highest-leverage local-SEO move available, currently missing entirely | ✅ Done (2026-09-01) — Google Business Profile created (category: Wholesaler) and Facebook Page claimed; both added to `sameAs` on the homepage's LocalBusiness schema and best-deals.html's Organization schema |
 | 16 | Post-delivery review-request email flow | Prerequisite for ever adding `aggregateRating` schema |
 
 ### Days 17–22 — Content & backlinks (the actual biggest gap)
