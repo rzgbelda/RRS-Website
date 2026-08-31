@@ -7099,7 +7099,8 @@ function renderQuoteComposerLines() {
         </div>
         <div style="text-align:center">
           <input type="number" id="ql-qty-${idx}" min="${line.moq || 1}" step="${line.moq > 1 ? line.moq : 1}" value="${line.quantity}"
-            oninput="onQuoteLineQtyInput(${idx}, this.value)"
+            oninput="onQuoteLineQtyInput(${idx}, this.value, false)"
+            onchange="onQuoteLineQtyInput(${idx}, this.value, true)"
             style="width:70px;padding:5px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;text-align:center">
         </div>
         <div style="text-align:right">
@@ -7169,10 +7170,34 @@ function onQuoteLineNameInput(idx, value) {
 // new quantity -- e.g. crossing from 4 to 6 cases should move from tier 1
 // to tier 2 pricing automatically. A price staff have deliberately
 // overridden is left alone.
-function onQuoteLineQtyInput(idx, value) {
+//
+// Same minimum-order rule the live checkout enforces (enforceCartMinimums()
+// in script.js): quantity can't go below the product's MOQ, and must land
+// on a whole multiple of it. onQuoteLineNameInput() already sets that floor
+// the moment a product is matched, but did nothing once the qty field was
+// edited afterward -- so staff could type "1" into a 50-dozen-minimum
+// product's line and the quote would promise a quantity checkout would
+// actually reject. line.moq stays 1 for anything not sold with a real
+// minimum (regular case-sold products), so the clamp is a no-op for those.
+//
+// The clamp itself only runs on `commit` (onchange -- the field lost focus
+// or Enter was pressed), not on every keystroke (oninput): correcting mid-
+// typing would fight the admin's own typing (e.g. typing "50" into a
+// moq-50 field would snap to 50 after just the "5"). oninput still drives
+// the live price/total recompute below so those feel responsive typing.
+function onQuoteLineQtyInput(idx, value, commit) {
   const line = _quoteComposerLines[idx];
   if (!line) return;
-  line.quantity = parseInt(value) || 1;
+  let qty = parseInt(value) || 1;
+
+  if (commit) {
+    const moq = line.moq || 1;
+    if (qty < moq) qty = moq;
+    else if (qty % moq !== 0) qty = Math.round(qty / moq) * moq || moq;
+    const qtyEl = document.getElementById(`ql-qty-${idx}`);
+    if (qtyEl && Number(qtyEl.value) !== qty) qtyEl.value = qty;
+  }
+  line.quantity = qty;
 
   if (!line.priceOverridden) {
     const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(line.name));
