@@ -2397,6 +2397,47 @@ async function saveInHouseDeliveryFee(orderId) {
   renderOrdersTable();
 }
 
+// Freight is no longer shown live to the customer at checkout -- staff
+// pull a Warp quote (or decide a flat rate) and set what actually bills
+// on the invoice here. Mirrors saveInHouseDeliveryFee() exactly, just for
+// the freight_fee column instead (see 20260831b_orders_freight_fee.sql).
+async function saveFreightFee(orderId) {
+  const input = document.getElementById("freightFeeInput");
+  if (!input) return;
+  const newFee = Math.max(0, parseFloat(input.value) || 0);
+
+  const { data: o, error: readErr } = await window.sb
+    .from("orders").select("total, freight_fee, payment_status").eq("id", orderId).single();
+  if (readErr || !o) {
+    alert(readErr?.code === "42703"
+      ? "Freight billing isn't set up on the database yet — run the migration 20260831b_orders_freight_fee.sql in Supabase, then try again."
+      : "Could not load the order: " + (readErr?.message || "not found"));
+    return;
+  }
+  if (o.payment_status === "paid") {
+    alert("This order has already been paid — the freight fee can't be changed anymore.");
+    openOrderModal(orderId);
+    return;
+  }
+
+  const currentFee = Number(o.freight_fee || 0);
+  const newTotal = Math.max(0, Number(o.total || 0) - currentFee + newFee);
+
+  const { error } = await window.sb.from("orders")
+    .update({ freight_fee: newFee, total: newTotal, updated_at: new Date().toISOString() })
+    .eq("id", orderId);
+  if (error) {
+    alert(error.code === "42703"
+      ? "Freight billing isn't set up on the database yet — run the migration 20260831b_orders_freight_fee.sql in Supabase, then try again."
+      : "Could not save the freight fee: " + error.message);
+    return;
+  }
+
+  showToast(`Freight fee set to $${newFee.toFixed(2)} — will show on the invoice.`);
+  openOrderModal(orderId);
+  renderOrdersTable();
+}
+
 async function markPickedUp(orderId) {
   if (!confirm("Mark this order as picked up by the customer?")) return;
   const { error } = await window.sb.from("orders")
@@ -2757,6 +2798,26 @@ async function openOrderModal(id) {
             ✕ Cancel Order
           </button>
         </div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px dashed #bbf7d0;">
+          <span style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
+            Freight Fee &mdash; Billed on Invoice
+          </span>
+          <p style="font-size:11.5px;color:#166534;margin:0 0 8px;">
+            Not shown live to the customer anymore &mdash; review the Warp quote above, then set what actually goes on their invoice (a Warp quote, a flat rate, or $0 if freight's already baked in).
+          </p>
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <label style="font-size:12px;font-weight:700;color:#166534;white-space:nowrap;">Freight $</label>
+            <input id="freightFeeInput" type="number" min="0" step="0.01"
+              value="${Number(o.freight_fee) > 0 ? Number(o.freight_fee).toFixed(2) : (freightQuoted ? Number(freightQuote.total_charge).toFixed(2) : "")}"
+              placeholder="0.00"
+              style="width:110px;padding:7px 10px;border:1.5px solid #86efac;border-radius:8px;font-size:13px;outline:none;">
+            <button onclick="saveFreightFee('${o.id}')"
+              style="background:#0b2d52;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">
+              Save Freight Fee
+            </button>
+            ${Number(o.freight_fee) > 0 ? `<span style="font-size:11.5px;color:#15803d;font-weight:700;">✓ $${Number(o.freight_fee).toFixed(2)} will show on the next invoice</span>` : ""}
+          </div>
+        </div>
       </div>`;
   } else if (isConfirmed && estesBookedLegacy) {
     actionBar = `
@@ -2873,7 +2934,8 @@ async function openOrderModal(id) {
       </div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
-      ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""}</div>` : ""}
+      ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""} <span style="color:#94a3b8">(customer never sees this)</span></div>` : ""}
+      ${Number(o.freight_fee) > 0 ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Fee (billed)</span><br><strong style="color:#15803d">$${Number(o.freight_fee).toFixed(2)}</strong> — appears on the invoice sent to the customer</div>` : ""}
     </div>
     <hr style="margin:16px 0;border:none;border-top:1px solid #f0f4fa">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">

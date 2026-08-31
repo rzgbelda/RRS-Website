@@ -261,8 +261,16 @@
           </div>
         </div>
 
-        <!-- Live freight quote panel -->
-        <div class="fq-section" id="freightQuoteSection">
+        <!-- Live freight quote panel -- hidden from customers. Staff now
+             decide freight per order (Warp quote or in-house delivery) and
+             it's billed on the emailed invoice instead of shown live at
+             checkout, so a customer never sees a raw carrier quote or a
+             "shipping rate under review" warning. Left in the DOM (just
+             hidden) rather than removed: initFreightQuoting() below still
+             runs in the background exactly as before -- it's what feeds
+             payment.html's auto-book-with-Warp step after a card/ACH
+             checkout, which is unrelated to this display and still needed. -->
+        <div class="fq-section" id="freightQuoteSection" style="display:none">
           <div class="fq-section-label">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
             Live Freight Rates

@@ -37,6 +37,16 @@ function invoiceEmailHtml(o) {
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.delivery_fee).toFixed(2) + '</td>' +
         '</tr>'
       : ''
+  ) + (
+    Number(o.freight_fee) > 0
+      ? '<tr>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Freight / Shipping' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Carrier freight for this order</span></td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.freight_fee).toFixed(2) + '</td>' +
+        '</tr>'
+      : ''
   );
 
   const taxAmount = Number(o.tax_amount) || 0;
@@ -166,7 +176,7 @@ module.exports = async (req, res) => {
   // order that's already sitting unpaid (e.g. a reorder awaiting payment)
   // getting a payment link sent for the first time -- no new order, the
   // one that's already there just gets a Stripe link and an email.
-  let items, itemsTotal, deliveryFee, taxAmount, total;
+  let items, itemsTotal, deliveryFee, freightFee, taxAmount, total;
   let contact_name, business_name, email, shipping_state, tax_rate, notes;
   let existingOrder = null;
 
@@ -179,12 +189,19 @@ module.exports = async (req, res) => {
     // This is the SAME class of drift that already broke this exact query
     // once before (see the old comment this replaced): a column a
     // migration file claims exists is not proof it exists live.
-    const baseCols = 'id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, shipping_address, order_items(*)';
-    let o, oErr, hasTaxColumns = true;
+    const baseCols = 'id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, freight_fee, shipping_address, order_items(*)';
+    const baseColsNoFreight = 'id, order_number, customer_name, customer_email, business_name, subtotal, total, payment_status, fulfillment_method, in_house_delivery_fee, shipping_address, order_items(*)';
+    let o, oErr, hasTaxColumns = true, hasFreightColumn = true;
     ({ data: o, error: oErr } = await supabase.from('orders').select(baseCols + ', tax_rate, tax_amount').eq('id', order_id).single());
     if (oErr && oErr.code === '42703') {
+      // Either tax_rate/tax_amount or freight_fee (or both) hasn't been
+      // migrated live yet -- can't tell which column tripped it from the
+      // error alone, so drop both optional pieces together and fall back
+      // to their known-safe degraded behavior (tax re-derived from the
+      // stored total, freight treated as not-yet-billed).
       hasTaxColumns = false;
-      ({ data: o, error: oErr } = await supabase.from('orders').select(baseCols).eq('id', order_id).single());
+      hasFreightColumn = false;
+      ({ data: o, error: oErr } = await supabase.from('orders').select(baseColsNoFreight).eq('id', order_id).single());
     }
 
     if (oErr) {
@@ -208,6 +225,14 @@ module.exports = async (req, res) => {
     if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
 
     deliveryFee = o.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(o.in_house_delivery_fee) || 0) : 0;
+    // Freight (Warp quote or otherwise) staff chose to bill this customer
+    // -- set via the order modal's "Freight Fee" field, separate from the
+    // in-house delivery fee since a 'ship' order can carry one but not
+    // the other. Not gated on fulfillment_method the way deliveryFee is:
+    // freight only ever applies to 'ship' orders in practice (staff have
+    // no reason to set it on a pickup/in-house order), but there's no
+    // correctness reason to hide a nonzero value if one's there.
+    freightFee  = hasFreightColumn ? Math.max(0, parseFloat(o.freight_fee) || 0) : 0;
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
     total       = Math.max(0, parseFloat(o.total) || 0);
     if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
@@ -220,10 +245,10 @@ module.exports = async (req, res) => {
     } else {
       // No tax columns yet (migration not run) or tax was never set on
       // this order -- recover the implied tax dollar amount as whatever's
-      // left of the real stored total once items and delivery are
-      // accounted for, so the Stripe line items and email still add up to
-      // the order's actual total exactly either way.
-      taxAmount = Math.max(0, total - itemsTotal - deliveryFee);
+      // left of the real stored total once items, delivery, and freight
+      // are accounted for, so the Stripe line items and email still add
+      // up to the order's actual total exactly either way.
+      taxAmount = Math.max(0, total - itemsTotal - deliveryFee - freightFee);
       tax_rate  = 0;
     }
 
@@ -256,6 +281,10 @@ module.exports = async (req, res) => {
     // payment link below -- billing only the items would undercharge by
     // exactly the delivery amount.
     deliveryFee = q.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(q.in_house_delivery_fee) || 0) : 0;
+    // Freight fee is an orders-table-only concept for now (set from a Warp
+    // quote pulled on the order itself, after the quote has already been
+    // converted) -- a quote_requests row has no freight_fee field to read.
+    freightFee  = 0;
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
     // Sales tax was computed and snapshotted server-side when the quote was
@@ -295,12 +324,13 @@ module.exports = async (req, res) => {
         customer_name: contact_name,
         business_name,
         items,
-        subtotal: itemsTotal + deliveryFee,
+        subtotal: itemsTotal + deliveryFee + freightFee,
         tax_amount: taxAmount,
         shipping_state,
         tax_rate,
         total,
         delivery_fee: deliveryFee,
+        freight_fee: freightFee,
         payment_link: '#preview-only',
       }),
     });
@@ -401,6 +431,13 @@ module.exports = async (req, res) => {
           unit_amount: Math.round(deliveryFee * 100),
         },
         quantity: 1,
+      }] : []).concat(freightFee > 0 ? [{
+        price_data: {
+          currency: 'usd',
+          product_data: { name: 'Freight / Shipping' },
+          unit_amount: Math.round(freightFee * 100),
+        },
+        quantity: 1,
       }] : []).concat(taxAmount > 0 ? [{
         price_data: {
           currency: 'usd',
@@ -441,12 +478,13 @@ module.exports = async (req, res) => {
         customer_name: contact_name,
         business_name,
         items,
-        subtotal: itemsTotal + deliveryFee,
+        subtotal: itemsTotal + deliveryFee + freightFee,
         tax_amount: taxAmount,
         shipping_state,
         tax_rate,
         total,
         delivery_fee: deliveryFee,
+        freight_fee: freightFee,
         payment_link: link.url,
       }),
     });
