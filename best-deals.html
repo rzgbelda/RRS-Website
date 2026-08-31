@@ -13,14 +13,40 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Best Deals | Room Ready Supply</title>
-  <meta name="description" content="Quality supplies, lower costs. Five of our best wholesale deals on hospitality and facility essentials — bathroom tissue, laundry detergent, gloves, and more." />
+  <title>Wholesale Commercial Supplies & Vacation Rental Restocks | Room Ready</title>
+  <meta name="description" content="Shop bulk commercial paper towels, trash liners, linens, and guest amenities. Wholesale pricing with fast East Coast shipping." />
   <link rel="canonical" href="https://www.roomreadysupply.com/best-deals" />
   <meta name="robots" content="noindex, follow">
   <!-- Marketing-campaign landing page: kept out of search results (it's meant
        to be reached from ads/email/social, not organic search) but links to
        real product pages still get crawled and pass value through. -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- Organization schema -- identifies Room Ready Supply itself to search
+       engines. Belongs once per crawlable page, not per-product; this page
+       gets it since /best-deals is a common ad/social landing spot even
+       though it's noindex itself, and any linked category/product pages it
+       sends crawlers to inherit that trust signal. -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "Room Ready Supply",
+    "url": "https://www.roomreadysupply.com/",
+    "logo": "https://www.roomreadysupply.com/assets/img/RR%20logo.png",
+    "telephone": "+1-252-227-0073",
+    "email": "sales@roomreadysupply.com",
+    "address": {
+      "@type": "PostalAddress",
+      "streetAddress": "609 Washington St",
+      "addressLocality": "Plymouth",
+      "addressRegion": "NC",
+      "postalCode": "27962",
+      "addressCountry": "US"
+    },
+    "areaServed": { "@type": "Place", "name": "East Coast, United States" }
+  }
+  </script>
 
   <style>
     /* Scoped to this page only -- reuses the site's Inter font stack and
@@ -30,6 +56,9 @@
     .bd-page { background:#fff; }
 
     .bd-hero { max-width:1160px; margin:0 auto; padding:56px 24px 40px; text-align:center; }
+    /* Shorter bottom gap than the full hero -- the product grid follows
+       immediately, so this reads as a lead-in, not its own section. */
+    .bd-hero-compact { padding-bottom:8px; }
     .bd-eyebrow { font-size:12px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#FF710C; margin-bottom:14px; }
     .bd-hero h1 { font-size:clamp(30px,4.6vw,48px); font-weight:800; line-height:1.14; letter-spacing:-.01em; color:#0B2545; margin-bottom:18px; text-wrap:balance; }
     /* A continuous left-to-right sweep, not a ping-pong pulse: linear
@@ -146,7 +175,15 @@
     .bd-card-hook { position:relative; font-size:20px; font-weight:800; color:#0B2545; line-height:1.3; margin-bottom:8px; }
     .bd-card-pitch { position:relative; font-size:13.5px; color:#5B6C7E; line-height:1.65; margin:0; }
     .bd-card-panel-body { padding:20px 26px 26px; }
-    .bd-card-name { font-size:15px; font-weight:700; color:#0B2545; margin-bottom:14px; line-height:1.4; }
+    .bd-card-name { font-size:15px; font-weight:700; color:#0B2545; margin-bottom:6px; line-height:1.4; }
+    /* Internal category link (SEO Priority 2) -- small, secondary to the
+       product name itself, but a real crawlable link to that category's
+       landing page. */
+    .bd-card-cat {
+      display:inline-block; font-size:11.5px; font-weight:700; color:#FF710C;
+      text-decoration:none; margin-bottom:14px; letter-spacing:.02em;
+    }
+    .bd-card-cat:hover { text-decoration:underline; }
     .bd-card-specs { list-style:none; padding:0; margin:0 0 20px; display:flex; flex-direction:column; gap:9px; }
     .bd-card-specs li { display:flex; align-items:flex-start; gap:9px; font-size:12.5px; color:#5B6C7E; line-height:1.5; }
     .bd-card-specs li svg { flex:none; margin-top:1px; color:#FF710C; }
@@ -190,50 +227,42 @@
        "glowing" mainly because it sits on a black page; on our white page
        the same mechanism (a colored, two-layer elevated shadow) just reads
        as a soft lift instead of a floating blob. */
+    /* "View Product" -- demoted to a small secondary text link now that
+       Add to Cart is the primary, high-intent action (was previously the
+       larger of the two buttons). Still real navigation to the full
+       product page for anyone who wants the details first. */
     .bd-buy-btn {
-      display:inline-flex; align-items:center; justify-content:center; gap:8px;
-      box-sizing:border-box; height:48px;
-      background:linear-gradient(180deg, #FF9A4D, #FF710C 75%);
-      color:#fff; font-weight:700; font-size:14px;
-      padding:0 22px; border-radius:10px; text-decoration:none;
-      border:1.5px solid rgba(255,255,255,.4);
-      /* Tightened from a large 20px/25px-blur downward shadow -- the two
-         buttons' boxes were already the same 48px height, but that shadow's
-         glow hung well below the button, reading as if it were taller than
-         the cart button next to it even though the actual edges lined up. */
-      box-shadow:0 6px 14px -4px rgba(255,113,12,.5);
-      transition:filter .2s ease;
+      display:inline-flex; align-items:center; gap:5px;
+      color:#8A99AB; font-weight:700; font-size:12.5px; text-decoration:none;
+      transition:color .15s ease;
     }
-    .bd-buy-btn:hover { filter:brightness(1.12); }
-    .bd-buy-btn:active { filter:brightness(1); }
+    .bd-buy-btn:hover { color:#FF710C; }
     .bd-buy-btn .bd-arrow { display:inline-block; }
 
-    /* Buy Now still jumps straight to the product page for anyone who
-       already knows they want just this one item. This button instead
-       adds the line to the same cart used site-wide (setupAddToCartButtons()
-       from script.js), so someone browsing several deals can add multiple
-       and check out once, without leaving the page. Sized/aligned to match
-       Buy Now exactly (same 48px box-sizing:border-box height, same flex
-       centering, same shadow weight) rather than relying on padding to land
-       at a similar height, which drifted a few px off next to Buy Now's own
-       padding. */
-    .bd-actions { display:flex; align-items:center; gap:10px; }
+    /* Add to Cart is now the primary, full-width, high-intent CTA (was a
+       small 48px icon-only square) -- one click adds the case to the same
+       cart used site-wide (setupAddToCartButtons() from script.js), no
+       navigating away needed for a fast restock. View Product sits below
+       it as the lower-commitment secondary action. */
+    .bd-actions { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
     .bd-cart-btn {
       /* This button also carries the site-wide .add-btn class (so
          script.js's setupAddToCartButtons() wires it up) -- that class
          is written for full-width, stacked catalog buttons and carries
-         width:100%/margin-top:15px, which pushed this button down and
-         off-center next to Buy Now. Everything below overrides that. */
-      display:inline-flex; align-items:center; justify-content:center;
-      width:48px; height:48px; box-sizing:border-box; flex:none; margin:0;
-      background:#fff; color:#FF710C; border:1.5px solid #FFCFA3; border-radius:10px;
-      box-shadow:0 6px 14px -4px rgba(11,37,69,.12);
-      cursor:pointer; transition:background .2s ease, border-color .2s ease, color .2s ease, transform .2s ease;
+         width:100%/margin-top:15px, which this overrides to fit the
+         card's price-row layout instead. */
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      box-sizing:border-box; height:48px; width:auto; margin:0;
+      background:linear-gradient(180deg, #FF9A4D, #FF710C 75%);
+      color:#fff; font-weight:700; font-size:13.5px; white-space:nowrap;
+      padding:0 20px; border-radius:10px; border:1.5px solid rgba(255,255,255,.4);
+      box-shadow:0 6px 14px -4px rgba(255,113,12,.5);
+      cursor:pointer; transition:filter .2s ease, transform .15s ease;
     }
-    .bd-cart-btn:hover { background:#FF710C; border-color:#FF710C; color:#fff; }
-    .bd-cart-btn:active { transform:scale(.94); }
-    .bd-cart-btn svg { display:block; }
-    .bd-cart-btn.bd-added { background:#16A34A; border-color:#16A34A; color:#fff; }
+    .bd-cart-btn:hover { filter:brightness(1.12); }
+    .bd-cart-btn:active { transform:scale(.97); }
+    .bd-cart-btn svg { display:block; flex:none; }
+    .bd-cart-btn.bd-added { background:#16A34A; border-color:#16A34A; filter:none; }
 
     .bd-cta { max-width:1160px; margin:0 auto; padding:20px 24px 64px; }
     .bd-cta-inner {
@@ -383,10 +412,17 @@
 
   <main>
 
-    <section class="bd-hero bd-reveal">
-      <p class="bd-eyebrow">Limited-Time Offers</p>
-      <h1>Quality Supplies. <span class="hl">Lower Costs.</span> Better Business.</h1>
-      <p>Get access to <span class="hl">low-cost</span> hospitality and business supplies designed to give you more room for <span class="hl">higher margins and bigger profits</span>.</p>
+    <!-- Product Placement First: core products display above all general
+         marketing text -- just the headline/subhead (identity, not filler)
+         sits above the grid, nothing else. -->
+    <section class="bd-hero bd-reveal bd-hero-compact">
+      <p class="bd-eyebrow">Wholesale Restock Deals</p>
+      <h1>Commercial Restock Deals for <span class="hl">Vacation Rentals</span> &amp; Facilities</h1>
+      <p>Wholesale pricing on high-turnover supplies with fast East Coast delivery. <span class="hl">No membership fees.</span></p>
+    </section>
+
+    <section class="bd-products" id="bdProductsContainer">
+      <div style="text-align:center;padding:40px;color:#8A99AB;font-size:14px">Loading this month's deals&hellip;</div>
     </section>
 
     <section class="bd-hero-photo bd-reveal">
@@ -395,15 +431,6 @@
 
     <section class="bd-intro bd-reveal">
       <p>Room Ready Supply offers <span class="hl">low-cost</span> hospitality and business essentials at competitive prices, helping you cut <span class="hl">supply costs</span> and protect your <span class="hl">profit margins</span>. Get better deals, bigger savings, and dependable quality <span class="hl">all in one place</span>.</p>
-    </section>
-
-    <section class="bd-offer-head bd-reveal">
-      <h2>What We Offer</h2>
-      <p>These are the products that we are proud of and what we offer. Take advantage of these <span class="hl">low-cost</span> products while it lasts!</p>
-    </section>
-
-    <section class="bd-products" id="bdProductsContainer">
-      <div style="text-align:center;padding:40px;color:#8A99AB;font-size:14px">Loading this month's deals&hellip;</div>
     </section>
 
     <section class="bd-cta bd-reveal">
@@ -514,11 +541,28 @@
       const buySlug = (p.sku || p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
       const buyHref = buySlug ? `/product?item=${encodeURIComponent(buySlug)}` : '/catalog';
 
+      // Internal category linking (SEO Priority 2): every card links its
+      // category name to that category's real landing page so search
+      // authority flows from this page down into the lower-traffic catalog
+      // pages -- reuses script.js's own categorySlug()/CATEGORY_PAGES
+      // pairing (same one product-detail breadcrumbs use) rather than a
+      // second slug scheme that could drift out of sync with it.
+      const BD_CATEGORY_PAGES = [
+        "bed-sheets-linens", "towels", "paper-products", "cleaning-chemicals",
+        "pillows-mattress-protectors", "trash-liners-can-liners", "gloves-ppe", "guest-amenities",
+      ];
+      const catSlug = typeof categorySlug === "function" ? categorySlug(p.category_name || "") : "";
+      const catHref = BD_CATEGORY_PAGES.includes(catSlug) ? `/category/${catSlug}` : (catSlug ? `/catalog?category=${encodeURIComponent(catSlug)}` : "");
+      const catLink = (p.category_name && catHref)
+        ? `<a class="bd-card-cat" href="${catHref}">${escBd(p.category_name)}</a>` : "";
+
       // Same .add-btn contract script.js's setupAddToCartButtons() already
       // wires up site-wide (catalog tiles, product page) -- reusing it here
       // means Best Deals gets real cart behavior (tiered pricing, minimums,
       // the shared cart badge) for free instead of a second cart
-      // implementation to keep in sync.
+      // implementation to keep in sync. Now the primary, high-intent CTA
+      // (was an icon-only button) -- label matches the CEO's requested
+      // "Add to Cart -- Fast Restock" verbiage exactly.
       const cartBtn = p.sku ? `
               <button
                 class="add-btn bd-cart-btn"
@@ -537,7 +581,8 @@
                 title="Add to cart"
                 aria-label="Add ${escBd(p.name || 'item')} to cart"
               >
-                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+                Add to Cart &ndash; Fast Restock
               </button>` : '';
 
       return `
@@ -554,6 +599,7 @@
           </div>
           <div class="bd-card-panel-body">
             <p class="bd-card-name">${escBd(p.name || '')}</p>
+            ${catLink}
             <ul class="bd-card-specs">${specs.join('')}</ul>
             <div class="bd-card-price-row">
               <div class="bd-card-price-block">
@@ -563,13 +609,55 @@
                   ${savingsPct ? `<span class="bd-savings-pill">Save ${savingsPct}%</span>` : ''}
                 </div>
               </div>
-              <div class="bd-actions">${cartBtn}
-                <a class="bd-buy-btn" href="${buyHref}">Buy Now <span class="bd-arrow">&rarr;</span></a>
+              <div class="bd-actions">
+                ${cartBtn}
+                <a class="bd-buy-btn" href="${buyHref}">View Product <span class="bd-arrow">&rarr;</span></a>
               </div>
             </div>
           </div>
         </div>
       </article>`;
+    }
+
+    // Technical SEO Priority 2: Product + Offer JSON-LD for the 5 featured
+    // deals, so Google can show price/availability in rich search snippets.
+    // Built from the SAME live product rows the cards themselves render
+    // from (never a hardcoded/stale copy) -- price and stock status can
+    // never drift out of sync with what's actually on the page.
+    function injectBestDealsSchema(deals, bySku) {
+      const items = deals
+        .map(d => bySku[d.sku])
+        .filter(p => p && p.price != null)
+        .map(p => {
+          const slug = (p.sku || p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+          return {
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": p.name || '',
+            "sku": p.sku || '',
+            "image": p.image_url || undefined,
+            "description": p.description || p.name || '',
+            "url": slug ? `https://www.roomreadysupply.com/product?item=${encodeURIComponent(slug)}` : undefined,
+            "offers": {
+              "@type": "Offer",
+              "url": slug ? `https://www.roomreadysupply.com/product?item=${encodeURIComponent(slug)}` : undefined,
+              "priceCurrency": "USD",
+              "price": Number(p.price).toFixed(2),
+              "availability": p.is_active === false ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+              "itemCondition": "https://schema.org/NewCondition",
+            },
+          };
+        });
+      if (!items.length) return;
+
+      let el = document.getElementById('bdProductSchema');
+      if (!el) {
+        el = document.createElement('script');
+        el.type = 'application/ld+json';
+        el.id = 'bdProductSchema';
+        document.head.appendChild(el);
+      }
+      el.textContent = JSON.stringify(items.length === 1 ? items[0] : items);
     }
 
     async function loadBestDeals() {
@@ -604,6 +692,7 @@
 
         container.innerHTML = deals.map((d, i) => bdCardHtml(d, bySku[d.sku], i)).join('');
         bdObserveReveals(container);
+        injectBestDealsSchema(deals, bySku);
 
         // Cards render after script.js's own DOMContentLoaded already ran
         // its one-time setupAddToCartButtons() pass, so the .add-btn
