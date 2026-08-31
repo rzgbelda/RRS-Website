@@ -4655,10 +4655,15 @@ async function renderDevTicketsTab() {
   if (!panel) return;
   panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading tickets…</div>`;
 
+  // The assignee list was only ever fetched for tktIsAdmin() (owner/admin)
+  // -- backwards now that a Developer is the one actually setting the
+  // Assignee field (tktCanTriage()). Marketing can view Dev Tickets too
+  // now, so it gets the list as well, purely so the assigned person's name
+  // resolves in their (disabled) dropdown instead of showing blank.
   const [ticketsRes, commentsRes, devsRes] = await Promise.all([
     window.sb.from("dev_tickets").select("*").order("created_at", { ascending:false }),
     window.sb.from("dev_ticket_comments").select("ticket_id"),
-    tktIsAdmin()
+    (tktIsAdmin() || tktCanTriage() || window._adminRole === "marketing")
       ? window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","admin","owner"])
       : Promise.resolve({ data: [] }),
   ]);
