@@ -818,7 +818,26 @@ function openAddProduct() {
   if (flatChk) flatChk.checked = false;
   toggleFlatPricing();
   recalcTierPricing();
+  updateMetaCharCounts();
   openModal("productModal");
+}
+
+// Live count next to the SEO Title/Description labels -- 60/155 mirror the
+// same display-length limits buildSeoTitleTag()/buildMetaDesc()
+// (api/product-meta.js) already trim the auto-generated versions to, so
+// staff get the same "will this get cut off in search results" signal for
+// a manual override that the auto-generated copy is already held to.
+function updateMetaCharCounts() {
+  const setCount = (fieldId, countId, limit) => {
+    const field = document.getElementById(fieldId);
+    const out   = document.getElementById(countId);
+    if (!field || !out) return;
+    const len = field.value.length;
+    out.textContent = `${len} / ${limit}`;
+    out.classList.toggle("over", len > limit);
+  };
+  setCount("prodMetaTitle",       "prodMetaTitleCount", 60);
+  setCount("prodMetaDescription", "prodMetaDescCount",  155);
 }
 
 /**
@@ -934,6 +953,9 @@ async function openEditProduct(id) {
   setVal("prodSku",        p.sku            || "");
   setVal("prodCategory",   p.category_name  || "");
   setVal("prodDescription",p.description    || "");
+  setVal("prodMetaTitle",       p.meta_title       || "");
+  setVal("prodMetaDescription", p.meta_description || "");
+  updateMetaCharCounts();
   setVal("prodPrice",      p.price          || 0);
   setVal("prodPrice1",     p.price_tier1    || "");
   setVal("prodPrice2",     p.price_tier2    || "");
@@ -1063,6 +1085,12 @@ async function saveProduct() {
     sku           : (document.getElementById("prodSku")?.value || "").trim() || null,
     category_name : (document.getElementById("prodCategory")?.value || "").trim(),
     description   : (document.getElementById("prodDescription")?.value || "").trim(),
+    // Optional SEO overrides -- null (not empty string) when blank, so
+    // "|| fallback" in api/product-meta.js and script.js's
+    // populateProductPage() correctly falls through to the auto-generated
+    // title/description instead of treating "" as a deliberately-empty tag.
+    meta_title       : (document.getElementById("prodMetaTitle")?.value || "").trim() || null,
+    meta_description : (document.getElementById("prodMetaDescription")?.value || "").trim() || null,
     // Flat-price products carry no tiers at all -- getTierPrice() (script.js)
     // already falls back to the base price at any quantity when tier1/2/3
     // are null, so this is the whole mechanism, not a partial one.

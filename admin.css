@@ -677,6 +677,13 @@ body.admin-body {
   display: block; font-size: 12.5px; font-weight: 600;
   color: var(--text-secondary); margin-bottom: 7px;
 }
+/* Live character-count next to a label (SEO title/description fields) --
+   plain muted text, not a boxed badge like .cms-label-hint, since this
+   updates on every keystroke and a badge redrawing that often reads as
+   noisy. .over turns it red once the field exceeds the search-result
+   display limit, purely informational -- saving isn't blocked. */
+.a-field-hint { font-weight: 500; color: var(--text-muted); font-size: 11.5px; }
+.a-field-hint.over { color: #dc2626; font-weight: 700; }
 .a-field input,
 .a-field select,
 .a-field textarea {

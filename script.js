@@ -133,6 +133,11 @@ function mapDbProductToLegacyShape(row) {
     images: Array.isArray(row.images) ? row.images.map(optimizeImageUrl) : [],
     description: row.description || "",
     overview: row.overview || "",
+    // Optional SEO overrides set from admin -- see populateProductPage(),
+    // which mirrors api/product-meta.js's same fallback-when-blank logic
+    // so the server-rendered tags and this client-side pass never disagree.
+    metaTitle: row.meta_title || "",
+    metaDescription: row.meta_description || "",
 
     feature1: row.feature1 || "",
     feature2: row.feature2 || "",
@@ -1146,19 +1151,25 @@ function populateProductPage(product) {
   const price = cleanPrice(product.price);
 
   const seoTitle = buildSeoTitle(product);
-  const titleTag = buildSeoTitleTag(product);
-  const metaDesc = (product.overview || product.description || "")
+  // Mirrors api/product-meta.js's injectMeta(): an admin-set SEO Title IS
+  // the full tag, no auto brand-suffix; JSON-LD's Product.name below still
+  // uses the real, untruncated seoTitle regardless, so an override never
+  // makes the structured data disagree with what the product actually is.
+  const titleOverride = (product.metaTitle || "").trim();
+  const titleTag = titleOverride || `${buildSeoTitleTag(product)} | Room Ready Supply`;
+  const autoMetaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
     (product.overview || "").length > 155 ? "…" : ""
   );
+  const metaDesc = (product.metaDescription || "").trim() || autoMetaDesc;
   const pageUrl = `https://www.roomreadysupply.com/product?item=${encodeURIComponent(product.slug)}`;
 
-  document.title = `${titleTag} | Room Ready Supply`;
+  document.title = titleTag;
 
   const setMeta = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
   setMeta("metaDescription", "content", metaDesc);
   setMeta("canonicalUrl",    "href",    pageUrl);
-  setMeta("ogTitle",         "content", seoTitle);
+  setMeta("ogTitle",         "content", titleOverride || seoTitle);
   setMeta("ogDescription",   "content", metaDesc);
   setMeta("ogImage",         "content", product.image);
   setMeta("ogUrl",           "content", pageUrl);
@@ -1168,7 +1179,11 @@ function populateProductPage(product) {
     "@context": "https://schema.org",
     "@type": "Product",
     name: seoTitle,
-    description: metaDesc,
+    // Deliberately autoMetaDesc, not metaDesc -- same reasoning as
+    // api/product-meta.js: structured data describes the real product,
+    // an SEO-copy override for search snippets shouldn't also rewrite
+    // what the rich-result entry says the product literally is.
+    description: autoMetaDesc,
     image: product.image,
     sku: product.itemNumber || product.slug,
     brand: { "@type": "Brand", name: "Room Ready Supply" },

@@ -2070,6 +2070,20 @@
           <textarea id="prodDescription" rows="3" placeholder="Short product description..."></textarea>
         </div>
 
+        <!-- SEO meta override -- both optional. Left blank, the product
+             page keeps auto-generating its title/description from the
+             name/category/overview the same way it always has; set here,
+             this exact text is what search results and shared links show
+             instead. -->
+        <div class="a-field">
+          <label>SEO Title <span class="a-field-hint" id="prodMetaTitleCount">0 / 60</span></label>
+          <input type="text" id="prodMetaTitle" maxlength="70" placeholder="Auto-generated from the product name if left blank" oninput="updateMetaCharCounts()" />
+        </div>
+        <div class="a-field">
+          <label>SEO Description <span class="a-field-hint" id="prodMetaDescCount">0 / 155</span></label>
+          <textarea id="prodMetaDescription" rows="2" maxlength="300" placeholder="Auto-generated from the product overview if left blank" oninput="updateMetaCharCounts()"></textarea>
+        </div>
+
         <!-- Row 3b: Escape hatch for products that don't need volume tiers
              (a one-off deal item, a sample, anything where the same price
              applies no matter how many cases someone orders). Checked, this
@@ -2569,7 +2583,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=79"></script>
+<script src="admin.js?v=80"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

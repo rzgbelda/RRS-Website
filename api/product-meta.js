@@ -24,7 +24,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -242,23 +242,31 @@ function buildBreadcrumbJsonLd(p, pageUrl) {
 
 function injectMeta(html, p) {
   const seoTitle = buildSeoTitle(p);
-  const titleTag = buildSeoTitleTag(p);
-  const metaDesc = buildMetaDesc(p);
+  // Admin's SEO Title override, when set, IS the full <title>/og:title --
+  // no " | Room Ready Supply" auto-suffix, since a manually-written title
+  // may already include the brand (or deliberately not). The auto-generated
+  // path keeps appending it as before. JSON-LD's Product.name deliberately
+  // still uses the real, untruncated seoTitle either way -- that is
+  // structured data describing the actual product, not search-snippet
+  // copy, so a marketing-crafted override shouldn't make a product's own
+  // rich-result entry disagree with what it actually is.
+  const titleTag = (p.meta_title || '').trim() || (buildSeoTitleTag(p) + ' | Room Ready Supply');
+  const metaDesc = (p.meta_description || '').trim() || buildMetaDesc(p);
   const slug = slugify(p.sku || p.name);
   const pageUrl = 'https://www.roomreadysupply.com/product?item=' + encodeURIComponent(slug);
   const image = p.image_url || '';
 
   let out = html.replace(
     /<title>[\s\S]*?<\/title>/i,
-    '<title>' + escText(titleTag + ' | Room Ready Supply') + '</title>'
+    '<title>' + escText(titleTag) + '</title>'
   );
   out = setAttrById(out, 'metaDescription', 'content', metaDesc);
   out = setAttrById(out, 'canonicalUrl',    'href',    pageUrl);
-  out = setAttrById(out, 'ogTitle',         'content', seoTitle);
+  out = setAttrById(out, 'ogTitle',         'content', p.meta_title ? titleTag : seoTitle);
   out = setAttrById(out, 'ogDescription',   'content', metaDesc);
   out = setAttrById(out, 'ogImage',         'content', image);
   out = setAttrById(out, 'ogUrl',           'content', pageUrl);
-  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, metaDesc, pageUrl));
+  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;
 }
