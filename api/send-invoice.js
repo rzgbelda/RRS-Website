@@ -258,11 +258,16 @@ module.exports = async (req, res) => {
     shipping_state = o.shipping_address?.state || '';
     existingOrder  = o;
   } else {
-    const { data: q, error: qErr } = await supabase
-      .from('quote_requests')
-      .select('id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount')
-      .eq('id', quote_request_id)
-      .single();
+    const qCols = 'id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, freight_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount';
+    const qColsNoFreight = 'id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount';
+    let q, qErr;
+    ({ data: q, error: qErr } = await supabase.from('quote_requests').select(qCols).eq('id', quote_request_id).single());
+    if (qErr && qErr.code === '42703') {
+      // freight_fee hasn't been migrated live yet -- fall back to the
+      // column list without it (treated as 0 below) instead of failing
+      // the whole invoice send over one missing optional column.
+      ({ data: q, error: qErr } = await supabase.from('quote_requests').select(qColsNoFreight).eq('id', quote_request_id).single());
+    }
 
     if (qErr || !q) return res.status(404).json({ error: 'Quote request not found' });
     if (!q.quote_items || !q.quote_items.length) return res.status(400).json({ error: 'This quote has no priced line items yet -- send the quote first.' });
@@ -281,10 +286,11 @@ module.exports = async (req, res) => {
     // payment link below -- billing only the items would undercharge by
     // exactly the delivery amount.
     deliveryFee = q.fulfillment_method === 'in_house' ? Math.max(0, parseFloat(q.in_house_delivery_fee) || 0) : 0;
-    // Freight fee is an orders-table-only concept for now (set from a Warp
-    // quote pulled on the order itself, after the quote has already been
-    // converted) -- a quote_requests row has no freight_fee field to read.
-    freightFee  = 0;
+    // Set from a Warp quote pulled in the "Build Quotation" composer and
+    // saved onto the quote by the send-quote edge function -- same
+    // freight_fee concept as orders, just read from quote_requests here
+    // since this quote hasn't become an order yet.
+    freightFee  = Math.max(0, parseFloat(q.freight_fee) || 0);
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
     // Sales tax was computed and snapshotted server-side when the quote was
@@ -299,7 +305,7 @@ module.exports = async (req, res) => {
     // everything needed to invoice regardless, so fall back to summing it.
     // The fallback must add the fee and tax back in; grand_total already
     // includes both.
-    total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + taxAmount;
+    total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + freightFee + taxAmount;
     if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
 
     contact_name   = q.contact_name || 'there';

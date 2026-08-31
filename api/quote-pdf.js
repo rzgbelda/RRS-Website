@@ -296,6 +296,25 @@ async function buildQuotePdf(q) {
     subtotal += deliveryFee;
   }
 
+  // Freight fee: same pattern as the delivery fee row above, its own line
+  // so the customer sees what the Warp/carrier freight portion is.
+  const freightFee = Math.max(0, Number(q.freight_fee) || 0);
+  if (freightFee > 0) {
+    if (ensure(24)) drawTableHead();
+    if ((items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 1) {
+      page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
+    }
+    const nameY = y - 12.5;
+    page.drawText(fitText('Freight / Shipping', COL_QTY - MARGIN - 74, reg, 8.5),
+      { x: MARGIN + 10, y: nameY, size: 8.5, font: reg, color: rgb(0.12, 0.18, 0.25) });
+    const fs = money(freightFee);
+    page.drawText('—', { x: rightOf('—', COL_QTY, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
+    page.drawText('—', { x: rightOf('—', COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
+    page.drawText(fs, { x: rightOf(fs, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: NAVY });
+    y -= 18;
+    subtotal += freightFee;
+  }
+
   // ── Subtotal / Tax / Total ──────────────────────────────────────────
   // grand_total already includes the delivery fee AND sales tax; the
   // subtotal fallback now includes only the delivery fee (added above),
@@ -330,7 +349,9 @@ async function buildQuotePdf(q) {
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
     deliveryFee > 0
       ? 'Delivery is by Room Ready Supply and is included in the total above.'
-      : 'Freight is additional unless otherwise noted.',
+      : freightFee > 0
+        ? 'Freight is included in the total above.'
+        : 'Freight is additional unless otherwise noted.',
     'Minimum order quantities may apply.',
   ];
   ensure(20 + terms.length * 11 + 10);

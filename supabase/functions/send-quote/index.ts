@@ -52,12 +52,14 @@ function buildQuoteHtml(payload: {
   message?: string;
   net_30_terms?: boolean;
   in_house_delivery_fee?: number;
+  freight_fee?: number;
   shipping_state?: string;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, shipping_state } = payload;
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, freight_fee, shipping_state } = payload;
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const deliveryFee = Number(in_house_delivery_fee) || 0;
-  const subtotal = itemsTotal + deliveryFee;
+  const freightFee = Number(freight_fee) || 0;
+  const subtotal = itemsTotal + deliveryFee + freightFee;
   const taxRate = getTaxRate(shipping_state);
   const tax = subtotal * taxRate;
   const grandTotal = subtotal + tax;
@@ -154,6 +156,15 @@ function buildQuoteHtml(payload: {
           <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:center;border-bottom:1px solid #f1f5f9">—</td>
           <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:right;border-bottom:1px solid #f1f5f9">—</td>
           <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right;border-bottom:1px solid #f1f5f9">$${deliveryFee.toFixed(2)}</td>
+        </tr>` : ""}${freightFee > 0 ? `
+        <tr style="background:${(items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 0 ? "#fff" : "#f8fafc"}">
+          <td style="padding:12px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">
+            Freight / Shipping
+            <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Carrier freight for this order</span>
+          </td>
+          <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:center;border-bottom:1px solid #f1f5f9">—</td>
+          <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:right;border-bottom:1px solid #f1f5f9">—</td>
+          <td style="padding:12px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right;border-bottom:1px solid #f1f5f9">$${freightFee.toFixed(2)}</td>
         </tr>` : ""}</tbody>
       <tfoot>
         <tr style="background:#f8fafc">
@@ -180,7 +191,9 @@ function buildQuoteHtml(payload: {
         ${net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
         ${deliveryFee > 0
           ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
-          : `<li>Freight is additional unless otherwise noted.</li>`}
+          : freightFee > 0
+            ? `<li>Freight is included in the total above.</li>`
+            : `<li>Freight is additional unless otherwise noted.</li>`}
         <li>Minimum order quantities may apply.</li>
       </ul>
     </div>
@@ -210,8 +223,15 @@ serve(async (req) => {
   try {
     const body = await req.json();
     const { quote_request_id, items, message, preview_only, net_30_terms,
-            fulfillment_method, in_house_delivery_fee, shipping_state } = body;
+            fulfillment_method, in_house_delivery_fee, freight_fee, shipping_state } = body;
     const deliveryFee = Math.max(0, Number(in_house_delivery_fee) || 0);
+    // Not gated on fulfillment_method the way deliveryFee is -- freight
+    // only ever gets set on a 'ship' quote in practice (staff have no
+    // reason to pull a Warp quote for an in-house delivery), but there's
+    // no correctness reason to force it to 0 based on that flag the way
+    // in-house delivery genuinely must be (can't bill both a carrier and
+    // ourselves for the same shipment).
+    const freightFee  = Math.max(0, Number(freight_fee) || 0);
     const isInHouse   = fulfillment_method === "in_house";
     let { valid_until } = body;
 
@@ -268,6 +288,7 @@ serve(async (req) => {
       message,
       net_30_terms: !!net_30_terms,
       in_house_delivery_fee: isInHouse ? deliveryFee : 0,
+      freight_fee: freightFee,
       shipping_state,
     });
 
@@ -311,13 +332,13 @@ serve(async (req) => {
     // silently changes what an already-sent quote says it charged.
     const fee_amt      = isInHouse ? deliveryFee : 0;
     const subtotal_amt = items.reduce((s: number, i: any) => s + (i.quantity * i.unit_price), 0);
-    const taxable_amt  = subtotal_amt + fee_amt;
+    const taxable_amt  = subtotal_amt + fee_amt + freightFee;
     const tax_rate      = getTaxRate(shipping_state);
     const tax_amt       = taxable_amt * tax_rate;
     const grand_amt      = taxable_amt + tax_amt;
 
     // Update status to quoted + save full quote snapshot for customer portal
-    await sb.from("quote_requests").update({
+    let { error: updErr } = await sb.from("quote_requests").update({
       status:           "quoted",
       quoted_at:        new Date().toISOString(),
       quote_number,
@@ -327,6 +348,7 @@ serve(async (req) => {
       net_30_terms:     !!net_30_terms,
       fulfillment_method:    isInHouse ? "in_house" : "ship",
       in_house_delivery_fee: fee_amt,
+      freight_fee:      freightFee,
       shipping_state:   shipping_state || null,
       tax_rate,
       tax_amount:       tax_amt,
@@ -334,6 +356,30 @@ serve(async (req) => {
       grand_total:      grand_amt,
       customer_visible: true,
     }).eq("id", quote_request_id);
+    if (updErr && updErr.code === "42703") {
+      // freight_fee hasn't been migrated live yet (20260831c) -- retry
+      // without it rather than fail the whole send; the email/PDF still
+      // shows the correct freight line either way since that's already
+      // rendered from the in-memory freightFee, not read back from the DB.
+      ({ error: updErr } = await sb.from("quote_requests").update({
+        status:           "quoted",
+        quoted_at:        new Date().toISOString(),
+        quote_number,
+        quote_items:      items,
+        valid_until:      valid_until.split("T")[0],
+        quote_message:    message || null,
+        net_30_terms:     !!net_30_terms,
+        fulfillment_method:    isInHouse ? "in_house" : "ship",
+        in_house_delivery_fee: fee_amt,
+        shipping_state:   shipping_state || null,
+        tax_rate,
+        tax_amount:       tax_amt,
+        subtotal:         subtotal_amt,
+        grand_total:      grand_amt,
+        customer_visible: true,
+      }).eq("id", quote_request_id));
+    }
+    if (updErr) console.error("[send-quote] quote_requests update failed:", updErr.message);
 
     return new Response(JSON.stringify({ success: true, quote_number }), {
       headers: { ...CORS, "Content-Type": "application/json" },

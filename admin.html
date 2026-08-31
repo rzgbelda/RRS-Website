@@ -1119,6 +1119,38 @@
             </div>
           </div>
 
+          <!-- Freight (Warp): the carrier-quote counterpart to in-house
+               delivery above -- pulls a real Warp quote off the lead's
+               shipping ZIP, then staff review/edit before it's included as
+               its own line on the quote/invoice. Independent of the
+               in-house checkbox (only one of the two would ever actually
+               apply to a given quote, but nothing stops both boxes from
+               being visible at once -- staff choose). -->
+          <div id="quoteFreightBox" style="margin-bottom:20px;border:1.5px solid #e2e8f0;border-radius:11px;padding:14px 16px;background:#fbfcfe">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+              <span style="display:flex;align-items:center;gap:9px;font-size:13.5px;font-weight:700;color:#0d1f38">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#e8621a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+                Freight (Warp)
+                <span style="font-size:11px;font-weight:600;color:#94a3b8">— not shown to the customer until you save it below</span>
+              </span>
+              <button type="button" id="quoteWarpQuoteBtn" onclick="getComposerWarpQuote()"
+                style="height:32px;padding:0 14px;border-radius:8px;border:1.5px solid #0d2c50;background:#fff;color:#0d2c50;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">
+                📦 Get Warp Quote
+              </button>
+            </div>
+            <p id="quoteWarpQuoteResult" style="font-size:11.5px;color:#64748b;margin:8px 0 0"></p>
+            <div style="margin-top:10px">
+              <label style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#64748b;display:block;margin-bottom:6px">Freight Fee</label>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:14px;font-weight:700;color:#475569">$</span>
+                <input type="number" min="0" step="0.01" id="quoteFreightFee" value="0.00" placeholder="0.00"
+                  oninput="recalcQuoteTotal()"
+                  style="width:130px;height:36px;border:1.5px solid #e2e8f0;border-radius:9px;padding:0 12px;font-size:13px;text-align:right">
+                <span style="font-size:11.5px;color:#94a3b8">shown as its own line on the quote</span>
+              </div>
+            </div>
+          </div>
+
           <!-- Custom message: given its own full-width row rather than being
                squeezed beside the date field, where it was two rows tall and
                showed barely one line of a four-line default message.
@@ -2537,7 +2569,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=75"></script>
+<script src="admin.js?v=76"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

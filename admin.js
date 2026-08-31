@@ -7195,6 +7195,56 @@ function quoteInHouseFee() {
   return Math.max(0, parseFloat(document.getElementById("quoteInHouseFee")?.value) || 0);
 }
 
+// Same idea as quoteInHouseFee() -- not gated behind a checkbox since
+// staff can just leave it at $0 for an in-house or free-freight quote.
+function quoteFreightFee() {
+  return Math.max(0, parseFloat(document.getElementById("quoteFreightFee")?.value) || 0);
+}
+
+// Pulls a real Warp quote using the lead's shipping ZIP on file (set when
+// the quote request came in, or by staff on the CRM lead) -- same
+// callWarpFunction() the order flow already uses. Result is shown for
+// review and pre-fills quoteFreightFee, never auto-saved: staff still
+// have to actually put a number there and it only reaches a real
+// customer once the quote is sent.
+async function getComposerWarpQuote() {
+  const resultEl = document.getElementById("quoteWarpQuoteResult");
+  const btn = document.getElementById("quoteWarpQuoteBtn");
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  if (!r) return;
+
+  if (!r.shipping_zip) {
+    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "No shipping ZIP on file for this lead -- add one on the lead's record first."; }
+    return;
+  }
+
+  const items = _quoteComposerLines
+    .filter(l => l.name?.trim() && Number(l.unit_price) > 0)
+    .map(l => ({ description: l.name.trim(), quantity: parseInt(l.quantity) || 1, weight_lbs: 40 }));
+  if (!items.length) {
+    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "Add at least one priced item before getting a freight quote."; }
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "⏳ Getting quote…"; }
+  if (resultEl) { resultEl.style.color = "#64748b"; resultEl.textContent = "Getting Warp rate quote…"; }
+
+  try {
+    const quote = await callWarpFunction("quote", { destination_zip: r.shipping_zip, items });
+    const feeInput = document.getElementById("quoteFreightFee");
+    if (feeInput) feeInput.value = Number(quote.total_charge).toFixed(2);
+    if (resultEl) {
+      resultEl.style.color = "#15803d";
+      resultEl.textContent = `✅ Warp quote: $${Number(quote.total_charge).toFixed(2)} · ${quote.transit_days ?? "?"} transit days. Pre-filled below -- review and adjust if needed.`;
+    }
+    recalcQuoteTotal();
+  } catch (e) {
+    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "Quote failed: " + e.message; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = "📦 Get Warp Quote"; }
+  }
+}
+
 // Subtotal (items + in-house delivery fee) -> tax by shipping state ->
 // grand total. Tax is 0 whenever no state is picked yet -- getTaxRate()
 // (tax-rates.js) already falls back to 0 for an empty/unrecognized code,
@@ -7216,6 +7266,7 @@ function recalcQuoteTotal() {
     if (lineEl) lineEl.textContent = lineTotal > 0 ? `$${lineTotal.toFixed(2)}` : "—";
   });
   subtotal += quoteInHouseFee();
+  subtotal += quoteFreightFee();
 
   const rate = quoteTaxRate();
   const tax = subtotal * rate;
@@ -7250,6 +7301,7 @@ function getComposerPayload() {
     net_30_terms: document.getElementById("quoteNet30").checked,
     fulfillment_method: inHouse ? "in_house" : "ship",
     in_house_delivery_fee: inHouse ? quoteInHouseFee() : 0,
+    freight_fee: quoteFreightFee(),
     shipping_state: document.getElementById("quoteShippingState")?.value || "",
   };
 }
@@ -7300,8 +7352,9 @@ async function downloadQuotePreviewPdf() {
   try {
     const itemsTotal = payload.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const deliveryFee = payload.fulfillment_method === "in_house" ? (payload.in_house_delivery_fee || 0) : 0;
+    const freightFee = payload.freight_fee || 0;
     const taxRate = payload.shipping_state ? (window.getTaxRate?.(payload.shipping_state) || 0) : 0;
-    const taxAmount = (itemsTotal + deliveryFee) * taxRate;
+    const taxAmount = (itemsTotal + deliveryFee + freightFee) * taxRate;
 
     const res = await fetch("/api/quote-pdf", {
       method: "POST",
@@ -7318,10 +7371,11 @@ async function downloadQuotePreviewPdf() {
         quote_message: payload.message,
         net_30_terms: payload.net_30_terms,
         in_house_delivery_fee: deliveryFee,
+        freight_fee: freightFee,
         shipping_state: payload.shipping_state,
         tax_rate: taxRate,
         tax_amount: taxAmount,
-        grand_total: itemsTotal + deliveryFee + taxAmount,
+        grand_total: itemsTotal + deliveryFee + freightFee + taxAmount,
       }),
     });
     if (!res.ok) throw new Error("HTTP " + res.status);
