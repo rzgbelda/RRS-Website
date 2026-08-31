@@ -251,7 +251,7 @@ module.exports = async (req, res) => {
     if (!items.length) return res.status(400).json({ error: 'No priced line items to invoice.' });
 
     // In-house delivery: we deliver the order ourselves and charge a fee set
-    // by hand on the quote, instead of an Estes/Shippo carrier rate. It is a
+    // by hand on the quote, instead of a Warp/Shippo carrier rate. It is a
     // real payable line, so it has to reach the invoice total AND the Stripe
     // payment link below -- billing only the items would undercharge by
     // exactly the delivery amount.
@@ -341,7 +341,7 @@ module.exports = async (req, res) => {
         status:         'pending',
         order_type:     'invoice',
         // Carries the choice onto the order so the admin order modal shows
-        // the in-house delivery panel instead of the Estes freight flow.
+        // the in-house delivery panel instead of the Warp freight flow.
         fulfillment_method:    _q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
         in_house_delivery_fee: deliveryFee,
         // Same shape regular checkout already writes to this column

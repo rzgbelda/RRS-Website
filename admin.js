@@ -5,28 +5,6 @@
 /* ── Bootstrap ─────────────────────────────────────────────── */
 window._adminRole = "admin"; // default; overwritten below
 
-async function loadWarpModeBadge() {
-  try {
-    // Removed — Warp replaced by Estes Express
-    return;
-    const res = await fetch("", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "mode" }),
-    });
-    const { mode } = await res.json();
-    const badge = document.getElementById("warpModeBadge");
-    if (!badge) return;
-    if (mode === "live") {
-      badge.style.cssText += "display:flex;background:#dcfce7;color:#15803d;border:1.5px solid #86efac;";
-      badge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#16a34a;display:inline-block;"></span> Warp LIVE`;
-    } else {
-      badge.style.cssText += "display:flex;background:#fef9ec;color:#b45309;border:1.5px solid #fde68a;";
-      badge.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:#f59e0b;display:inline-block;"></span> Warp TEST`;
-    }
-  } catch (e) { console.warn("[Warp] Mode check failed:", e.message); }
-}
-
 document.addEventListener("DOMContentLoaded", async () => {
   if (typeof window.sb === "undefined") {
     showLoginError("Supabase not configured. Set your credentials in supabase.js.");
@@ -53,7 +31,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyRoleRestrictions(role);
   showDashboard();
   switchTab(landingTabFor(role));
-  loadWarpModeBadge();
   updateNotifBadgeFromStorage();
 
   /* Wire buttons */
@@ -2152,6 +2129,8 @@ async function renderOrdersTable(filter) {
   tbody.innerHTML = (orders || []).map(o => {
     const items = Array.isArray(o.items) ? o.items : (typeof o.items === "string" ? JSON.parse(o.items || "[]") : []);
     const totalDollars = o.total ? Number(o.total).toFixed(2) : "0.00";
+    const rowFreightQuote = o.freight_quote ? (typeof o.freight_quote === "string" ? JSON.parse(o.freight_quote) : o.freight_quote) : null;
+    const rowIsEstes = rowFreightQuote?.carrier_name === "Estes Express";
     return `
     <tr>
       <td><strong>${escHtml(o.order_number)}</strong></td>
@@ -2171,7 +2150,8 @@ async function renderOrdersTable(filter) {
       <td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
         <button class="a-btn-sm" onclick="openOrderModal('${o.id}')">View</button>
         ${o.label_url ? `<a href="${escHtml(o.label_url)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#0B1F38;color:#fff;text-decoration:none;">&#128438; Label</a>` : ""}
-        ${o.pro_number ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;">&#128666; BOL</a>` : ""}
+        ${o.pro_number && rowIsEstes ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;">&#128666; BOL</a>` : ""}
+        ${o.pro_number && !rowIsEstes ? `<span class="a-btn-sm" style="background:#1d4ed8;color:#fff;cursor:default;" title="Warp tracking #${escHtml(o.pro_number)}">&#128666; ${escHtml(o.pro_number)}</span>` : ""}
       </td>
     </tr>`;
   }).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
@@ -2262,7 +2242,7 @@ async function setFulfillmentMethod(orderId, method) {
   if (error) { alert("Could not update: " + error.message); return; }
   const label = {
     pickup:   "Order switched to warehouse pickup.",
-    in_house: "Order switched to in-house delivery. Estes/Shippo skipped.",
+    in_house: "Order switched to in-house delivery. Warp/Shippo skipped.",
     ship:     "Order switched to carrier shipping.",
   }[method] || "Order updated.";
   showToast(label);
@@ -2646,17 +2626,25 @@ async function openOrderModal(id) {
   const isPending    = o.status === "pending";
   const isConfirmed  = o.status === "confirmed";
   const isCancelled  = o.status === "cancelled";
-  const estesBooked  = !!o.estes_bol_number;
+  // estes_bol_number is a legacy field -- only ever written by the old
+  // Estes manual-book flow, kept around purely to still display those old
+  // bookings correctly. New bookings (any carrier) write to the neutral
+  // bol_number/pro_number columns instead (see 20260725_orders_bol_columns.sql),
+  // with the carrier identified from freight_quote.carrier_name at display time.
+  const estesBookedLegacy = !!o.estes_bol_number;
+  const freightBooked = estesBookedLegacy || !!o.bol_number;
   const freightQuote = o.freight_quote ? (typeof o.freight_quote === "string" ? JSON.parse(o.freight_quote) : o.freight_quote) : null;
-  const estesQuoted  = freightQuote?.carrier_name === "Estes Express";
+  const freightCarrier = freightQuote?.carrier_name || "";
+  const isWarpQuote  = freightCarrier === "Warp";
+  const freightQuoted = !!freightCarrier;
   // Reported live: an invoice-created order for a customer picking up in
-  // person got routed through the Estes rate flow purely because every
+  // person got routed through the Warp rate flow purely because every
   // order implicitly assumed shipping. fulfillment_method (default
   // 'ship') lets staff mark an order as warehouse pickup instead, which
   // skips freight entirely -- see the pickup branch below.
   const isPickup     = o.fulfillment_method === "pickup";
   // In-house delivery: we drive it out ourselves for a fee set on the
-  // quote. Like pickup, it deliberately hides the Estes/Shippo buttons --
+  // quote. Like pickup, it deliberately hides the Warp/Shippo buttons --
   // booking a paid carrier pickup for an order we are delivering would be
   // a real, billable mistake.
   const isInHouse    = o.fulfillment_method === "in_house";
@@ -2734,7 +2722,7 @@ async function openOrderModal(id) {
         </div>
       </div>`;
   } else if (isPending) {
-    const quotePanel = estesQuoted ? `
+    const quotePanel = freightQuoted ? `
       <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:12px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
         <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Freight Cost</span>
           <strong style="color:#0c4a6e;font-size:16px;">$${Number(freightQuote.total_charge).toFixed(2)}</strong></div>
@@ -2743,7 +2731,7 @@ async function openOrderModal(id) {
         <div><span style="font-size:10px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.05em;display:block">Est. Delivery</span>
           <strong style="color:#0c4a6e;font-size:13px;">${freightQuote.delivery_date ?? "—"}</strong></div>
       </div>
-      ${freightQuote.test_mode ? `<div style="background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11.5px;color:#92400e;font-weight:600;">🧪 TEST MODE — Quote is from Estes UAT. No real charges until credentials switch to production.</div>` : ""}` : "";
+      ${freightQuote.test_mode ? `<div style="background:#fef9ec;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin-bottom:12px;font-size:11.5px;color:#92400e;font-weight:600;">🧪 TEST MODE — Quote is from Warp staging. No real charges until credentials switch to production.</div>` : ""}` : "";
 
     actionBar = `
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:18px 20px;margin-bottom:20px;">
@@ -2751,18 +2739,18 @@ async function openOrderModal(id) {
           <span style="font-size:20px;">📋</span>
           <div>
             <strong style="font-size:14px;color:#15803d;display:block;">Order Pending Review</strong>
-            <span style="font-size:12px;color:#166534;">Get a freight quote from Estes Express, then confirm to book.</span>
+            <span style="font-size:12px;color:#166534;">Get a freight quote from Warp, then confirm to book.</span>
           </div>
         </div>
         ${quotePanel}
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button onclick="getEstesQuote('${o.id}')"
+          <button onclick="getFreightQuote('${o.id}')"
             style="flex:1;min-width:160px;background:#fff;color:#0b2d52;border:1.5px solid #0b2d52;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            📦 ${estesQuoted ? "Refresh Quote" : "Get Estes Quote"}
+            📦 ${freightQuoted ? "Refresh Quote" : "Get Warp Quote"}
           </button>
-          ${estesQuoted ? `<button onclick="bookWithEstes('${o.id}')"
+          ${freightQuoted ? `<button onclick="bookWithWarp('${o.id}')"
             style="flex:2;min-width:180px;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            🚚 Confirm &amp; Book with Estes
+            🚚 Confirm &amp; Book with Warp
           </button>` : ""}
           <button onclick="cancelOrderFromModal('${o.id}')"
             style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
@@ -2770,14 +2758,24 @@ async function openOrderModal(id) {
           </button>
         </div>
       </div>`;
-  } else if (isConfirmed && estesBooked) {
+  } else if (isConfirmed && estesBookedLegacy) {
     actionBar = `
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:20px;">✅</span>
         <div>
-          <strong style="color:#15803d;font-size:13px;display:block;">Booked with Estes Express</strong>
+          <strong style="color:#15803d;font-size:13px;display:block;">Booked with Estes Express <span style="font-weight:500;color:#94a3b8">(legacy — Estes is no longer our carrier)</span></strong>
           <span style="color:#166534;font-size:12px;">BOL: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.estes_bol_number)}</code>
           ${o.estes_pro_number ? ` &nbsp;·&nbsp; PRO: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.estes_pro_number)}</code>` : ""}</span>
+        </div>
+      </div>`;
+  } else if (isConfirmed && freightBooked) {
+    actionBar = `
+      <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:20px;">✅</span>
+        <div>
+          <strong style="color:#15803d;font-size:13px;display:block;">Booked with Warp</strong>
+          <span style="color:#166534;font-size:12px;">Order #: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.bol_number)}</code>
+          ${o.pro_number ? ` &nbsp;·&nbsp; Tracking #: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.pro_number)}</code>` : ""}</span>
         </div>
       </div>`;
   } else if (isConfirmed) {
@@ -2926,12 +2924,13 @@ async function openOrderModal(id) {
           style="font-weight:700;color:#0B1F38;text-decoration:underline;">${escHtml(o.tracking_number)}</a>
         &nbsp;<span style="color:#94a3b8;font-size:11px;">(${escHtml(o.shipping_carrier || "Carrier")})</span>
       </span>` : ""}
-      ${o.bol_number ? `<span style="font-size:13px;color:#334155;">BOL: <strong>${escHtml(o.bol_number)}</strong></span>` : ""}
-      ${o.pro_number ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener"
+      ${o.bol_number ? `<span style="font-size:13px;color:#334155;">${isWarpQuote ? "Warp Order #" : "BOL"}: <strong>${escHtml(o.bol_number)}</strong></span>` : ""}
+      ${o.pro_number && !isWarpQuote ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener"
         style="display:inline-flex;align-items:center;gap:7px;background:#1d4ed8;color:#fff;border:none;border-radius:9px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;text-decoration:none;">
         &#128666; Track on Estes &rarr;
       </a>
       <span style="font-size:13px;color:#334155;">PRO: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
+      ${o.pro_number && isWarpQuote ? `<span style="font-size:13px;color:#334155;">Tracking #: <strong>${escHtml(o.pro_number)}</strong></span>` : ""}
     </div>` : ""}
     ${o.payment_status !== "paid" ? `
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
@@ -3156,222 +3155,21 @@ function viewQuotePdf() {
   window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
 }
 
-function showWarpConfirmDialog() { return Promise.resolve(false); } // removed — use bookWithEstes
+// (The old pre-Estes Warp integration that used to live here -- a dead
+// showWarpConfirmDialog()/approveAndBookWithWarp() pair calling a
+// long-retired /functions/v1/warp-quote endpoint -- has been fully
+// replaced by the real Warp integration below, built from WARP's actual
+// published API docs. See getFreightQuote()/bookWithWarp().)
 
-function _showWarpConfirmDialogUnused({ orderNumber, customer, business, shipTo, total, freightCost, carrier, isLive }) {
-  return new Promise((resolve) => {
-    const existing = document.getElementById("warpConfirmOverlay");
-    if (existing) existing.remove();
-
-    const overlay = document.createElement("div");
-    overlay.id = "warpConfirmOverlay";
-    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
-
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:20px;max-width:480px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
-        <div style="background:#0b2d52;padding:20px 24px;display:flex;align-items:center;gap:12px;">
-          <span style="font-size:24px;">🚚</span>
-          <div>
-            <div style="color:#fff;font-size:15px;font-weight:800;">Confirm Warp Booking</div>
-            <div style="color:#93c5fd;font-size:12px;margin-top:2px;">Please review before booking</div>
-          </div>
-        </div>
-        ${isLive ? `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;display:flex;align-items:center;gap:8px;">
-          <span style="font-size:14px;">⚠️</span>
-          <span style="color:#dc2626;font-size:12px;font-weight:700;">LIVE MODE — This will create a REAL shipment and incur freight charges.</span>
-        </div>` : `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;display:flex;align-items:center;gap:8px;">
-          <span style="font-size:14px;">🧪</span>
-          <span style="color:#b45309;font-size:12px;font-weight:700;">TEST MODE — No real shipment or charges will occur.</span>
-        </div>`}
-        <div style="padding:20px 24px;">
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 20px;font-size:13px;margin-bottom:18px;">
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order</span><strong>${escHtml(orderNumber)}</strong></div>
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order Total</span><strong>${escHtml(total)}</strong></div>
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Customer</span>${escHtml(customer || "—")}</div>
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Business</span>${escHtml(business || "—")}</div>
-            <div style="grid-column:span 2"><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Ship To</span>${escHtml(shipTo || "—")}</div>
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Carrier</span>${escHtml(carrier)}</div>
-            <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Est. Freight Cost</span><strong style="color:#0b2d52;">${escHtml(freightCost)}</strong></div>
-          </div>
-          <div style="background:#f8fafd;border:1.5px solid #e4e9f2;border-radius:10px;padding:12px 14px;font-size:12px;color:#64748b;margin-bottom:18px;">
-            By confirming, you authorize Room Ready Supply to book this LTL shipment with Warp.${isLive ? " <strong style='color:#dc2626;'>Freight charges will apply.</strong>" : ""}
-          </div>
-          <div style="display:flex;gap:10px;">
-            <button id="warpConfirmCancel" style="flex:1;padding:11px;border:1.5px solid #e4e9f2;border-radius:10px;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;">Cancel</button>
-            <button id="warpConfirmProceed" style="flex:2;padding:11px;border:none;border-radius:10px;background:#0b2d52;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
-              ${isLive ? "✅ Yes, Book Shipment" : "✅ Yes, Book (Test)"}
-            </button>
-          </div>
-        </div>
-      </div>`;
-
-    document.body.appendChild(overlay);
-
-    document.getElementById("warpConfirmCancel").onclick  = () => { overlay.remove(); resolve(false); };
-    document.getElementById("warpConfirmProceed").onclick = () => { overlay.remove(); resolve(true); };
-    overlay.addEventListener("click", (e) => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
-  });
-}
-
-async function approveAndBookWithWarp(orderId) {
-  return bookWithEstes(orderId); // Warp removed — Estes Express is the carrier
-}
-
-async function _approveAndBookWithWarpUnused(orderId) {
-  const resultEl = document.getElementById("orderActionResult");
-
-  // Fetch order details first for the confirmation dialog
-  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
-  const addr = order?.shipping_address || {};
-  const freightQuote = order?.freight_quote ? (typeof order.freight_quote === "string" ? JSON.parse(order.freight_quote) : order.freight_quote) : null;
-  const freightCost  = freightQuote?.total_charge ? `$${Number(freightQuote.total_charge).toFixed(2)}` : "TBD by Warp";
-  const carrier      = freightQuote?.carrier_name || "Warp LTL";
-  const isLiveMode   = document.getElementById("warpModeBadge")?.textContent?.includes("LIVE");
-
-  // Show confirmation dialog
-  const confirmed = await showWarpConfirmDialog({
-    orderNumber:  order?.order_number,
-    customer:     order?.customer_name,
-    business:     order?.business_name,
-    shipTo:       [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "),
-    total:        `$${Number(order?.total || 0).toFixed(2)}`,
-    freightCost,
-    carrier,
-    isLive:       isLiveMode,
-  });
-
-  if (!confirmed) return; // user cancelled
-
-  const btn = document.querySelector('[onclick^="approveAndBookWithWarp"]');
-  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Processing…"; }
-  const warpPayload = { // addr already defined above
-    reference:    order?.order_number,
-    pickup_date:  nextBusinessDay(),
-    origin: {
-      street: "609 Washington St", city: "Plymouth", state: "NC", zip: "27962",
-    },
-    destination: {
-      street: addr.street || "", city: addr.city || "", state: addr.state || "", zip: addr.zip || "",
-      contact_name:  order?.customer_name  || "",
-      contact_phone: order?.phone          || "",
-      contact_email: order?.customer_email || "",
-    },
-    items: (order?.order_items || []).map(i => ({
-      description: i.name || i.product_name || "Product", quantity: i.quantity,
-      weight_lbs: 20, length_in: 14, width_in: 12, height_in: 10, freight_class: "70",
-    })),
-  };
-
-  // Step 3: Call Warp booking via Edge Function (quote → book in one call)
-  if (resultEl) {
-    resultEl.style.display = "";
-    resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Booking with Warp…</div>`;
-  }
-
-  const SUPABASE_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
-
-  let warpShipmentId = null;
-  let warpError = null;
-
-  try {
-    const warpRes = await fetch("https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-quote", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        action: "book",
-        quotePayload: {
-          origin_zip:      "27962",
-          destination_zip: addr.zip || "",
-          pickup_date:     warpPayload.pickup_date,
-          pallets:         Math.max(1, Math.ceil((order?.order_items || []).length / 4)),
-          weight_lbs_per_pallet: 400,
-          commodity:       "general freight",
-          length_in: 48, width_in: 40, height_in: 48,
-        },
-        bookPayload: {
-          reference: order?.order_number,
-          patch: {
-            pickup: {
-              street:      "609 Washington St",
-              city:        "Plymouth",
-              state:       "NC",
-              zipCode:     "27962",
-              contactName: "Room Ready Supply",
-              phone:       "sales@roomreadysupply.com",
-              email:       "sales@roomreadysupply.com",
-            },
-            delivery: {
-              street:      addr.street || "",
-              city:        addr.city   || "",
-              state:       addr.state  || "",
-              zipCode:     addr.zip    || "",
-              contactName: order?.customer_name  || "",
-              phone:       order?.phone          || "",
-              email:       order?.customer_email || "",
-            },
-          },
-        },
-      }),
-    });
-
-    const warpData = await warpRes.json();
-
-    if (!warpRes.ok || warpData.error) {
-      warpError = warpData.error || warpData.message || `Warp API error (${warpRes.status})`;
-    } else {
-      warpShipmentId = warpData.id || warpData.shipment_id || warpData.quote_id || null;
-      // Save shipment ID to order
-      await window.sb.from("orders").update({
-        warp_shipment_id: warpShipmentId ? String(warpShipmentId) : "booked",
-        warp_booked_at:   new Date().toISOString(),
-      }).eq("id", orderId);
-    }
-  } catch (e) {
-    warpError = e.message;
-  }
-
-  // Step 4: Show result
-  if (resultEl) {
-    resultEl.style.display = "";
-    if (warpError) {
-      // Warp failed — keep order as pending so admin can retry
-      resultEl.innerHTML = `
-        <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
-          <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Warp Booking Failed — Order Still Pending</strong>
-          <span style="color:#b91c1c;font-size:12px;">Warp returned an error: <em>${escHtml(warpError)}</em>. Order has NOT been confirmed. Fix the issue and try again.</span>
-        </div>`;
-      if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Approve &amp; Book with Warp"; }
-      showToast("Warp booking failed — order remains pending.");
-    } else {
-      // Warp succeeded — now confirm the order in DB
-      await window.sb.from("orders").update({
-        status:           "confirmed",
-        warp_shipment_id: warpShipmentId ? String(warpShipmentId) : "booked",
-        warp_booked_at:   new Date().toISOString(),
-        updated_at:       new Date().toISOString(),
-      }).eq("id", orderId);
-
-      resultEl.innerHTML = `
-        <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
-          <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Warp!</strong>
-          <span style="color:#166534;font-size:12px;">Order confirmed and shipment booked.${warpShipmentId ? ` Warp Shipment ID: <strong>${escHtml(String(warpShipmentId))}</strong>` : ""}</span>
-        </div>`;
-      showToast("Order confirmed and booked with Warp! 🚚");
-    }
-  }
-
-  renderOrdersTable();
-}
-
-// ── Estes Express Integration ────────────────────────────────────────────────
+// ── Warp Freight Integration ─────────────────────────────────────────────────
+// Real schema pulled from WARP's own published OpenAPI docs
+// (https://developer.wearewarp.com/docs/freight/) -- see
+// supabase/functions/warp-freight/index.ts for the actual API calls.
 const SUPABASE_ANON_KEY_ESTES = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
-const ESTES_FN_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight";
+const WARP_FN_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight";
 
-async function callEstesFunction(action, payload) {
-  const res = await fetch(ESTES_FN_URL, {
+async function callWarpFunction(action, payload) {
+  const res = await fetch(WARP_FN_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -3380,13 +3178,13 @@ async function callEstesFunction(action, payload) {
     body: JSON.stringify({ action, payload }),
   });
   const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || `Estes error (${res.status})`);
+  if (!res.ok || data.error) throw new Error(data.error || `Warp error (${res.status})`);
   return data;
 }
 
-async function getEstesQuote(orderId) {
+async function getFreightQuote(orderId) {
   const resultEl = document.getElementById("orderActionResult");
-  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Getting Estes rate quote…</div>`; }
+  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Getting Warp rate quote…</div>`; }
 
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
   const addr  = order?.shipping_address || {};
@@ -3407,8 +3205,8 @@ async function getEstesQuote(orderId) {
   // Invoice- and terms-agreement-created orders never collect an address
   // (see api/send-invoice.js), so this is a real, expected case -- not
   // just defensive coding. Catching it here means a clear, actionable
-  // message instead of Estes's raw "City, State, Zip... not valid
-  // together" error, which is what an empty city/state/zip produces.
+  // message instead of Warp's raw "required_field_missing" error, which
+  // is what an empty zip produces.
   if (!addr.city || !addr.state || !addr.zip) {
     if (resultEl) {
       resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 16px;">
@@ -3419,15 +3217,18 @@ async function getEstesQuote(orderId) {
     return;
   }
 
-  // Calculate total shipment weight: sum of (qty × 40 lbs default per case)
-  const totalWeight = items.reduce((sum, i) => sum + (i.quantity * (i.weight_lbs || 40)), 0) || 40;
-
+  // Warp requires an itemized line list on every quote (name/dims/weight
+  // per line), not just a total weight -- order_items doesn't carry
+  // per-item dims, so default box size is applied the same way
+  // warp-freight.js does at checkout.
   try {
-    const quote = await callEstesFunction("quote", {
-      destination_zip:   addr.zip   || "",
-      destination_city:  addr.city  || "",
-      destination_state: addr.state || "",
-      weight_lbs: totalWeight,
+    const quote = await callWarpFunction("quote", {
+      destination_zip: addr.zip || "",
+      items: items.map(i => ({
+        description: i.name || i.product_name || "Product",
+        quantity:    i.quantity,
+        weight_lbs:  i.weight_lbs || 40,
+      })),
     });
 
     // Save quote to order
@@ -3438,11 +3239,11 @@ async function getEstesQuote(orderId) {
 
     if (resultEl) {
       resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
-        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Quote received — Estes Express</strong>
+        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Quote received — Warp</strong>
         <span style="color:#166534;font-size:12px;">$${Number(quote.total_charge).toFixed(2)} · ${quote.transit_days ?? "?"} transit days · Est. delivery: ${quote.delivery_date ?? "TBD"}</span>
       </div>`;
     }
-    showToast("Estes quote received! Click 'Confirm & Book' to proceed.");
+    showToast("Warp quote received! Click 'Confirm & Book' to proceed.");
     // Reopen modal to refresh action bar with quote panel
     setTimeout(() => showOrderModal(orderId), 800);
   } catch (e) {
@@ -3455,7 +3256,7 @@ async function getEstesQuote(orderId) {
   }
 }
 
-async function bookWithEstes(orderId) {
+async function bookWithWarp(orderId) {
   const resultEl = document.getElementById("orderActionResult");
 
   const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
@@ -3478,17 +3279,17 @@ async function bookWithEstes(orderId) {
   });
   if (!confirmed) return;
 
-  const btn = document.querySelector('[onclick^="bookWithEstes"]');
+  const btn = document.querySelector('[onclick^="bookWithWarp"]');
   if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Booking…"; }
-  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Creating BOL with Estes…</div>`; }
-
-  const totalWeight = items.reduce((sum, i) => sum + (i.quantity * (i.weight_lbs || 40)), 0) || 40;
+  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Booking with Warp…</div>`; }
 
   try {
-    const result = await callEstesFunction("book", {
+    const result = await callWarpFunction("book", {
       order_number: order?.order_number,
       quote_id:     freightQuote?.quote_id ?? null,
       ship_date:    freightQuote?.ship_date ?? null,
+      customer_email: order?.customer_email || "",
+      customer_name:  order?.customer_name  || "",
       destination: {
         name:   order?.business_name || order?.customer_name || "Customer",
         street: addr.street || "",
@@ -3501,36 +3302,40 @@ async function bookWithEstes(orderId) {
       items: items.map(i => ({
         description: i.name || i.product_name || "Product",
         quantity:    i.quantity,
-        weight_lbs:  i.quantity * (i.weight_lbs || 40),
+        weight_lbs:  i.weight_lbs || 40,
       })),
     });
 
-    // Save BOL + confirm order
+    // Save order # + tracking # + confirm order. Reuses the same neutral
+    // bol_number/pro_number columns the checkout auto-book path writes to
+    // (see 20260725_orders_bol_columns.sql) -- carrier is identified from
+    // freight_quote.carrier_name at display time, so no schema change or
+    // carrier-specific columns are needed.
     await window.sb.from("orders").update({
-      status:           "confirmed",
-      estes_bol_number: result.bol_number || "booked",
-      estes_pro_number: result.pro_number || null,
-      estes_booked_at:  new Date().toISOString(),
-      updated_at:       new Date().toISOString(),
+      status:      "confirmed",
+      bol_number:  result.warp_order_number || "booked",
+      pro_number:  result.tracking_number   || null,
+      bol_created_at: new Date().toISOString(),
+      updated_at:  new Date().toISOString(),
     }).eq("id", orderId);
 
     if (resultEl) {
       resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
-        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Estes Express!</strong>
-        <span style="color:#166534;font-size:12px;">BOL: <strong>${escHtml(result.bol_number)}</strong>${result.pro_number ? ` · PRO: <strong>${escHtml(result.pro_number)}</strong>` : ""}</span>
+        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Warp!</strong>
+        <span style="color:#166534;font-size:12px;">Order #: <strong>${escHtml(result.warp_order_number)}</strong>${result.tracking_number ? ` · Tracking #: <strong>${escHtml(result.tracking_number)}</strong>` : ""}</span>
       </div>`;
     }
-    showToast("Order confirmed and booked with Estes Express! 🚚");
+    showToast("Order confirmed and booked with Warp! 🚚");
     renderOrdersTable();
   } catch (e) {
     if (resultEl) {
       resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
-        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Estes Booking Failed — Order Still Pending</strong>
+        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Warp Booking Failed — Order Still Pending</strong>
         <span style="color:#b91c1c;font-size:12px;">${escHtml(e.message)}</span>
       </div>`;
     }
-    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Confirm &amp; Book with Estes"; }
-    showToast("Estes booking failed — order remains pending.");
+    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Confirm &amp; Book with Warp"; }
+    showToast("Warp booking failed — order remains pending.");
   }
 }
 
@@ -3544,10 +3349,10 @@ function showFreightConfirmDialog({ orderNumber, customer, business, shipTo, tot
     overlay.innerHTML = `
       <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
         <div style="padding:22px 24px 16px;border-bottom:1px solid #f0f4fa;">
-          <strong style="font-size:16px;color:#0d1f38;display:block;margin-bottom:4px;">Confirm Estes Express Booking</strong>
+          <strong style="font-size:16px;color:#0d1f38;display:block;margin-bottom:4px;">Confirm Warp Booking</strong>
           <span style="font-size:12px;color:#64748b;">Order #${escHtml(orderNumber)}</span>
         </div>
-        ${testMode ? `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;font-size:12px;color:#b45309;font-weight:700;">🧪 TEST MODE — No real shipment or charges.</div>` : `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;font-size:12px;color:#dc2626;font-weight:700;">⚠️ LIVE — This will create a real Estes shipment.</div>`}
+        ${testMode ? `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;font-size:12px;color:#b45309;font-weight:700;">🧪 TEST MODE — No real shipment or charges.</div>` : `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;font-size:12px;color:#dc2626;font-weight:700;">⚠️ LIVE — This will create a real Warp shipment.</div>`}
         <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
           <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Customer</span>${escHtml(customer || "—")}</div>
           <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Business</span>${escHtml(business || "—")}</div>

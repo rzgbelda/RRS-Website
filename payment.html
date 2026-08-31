@@ -1064,11 +1064,11 @@
               // freight manually from the admin panel once an ACH order
               // shows as paid (the webhook flips it when the debit clears).
               var freightQuote = (checkout.fulfillmentMethod === 'pickup' || paymentStatus === 'processing') ? {} : JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
-              var isEstesFreight = (freightQuote.carrier_name || '').toLowerCase().includes('estes');
+              var isWarpFreight = (freightQuote.carrier_name || '').toLowerCase() === 'warp';
 
-              // Estes LTL freight — auto-create BOL
-              if (isEstesFreight) {
-                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight', {
+              // Warp LTL freight — auto-book the shipment
+              if (isWarpFreight) {
+                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight', {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -1088,29 +1088,35 @@
                         state:  checkout.state  || '',
                         zip:    checkout.zip    || '',
                         phone:  (checkout.phone || '').replace(/\D/g, ''),
+                        email:  checkout.email || '',
                       },
                       items: (window._orderItems || []).map(function(i) {
                         return { description: i.name || 'Hospitality Supply', weight_lbs: 20, quantity: i.quantity || 1 };
                       }),
                     },
                   }),
-                }).then(function(r) { return r.json(); }).then(function(bolData) {
-                  if (bolData.bol_number || bolData.pro_number) {
-                    console.log('[bol] created — BOL:', bolData.bol_number, 'PRO:', bolData.pro_number);
+                }).then(function(r) { return r.json(); }).then(function(warpData) {
+                  if (warpData.warp_order_number || warpData.tracking_number) {
+                    console.log('[warp] booked — order #:', warpData.warp_order_number, 'tracking #:', warpData.tracking_number);
+                    // Reuses the same neutral bol_number/pro_number columns
+                    // every carrier's auto-book has always written to --
+                    // see 20260725_orders_bol_columns.sql. Carrier is
+                    // identified from freight_quote.carrier_name at
+                    // display time (admin.js), not from a separate column.
                     window.sb.from('orders').update({
-                      bol_number: bolData.bol_number || null,
-                      pro_number: bolData.pro_number || null,
+                      bol_number: warpData.warp_order_number || null,
+                      pro_number: warpData.tracking_number   || null,
                       bol_created_at: new Date().toISOString(),
                       status: 'processing',
                     }).eq('id', orderInsert.data.id).then(function() {});
                   } else {
-                    console.warn('[bol] creation failed:', bolData.error);
+                    console.warn('[warp] booking failed:', warpData.error);
                   }
-                }).catch(function(err) { console.error('[bol] fetch error:', err); });
+                }).catch(function(err) { console.error('[warp] fetch error:', err); });
               }
 
               // Shippo parcel — auto-purchase label
-              if (!isEstesFreight && freightQuote.service_token) {
+              if (!isWarpFreight && freightQuote.service_token) {
                 fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/purchase-label', {
                   method: 'POST',
                   headers: {

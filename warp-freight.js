@@ -3,7 +3,7 @@
 // API key is stored securely in Supabase Edge Function — not exposed here
 
 const WARP_CONFIG = {
-  edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight',
+  edgeFunctionUrl:   'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight',
   parcelFunctionUrl: 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/bright-service',
   origin: {
     street: '609 Washington St',
@@ -95,7 +95,7 @@ function buildFreightItems(cartItems) {
   });
 }
 
-const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LTL (Warp)
+const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LTL freight (Warp)
 const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
 const SUPABASE_ANON_KEY   = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
@@ -177,11 +177,22 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     action: 'quote',
     payload: {
       destination_zip: destinationZip,
-      weight_lbs: totalWeight,
       ship_date: nextBusinessDay(),
+      // Warp requires itemized line items (name/dims/weight per line) on
+      // every quote, unlike Estes which only needed a total weight —
+      // reuse the same per-item dims already built for the freight-class
+      // lookup above.
+      items: items.map(i => ({
+        description: i.description,
+        quantity:    i.quantity,
+        weight_lbs:  i.weight_lbs,
+        length_in:   i.length_in,
+        width_in:    i.width_in,
+        height_in:   i.height_in,
+      })),
     },
   };
-  console.log('[Estes] LTL quote payload:', JSON.stringify(payload));
+  console.log('[Warp] LTL quote payload:', JSON.stringify(payload));
 
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
   try {
@@ -199,17 +210,17 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
     clearTimeout(timer);
     const text = await res.text();
     let data;
-    try { data = JSON.parse(text); } catch(e) { console.error('[Estes] non-JSON:', text); data = null; }
+    try { data = JSON.parse(text); } catch(e) { console.error('[Warp] non-JSON:', text); data = null; }
 
     if (!res.ok || !data || data.error) {
-      console.warn('[Estes] attempt ' + attempt + ' failed (' + res.status + '):', data?.error || text);
+      console.warn('[Warp] attempt ' + attempt + ' failed (' + res.status + '):', data?.error || text);
       if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
       return null;
     }
 
-    // estes-freight returns a single quote object — wrap in array
+    // warp-freight returns a single quote object — wrap in array
     var quote = {
-      carrier_name:  data.carrier_name  || 'Estes Express',
+      carrier_name:  data.carrier_name  || 'Warp',
       total_charge:  data.total_charge  || 0,
       transit_days:  data.transit_days  ?? null,
       delivery_date: data.delivery_date ?? null,
@@ -220,16 +231,16 @@ async function fetchFreightQuotes(destinationZip, cartItems) {
 
     const subtotal = getCartSubtotal();
     if (subtotal > 0 && quote.total_charge > subtotal * QUOTE_SANITY_RATIO) {
-      console.warn('[Estes] Quote exceeds ' + QUOTE_SANITY_RATIO + '× subtotal — flagging for review');
+      console.warn('[Warp] Quote exceeds ' + QUOTE_SANITY_RATIO + '× subtotal — flagging for review');
       return 'review';
     }
 
-    console.log('[Estes] rate received:', quote);
+    console.log('[Warp] rate received:', quote);
     return [quote];
 
   } catch (e) {
     var reason = e.name === 'AbortError' ? 'timeout' : e.message;
-    console.warn('[Estes] attempt ' + attempt + ' error: ' + reason);
+    console.warn('[Warp] attempt ' + attempt + ' error: ' + reason);
     if (attempt < MAX_RETRIES) { await _sleep(2000 * attempt); continue; }
     return null;
   }
@@ -454,7 +465,7 @@ function renderQuotePanel(quotes, state) {
   panel.innerHTML = `
     <p class="fq-label">Select a shipping option:</p>
     <div class="fq-list">${rows}</div>
-    <p class="fq-note">Live rates via Shippo and Estes Express LTL. Final pricing confirmed in your order.</p>`;
+    <p class="fq-note">Live rates via Shippo and Warp LTL. Final pricing confirmed in your order.</p>`;
 }
 
 function selectFreightQuote(jsonStr) {

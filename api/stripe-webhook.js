@@ -11,15 +11,18 @@ function getRawBody(req) {
   });
 }
 
-const SUPABASE_FUNCTIONS_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/estes-freight';
+const SUPABASE_FUNCTIONS_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-async function bookEstesShipment(orderNumber, shippingAddr, items, quoteId) {
+async function bookWarpShipment(orderNumber, shippingAddr, items) {
+  // No quote_id survives to this fallback path (nothing ever set an
+  // estes_quote_id/warp_quote_id in the payment-intent metadata this webhook
+  // reads from) -- Warp still books fine without one, just without the
+  // price-lock guarantee a prior quote would give.
   const payload = {
     action: 'book',
     payload: {
       order_number: orderNumber,
-      quote_id: quoteId || undefined,
       destination: {
         name:   shippingAddr.name   || 'Customer',
         street: shippingAddr.street || '',
@@ -27,6 +30,7 @@ async function bookEstesShipment(orderNumber, shippingAddr, items, quoteId) {
         state:  shippingAddr.state  || '',
         zip:    shippingAddr.zip    || '',
         phone:  shippingAddr.phone  || '',
+        email:  shippingAddr.email  || '',
       },
       items: (items || []).map(function (i) {
         return {
@@ -48,8 +52,8 @@ async function bookEstesShipment(orderNumber, shippingAddr, items, quoteId) {
   });
 
   const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || 'Estes booking failed (' + res.status + ')');
-  console.log('[Estes] BOL created:', data.bol_number, '| PRO:', data.pro_number);
+  if (!res.ok || data.error) throw new Error(data.error || 'Warp booking failed (' + res.status + ')');
+  console.log('[Warp] booked — order #:', data.warp_order_number, '| tracking #:', data.tracking_number);
   return data;
 }
 
@@ -150,8 +154,8 @@ module.exports = async (req, res) => {
       // Everything below is fallback work. When the browser completed
       // normally it has already sent the receipt and booked freight, so
       // repeating it here would double-send email and -- more expensively --
-      // book a second Estes BOL against the same order. Only run when this
-      // handler was the one that had to record the order.
+      // book a second Warp shipment against the same order. Only run when
+      // this handler was the one that had to record the order.
       if (createdHere) {
         const emailOrder = { ...orderData, items: parsedItems, amount_total: pi.amount };
         const shippingAddr = orderData.shipping_address || {};
@@ -165,24 +169,24 @@ module.exports = async (req, res) => {
 
           // No item detail survives to this fallback path (see note above),
           // and freight can't be booked sensibly with an empty commodity
-          // list, so skip auto-booking rather than send Estes a bogus
+          // list, so skip auto-booking rather than send Warp a bogus
           // zero-item request. Staff can book manually from the admin panel
           // -- this only triggers in the rare case the browser died mid-flow.
           (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip && parsedItems.length)
-            ? bookEstesShipment(orderData.order_number, shippingAddr, parsedItems, meta.estes_quote_id || null)
-                .then(function (bol) {
-                  if (bol) {
+            ? bookWarpShipment(orderData.order_number, shippingAddr, parsedItems)
+                .then(function (booked) {
+                  if (booked) {
                     return supabase.from('orders')
                       .update({
-                        bol_number:     bol.bol_number,
-                        pro_number:     bol.pro_number,
+                        bol_number:     booked.warp_order_number,
+                        pro_number:     booked.tracking_number,
                         bol_created_at: new Date().toISOString(),
                         status:         'processing',
                       })
                       .eq('order_number', orderData.order_number);
                   }
                 })
-                .catch(function (e) { console.error('Estes booking failed:', e.message); })
+                .catch(function (e) { console.error('Warp booking failed:', e.message); })
             : Promise.resolve(),
         ]);
       } else {

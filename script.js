@@ -2719,7 +2719,7 @@ function loadPaymentSummary() {
 
   // Freight is no longer billed to the customer as a separate line: it is
   // built into product pricing and shows up only in P&L. The freight quote
-  // is still fetched and stored for the admin side (it drives Estes
+  // is still fetched and stored for the admin side (it drives Warp
   // booking), it just no longer adds to what is charged here.
   //
   // Stated explicitly rather than relying on the shipping element having
