@@ -135,7 +135,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
-  "sub-distributors", "seo", "reports",
+  "sub-distributors", "seo", "reports", "dev-tickets",
 ];
 
 // Per direct CEO instruction: role='admin' is now the narrow, Azure-style
@@ -4634,6 +4634,14 @@ const _tkt = {
 };
 
 function tktIsAdmin()    { return window._adminRole === "admin" || window._adminRole === "owner"; }
+// Per direct CEO instruction: Owner, Admin, and Marketing can file/view/
+// comment on tickets, but only a Developer decides who's working one and
+// whether it's done -- Status and Assignee are gated to this, everything
+// else (Priority, comments) keeps its existing tktIsAdmin() gate.
+// Enforced server-side too (guard_dev_ticket_triage_fields trigger,
+// 20260901_dev_ticket_triage_gate.sql) -- this disables the UI control,
+// the trigger is what actually stops a bypass.
+function tktCanTriage()  { return window._adminRole === "developer"; }
 function tktAvatar(email, size) {
   const s = size || 26;
   if (!email) return `<span class="tkt-avatar tkt-avatar-empty" style="width:${s}px;height:${s}px" title="Unassigned">–</span>`;
@@ -4799,7 +4807,7 @@ function tktCard(t) {
   const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
   const cCount = _tkt.comments[t.id] || 0;
   return `
-    <article class="tkt-card ${pr.cls}" draggable="true"
+    <article class="tkt-card ${pr.cls}" draggable="${tktCanTriage()}"
       ondragstart="tktDragStart(event,'${t.id}')" ondragend="tktDragEnd(event)"
       onclick="openTicketDrawer('${t.id}')">
       <div class="tkt-card-top">
@@ -5127,7 +5135,7 @@ async function openTicketDrawer(id) {
     <div class="tkt-dr-controls">
       <label class="tkt-dr-ctl">
         <span>Status</span>
-        <select class="a-input" onchange="setTicketStatus('${t.id}', this.value)">
+        <select class="a-input" onchange="setTicketStatus('${t.id}', this.value)" ${tktCanTriage()?"":"disabled"}>
           ${TKT_STATUS.map(s => `<option value="${s.key}"${t.status===s.key?" selected":""}>${s.label}</option>`).join("")}
         </select>
       </label>
@@ -5139,7 +5147,7 @@ async function openTicketDrawer(id) {
       </label>
       <label class="tkt-dr-ctl">
         <span>Assignee</span>
-        <select class="a-input" onchange="setTicketAssignee('${t.id}', this)" ${tktIsAdmin()?"":"disabled"}>
+        <select class="a-input" onchange="setTicketAssignee('${t.id}', this)" ${tktCanTriage()?"":"disabled"}>
           <option value="">Unassigned</option>
           ${_tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email||"")}"${t.assignee_id===d.id?" selected":""}>${escHtml(d.full_name || d.email || "")}${d.role==="developer"?" (developer)":""}</option>`).join("")}
           ${(!tktIsAdmin() && t.assignee_email) ? `<option value="${t.assignee_id}" selected>${escHtml(t.assignee_email)}</option>` : ""}
