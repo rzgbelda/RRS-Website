@@ -3901,6 +3901,9 @@ async function openCrmDrawer(id) {
                 <strong>${escHtml(a.author_name || "Staff")}</strong>
                 <span class="tkt-role-tag">${escHtml((CRM_ACTIVITY_TYPES.find(t=>t.key===a.activity_type)||{}).label || a.activity_type)}</span>
                 <span class="tkt-comment-time">${timeAgo(a.created_at)}</span>
+                <span class="tkt-comment-actions">
+                  <button type="button" onclick="deleteCrmActivity('${a.id}','${l.id}')" title="Delete">Delete</button>
+                </span>
               </div>
               <p>${escHtml(a.body)}</p>
             </div>
@@ -3946,6 +3949,14 @@ async function submitCrmActivity(id) {
   await logCrmActivity(id, typeEl?.value || "note", body);
   bodyEl.value = "";
   openCrmDrawer(id); // re-render the thread with the new entry
+}
+
+async function deleteCrmActivity(activityId, leadId) {
+  if (!confirm("Delete this activity entry? This cannot be undone.")) return;
+  const { error } = await window.sb.from("crm_activity_log").delete().eq("id", activityId);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  showToast("Activity entry deleted.");
+  openCrmDrawer(leadId); // re-render the thread without it
 }
 
 /* ── Campaigns (Marketing Account, Phase 2/3) ─────────────────
