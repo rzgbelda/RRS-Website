@@ -247,7 +247,7 @@
           <div class="cat-carousel-body">
             <h3>Bed Sheets &amp; Linens</h3>
             <p>Flat, fitted and pillowcases in T-180, T-200, T-250 and microfiber</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/towels" class="cat-carousel-card">
@@ -255,7 +255,7 @@
           <div class="cat-carousel-body">
             <h3>Towels</h3>
             <p>Bath, hand and wash cloths in economy, premium and luxury cotton</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/paper-products" class="cat-carousel-card">
@@ -263,7 +263,7 @@
           <div class="cat-carousel-body">
             <h3>Paper Products</h3>
             <p>Bath tissue, kitchen roll, multifold and hardwound towels</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/cleaning-chemicals" class="cat-carousel-card">
@@ -271,7 +271,7 @@
           <div class="cat-carousel-body">
             <h3>Cleaning Chemicals</h3>
             <p>EPA-registered disinfectants, bleach, glass cleaner and detergents</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/pillows-mattress-protectors" class="cat-carousel-card">
@@ -279,7 +279,7 @@
           <div class="cat-carousel-body">
             <h3>Pillows &amp; Mattress Protectors</h3>
             <p>Waterproof protectors and poly-fill pillows in every bed size</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/trash-liners-can-liners" class="cat-carousel-card">
@@ -287,7 +287,7 @@
           <div class="cat-carousel-body">
             <h3>Trash Liners &amp; Can Liners</h3>
             <p>Low density, high density and heavy-gauge recycled resin</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/gloves-ppe" class="cat-carousel-card">
@@ -295,7 +295,7 @@
           <div class="cat-carousel-body">
             <h3>Gloves &amp; PPE</h3>
             <p>Powder-free nitrile gloves, standard and exam grade</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/guest-amenities" class="cat-carousel-card">
@@ -303,7 +303,7 @@
           <div class="cat-carousel-body">
             <h3>Guest Amenities</h3>
             <p>Soap bars, shampoo, conditioner, body wash and lotion</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
         <a href="/category/laundry-cleaning-chemicals" class="cat-carousel-card">
@@ -311,7 +311,7 @@
           <div class="cat-carousel-body">
             <h3>Laundry &amp; Cleaning Chemicals</h3>
             <p>Commercial detergent, bleach, fabric softener and stain treatment</p>
-            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
           </div>
         </a>
       </div>
@@ -392,7 +392,10 @@
 
 <script>
   // Real <a> cards in a scroll-snap track -- crawlable and keyboard/touch
-  // usable with zero JS, the arrows/dots are pure enhancement on top.
+  // usable with zero JS, the arrows/dots/auto-rotate are pure enhancement
+  // on top. Auto-rotate loops back to the start at the end rather than
+  // stopping dead, and pauses on hover/touch/focus so it never fights a
+  // visitor actively browsing -- resumes a few seconds after they let go.
   (function () {
     const track = document.getElementById('catCarouselTrack');
     const dotsWrap = document.getElementById('catCarouselDots');
@@ -414,20 +417,25 @@
       return card.getBoundingClientRect().width + gap;
     }
 
-    function updateUI() {
-      const maxScroll = track.scrollWidth - track.clientWidth - 2;
-      if (leftBtn) leftBtn.disabled = track.scrollLeft <= 2;
-      if (rightBtn) rightBtn.disabled = track.scrollLeft >= maxScroll;
-
-      const idx = Math.round(track.scrollLeft / cardStep());
-      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    function currentIndex() {
+      return Math.round(track.scrollLeft / cardStep());
     }
 
-    leftBtn?.addEventListener('click', () => track.scrollBy({ left: -cardStep() * 2, behavior: 'smooth' }));
-    rightBtn?.addEventListener('click', () => track.scrollBy({ left: cardStep() * 2, behavior: 'smooth' }));
-    dots.forEach(d => d.addEventListener('click', () => {
-      track.scrollTo({ left: cardStep() * Number(d.dataset.i), behavior: 'smooth' });
-    }));
+    function goTo(idx) {
+      // Wraps in both directions -- a rotating carousel, not a dead-ended
+      // one -- so the left arrow from card 1 loops to the last card and
+      // the right arrow from the last card loops back to the first.
+      const wrapped = ((idx % cards.length) + cards.length) % cards.length;
+      track.scrollTo({ left: cardStep() * wrapped, behavior: 'smooth' });
+    }
+
+    function updateUI() {
+      dots.forEach((d, i) => d.classList.toggle('active', i === currentIndex()));
+    }
+
+    leftBtn?.addEventListener('click', () => { goTo(currentIndex() - 1); restartAutoplay(); });
+    rightBtn?.addEventListener('click', () => { goTo(currentIndex() + 1); restartAutoplay(); });
+    dots.forEach(d => d.addEventListener('click', () => { goTo(Number(d.dataset.i)); restartAutoplay(); }));
 
     let raf = null;
     track.addEventListener('scroll', () => {
@@ -436,6 +444,44 @@
     }, { passive: true });
     window.addEventListener('resize', updateUI);
     updateUI();
+
+    // ── Auto-rotate ──────────────────────────────────────────────
+    const AUTOPLAY_MS = 4000;
+    const RESUME_DELAY_MS = 6000;
+    let autoplayTimer = null;
+    let resumeTimer = null;
+
+    function tick() {
+      goTo(currentIndex() + 1);
+    }
+
+    function startAutoplay() {
+      stopAutoplay();
+      autoplayTimer = setInterval(tick, AUTOPLAY_MS);
+    }
+    function stopAutoplay() {
+      if (autoplayTimer) clearInterval(autoplayTimer);
+      autoplayTimer = null;
+    }
+    function restartAutoplay() {
+      stopAutoplay();
+      if (resumeTimer) clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(startAutoplay, RESUME_DELAY_MS);
+    }
+
+    track.addEventListener('mouseenter', stopAutoplay);
+    track.addEventListener('mouseleave', startAutoplay);
+    track.addEventListener('touchstart', restartAutoplay, { passive: true });
+    track.addEventListener('focusin', stopAutoplay);
+    track.addEventListener('focusout', startAutoplay);
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopAutoplay(); else startAutoplay();
+    });
+
+    // Respect a visitor's reduced-motion preference -- no unsolicited
+    // continuous movement on the page for anyone who's asked for that.
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReducedMotion) startAutoplay();
   })();
 </script>
 
