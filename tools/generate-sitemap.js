@@ -22,6 +22,7 @@ const SUPABASE_ANON = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 const STATIC_PAGES = [
   { path: '/',                changefreq: 'weekly',  priority: '1.0' },
   { path: '/catalog',         changefreq: 'weekly',  priority: '0.9' },
+  { path: '/blog',            changefreq: 'weekly',  priority: '0.7' },
   { path: '/shipping-policy', changefreq: 'monthly', priority: '0.5' },
   { path: '/terms',           changefreq: 'yearly',  priority: '0.3' },
   { path: '/privacy',         changefreq: 'yearly',  priority: '0.3' },
@@ -71,6 +72,7 @@ async function main() {
   console.log(`Generated sitemap-categories.xml with ${categorySlugs.length} category pages`);
 
   await generateProductSitemap(today);
+  await generateBlogSitemap(today);
 
   const index =
     `<?xml version="1.0" encoding="UTF-8"?>\n` +
@@ -78,6 +80,7 @@ async function main() {
     `  <sitemap>\n    <loc>${BASE}/sitemap.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n` +
     `  <sitemap>\n    <loc>${BASE}/sitemap-categories.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n` +
     `  <sitemap>\n    <loc>${BASE}/sitemap-products.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n` +
+    `  <sitemap>\n    <loc>${BASE}/sitemap-blog.xml</loc>\n    <lastmod>${today}</lastmod>\n  </sitemap>\n` +
     `</sitemapindex>\n`;
 
   fs.writeFileSync(path.join(ROOT, 'sitemap-index.xml'), index);
@@ -121,6 +124,31 @@ async function generateProductSitemap(today) {
 
   writeUrlset('sitemap-products.xml', urls);
   console.log(`Generated sitemap-products.xml with ${urls.length} product URLs`);
+}
+
+async function generateBlogSitemap(today) {
+  // Published articles only -- a draft has no public route to begin with
+  // (RLS on articles blocks anon reads of anything but status='published'),
+  // so this query mirrors that same filter rather than relying on it.
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/articles?select=slug,updated_at&status=eq.published`,
+    { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
+  );
+  if (!res.ok) throw new Error(`Failed to load articles (${res.status})`);
+  const articles = await res.json();
+
+  const urls = articles.map(a => {
+    const lastmod = (a.updated_at || today).slice(0, 10);
+    return `  <url>\n` +
+      `    <loc>${BASE}/blog/post?slug=${encodeURIComponent(a.slug)}</loc>\n` +
+      `    <lastmod>${lastmod}</lastmod>\n` +
+      `    <changefreq>monthly</changefreq>\n` +
+      `    <priority>0.6</priority>\n` +
+      `  </url>`;
+  });
+
+  writeUrlset('sitemap-blog.xml', urls);
+  console.log(`Generated sitemap-blog.xml with ${urls.length} article URLs`);
 }
 
 main().catch(err => { console.error(err); process.exit(1); });

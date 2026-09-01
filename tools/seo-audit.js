@@ -17,7 +17,7 @@ const LIMITS = { titleMin: 30, titleMax: 60, descMin: 70, descMax: 160 };
 
 // Pages that should be indexed and fully tagged.
 const PUBLIC_PAGES = [
-  '/', '/catalog', '/privacy', '/terms', '/shipping-policy', '/login',
+  '/', '/catalog', '/privacy', '/terms', '/shipping-policy', '/login', '/blog',
 ];
 
 const CATEGORY_SLUGS = [

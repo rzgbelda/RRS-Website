@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-69R8R75Q3Y');
+  </script>
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/Favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Blog | Room Ready Supply</title>
+  <meta name="description" content="Practical guidance on hospitality and facility supply, restocking, and case-quantity buying from Room Ready Supply.">
+  <link rel="canonical" href="https://www.roomreadysupply.com/blog">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Room Ready Supply">
+  <meta property="og:title" content="Blog | Room Ready Supply">
+  <meta property="og:description" content="Practical guidance on hospitality and facility supply, restocking, and case-quantity buying from Room Ready Supply.">
+  <meta property="og:url" content="https://www.roomreadysupply.com/blog">
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .blog-page { max-width: 1080px; margin: 0 auto; padding: 40px 24px 90px; }
+    .blog-hero { text-align: center; max-width: 640px; margin: 0 auto 44px; }
+    .blog-eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #ED7226; margin: 0 0 10px; }
+    .blog-h1 { font-size: clamp(28px, 4vw, 38px); font-weight: 800; color: #0B1F38; letter-spacing: -.5px; margin: 0 0 12px; }
+    .blog-sub { font-size: 15px; color: #5B6C7E; margin: 0; }
+    .blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 24px; }
+    .blog-card {
+      display: flex; flex-direction: column; background: #fff; border: 1px solid #e2e8f0;
+      border-radius: 14px; overflow: hidden; text-decoration: none; color: inherit;
+      transition: box-shadow .18s, transform .12s, border-color .18s;
+    }
+    .blog-card:hover { box-shadow: 0 8px 24px rgba(11,31,56,.1); transform: translateY(-2px); border-color: #d7dee8; }
+    .blog-card-img { width: 100%; height: 170px; object-fit: cover; background: #f1f5f9; }
+    .blog-card-body { padding: 18px 20px 20px; display: flex; flex-direction: column; flex: 1; }
+    .blog-card-date { font-size: 11.5px; font-weight: 700; color: #94a3b8; margin: 0 0 8px; }
+    .blog-card-title { font-size: 17px; font-weight: 800; color: #0B1F38; line-height: 1.35; margin: 0 0 8px; letter-spacing: -.2px; }
+    .blog-card-excerpt { font-size: 13.5px; color: #5B6C7E; line-height: 1.55; margin: 0; flex: 1; }
+    .blog-card-read { font-size: 12.5px; font-weight: 700; color: #ED7226; margin-top: 14px; }
+    .blog-empty { text-align: center; padding: 60px 0; color: #5B6C7E; }
+    .blog-loading { text-align: center; padding: 60px 0; color: #5B6C7E; }
+  </style>
+</head>
+
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (252) 227-0073</span>
+      <span>✉ sales@roomreadysupply.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="/" class="logo">
+      <picture><source srcset="assets/img/RR logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
+    </a>
+
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/catalog">Catalog</a>
+      <a href="/best-deals">Best Deals</a>
+      <a href="/blog">Blog</a>
+      <a href="/#about-us">About Us</a>
+      <a href="/#about-us">Contact</a>
+    </nav>
+
+    <div class="nav-icons">
+      <a href="/catalog">
+        <img src="assets/icons/hl1.svg" alt="Search">
+      </a>
+
+      <a href="/login" class="guest-only login-nav-btn">Login</a>
+
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn">
+          <img src="assets/icons/hl2.svg" alt="Account">
+        </button>
+
+        <div class="dropdown-menu">
+  <a href="/account">My Account</a>
+  <a href="/account#orders">Order History</a>
+  <a href="/profile?tab=reorder">Reorder Program</a>
+
+  <div class="dropdown-divider"></div>
+
+  <button id="logout-btn">Logout</button>
+</div>
+      </div>
+
+      <div class="cart-container">
+        <a href="/cart">
+          <img src="assets/icons/hl3.svg" alt="Cart">
+        </a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+    <a href="/">Home</a>
+    <a href="/catalog">Catalog</a>
+    <a href="/best-deals">Best Deals</a>
+    <a href="/blog">Blog</a>
+    <a href="/#about-us">About Us</a>
+    <a href="/#about-us">Contact</a>
+    <a href="/cart">My Cart</a>
+  </nav>
+
+  <section class="blog-page">
+    <div class="blog-hero">
+      <p class="blog-eyebrow">Room Ready Supply Blog</p>
+      <h1 class="blog-h1">Guidance for hospitality &amp; facility supply</h1>
+      <p class="blog-sub">Restocking, case-quantity buying, and keeping properties guest-ready without the guesswork.</p>
+    </div>
+
+    <div id="blogGrid" class="blog-grid">
+      <div class="blog-loading">Loading articles&hellip;</div>
+    </div>
+  </section>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="supabase.js"></script>
+<script src="script.js"></script>
+<script src="blog-index.js"></script>
+</body>
+</html>

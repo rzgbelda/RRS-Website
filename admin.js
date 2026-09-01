@@ -121,7 +121,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -135,7 +135,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
-  "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions",
+  "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
 ];
 
 // Per direct CEO instruction: role='admin' is now the narrow, Azure-style
@@ -269,7 +269,7 @@ function switchTab(tab) {
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
-      "vendors":"Vendors", "order-exceptions":"Order Exceptions" }[tab] || tab;
+      "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -289,6 +289,7 @@ function switchTab(tab) {
   if (tab === "campaigns")        renderCampaignsTab();
   if (tab === "vendors")          renderVendorsTab();
   if (tab === "order-exceptions") renderExceptionsTab();
+  if (tab === "blog")             renderBlogTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -5150,6 +5151,253 @@ async function deleteAutomation(id) {
   const { error } = await window.sb.from("automations").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
   await renderAutomationList();
+}
+
+/* ============================================================
+   BLOG (SEO Roadmap Day 17) -- content infrastructure to close the
+   single biggest structural SEO gap: zero backlink-attracting,
+   long-tail-keyword-targeting content existed anywhere on the site.
+   Real articles table (not the single-row site_content jsonb pattern
+   Hero/About use -- wrong shape for many posts with drafts/publish
+   dates/slugs). Reuses the camp-* visual system since Blog sits in the
+   same Marketing nav group as Campaigns.
+============================================================ */
+
+const _blog = { articles: [] };
+
+async function renderBlogTab() {
+  const panel = document.getElementById("tab-blog");
+  if (!panel) return;
+  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading articles…</div>`;
+
+  const { data, error } = await window.sb.from("articles").select("*").order("created_at", { ascending: false });
+  if (error) {
+    panel.innerHTML = `<div class="a-empty" style="padding:50px">Couldn't load articles: ${escHtml(error.message)}<br><span style="font-size:12px;color:#94a3b8">If this says a table is missing, run the 20260902c_blog_foundation.sql migration.</span></div>`;
+    return;
+  }
+  _blog.articles = data || [];
+
+  panel.innerHTML = `
+   <div class="camp-page">
+    <div class="camp-header">
+      <div>
+        <h1 class="camp-title">Blog</h1>
+        <p class="camp-subtitle">Long-form articles published at <a href="/blog" target="_blank" rel="noopener">roomreadysupply.com/blog</a> &mdash; real content search engines can actually rank.</p>
+      </div>
+      <div class="camp-header-actions">
+        <button class="camp-btn camp-btn-primary" onclick="openAddArticle()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          New Article
+        </button>
+      </div>
+    </div>
+
+    <div id="blogList" style="display:flex;flex-direction:column;gap:10px"></div>
+   </div>
+  `;
+
+  renderBlogList();
+}
+
+function renderBlogList() {
+  const el = document.getElementById("blogList");
+  if (!el) return;
+  if (!_blog.articles.length) {
+    el.innerHTML = `<div class="camp-empty">
+      <div class="camp-empty-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      </div>
+      <h3>No articles yet</h3>
+      <p>Write the first post to start building organic search traffic.</p>
+      <button class="camp-btn camp-btn-primary" onclick="openAddArticle()">New Article</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = _blog.articles.map(a => `
+    <div class="camp-listrow" style="padding:14px 16px;cursor:pointer" onclick="openArticleDrawer('${a.id}')">
+      <div class="camp-listrow-body" style="gap:4px">
+        <strong style="font-size:14px">${escHtml(a.title || "Untitled")}</strong>
+        <span>${a.status === "published" ? `Published ${a.published_at ? fmt(a.published_at) : ""}` : "Draft"} &middot; /blog/post?slug=${escHtml(a.slug)}</span>
+      </div>
+      <div class="camp-listrow-actions">
+        <span class="crm-status-pill ${a.status === "published" ? "crm-status-customer" : "crm-status-new"}">${a.status === "published" ? "Published" : "Draft"}</span>
+        <button class="camp-btn-sm camp-btn-sm-danger" onclick="event.stopPropagation(); deleteArticle('${a.id}')">Delete</button>
+      </div>
+    </div>`).join("");
+}
+
+function slugifyArticleTitle(title) {
+  return String(title || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function openAddArticle() {
+  openArticleDrawer(null);
+}
+
+async function openArticleDrawer(id) {
+  const overlay = document.getElementById("articleDrawerOverlay");
+  const body = document.getElementById("articleDrawerBody");
+  overlay.style.display = "flex";
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  const a = id ? _blog.articles.find(x => x.id === id) : {
+    id: null, title: "", slug: "", excerpt: "", body_html: "", cover_image_url: "",
+    meta_title: "", meta_description: "", status: "draft",
+  };
+  if (!a) { body.innerHTML = `<div class="a-empty" style="padding:60px">Article not found.</div>`; return; }
+
+  body.innerHTML = `
+   <div class="camp-dr">
+    <header class="camp-dr-head">
+      <div class="camp-dr-headtop">
+        <span class="camp-dr-eyebrow">${a.id ? "Article" : "New Article"}</span>
+        <div class="camp-dr-headbtns">
+          ${a.id ? `<button class="camp-iconbtn camp-iconbtn-danger" title="Delete article" onclick="deleteArticle('${a.id}')">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+          </button>` : ""}
+          <button class="camp-iconbtn" title="Close" onclick="closeArticleDrawer(true)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div class="camp-dr-section">
+      <div class="camp-field">
+        <span class="camp-field-label">Title</span>
+        <input id="artTitle" class="camp-input" value="${escHtml(a.title)}" placeholder="e.g. How Much Toilet Paper Should a 50-Room Hotel Stock?" oninput="onArticleTitleInput()">
+      </div>
+      <div class="camp-field">
+        <span class="camp-field-label">URL Slug <span class="camp-field-hint">roomreadysupply.com/blog/post?slug=&hellip;</span></span>
+        <input id="artSlug" class="camp-input camp-mono" value="${escHtml(a.slug)}" placeholder="how-much-toilet-paper-50-room-hotel">
+      </div>
+      <div class="camp-field">
+        <span class="camp-field-label">Excerpt <span class="camp-field-hint">shown on the /blog index card, also the SEO description fallback</span></span>
+        <textarea id="artExcerpt" class="camp-input camp-textarea" rows="2">${escHtml(a.excerpt || "")}</textarea>
+      </div>
+      <div class="camp-field">
+        <span class="camp-field-label">Cover Image URL <span class="camp-field-hint">optional</span></span>
+        <input id="artCover" class="camp-input" value="${escHtml(a.cover_image_url || "")}" placeholder="https://...">
+      </div>
+      <div class="camp-field" style="margin-bottom:0">
+        <span class="camp-field-label">Body (HTML) <span class="camp-field-hint">use &lt;h2&gt;, &lt;p&gt;, &lt;ul&gt; &mdash; matches the article page's own styling</span></span>
+        <textarea id="artBody" class="camp-input camp-textarea camp-mono" rows="14" placeholder="<p>Start writing&hellip;</p>">${escHtml(a.body_html || "")}</textarea>
+      </div>
+    </div>
+
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>SEO Overrides <span class="camp-field-hint">optional &mdash; blank falls back to the title/excerpt above</span></h4>
+      <div class="camp-field">
+        <span class="camp-field-label">SEO Title</span>
+        <input id="artMetaTitle" class="camp-input" value="${escHtml(a.meta_title || "")}" placeholder="Auto-generated from the title if left blank">
+      </div>
+      <div class="camp-field" style="margin-bottom:0">
+        <span class="camp-field-label">SEO Description</span>
+        <textarea id="artMetaDesc" class="camp-input camp-textarea" rows="2" placeholder="Auto-generated from the excerpt if left blank">${escHtml(a.meta_description || "")}</textarea>
+      </div>
+    </div>
+
+    <div class="camp-dr-section camp-send-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon camp-dr-h4-icon-accent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>Status</h4>
+      <div class="camp-field" style="margin-bottom:0">
+        <select id="artStatus" class="camp-select">
+          <option value="draft"${a.status === "draft" ? " selected" : ""}>Draft &mdash; hidden from /blog</option>
+          <option value="published"${a.status === "published" ? " selected" : ""}>Published &mdash; live on the site</option>
+        </select>
+      </div>
+      <p id="artError" class="camp-formerror" style="display:none"></p>
+      <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="camp-btn camp-btn-primary camp-btn-lg" id="artSaveBtn" onclick="saveArticle('${a.id || ""}')">Save Article</button>
+        ${a.status === "published" ? `<a class="camp-btn camp-btn-ghost" href="/blog/post?slug=${encodeURIComponent(a.slug)}" target="_blank" rel="noopener">View Live &rarr;</a>` : ""}
+      </div>
+    </div>
+   </div>
+  `;
+}
+
+// Only auto-fills the slug while staff haven't hand-edited it yet --
+// tracked by whether the slug field still equals what slugifying the
+// title would produce. Once someone deliberately types a different slug,
+// further title edits stop overwriting it.
+function onArticleTitleInput() {
+  const slugEl = document.getElementById("artSlug");
+  const titleEl = document.getElementById("artTitle");
+  if (!slugEl || !titleEl) return;
+  const prevAuto = slugifyArticleTitle(titleEl.dataset.prevValue || "");
+  if (slugEl.value === "" || slugEl.value === prevAuto) {
+    slugEl.value = slugifyArticleTitle(titleEl.value);
+  }
+  titleEl.dataset.prevValue = titleEl.value;
+}
+
+function closeArticleDrawer(force) {
+  if (force !== true && force && force.target && force.target.id !== "articleDrawerOverlay") return;
+  const overlay = document.getElementById("articleDrawerOverlay");
+  overlay.classList.remove("open");
+  setTimeout(() => { overlay.style.display = "none"; }, 180);
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && document.getElementById("articleDrawerOverlay")?.style.display === "flex") closeArticleDrawer(true);
+});
+
+async function saveArticle(id) {
+  const errEl = document.getElementById("artError");
+  errEl.style.display = "none";
+
+  const title = document.getElementById("artTitle").value.trim();
+  const slug = document.getElementById("artSlug").value.trim();
+  if (!title) { errEl.textContent = "Title is required."; errEl.style.display = "block"; return; }
+  if (!slug) { errEl.textContent = "URL slug is required."; errEl.style.display = "block"; return; }
+
+  const btn = document.getElementById("artSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  const payload = {
+    title, slug,
+    excerpt: document.getElementById("artExcerpt").value.trim() || null,
+    cover_image_url: document.getElementById("artCover").value.trim() || null,
+    body_html: document.getElementById("artBody").value,
+    meta_title: document.getElementById("artMetaTitle").value.trim() || null,
+    meta_description: document.getElementById("artMetaDesc").value.trim() || null,
+    status: document.getElementById("artStatus").value,
+  };
+  if (!id) payload.author_id = session?.user?.id || null;
+
+  const { data, error } = id
+    ? await window.sb.from("articles").update(payload).eq("id", id).select().single()
+    : await window.sb.from("articles").insert(payload).select().single();
+
+  btn.disabled = false; btn.textContent = "Save Article";
+  if (error) {
+    // 23505 = unique_violation on the slug column
+    errEl.textContent = error.code === "23505" ? "That URL slug is already used by another article." : error.message;
+    errEl.style.display = "block";
+    return;
+  }
+
+  if (id) {
+    const idx = _blog.articles.findIndex(x => x.id === id);
+    if (idx > -1) _blog.articles[idx] = data;
+  } else {
+    _blog.articles.unshift(data);
+  }
+  showToast("Article saved.");
+  renderBlogList();
+  openArticleDrawer(data.id);
+}
+
+async function deleteArticle(id) {
+  if (!confirm("Delete this article? This cannot be undone.")) return;
+  const { error } = await window.sb.from("articles").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  _blog.articles = _blog.articles.filter(x => x.id !== id);
+  const overlay = document.getElementById("articleDrawerOverlay");
+  if (overlay && overlay.classList.contains("open")) closeArticleDrawer(true);
+  renderBlogList();
+  showToast("Article deleted.");
 }
 
 /* ── Reports ───────────────────────────────────────────────── */

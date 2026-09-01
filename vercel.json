@@ -2,7 +2,7 @@
   "cleanUrls": true,
   "functions": {
     "api/product-meta.js": {
-      "includeFiles": "product-template.html"
+      "includeFiles": "{product-template.html,article-template.html}"
     }
   },
   "crons": [
@@ -314,6 +314,14 @@
     },
     {
       "source": "/product",
+      "destination": "/api/product-meta"
+    },
+    {
+      "source": "/blog",
+      "destination": "/blog.html"
+    },
+    {
+      "source": "/blog/post",
       "destination": "/api/product-meta"
     },
     {

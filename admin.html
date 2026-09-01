@@ -102,6 +102,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v3M16 3v3"/></svg>
         Campaigns
       </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="blog">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h7"/></svg>
+        Blog
+      </a>
 
       <span class="a-nav-section admin-only-nav">Content</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="manage-hero">
@@ -1424,6 +1428,17 @@
     <div id="tab-campaigns" class="a-tab" style="display:none">
       <!-- Populated dynamically by renderCampaignsTab() in admin.js -->
     </div><!-- /campaigns tab -->
+
+    <div id="tab-blog" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderBlogTab() in admin.js -->
+    </div><!-- /blog tab -->
+
+    <!-- ARTICLE EDITOR DRAWER -->
+    <div id="articleDrawerOverlay" class="tkt-drawer-overlay" style="display:none" onclick="closeArticleDrawer(event)">
+      <div class="tkt-drawer" onclick="event.stopPropagation()">
+        <div id="articleDrawerBody"><!-- Populated by openArticleDrawer() --></div>
+      </div>
+    </div>
 
     <!-- CAMPAIGN DETAIL DRAWER -->
     <div id="campDrawerOverlay" class="tkt-drawer-overlay" style="display:none" onclick="closeCampDrawer(event)">
@@ -2813,7 +2828,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=85"></script>
+<script src="admin.js?v=86"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

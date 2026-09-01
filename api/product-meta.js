@@ -52,6 +52,25 @@ function loadShell() {
   throw new Error('product.html not found in: ' + candidates.join(' | '));
 }
 
+// SEO Roadmap Day 17 (blog): same server-render-before-crawler-fetch
+// treatment as products, added to this file rather than a new one --
+// Vercel Hobby's 12-function cap is already exhausted (confirmed at time
+// of writing). /blog/post routes here (vercel.json), distinguished from
+// the product path by a `slug` query param instead of `item`.
+let _articleShell = null;
+function loadArticleShell() {
+  if (_articleShell) return _articleShell;
+  const candidates = [
+    path.join(process.cwd(), 'article-template.html'),
+    path.join(__dirname, '..', 'article-template.html'),
+    path.join(__dirname, 'article-template.html'),
+  ];
+  for (const p of candidates) {
+    try { _articleShell = fs.readFileSync(p, 'utf8'); return _articleShell; } catch { /* try next */ }
+  }
+  throw new Error('article-template.html not found in: ' + candidates.join(' | '));
+}
+
 /* ── helpers mirrored from script.js ─────────────────────────── */
 
 // Must match mapDbProductToLegacyShape()'s slug derivation exactly, since
@@ -271,6 +290,89 @@ function injectMeta(html, p) {
   return out;
 }
 
+/* ── article (blog) meta injection ───────────────────────────── */
+
+function stripHtmlToText(html) {
+  return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function buildArticleMetaDesc(a) {
+  const base = (a.excerpt || stripHtmlToText(a.body_html)).slice(0, 155);
+  const source = a.excerpt || stripHtmlToText(a.body_html);
+  return base + (source.length > 155 ? '…' : '');
+}
+
+function buildArticleJsonLd(a, title, metaDesc, pageUrl) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: title,
+    description: metaDesc,
+    image: a.cover_image_url || undefined,
+    datePublished: a.published_at || a.created_at,
+    dateModified: a.updated_at || a.published_at || a.created_at,
+    author: { '@type': 'Organization', name: 'Room Ready Supply' },
+    publisher: {
+      '@type': 'Organization', name: 'Room Ready Supply',
+      logo: { '@type': 'ImageObject', url: 'https://www.roomreadysupply.com/assets/img/RR%20logo.png' },
+    },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': pageUrl },
+  };
+}
+
+function buildArticleBreadcrumbJsonLd(a, pageUrl) {
+  const SITE = 'https://www.roomreadysupply.com';
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: SITE + '/' },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: SITE + '/blog' },
+      { '@type': 'ListItem', position: 3, name: a.title, item: pageUrl },
+    ],
+  };
+}
+
+function injectArticleMeta(html, a) {
+  const titleTag = (a.meta_title || '').trim() || (a.title + ' | Room Ready Supply');
+  const metaDesc = (a.meta_description || '').trim() || buildArticleMetaDesc(a);
+  const pageUrl = 'https://www.roomreadysupply.com/blog/post?slug=' + encodeURIComponent(a.slug);
+  const image = a.cover_image_url || '';
+
+  let out = html.replace(
+    /<title>[\s\S]*?<\/title>/i,
+    '<title>' + escText(titleTag) + '</title>'
+  );
+  out = setAttrById(out, 'metaDescription', 'content', metaDesc);
+  out = setAttrById(out, 'canonicalUrl',    'href',    pageUrl);
+  out = setAttrById(out, 'ogTitle',         'content', a.meta_title ? titleTag : a.title);
+  out = setAttrById(out, 'ogDescription',   'content', metaDesc);
+  out = setAttrById(out, 'ogImage',         'content', image);
+  out = setAttrById(out, 'ogUrl',           'content', pageUrl);
+  out = setScriptContentById(out, 'articleJsonLd',    buildArticleJsonLd(a, titleTag, metaDesc, pageUrl));
+  out = setScriptContentById(out, 'breadcrumbJsonLd', buildArticleBreadcrumbJsonLd(a, pageUrl));
+  return out;
+}
+
+const SUPABASE_ANON_KEY_FOR_ARTICLES = SUPABASE_ANON_KEY; // same public key; RLS limits reads to status='published'
+const _articleCache = new Map();
+
+async function lookupArticle(slug) {
+  const cached = _articleCache.get(slug);
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.a;
+
+  const res = await fetch(
+    SUPABASE_URL + '/rest/v1/articles?select=slug,title,excerpt,body_html,cover_image_url,meta_title,meta_description,published_at,updated_at,created_at&status=eq.published&slug=eq.' + encodeURIComponent(slug) + '&limit=1',
+    { headers: { apikey: SUPABASE_ANON_KEY_FOR_ARTICLES, Authorization: 'Bearer ' + SUPABASE_ANON_KEY_FOR_ARTICLES } }
+  );
+  if (!res.ok) throw new Error('Supabase ' + res.status);
+  const rows = await res.json();
+  const article = rows[0] || null;
+
+  _articleCache.set(slug, { a: article, at: Date.now() });
+  return article;
+}
+
 /* ── product lookup ──────────────────────────────────────────── */
 
 // Warm-lambda cache. Only name/description/overview/image are used here
@@ -316,6 +418,35 @@ async function lookupProduct(item) {
 /* ── handler ─────────────────────────────────────────────────── */
 
 module.exports = async (req, res) => {
+  const url = new URL(req.url, 'https://www.roomreadysupply.com');
+  const isArticleRoute = url.pathname === '/blog/post' || url.searchParams.has('slug');
+
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+
+  if (isArticleRoute) {
+    let articleShell;
+    try {
+      articleShell = loadArticleShell();
+    } catch (err) {
+      console.error('[product-meta] FATAL, cannot read article shell:', err.message);
+      res.status(500).send('Article temporarily unavailable.');
+      return;
+    }
+    try {
+      const slug = (url.searchParams.get('slug') || '').trim();
+      if (!slug) { res.status(200).send(articleShell); return; }
+
+      const article = await lookupArticle(slug);
+      if (!article) { res.status(200).send(articleShell); return; }
+
+      res.status(200).send(injectArticleMeta(articleShell, article));
+    } catch (err) {
+      console.error('[product-meta] falling back to plain article shell:', err.message);
+      res.status(200).send(articleShell);
+    }
+    return;
+  }
+
   let shell;
   try {
     shell = loadShell();
@@ -327,10 +458,7 @@ module.exports = async (req, res) => {
     return;
   }
 
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-
   try {
-    const url = new URL(req.url, 'https://www.roomreadysupply.com');
     const item = (url.searchParams.get('item') || '').trim();
     if (!item) { res.status(200).send(shell); return; }
 
@@ -356,3 +484,7 @@ module.exports.buildProductJsonLd  = buildProductJsonLd;
 module.exports.buildBreadcrumbJsonLd = buildBreadcrumbJsonLd;
 module.exports.slugify             = slugify;
 module.exports.lookupProduct       = lookupProduct;
+module.exports.injectArticleMeta   = injectArticleMeta;
+module.exports.buildArticleJsonLd  = buildArticleJsonLd;
+module.exports.buildArticleMetaDesc = buildArticleMetaDesc;
+module.exports.lookupArticle       = lookupArticle;
