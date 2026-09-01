@@ -227,7 +227,9 @@
 <!-- Shop by Category ---------------------------------------------
      Gives buyers a route in by what they actually need, and gives
      Google real internal links into each category landing page
-     instead of one undifferentiated catalog URL. -->
+     instead of one undifferentiated catalog URL. Real anchor tags
+     throughout (not JS-only click handlers) so this stays fully
+     crawlable regardless of the carousel behavior layered on top. -->
 <section class="cat-nav-section">
   <div class="container">
     <div class="section-heading">
@@ -236,62 +238,206 @@
       <p>Wholesale hospitality supplies by the case, with volume pricing at 6 and 30 cases.</p>
     </div>
 
-    <div class="cat-nav-grid">
-      <a href="/category/bed-sheets-linens" class="cat-nav-card">
-        <h3>Bed Sheets &amp; Linens</h3>
-        <p>Flat, fitted and pillowcases in T-180, T-200, T-250 and microfiber</p>
-      </a>
-      <a href="/category/towels" class="cat-nav-card">
-        <h3>Towels</h3>
-        <p>Bath, hand and wash cloths in economy, premium and luxury cotton</p>
-      </a>
-      <a href="/category/paper-products" class="cat-nav-card">
-        <h3>Paper Products</h3>
-        <p>Bath tissue, kitchen roll, multifold and hardwound towels</p>
-      </a>
-      <a href="/category/cleaning-chemicals" class="cat-nav-card">
-        <h3>Cleaning Chemicals</h3>
-        <p>EPA-registered disinfectants, bleach, glass cleaner and detergents</p>
-      </a>
-      <a href="/category/pillows-mattress-protectors" class="cat-nav-card">
-        <h3>Pillows &amp; Mattress Protectors</h3>
-        <p>Waterproof protectors and poly-fill pillows in every bed size</p>
-      </a>
-      <a href="/category/trash-liners-can-liners" class="cat-nav-card">
-        <h3>Trash Liners &amp; Can Liners</h3>
-        <p>Low density, high density and heavy-gauge recycled resin</p>
-      </a>
-      <a href="/category/gloves-ppe" class="cat-nav-card">
-        <h3>Gloves &amp; PPE</h3>
-        <p>Powder-free nitrile gloves, standard and exam grade</p>
-      </a>
-      <a href="/category/guest-amenities" class="cat-nav-card">
-        <h3>Guest Amenities</h3>
-        <p>Soap bars, shampoo, conditioner, body wash and lotion</p>
-      </a>
-      <a href="/category/laundry-cleaning-chemicals" class="cat-nav-card">
-        <h3>Laundry &amp; Cleaning Chemicals</h3>
-        <p>Commercial detergent, bleach, fabric softener and stain treatment</p>
-      </a>
+    <div class="cat-carousel">
+      <button class="cat-carousel-arrow left" aria-label="Scroll categories left" type="button">&#8249;</button>
+
+      <div class="cat-carousel-track" id="catCarouselTrack">
+        <a href="/category/bed-sheets-linens" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260980/mfqflat.png" alt="Bed Sheets & Linens" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Bed Sheets &amp; Linens</h3>
+            <p>Flat, fitted and pillowcases in T-180, T-200, T-250 and microfiber</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/towels" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260974/ebathtowel.png" alt="Towels" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Towels</h3>
+            <p>Bath, hand and wash cloths in economy, premium and luxury cotton</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/paper-products" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/green-heritage-pro-2-ply-bathroom-tissue.jpg" alt="Paper Products" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Paper Products</h3>
+            <p>Bath tissue, kitchen roll, multifold and hardwound towels</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/cleaning-chemicals" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/cloroxprotm-pine-sol-multi-surface-cleaner.jpg" alt="Cleaning Chemicals" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Cleaning Chemicals</h3>
+            <p>EPA-registered disinfectants, bleach, glass cleaner and detergents</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/pillows-mattress-protectors" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260975/pillows.png" alt="Pillows & Mattress Protectors" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Pillows &amp; Mattress Protectors</h3>
+            <p>Waterproof protectors and poly-fill pillows in every bed size</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/trash-liners-can-liners" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/napco-black-heavy-duty-municipal-liners.jpg" alt="Trash Liners & Can Liners" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Trash Liners &amp; Can Liners</h3>
+            <p>Low density, high density and heavy-gauge recycled resin</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/gloves-ppe" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/empresstm-blue-nitrile-powder-free-gloves.jpg" alt="Gloves & PPE" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Gloves &amp; PPE</h3>
+            <p>Powder-free nitrile gloves, standard and exam grade</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/guest-amenities" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1787087610/dovvebarsoap.png" alt="Guest Amenities" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Guest Amenities</h3>
+            <p>Soap bars, shampoo, conditioner, body wash and lotion</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+        <a href="/category/laundry-cleaning-chemicals" class="cat-carousel-card">
+          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1787336496/LD_grnwoxi_tbf.png" alt="Laundry & Cleaning Chemicals" loading="lazy"></div>
+          <div class="cat-carousel-body">
+            <h3>Laundry &amp; Cleaning Chemicals</h3>
+            <p>Commercial detergent, bleach, fabric softener and stain treatment</p>
+            <span class="cat-carousel-cta">Shop Now <span aria-hidden="true">&rarr;</span></span>
+          </div>
+        </a>
+      </div>
+
+      <button class="cat-carousel-arrow right" aria-label="Scroll categories right" type="button">&#8250;</button>
     </div>
+
+    <div class="cat-carousel-dots" id="catCarouselDots" aria-hidden="true"></div>
   </div>
 </section>
 
 <style>
   .cat-nav-section { padding: 56px 0 64px; background: #f6f9fc; }
-  .cat-nav-grid {
-    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 16px; max-width: 1180px; margin: 30px auto 0; padding: 0 24px;
+
+  .cat-carousel { position: relative; max-width: 1180px; margin: 30px auto 0; padding: 0 24px; }
+
+  .cat-carousel-track {
+    display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 4px 2px 10px; scrollbar-width: none;
   }
-  .cat-nav-card {
-    display: block; background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
-    padding: 20px 22px; text-decoration: none;
-    transition: border-color .15s, box-shadow .15s, transform .15s;
+  .cat-carousel-track::-webkit-scrollbar { display: none; }
+
+  .cat-carousel-card {
+    flex: 0 0 240px; scroll-snap-align: start;
+    display: flex; flex-direction: column; background: #fff;
+    border: 1.5px solid #e2e8f0; border-radius: 16px; overflow: hidden;
+    text-decoration: none; transition: border-color .18s, box-shadow .18s, transform .18s;
   }
-  .cat-nav-card:hover { border-color: #ED7226; box-shadow: 0 8px 24px rgba(11,31,56,.09); transform: translateY(-2px); }
-  .cat-nav-card h3 { font-size: 15.5px; font-weight: 800; color: #0B1F38; margin: 0 0 6px; }
-  .cat-nav-card p  { font-size: 13px; color: #5B6C7E; line-height: 1.55; margin: 0; }
+  .cat-carousel-card:hover, .cat-carousel-card:focus-visible {
+    border-color: #ED7226; box-shadow: 0 12px 28px rgba(11,31,56,.12); transform: translateY(-4px);
+  }
+  .cat-carousel-card:hover .cat-carousel-img img { transform: scale(1.06); }
+
+  .cat-carousel-img { width: 100%; height: 150px; overflow: hidden; background: #f6f9fc; }
+  .cat-carousel-img img {
+    width: 100%; height: 100%; object-fit: contain; padding: 14px;
+    transition: transform .35s ease;
+  }
+
+  .cat-carousel-body { padding: 16px 18px 20px; display: flex; flex-direction: column; flex: 1; }
+  .cat-carousel-card h3 { font-size: 15px; font-weight: 800; color: #0B1F38; margin: 0 0 6px; }
+  .cat-carousel-card p  { font-size: 12.5px; color: #5B6C7E; line-height: 1.5; margin: 0 0 14px; flex: 1; }
+  .cat-carousel-cta {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 12.5px; font-weight: 800; color: #ED7226;
+  }
+  .cat-carousel-cta span { transition: transform .18s ease; }
+  .cat-carousel-card:hover .cat-carousel-cta span { transform: translateX(3px); }
+
+  .cat-carousel-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid #e2e8f0;
+    background: #fff; color: #0B1F38; font-size: 22px; line-height: 1; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 18px rgba(11,31,56,.1); z-index: 2;
+    transition: border-color .15s, color .15s, box-shadow .15s;
+  }
+  .cat-carousel-arrow:hover { border-color: #ED7226; color: #ED7226; }
+  .cat-carousel-arrow.left  { left: -6px; }
+  .cat-carousel-arrow.right { right: -6px; }
+  .cat-carousel-arrow[disabled] { opacity: .35; cursor: default; box-shadow: none; }
+  .cat-carousel-arrow[disabled]:hover { border-color: #e2e8f0; color: #0B1F38; }
+
+  .cat-carousel-dots {
+    display: flex; justify-content: center; gap: 7px; margin-top: 16px;
+  }
+  .cat-carousel-dots .dot {
+    width: 7px; height: 7px; border-radius: 50%; background: #d7dee8;
+    cursor: pointer; padding: 0; border: none; transition: background .15s, width .15s;
+  }
+  .cat-carousel-dots .dot.active { background: #ED7226; width: 20px; border-radius: 4px; }
+
+  @media (max-width: 640px) {
+    .cat-carousel-arrow { display: none; }
+    .cat-carousel-card { flex-basis: 200px; }
+  }
 </style>
+
+<script>
+  // Real <a> cards in a scroll-snap track -- crawlable and keyboard/touch
+  // usable with zero JS, the arrows/dots are pure enhancement on top.
+  (function () {
+    const track = document.getElementById('catCarouselTrack');
+    const dotsWrap = document.getElementById('catCarouselDots');
+    if (!track || !dotsWrap) return;
+
+    const cards = Array.from(track.children);
+    const leftBtn = document.querySelector('.cat-carousel-arrow.left');
+    const rightBtn = document.querySelector('.cat-carousel-arrow.right');
+
+    dotsWrap.innerHTML = cards.map((_, i) =>
+      '<button class="dot' + (i === 0 ? ' active' : '') + '" data-i="' + i + '" aria-label="Go to category ' + (i + 1) + '"></button>'
+    ).join('');
+    const dots = Array.from(dotsWrap.children);
+
+    function cardStep() {
+      const card = cards[0];
+      const style = getComputedStyle(track);
+      const gap = parseFloat(style.columnGap || style.gap || '18');
+      return card.getBoundingClientRect().width + gap;
+    }
+
+    function updateUI() {
+      const maxScroll = track.scrollWidth - track.clientWidth - 2;
+      if (leftBtn) leftBtn.disabled = track.scrollLeft <= 2;
+      if (rightBtn) rightBtn.disabled = track.scrollLeft >= maxScroll;
+
+      const idx = Math.round(track.scrollLeft / cardStep());
+      dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+    }
+
+    leftBtn?.addEventListener('click', () => track.scrollBy({ left: -cardStep() * 2, behavior: 'smooth' }));
+    rightBtn?.addEventListener('click', () => track.scrollBy({ left: cardStep() * 2, behavior: 'smooth' }));
+    dots.forEach(d => d.addEventListener('click', () => {
+      track.scrollTo({ left: cardStep() * Number(d.dataset.i), behavior: 'smooth' });
+    }));
+
+    let raf = null;
+    track.addEventListener('scroll', () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(updateUI);
+    }, { passive: true });
+    window.addEventListener('resize', updateUI);
+    updateUI();
+  })();
+</script>
 
 <section class="serve-section">
 
