@@ -1434,32 +1434,38 @@
 
     <!-- EMAIL TEMPLATES MODAL -->
     <div id="emailTemplatesModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:640px">
-        <div class="a-modal-header">
-          <h3>Email Templates</h3>
+      <div class="a-modal camp-modal" style="max-width:660px">
+        <div class="camp-modal-header">
+          <span class="camp-modal-icon">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          </span>
+          <div class="camp-modal-headtext">
+            <h3>Email Templates</h3>
+            <p>Reusable subject &amp; body pairs you can drop straight into any campaign send.</p>
+          </div>
           <button class="a-modal-close" onclick="closeModal('emailTemplatesModal')">&times;</button>
         </div>
         <div class="a-modal-body">
-          <div id="emailTemplateList" class="tkt-teamlist" style="margin-bottom:20px"></div>
-          <div class="tkt-teamdivider"><span id="tplFormTitle">New Template</span></div>
+          <div id="emailTemplateList" class="camp-listbox"></div>
+          <div class="camp-formdivider"><span id="tplFormTitle">New Template</span></div>
           <input type="hidden" id="tplEditId">
-          <div class="cms-form-group">
-            <label class="cms-label">Template Name</label>
-            <input id="tplName" class="a-input" placeholder="e.g. Monthly Restock Reminder">
+          <div class="camp-field">
+            <span class="camp-field-label">Template Name</span>
+            <input id="tplName" class="camp-input" placeholder="e.g. Monthly Restock Reminder">
           </div>
-          <div class="cms-form-group">
-            <label class="cms-label">Subject Line</label>
-            <input id="tplSubject" class="a-input" placeholder="e.g. Time to restock — 10% off this week">
+          <div class="camp-field">
+            <span class="camp-field-label">Subject Line</span>
+            <input id="tplSubject" class="camp-input" placeholder="e.g. Time to restock — 10% off this week">
           </div>
-          <div class="cms-form-group" style="margin-bottom:0">
-            <label class="cms-label">Body (HTML) <span class="cms-label-hint">plain text works too — line breaks aren't preserved in HTML email, so wrap paragraphs in &lt;p&gt; tags</span></label>
-            <textarea id="tplBody" class="a-input" rows="8" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi there,</p><p>...</p>"></textarea>
+          <div class="camp-field">
+            <span class="camp-field-label">Body (HTML) <span class="camp-field-hint">plain text works too — wrap paragraphs in &lt;p&gt; tags</span></span>
+            <textarea id="tplBody" class="camp-input camp-textarea camp-mono" rows="8" placeholder="<p>Hi there,</p><p>...</p>"></textarea>
           </div>
-          <p id="tplError" class="tkt-formerror" style="display:none"></p>
+          <p id="tplError" class="camp-formerror" style="display:none"></p>
         </div>
         <div class="a-modal-footer">
-          <button class="a-btn-secondary" id="tplCancelBtn" style="display:none" onclick="resetTemplateForm()">Cancel Edit</button>
-          <button class="a-btn-primary" id="tplSaveBtn" onclick="saveEmailTemplate()">Save Template</button>
+          <button class="camp-btn camp-btn-ghost" id="tplCancelBtn" style="display:none" onclick="resetTemplateForm()">Cancel Edit</button>
+          <button class="camp-btn camp-btn-primary" id="tplSaveBtn" onclick="saveEmailTemplate()">Save Template</button>
         </div>
       </div>
     </div>
@@ -1489,74 +1495,91 @@
 
     <!-- SCHEDULE SEND MODAL -->
     <div id="scheduleSendModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:420px">
-        <div class="a-modal-header">
-          <h3>Schedule Send</h3>
+      <div class="a-modal camp-modal" style="max-width:440px">
+        <div class="camp-modal-header">
+          <span class="camp-modal-icon camp-modal-icon-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+          </span>
+          <div class="camp-modal-headtext">
+            <h3>Schedule Send</h3>
+            <p>Pick a future date and time to send this email.</p>
+          </div>
           <button class="a-modal-close" onclick="closeModal('scheduleSendModal')">&times;</button>
         </div>
         <div class="a-modal-body">
           <input type="hidden" id="schedSendCampId">
           <input type="hidden" id="schedSendSubject">
           <input type="hidden" id="schedSendBody">
-          <div class="cms-form-group" style="margin-bottom:0">
-            <label class="cms-label">Send At</label>
-            <input type="datetime-local" id="schedSendAt" class="a-input">
+          <div class="camp-field" style="margin-bottom:0">
+            <span class="camp-field-label">Send At</span>
+            <input type="datetime-local" id="schedSendAt" class="camp-input">
           </div>
-          <p style="font-size:12px;color:#94a3b8;margin:10px 0 0">Checked once a day and sent to whoever matches this campaign's segment at that time &mdash; not necessarily the same recipients as right now.</p>
+          <p class="camp-modal-note">Checked once a day and sent to whoever matches this campaign's segment at that time &mdash; not necessarily the same recipients as right now.</p>
         </div>
         <div class="a-modal-footer">
-          <button class="a-btn-secondary" onclick="closeModal('scheduleSendModal')">Cancel</button>
-          <button class="a-btn-primary" onclick="confirmScheduleSend()">Schedule</button>
+          <button class="camp-btn camp-btn-ghost" onclick="closeModal('scheduleSendModal')">Cancel</button>
+          <button class="camp-btn camp-btn-primary" onclick="confirmScheduleSend()">Schedule</button>
         </div>
       </div>
     </div>
 
     <!-- AUTOMATIONS MODAL -->
     <div id="automationsModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:640px">
-        <div class="a-modal-header">
-          <h3>Automations</h3>
+      <div class="a-modal camp-modal" style="max-width:660px">
+        <div class="camp-modal-header">
+          <span class="camp-modal-icon camp-modal-icon-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
+          </span>
+          <div class="camp-modal-headtext">
+            <h3>Automations</h3>
+            <p>Trigger &rarr; delay &rarr; email, sent automatically once a day.</p>
+          </div>
           <button class="a-modal-close" onclick="closeModal('automationsModal')">&times;</button>
         </div>
         <div class="a-modal-body">
-          <p style="font-size:12.5px;color:#64748b;margin:0 0 16px">A trigger &mdash; delay &mdash; email sequence, sent automatically once a day. Two triggers: a new lead comes in, or a quote sits with no order past a set number of days.</p>
-          <div id="automationList" class="tkt-teamlist" style="margin-bottom:20px"></div>
-          <div class="tkt-teamdivider"><span id="autoFormTitle">New Automation</span></div>
+          <div id="automationList" class="camp-listbox"></div>
+          <div class="camp-formdivider"><span id="autoFormTitle">New Automation</span></div>
           <input type="hidden" id="autoEditId">
-          <div class="cms-form-group">
-            <label class="cms-label">Name</label>
-            <input id="autoName" class="a-input" placeholder="e.g. New Lead Welcome">
+          <div class="camp-field">
+            <span class="camp-field-label">Name</span>
+            <input id="autoName" class="camp-input" placeholder="e.g. New Lead Welcome">
           </div>
-          <div class="tkt-form-row">
-            <div class="cms-form-group">
-              <label class="cms-label">Trigger</label>
-              <select id="autoTriggerType" class="a-input" onchange="toggleAutoStaleField()">
+          <div class="camp-fieldgrid camp-fieldgrid-2">
+            <div class="camp-field">
+              <span class="camp-field-label">Trigger</span>
+              <select id="autoTriggerType" class="camp-select" onchange="toggleAutoStaleField()">
                 <option value="crm_lead_created">New lead created</option>
                 <option value="quote_stale">Quote sent, no order yet</option>
               </select>
             </div>
-            <div class="cms-form-group" id="autoStaleWrap" style="display:none">
-              <label class="cms-label">Stale After (days)</label>
-              <input id="autoStaleAfterDays" type="number" min="1" value="5" class="a-input">
+            <div class="camp-field" id="autoStaleWrap" style="display:none">
+              <span class="camp-field-label">Stale After (days)</span>
+              <input id="autoStaleAfterDays" type="number" min="1" value="5" class="camp-input">
             </div>
           </div>
-          <div class="cms-form-group">
-            <label class="cms-label">Send Delay (days) <span class="cms-label-hint">0 = as soon as it triggers</span></label>
-            <input id="autoDelayDays" type="number" min="0" value="0" class="a-input">
+          <div class="camp-field">
+            <span class="camp-field-label">Send Delay (days) <span class="camp-field-hint">0 = as soon as it triggers</span></span>
+            <input id="autoDelayDays" type="number" min="0" value="0" class="camp-input">
           </div>
-          <div class="cms-form-group">
-            <label class="cms-label">Subject Line <span class="cms-label-hint">supports {{business_name}}, {{contact_name}}, {{first_name}}</span></label>
-            <input id="autoSubject" class="a-input" placeholder="e.g. Welcome to Room Ready Supply, {{first_name}}">
+          <div class="camp-field">
+            <span class="camp-field-label">Subject Line</span>
+            <input id="autoSubject" class="camp-input" placeholder="e.g. Welcome to Room Ready Supply, {{first_name}}">
           </div>
-          <div class="cms-form-group" style="margin-bottom:0">
-            <label class="cms-label">Body (HTML)</label>
-            <textarea id="autoBodyHtml" class="a-input" rows="6" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi {{first_name}},</p>..."></textarea>
+          <div class="camp-field">
+            <span class="camp-field-label">Body (HTML)</span>
+            <textarea id="autoBodyHtml" class="camp-input camp-textarea camp-mono" rows="6" placeholder="<p>Hi {{first_name}},</p>..."></textarea>
           </div>
-          <p id="autoError" class="tkt-formerror" style="display:none"></p>
+          <div class="camp-mergefields">
+            <span class="camp-mergefields-label">Merge fields</span>
+            <code class="camp-mergefield">{{business_name}}</code>
+            <code class="camp-mergefield">{{contact_name}}</code>
+            <code class="camp-mergefield">{{first_name}}</code>
+          </div>
+          <p id="autoError" class="camp-formerror" style="display:none"></p>
         </div>
         <div class="a-modal-footer">
-          <button class="a-btn-secondary" id="autoCancelBtn" style="display:none" onclick="resetAutomationForm()">Cancel Edit</button>
-          <button class="a-btn-primary" id="autoSaveBtn" onclick="saveAutomation()">Save Automation</button>
+          <button class="camp-btn camp-btn-ghost" id="autoCancelBtn" style="display:none" onclick="resetAutomationForm()">Cancel Edit</button>
+          <button class="camp-btn camp-btn-primary" id="autoSaveBtn" onclick="saveAutomation()">Save Automation</button>
         </div>
       </div>
     </div>
@@ -2778,7 +2801,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=83"></script>
+<script src="admin.js?v=84"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

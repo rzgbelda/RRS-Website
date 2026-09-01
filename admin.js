@@ -4336,28 +4336,39 @@ async function renderCampaignsTab() {
   _camp.campaigns = data || [];
 
   panel.innerHTML = `
-    <div class="tkt-header">
+   <div class="camp-page">
+    <div class="camp-header">
       <div>
-        <h1 class="a-page-title">Campaigns</h1>
-        <p class="a-page-sub">Plan, schedule, and send marketing campaigns — linked to real products and promotions.</p>
+        <h1 class="camp-title">Campaigns</h1>
+        <p class="camp-subtitle">Plan, schedule, and send marketing campaigns — linked to real products and promotions.</p>
       </div>
-      <div class="tkt-header-actions">
-        <button class="a-btn-secondary" onclick="openAutomationsModal()">Automations</button>
-        <button class="a-btn-secondary" onclick="openEmailTemplatesModal()">Email Templates</button>
-        <button class="a-btn-primary" onclick="createNewCampaign()">+ New Campaign</button>
+      <div class="camp-header-actions">
+        <button class="camp-btn camp-btn-ghost" onclick="openAutomationsModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/></svg>
+          Automations
+        </button>
+        <button class="camp-btn camp-btn-ghost" onclick="openEmailTemplatesModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+          Email Templates
+        </button>
+        <button class="camp-btn camp-btn-primary" onclick="createNewCampaign()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          New Campaign
+        </button>
       </div>
     </div>
 
-    <div class="tkt-statstrip" id="campStats"></div>
+    <div class="camp-statstrip" id="campStats"></div>
 
-    <div class="tkt-filterbar">
-      <div class="tkt-search">
+    <div class="camp-filterbar">
+      <div class="camp-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="campSearch" type="text" placeholder="Search campaigns…" value="${escHtml(_camp.filters.q)}" oninput="setCampFilter('q', this.value)">
       </div>
     </div>
 
     <div id="campBoardWrap"></div>
+   </div>
   `;
 
   renderCampStats();
@@ -4369,7 +4380,7 @@ function renderCampStats() {
   if (!el) return;
   el.innerHTML = CAMP_STATUS.map(col => {
     const n = _camp.campaigns.filter(c => c.status === col.key).length;
-    return `<div class="tkt-stat tkt-stat-camp-${col.key}"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
+    return `<div class="camp-stat camp-stat-${col.key}"><span class="camp-stat-n">${n}</span><span class="camp-stat-l">${escHtml(col.label)}</span></div>`;
   }).join("");
 }
 
@@ -4390,60 +4401,69 @@ function renderCampBoard() {
   const visible = campVisible();
 
   if (!_camp.campaigns.length) {
-    wrap.innerHTML = `<div class="tkt-empty">
-      <div class="tkt-empty-icon">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
+    wrap.innerHTML = `<div class="camp-empty">
+      <div class="camp-empty-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg>
       </div>
       <h3>No campaigns yet</h3>
       <p>Create your first campaign to start planning and tracking marketing activity.</p>
-      <button class="a-btn-primary" onclick="createNewCampaign()">+ New Campaign</button>
+      <button class="camp-btn camp-btn-primary" onclick="createNewCampaign()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+        New Campaign
+      </button>
     </div>`;
     return;
   }
 
-  wrap.innerHTML = `<div class="tkt-board" style="grid-template-columns:repeat(5, minmax(220px, 1fr))">${CAMP_STATUS.map(col => {
+  wrap.innerHTML = `<div class="camp-board">${CAMP_STATUS.map(col => {
     const items = visible.filter(c => c.status === col.key);
     return `
-      <section class="tkt-col" data-status="${col.key}"
+      <section class="camp-col" data-status="${col.key}"
         ondragover="campDragOver(event)" ondragleave="campDragLeave(event)" ondrop="campDrop(event,'${col.key}')">
-        <header class="tkt-col-head">
-          <span class="tkt-col-dot" style="background:${campDotColor(col.key)}"></span>
-          <span class="tkt-col-title">${escHtml(col.label)}</span>
-          <span class="tkt-col-count">${items.length}</span>
+        <header class="camp-col-head">
+          <span class="camp-col-title">${escHtml(col.label)}</span>
+          <span class="camp-col-count">${items.length}</span>
         </header>
-        <div class="tkt-col-body">
-          ${items.map(campCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
+        <div class="camp-col-body">
+          ${items.map(campCard).join("") || `<div class="camp-col-empty">Nothing here</div>`}
         </div>
       </section>`;
   }).join("")}</div>`;
 }
 
-function campDotColor(status) {
-  return { draft:"#94a3b8", scheduled:"#3b82f6", active:"#22a565", completed:"#0d1f38", archived:"#94739b" }[status] || "#94a3b8";
-}
+const CAMP_TYPE_ICON = {
+  email:         `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>`,
+  social:        `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 10.5 6.8-3.9M8.6 13.5l6.8 3.9"/></svg>`,
+  landing_page:  `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>`,
+  product_promo: `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M20.6 12.9 12.9 20.6a2 2 0 0 1-2.8 0l-8-8a2 2 0 0 1 0-2.8l7.7-7.7a2 2 0 0 1 1.4-.6H19a2 2 0 0 1 2 2v6.6a2 2 0 0 1-.4 1.3Z"/><circle cx="7" cy="7" r="1.4" fill="currentColor" stroke="none"/></svg>`,
+  other:         `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/></svg>`,
+};
 
 function campCard(c) {
   const type = CAMP_TYPES.find(t => t.key === c.campaign_type) || CAMP_TYPES[0];
   const dateRange = [c.start_date, c.end_date].filter(Boolean).map(d => new Date(d + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})).join(" – ");
   return `
-    <article class="tkt-card" draggable="true"
+    <article class="camp-card" data-status="${c.status}" draggable="true"
       ondragstart="campDragStart(event,'${c.id}')" ondragend="campDragEnd(event)"
       onclick="openCampDrawer('${c.id}')">
-      <div class="tkt-card-top">
-        <span class="tkt-type tkt-t-bug">${escHtml(type.label)}</span>
-        ${c.emails_sent ? `<span class="tkt-pri tkt-p-enhancement">${c.emails_sent} sent</span>` : ""}
+      <div class="camp-card-top">
+        <span class="camp-type-chip">${CAMP_TYPE_ICON[c.campaign_type] || CAMP_TYPE_ICON.other}${escHtml(type.label)}</span>
+        ${c.emails_sent ? `<span class="camp-sent-chip">${c.emails_sent} sent</span>` : ""}
       </div>
-      <p class="tkt-card-title">${escHtml(c.name)}</p>
-      ${c.audience_segment ? `<p class="tkt-card-sub">${escHtml(c.audience_segment)}</p>` : ""}
-      <div class="tkt-card-foot">
-        <span class="tkt-chip">${dateRange ? escHtml(dateRange) : "No dates set"}</span>
+      <p class="camp-card-title">${escHtml(c.name)}</p>
+      ${c.audience_segment ? `<p class="camp-card-sub">${escHtml(c.audience_segment)}</p>` : ""}
+      <div class="camp-card-foot">
+        <span class="camp-date-chip">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+          ${dateRange ? escHtml(dateRange) : "No dates set"}
+        </span>
       </div>
     </article>`;
 }
 
 let _campDragId = null;
 function campDragStart(e, id) { _campDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
-function campDragEnd(e)       { _campDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
+function campDragEnd(e)       { _campDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".camp-col.over").forEach(c => c.classList.remove("over")); }
 function campDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
 function campDragLeave(e)     { e.currentTarget.classList.remove("over"); }
 async function campDrop(e, status) {
@@ -4494,174 +4514,176 @@ async function openCampDrawer(id) {
   _camp._templates = templates || [];
 
   body.innerHTML = `
-    <header class="tkt-dr-head">
-      <div class="tkt-dr-headtop">
-        <span class="tkt-num tkt-num-lg">Campaign</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="tkt-iconbtn" title="Delete campaign" onclick="deleteCampaign('${c.id}')">
+   <div class="camp-dr">
+    <header class="camp-dr-head">
+      <div class="camp-dr-headtop">
+        <span class="camp-dr-eyebrow">Campaign</span>
+        <div class="camp-dr-headbtns">
+          <button class="camp-iconbtn camp-iconbtn-danger" title="Delete campaign" onclick="deleteCampaign('${c.id}')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
-          <button class="tkt-iconbtn" title="Close" onclick="closeCampDrawer(true)">
+          <button class="camp-iconbtn" title="Close" onclick="closeCampDrawer(true)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>
-      <input id="campNameInput" value="${escHtml(c.name)}" onchange="setCampField('${c.id}','name',this.value); document.getElementById('campNameHeading').textContent=this.value;"
-        style="font-size:19px;font-weight:800;color:#0d1f38;border:none;outline:none;width:100%;padding:0;margin:0 0 12px;font-family:inherit" id="campNameHeading">
-      <div class="tkt-dr-badges">
-        <span class="tkt-status-pill tkt-dotbg-${c.status === "active" ? "customer" : c.status === "completed" ? "done" : "new"}">${escHtml(CAMP_STATUS_LABEL[c.status] || c.status)}</span>
+      <input id="campNameInput" class="camp-dr-nameinput" value="${escHtml(c.name)}" onchange="setCampField('${c.id}','name',this.value); document.getElementById('campNameHeading').textContent=this.value;"
+        id="campNameHeading">
+      <div class="camp-dr-badges">
+        <span class="camp-status-pill camp-status-${c.status}">${escHtml(CAMP_STATUS_LABEL[c.status] || c.status)}</span>
       </div>
     </header>
 
-    <div class="tkt-dr-controls">
-      <label class="tkt-dr-ctl">
-        <span>Status</span>
-        <select class="a-input" onchange="setCampField('${c.id}','status',this.value); renderCampStats(); renderCampBoard();">
+    <div class="camp-dr-controls">
+      <label class="camp-field">
+        <span class="camp-field-label">Status</span>
+        <select class="camp-select" onchange="setCampField('${c.id}','status',this.value); renderCampStats(); renderCampBoard();">
           ${CAMP_STATUS.map(s => `<option value="${s.key}"${c.status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
         </select>
       </label>
-      <label class="tkt-dr-ctl">
-        <span>Type</span>
-        <select class="a-input" onchange="setCampField('${c.id}','campaign_type',this.value)">
+      <label class="camp-field">
+        <span class="camp-field-label">Type</span>
+        <select class="camp-select" onchange="setCampField('${c.id}','campaign_type',this.value)">
           ${CAMP_TYPES.map(t => `<option value="${t.key}"${c.campaign_type===t.key?" selected":""}>${escHtml(t.label)}</option>`).join("")}
         </select>
       </label>
-      <label class="tkt-dr-ctl">
-        <span>Start Date</span>
-        <input class="a-input" type="date" value="${c.start_date || ""}" onchange="setCampField('${c.id}','start_date',this.value || null); renderCampBoard();">
+      <label class="camp-field">
+        <span class="camp-field-label">Start Date</span>
+        <input class="camp-input" type="date" value="${c.start_date || ""}" onchange="setCampField('${c.id}','start_date',this.value || null); renderCampBoard();">
       </label>
-      <label class="tkt-dr-ctl">
-        <span>End Date</span>
-        <input class="a-input" type="date" value="${c.end_date || ""}" onchange="setCampField('${c.id}','end_date',this.value || null); renderCampBoard();">
+      <label class="camp-field">
+        <span class="camp-field-label">End Date</span>
+        <input class="camp-input" type="date" value="${c.end_date || ""}" onchange="setCampField('${c.id}','end_date',this.value || null); renderCampBoard();">
       </label>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>Audience Segment</h4>
-      <p class="tkt-dr-meta" style="margin:0 0 10px">Who this campaign targets — used to build the live recipient list when you send an email below. Leave a filter blank to not narrow by it.</p>
-      <div class="tkt-dr-controls-inset">
-        <label class="tkt-dr-ctl">
-          <span>Customer Type</span>
-          <select id="segCustomerType-${c.id}" onchange="setCampField('${c.id}','segment_customer_type',this.value || null); updateRecipientPreview('${c.id}')">
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg></span>Audience Segment</h4>
+      <p class="camp-dr-hint">Who this campaign targets — used to build the live recipient list when you send an email below. Leave a filter blank to not narrow by it.</p>
+      <div class="camp-fieldgrid">
+        <label class="camp-field">
+          <span class="camp-field-label">Customer Type</span>
+          <select class="camp-select" id="segCustomerType-${c.id}" onchange="setCampField('${c.id}','segment_customer_type',this.value || null); updateRecipientPreview('${c.id}')">
             <option value=""${!c.segment_customer_type?" selected":""}>Any</option>
             ${["Hotel","Motel","Short-Term Rental","Cleaning Company","Restaurant","Campground","RV Park","Facility Manager","Property Manager","Apartment Complex","Student Housing","Senior Living","Other"].map(t => `<option value="${escHtml(t)}"${c.segment_customer_type===t?" selected":""}>${escHtml(t)}</option>`).join("")}
           </select>
         </label>
-        <label class="tkt-dr-ctl">
-          <span>Lead Stage</span>
-          <select id="segLeadStatus-${c.id}" onchange="setCampField('${c.id}','segment_lead_status',this.value || null); updateRecipientPreview('${c.id}')">
+        <label class="camp-field">
+          <span class="camp-field-label">Lead Stage</span>
+          <select class="camp-select" id="segLeadStatus-${c.id}" onchange="setCampField('${c.id}','segment_lead_status',this.value || null); updateRecipientPreview('${c.id}')">
             <option value=""${!c.segment_lead_status?" selected":""}>Any</option>
             ${CRM_STATUS.map(s => `<option value="${s.key}"${c.segment_lead_status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
           </select>
         </label>
-        <label class="tkt-dr-ctl">
-          <span>Lead Source</span>
-          <select id="segLeadSource-${c.id}" onchange="setCampField('${c.id}','segment_lead_source',this.value || null); updateRecipientPreview('${c.id}')">
+        <label class="camp-field">
+          <span class="camp-field-label">Lead Source</span>
+          <select class="camp-select" id="segLeadSource-${c.id}" onchange="setCampField('${c.id}','segment_lead_source',this.value || null); updateRecipientPreview('${c.id}')">
             <option value=""${!c.segment_lead_source?" selected":""}>Any</option>
             ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${c.segment_lead_source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
           </select>
         </label>
-        <label class="tkt-dr-ctl">
-          <span>Tag</span>
-          <input id="segTag-${c.id}" class="a-input" list="crmTagOptions" value="${escHtml(c.segment_tag || "")}" placeholder="Any"
+        <label class="camp-field">
+          <span class="camp-field-label">Tag</span>
+          <input class="camp-input" id="segTag-${c.id}" list="crmTagOptions" value="${escHtml(c.segment_tag || "")}" placeholder="Any"
             onchange="setCampField('${c.id}','segment_tag',this.value.trim() || null); updateRecipientPreview('${c.id}')">
           <datalist id="crmTagOptions">${[...new Set((_crm.leads || []).flatMap(l => l.tags || []))].map(t => `<option value="${escHtml(t)}">`).join("")}</datalist>
         </label>
       </div>
-      <div class="cms-form-group" style="margin-top:10px">
-        <label class="cms-label">Note (shown on the card)</label>
-        <input class="a-input" value="${escHtml(c.audience_segment || "")}" placeholder="e.g. Hotels, New Leads, from Trade Show"
+      <div class="camp-field" style="margin-top:12px">
+        <span class="camp-field-label">Note <span class="camp-field-hint">shown on the card</span></span>
+        <input class="camp-input" value="${escHtml(c.audience_segment || "")}" placeholder="e.g. Hotels, New Leads, from Trade Show"
           onchange="setCampField('${c.id}','audience_segment',this.value || null); renderCampBoard();">
       </div>
-      <span id="recipientPreview-${c.id}" class="tkt-recipient-pill is-loading">Calculating…</span>
+      <span id="recipientPreview-${c.id}" class="camp-recipient-pill is-loading">Calculating…</span>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83A2 2 0 009.59 3.24L4 3a1 1 0 00-1 1l.24 5.59a2 2 0 00.59 1.41l9.58 9.58a2 2 0 002.82 0l4.36-4.36a2 2 0 000-2.81z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg>Linked Product / Promotion</h4>
-      <div class="tkt-dr-controls-inset">
-        <label class="tkt-dr-ctl">
-          <span>Product</span>
-          <select onchange="setCampField('${c.id}','linked_product_sku',this.value || null)">
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83A2 2 0 009.59 3.24L4 3a1 1 0 00-1 1l.24 5.59a2 2 0 00.59 1.41l9.58 9.58a2 2 0 002.82 0l4.36-4.36a2 2 0 000-2.81z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg></span>Linked Product / Promotion</h4>
+      <div class="camp-fieldgrid">
+        <label class="camp-field">
+          <span class="camp-field-label">Product</span>
+          <select class="camp-select" onchange="setCampField('${c.id}','linked_product_sku',this.value || null)">
             <option value="">None</option>
             ${_camp._products.map(p => `<option value="${escHtml(p.sku)}"${c.linked_product_sku===p.sku?" selected":""}>${escHtml(p.name)}</option>`).join("")}
           </select>
         </label>
-        <label class="tkt-dr-ctl">
-          <span>Best Deal</span>
-          <select onchange="setCampField('${c.id}','linked_best_deal_id',this.value || null)">
+        <label class="camp-field">
+          <span class="camp-field-label">Best Deal</span>
+          <select class="camp-select" onchange="setCampField('${c.id}','linked_best_deal_id',this.value || null)">
             <option value="">None</option>
             ${_camp._deals.map(d => `<option value="${d.id}"${c.linked_best_deal_id===d.id?" selected":""}>${escHtml(d.hook_title)}</option>`).join("")}
           </select>
         </label>
-        <label class="tkt-dr-ctl">
-          <span>Mix &amp; Match Group</span>
-          <input value="${escHtml(c.linked_moq_group || "")}" placeholder="e.g. 5GAL-CHEMICALS" onchange="setCampField('${c.id}','linked_moq_group',this.value || null)">
+        <label class="camp-field">
+          <span class="camp-field-label">Mix &amp; Match Group</span>
+          <input class="camp-input" value="${escHtml(c.linked_moq_group || "")}" placeholder="e.g. 5GAL-CHEMICALS" onchange="setCampField('${c.id}','linked_moq_group',this.value || null)">
         </label>
       </div>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>Content Calendar</h4>
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg></span>Content Calendar</h4>
       <div id="campContentList-${c.id}">${renderCampContentListHtml(content || [])}</div>
-      <div class="tkt-cc-add">
-        <input type="date" id="ccDate-${c.id}" class="a-input">
-        <select id="ccType-${c.id}" class="a-input">
+      <div class="camp-cc-add">
+        <input type="date" id="ccDate-${c.id}" class="camp-input">
+        <select id="ccType-${c.id}" class="camp-select">
           ${CAMP_CONTENT_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
         </select>
-        <input type="text" id="ccTitle-${c.id}" class="a-input" placeholder="What's scheduled…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCampContentItem('${c.id}');}">
-        <button class="a-btn-primary" onclick="addCampContentItem('${c.id}')">+ Add</button>
+        <input type="text" id="ccTitle-${c.id}" class="camp-input" placeholder="What's scheduled…" onkeydown="if(event.key==='Enter'){event.preventDefault();addCampContentItem('${c.id}');}">
+        <button class="camp-btn camp-btn-primary" onclick="addCampContentItem('${c.id}')">Add</button>
       </div>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4.5 17a2 2 0 001.8 3h11.4a2 2 0 001.8-3L15 8V2M9 2h6M8 15h8"/></svg>A/B Testing &amp; Notes</h4>
-      <textarea class="a-input" rows="3" placeholder="Subject lines tried, offers tested, what won…" onchange="setCampField('${c.id}','notes',this.value || null)">${escHtml(c.notes || "")}</textarea>
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 2v6L4.5 17a2 2 0 001.8 3h11.4a2 2 0 001.8-3L15 8V2M9 2h6M8 15h8"/></svg></span>A/B Testing &amp; Notes</h4>
+      <textarea class="camp-input camp-textarea" rows="3" placeholder="Subject lines tried, offers tested, what won…" onchange="setCampField('${c.id}','notes',this.value || null)">${escHtml(c.notes || "")}</textarea>
     </div>
 
-    <div class="tkt-dr-section tkt-send-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send Campaign Email</h4>
-      <div class="cms-form-group">
-        <label class="cms-label">Template</label>
-        <select class="a-input" id="sendTplSelect-${c.id}" onchange="onSendTemplateChange('${c.id}')">
+    <div class="camp-dr-section camp-send-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon camp-dr-h4-icon-accent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></span>Send Campaign Email</h4>
+      <div class="camp-field">
+        <span class="camp-field-label">Template</span>
+        <select class="camp-select" id="sendTplSelect-${c.id}" onchange="onSendTemplateChange('${c.id}')">
           <option value="">— Write inline —</option>
           ${_camp._templates.map(t => `<option value="${t.id}">${escHtml(t.name)}</option>`).join("")}
         </select>
       </div>
-      <div class="cms-form-group">
-        <label class="cms-label">Subject</label>
-        <input class="a-input" id="sendSubject-${c.id}" placeholder="Subject line">
+      <div class="camp-field">
+        <span class="camp-field-label">Subject</span>
+        <input class="camp-input" id="sendSubject-${c.id}" placeholder="Subject line">
       </div>
-      <div class="cms-form-group" style="margin-bottom:0">
-        <label class="cms-label">Body (HTML)</label>
-        <textarea class="a-input" id="sendBody-${c.id}" rows="6" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi there,</p>..."></textarea>
+      <div class="camp-field">
+        <span class="camp-field-label">Body (HTML)</span>
+        <textarea class="camp-input camp-textarea camp-mono" id="sendBody-${c.id}" rows="6" placeholder="<p>Hi there,</p>..."></textarea>
       </div>
-      <div class="cms-form-group" style="display:flex;align-items:center;gap:8px">
-        <input type="email" class="a-input" id="testEmailInput-${c.id}" placeholder="you@roomreadysupply.com" style="flex:1">
-        <button class="a-btn-secondary" onclick="sendCampaignTestEmail('${c.id}')" id="testCampBtn-${c.id}" style="white-space:nowrap">Send Test</button>
+      <div class="camp-testrow">
+        <input type="email" class="camp-input" id="testEmailInput-${c.id}" placeholder="you@roomreadysupply.com">
+        <button class="camp-btn camp-btn-ghost" onclick="sendCampaignTestEmail('${c.id}')" id="testCampBtn-${c.id}">Send Test</button>
       </div>
-      <p id="sendError-${c.id}" class="tkt-formerror" style="display:none"></p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="a-btn-primary tkt-send-btn" onclick="sendCampaignEmail('${c.id}')" id="sendCampBtn-${c.id}">
+      <p id="sendError-${c.id}" class="camp-formerror" style="display:none"></p>
+      <div class="camp-sendrow">
+        <button class="camp-btn camp-btn-primary camp-btn-lg" onclick="sendCampaignEmail('${c.id}')" id="sendCampBtn-${c.id}">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
           Send to Segment Now
         </button>
-        <button class="a-btn-secondary" onclick="openScheduleSendModal('${c.id}')" id="scheduleCampBtn-${c.id}">
+        <button class="camp-btn camp-btn-ghost" onclick="openScheduleSendModal('${c.id}')" id="scheduleCampBtn-${c.id}">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
           Schedule for Later
         </button>
       </div>
-      <div id="scheduledSendStatus-${c.id}" style="margin-top:8px"></div>
-      ${c.emails_sent ? `<p class="tkt-dr-meta">Last sent ${fmt(c.last_sent_at)} — ${c.emails_sent} email${c.emails_sent===1?"":"s"} total.</p>` : ""}
+      <div id="scheduledSendStatus-${c.id}" style="margin-top:10px"></div>
+      ${c.emails_sent ? `<p class="camp-dr-hint" style="margin-top:10px">Last sent ${fmt(c.last_sent_at)} — ${c.emails_sent} email${c.emails_sent===1?"":"s"} total.</p>` : ""}
     </div>
 
-    <div class="tkt-dr-section">
-      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Email Performance</h4>
-      <div id="campMetrics-${c.id}"><p class="tkt-dr-meta">Loading…</p></div>
+    <div class="camp-dr-section">
+      <h4 class="camp-dr-h4"><span class="camp-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span>Email Performance</h4>
+      <div id="campMetrics-${c.id}"><p class="camp-dr-hint">Loading…</p></div>
     </div>
 
-    <div class="tkt-dr-section tkt-dr-facts">
-      <div><span>Created</span><strong>${fmt(c.created_at)}</strong></div>
+    <div class="camp-dr-facts">
+      <span>Created</span><strong>${fmt(c.created_at)}</strong>
     </div>
+   </div>
   `;
   renderCampMetrics(c.id);
   renderScheduledSendStatus(c.id);
@@ -4694,14 +4716,14 @@ async function deleteCampaign(id) {
 /* ── Content calendar ─────────────────────────────────────────── */
 
 function renderCampContentListHtml(items) {
-  if (!items.length) return `<p class="tkt-dr-meta" style="margin:0">Nothing scheduled yet.</p>`;
-  return items.map(i => `
-    <div class="tkt-cc-row">
-      <span class="tkt-cc-date">${new Date(i.scheduled_date + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
-      <span class="tkt-cc-type tkt-cc-type-${i.content_type}">${escHtml((CAMP_CONTENT_TYPES.find(t=>t.key===i.content_type)||{}).label || i.content_type)}</span>
-      <span class="tkt-cc-title">${escHtml(i.title)}</span>
-      <button class="tkt-cc-remove" onclick="deleteCampContentItem('${i.campaign_id}','${i.id}')" title="Remove">&times;</button>
-    </div>`).join("");
+  if (!items.length) return `<p class="camp-dr-hint" style="margin:0 0 10px">Nothing scheduled yet.</p>`;
+  return `<div class="camp-cc-list">${items.map(i => `
+    <div class="camp-cc-row">
+      <span class="camp-cc-date">${new Date(i.scheduled_date + "T00:00:00").toLocaleDateString("en-US",{month:"short",day:"numeric"})}</span>
+      <span class="camp-cc-type camp-cc-type-${i.content_type}">${escHtml((CAMP_CONTENT_TYPES.find(t=>t.key===i.content_type)||{}).label || i.content_type)}</span>
+      <span class="camp-cc-title">${escHtml(i.title)}</span>
+      <button class="camp-cc-remove" onclick="deleteCampContentItem('${i.campaign_id}','${i.id}')" title="Remove">&times;</button>
+    </div>`).join("")}</div>`;
 }
 
 async function addCampContentItem(campaignId) {
@@ -4752,17 +4774,17 @@ const _campPersonIcon = `<svg width="13" height="13" viewBox="0 0 24 24" fill="n
 async function updateRecipientPreview(campaignId) {
   const el = document.getElementById("recipientPreview-" + campaignId);
   if (!el) return;
-  el.className = "tkt-recipient-pill is-loading";
+  el.className = "camp-recipient-pill is-loading";
   el.textContent = "Calculating recipients…";
   const c = _camp.campaigns.find(x => x.id === campaignId);
   if (!c) return;
   const { emails, error } = await computeSegmentRecipients(c);
   if (error) {
-    el.className = "tkt-recipient-pill is-empty";
+    el.className = "camp-recipient-pill is-empty";
     el.textContent = "Couldn't calculate: " + error.message;
     return;
   }
-  el.className = "tkt-recipient-pill" + (emails.length ? "" : " is-empty");
+  el.className = "camp-recipient-pill" + (emails.length ? "" : " is-empty");
   el.innerHTML = `${_campPersonIcon} ${emails.length} recipient${emails.length===1?"":"s"} match this segment right now.`;
 }
 
@@ -4783,8 +4805,8 @@ async function renderCampMetrics(campaignId) {
 
   const { data: events, error } = await window.sb
     .from("campaign_email_events").select("event_type, recipient").eq("campaign_id", campaignId);
-  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load: ${escHtml(error.message)}</p>`; return; }
-  if (!events || !events.length) { el.innerHTML = `<p class="tkt-dr-meta">No email activity yet.</p>`; return; }
+  if (error) { el.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}</p>`; return; }
+  if (!events || !events.length) { el.innerHTML = `<p class="camp-dr-hint">No email activity yet.</p>`; return; }
 
   const distinctBy = type => new Set(events.filter(e => e.event_type === type).map(e => e.recipient)).size;
   const sent = distinctBy("sent") || new Set(events.map(e => e.recipient)).size;
@@ -4796,12 +4818,12 @@ async function renderCampMetrics(campaignId) {
     { label: "Unsubscribed", n: distinctBy("unsubscribed") },
   ];
 
-  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+  el.innerHTML = `<div class="camp-metrics-grid">
     ${stats.map(s => `
-      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;text-align:center">
-        <div style="font-size:18px;font-weight:800;color:#0d1f38">${s.n}</div>
-        <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;font-weight:700">${s.label}</div>
-        <div style="font-size:10.5px;color:#94a3b8">${sent ? Math.round((s.n / sent) * 100) : 0}%</div>
+      <div class="camp-metric-tile">
+        <div class="camp-metric-n">${s.n}</div>
+        <div class="camp-metric-l">${s.label}</div>
+        <div class="camp-metric-pct">${sent ? Math.round((s.n / sent) * 100) : 0}%</div>
       </div>`).join("")}
   </div>`;
 }
@@ -4923,8 +4945,8 @@ async function renderScheduledSendStatus(campaignId) {
   const { data } = await window.sb.from("campaign_scheduled_sends")
     .select("*").eq("campaign_id", campaignId).is("sent_at", null).maybeSingle();
   if (!data) { el.innerHTML = ""; return; }
-  el.innerHTML = `<span class="tkt-recipient-pill">${_campPersonIcon} Scheduled to send ${fmt(data.send_at)}
-    <button onclick="cancelScheduledSend('${data.id}','${campaignId}')" style="margin-left:8px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;font-weight:700">Cancel</button></span>`;
+  el.innerHTML = `<span class="camp-recipient-pill camp-scheduled-pill">${_campPersonIcon} Scheduled to send ${fmt(data.send_at)}
+    <button class="camp-pill-cancel" onclick="cancelScheduledSend('${data.id}','${campaignId}')">Cancel</button></span>`;
 }
 
 async function cancelScheduledSend(id, campaignId) {
@@ -4945,16 +4967,18 @@ async function openEmailTemplatesModal() {
 async function renderEmailTemplateList() {
   const el = document.getElementById("emailTemplateList");
   const { data, error } = await window.sb.from("email_templates").select("*").order("name");
-  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load templates: ${escHtml(error.message)}</p>`; return; }
+  if (error) { el.innerHTML = `<p class="camp-dr-hint">Couldn't load templates: ${escHtml(error.message)}</p>`; return; }
   el.innerHTML = (data && data.length) ? data.map(t => `
-    <div class="tkt-teamrow">
-      <div style="flex:1;min-width:0">
+    <div class="camp-listrow">
+      <div class="camp-listrow-body">
         <strong>${escHtml(t.name)}</strong>
         <span>${escHtml(t.subject)}</span>
       </div>
-      <button class="a-btn-sm" onclick='editEmailTemplate(${JSON.stringify(t).replace(/'/g, "&#39;")})'>Edit</button>
-      <button class="a-btn-sm a-btn-danger" onclick="deleteEmailTemplate('${t.id}')">Delete</button>
-    </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No templates yet — create one below.</p>`;
+      <div class="camp-listrow-actions">
+        <button class="camp-btn-sm" onclick='editEmailTemplate(${JSON.stringify(t).replace(/'/g, "&#39;")})'>Edit</button>
+        <button class="camp-btn-sm camp-btn-sm-danger" onclick="deleteEmailTemplate('${t.id}')">Delete</button>
+      </div>
+    </div>`).join("") : `<p class="camp-listbox-empty">No templates yet — create one below.</p>`;
 }
 
 function resetTemplateForm() {
@@ -5023,17 +5047,19 @@ async function openAutomationsModal() {
 async function renderAutomationList() {
   const el = document.getElementById("automationList");
   const { data, error } = await window.sb.from("automations").select("*").order("name");
-  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20260901f migration.</span></p>`; return; }
+  if (error) { el.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20260901f migration.</span></p>`; return; }
   el.innerHTML = (data && data.length) ? data.map(a => `
-    <div class="tkt-teamrow">
-      <div style="flex:1;min-width:0">
+    <div class="camp-listrow${a.is_active ? "" : " is-paused"}">
+      <div class="camp-listrow-body">
         <strong>${escHtml(a.name)}</strong>
-        <span>${escHtml(AUTO_TRIGGER_LABEL[a.trigger_type] || a.trigger_type)} &middot; ${a.delay_days} day${a.delay_days === 1 ? "" : "s"} delay ${a.is_active ? "" : "&middot; <span style=\"color:#dc2626\">Paused</span>"}</span>
+        <span>${escHtml(AUTO_TRIGGER_LABEL[a.trigger_type] || a.trigger_type)} &middot; ${a.delay_days} day${a.delay_days === 1 ? "" : "s"} delay${a.is_active ? "" : ` &middot; <span class="camp-paused-tag">Paused</span>`}</span>
       </div>
-      <button class="a-btn-sm" onclick='editAutomation(${JSON.stringify(a).replace(/'/g, "&#39;")})'>Edit</button>
-      <button class="a-btn-sm" onclick="toggleAutomationActive('${a.id}', ${!a.is_active})">${a.is_active ? "Pause" : "Resume"}</button>
-      <button class="a-btn-sm a-btn-danger" onclick="deleteAutomation('${a.id}')">Delete</button>
-    </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No automations yet — create one below.</p>`;
+      <div class="camp-listrow-actions">
+        <button class="camp-btn-sm" onclick='editAutomation(${JSON.stringify(a).replace(/'/g, "&#39;")})'>Edit</button>
+        <button class="camp-btn-sm" onclick="toggleAutomationActive('${a.id}', ${!a.is_active})">${a.is_active ? "Pause" : "Resume"}</button>
+        <button class="camp-btn-sm camp-btn-sm-danger" onclick="deleteAutomation('${a.id}')">Delete</button>
+      </div>
+    </div>`).join("") : `<p class="camp-listbox-empty">No automations yet — create one below.</p>`;
 }
 
 function toggleAutoStaleField() {
