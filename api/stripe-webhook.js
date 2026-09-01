@@ -1,7 +1,46 @@
 const Stripe = require('stripe');
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
-const { Webhook } = require('svix');
 const { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert } = require('./_lib/send-emails');
+
+// Verifies a Svix-signed webhook (the scheme Resend's webhooks use) by hand
+// with Node's built-in crypto -- the `svix` npm package is ESM-only
+// ("type": "module", no CJS build), which crashed this whole file's
+// require() at cold start on Vercel's Node runtime (confirmed live: every
+// request here, including the pre-existing Stripe path, started returning
+// FUNCTION_INVOCATION_FAILED the moment `require('svix')` was added,
+// despite working fine in a local `node -e` sanity check -- local Node's
+// CJS/ESM interop is more permissive than the deployed runtime's). The
+// algorithm itself is simple and stable (documented at svix.com/docs/receiving/verifying-payloads/how-manual):
+// HMAC-SHA256 over "{svix-id}.{svix-timestamp}.{body}", keyed by the
+// base64 portion of the whsec_ secret, compared against any of the
+// space-separated "v1,<sig>" values in the svix-signature header.
+function verifySvixSignature(rawBody, headers, secret) {
+  const id = headers['svix-id'];
+  const timestamp = headers['svix-timestamp'];
+  const signatureHeader = headers['svix-signature'];
+  if (!id || !timestamp || !signatureHeader) throw new Error('Missing svix headers');
+
+  // Reject anything older than 5 minutes -- same tolerance the official
+  // library enforces, stops a captured request being replayed later.
+  const now = Math.floor(Date.now() / 1000);
+  const ts = parseInt(timestamp, 10);
+  if (!ts || Math.abs(now - ts) > 300) throw new Error('Message timestamp too old or too new');
+
+  const secretBytes = Buffer.from(secret.replace(/^whsec_/, ''), 'base64');
+  const signedContent = `${id}.${timestamp}.${rawBody.toString('utf8')}`;
+  const expected = crypto.createHmac('sha256', secretBytes).update(signedContent).digest('base64');
+
+  const candidates = signatureHeader.split(' ').map(s => s.split(',')[1]).filter(Boolean);
+  const matches = candidates.some(c => {
+    try {
+      return crypto.timingSafeEqual(Buffer.from(c, 'base64'), Buffer.from(expected, 'base64'));
+    } catch { return false; }
+  });
+  if (!matches) throw new Error('No matching signature found');
+
+  return JSON.parse(rawBody.toString('utf8'));
+}
 
 // Resend signs every webhook event with Svix; RESEND_WEBHOOK_SECRET is the
 // "whsec_..." signing secret from the Resend dashboard's Webhooks page
@@ -28,12 +67,7 @@ async function handleResendWebhook(req, res) {
   let payload;
   try {
     const rawBody = await getRawBody(req);
-    const wh = new Webhook(webhookSecret);
-    payload = wh.verify(rawBody, {
-      'svix-id': req.headers['svix-id'],
-      'svix-timestamp': req.headers['svix-timestamp'],
-      'svix-signature': req.headers['svix-signature'],
-    });
+    payload = verifySvixSignature(rawBody, req.headers, webhookSecret);
   } catch (err) {
     console.error('[resend webhook] signature verification failed:', err.message);
     return res.status(400).json({ error: 'Invalid signature' });
