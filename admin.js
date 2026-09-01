@@ -4154,6 +4154,7 @@ async function renderCampaignsTab() {
         <p class="a-page-sub">Plan, schedule, and send marketing campaigns — linked to real products and promotions.</p>
       </div>
       <div class="tkt-header-actions">
+        <button class="a-btn-secondary" onclick="openAutomationsModal()">Automations</button>
         <button class="a-btn-secondary" onclick="openEmailTemplatesModal()">Email Templates</button>
         <button class="a-btn-primary" onclick="createNewCampaign()">+ New Campaign</button>
       </div>
@@ -4448,10 +4449,16 @@ async function openCampDrawer(id) {
       ${c.emails_sent ? `<p class="tkt-dr-meta">Last sent ${fmt(c.last_sent_at)} — ${c.emails_sent} email${c.emails_sent===1?"":"s"} total.</p>` : ""}
     </div>
 
+    <div class="tkt-dr-section">
+      <h4><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>Email Performance</h4>
+      <div id="campMetrics-${c.id}"><p class="tkt-dr-meta">Loading…</p></div>
+    </div>
+
     <div class="tkt-dr-section tkt-dr-facts">
       <div><span>Created</span><strong>${fmt(c.created_at)}</strong></div>
     </div>
   `;
+  renderCampMetrics(c.id);
   updateRecipientPreview(id);
 }
 
@@ -4555,6 +4562,39 @@ function onSendTemplateChange(campaignId) {
   const tpl = _camp._templates.find(t => t.id === tplId);
   document.getElementById("sendSubject-" + campaignId).value = tpl ? tpl.subject : "";
   document.getElementById("sendBody-" + campaignId).value = tpl ? tpl.body_html : "";
+}
+
+// Real delivery/open/click/bounce numbers, fed by Resend's webhook
+// (api/stripe-webhook.js's handleResendWebhook writes campaign_email_events)
+// -- distinct counts of recipients per event type, not raw row counts, so
+// three opens from the same person still reads as "1 opened".
+async function renderCampMetrics(campaignId) {
+  const el = document.getElementById(`campMetrics-${campaignId}`);
+  if (!el) return;
+
+  const { data: events, error } = await window.sb
+    .from("campaign_email_events").select("event_type, recipient").eq("campaign_id", campaignId);
+  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load: ${escHtml(error.message)}</p>`; return; }
+  if (!events || !events.length) { el.innerHTML = `<p class="tkt-dr-meta">No email activity yet.</p>`; return; }
+
+  const distinctBy = type => new Set(events.filter(e => e.event_type === type).map(e => e.recipient)).size;
+  const sent = distinctBy("sent") || new Set(events.map(e => e.recipient)).size;
+  const stats = [
+    { label: "Delivered",    n: distinctBy("delivered") },
+    { label: "Opened",       n: distinctBy("opened") },
+    { label: "Clicked",      n: distinctBy("clicked") },
+    { label: "Bounced",      n: distinctBy("bounced") },
+    { label: "Unsubscribed", n: distinctBy("unsubscribed") },
+  ];
+
+  el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+    ${stats.map(s => `
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;text-align:center">
+        <div style="font-size:18px;font-weight:800;color:#0d1f38">${s.n}</div>
+        <div style="font-size:10.5px;color:#94a3b8;text-transform:uppercase;letter-spacing:.04em;font-weight:700">${s.label}</div>
+        <div style="font-size:10.5px;color:#94a3b8">${sent ? Math.round((s.n / sent) * 100) : 0}%</div>
+      </div>`).join("")}
+  </div>`;
 }
 
 async function sendCampaignEmail(campaignId) {
@@ -4662,6 +4702,113 @@ async function deleteEmailTemplate(id) {
   const { error } = await window.sb.from("email_templates").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
   await renderEmailTemplateList();
+}
+
+/* ── Automations (trigger -> delay -> email) ───────────────────
+   A small, real slice of the "email funnel" spec review -- not a visual
+   drag-and-drop builder. Evaluated by the same daily cron sweep that
+   already runs reorders (api/create-order.js's runDueAutomations). */
+
+const AUTO_TRIGGER_LABEL = {
+  crm_lead_created: "New lead created",
+  quote_stale: "Quote sent, no order yet",
+};
+
+async function openAutomationsModal() {
+  resetAutomationForm();
+  await renderAutomationList();
+  openModal("automationsModal");
+}
+
+async function renderAutomationList() {
+  const el = document.getElementById("automationList");
+  const { data, error } = await window.sb.from("automations").select("*").order("name");
+  if (error) { el.innerHTML = `<p class="tkt-dr-meta">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20260901f migration.</span></p>`; return; }
+  el.innerHTML = (data && data.length) ? data.map(a => `
+    <div class="tkt-teamrow">
+      <div style="flex:1;min-width:0">
+        <strong>${escHtml(a.name)}</strong>
+        <span>${escHtml(AUTO_TRIGGER_LABEL[a.trigger_type] || a.trigger_type)} &middot; ${a.delay_days} day${a.delay_days === 1 ? "" : "s"} delay ${a.is_active ? "" : "&middot; <span style=\"color:#dc2626\">Paused</span>"}</span>
+      </div>
+      <button class="a-btn-sm" onclick='editAutomation(${JSON.stringify(a).replace(/'/g, "&#39;")})'>Edit</button>
+      <button class="a-btn-sm" onclick="toggleAutomationActive('${a.id}', ${!a.is_active})">${a.is_active ? "Pause" : "Resume"}</button>
+      <button class="a-btn-sm a-btn-danger" onclick="deleteAutomation('${a.id}')">Delete</button>
+    </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No automations yet — create one below.</p>`;
+}
+
+function toggleAutoStaleField() {
+  const isStale = document.getElementById("autoTriggerType")?.value === "quote_stale";
+  const wrap = document.getElementById("autoStaleWrap");
+  if (wrap) wrap.style.display = isStale ? "" : "none";
+}
+
+function resetAutomationForm() {
+  document.getElementById("autoEditId").value = "";
+  document.getElementById("autoName").value = "";
+  document.getElementById("autoTriggerType").value = "crm_lead_created";
+  document.getElementById("autoStaleAfterDays").value = "5";
+  document.getElementById("autoDelayDays").value = "0";
+  document.getElementById("autoSubject").value = "";
+  document.getElementById("autoBodyHtml").value = "";
+  document.getElementById("autoFormTitle").textContent = "New Automation";
+  document.getElementById("autoCancelBtn").style.display = "none";
+  document.getElementById("autoError").style.display = "none";
+  toggleAutoStaleField();
+}
+
+function editAutomation(a) {
+  document.getElementById("autoEditId").value = a.id;
+  document.getElementById("autoName").value = a.name;
+  document.getElementById("autoTriggerType").value = a.trigger_type;
+  document.getElementById("autoStaleAfterDays").value = a.stale_after_days || 5;
+  document.getElementById("autoDelayDays").value = a.delay_days;
+  document.getElementById("autoSubject").value = a.subject;
+  document.getElementById("autoBodyHtml").value = a.body_html;
+  document.getElementById("autoFormTitle").textContent = "Editing: " + a.name;
+  document.getElementById("autoCancelBtn").style.display = "inline-block";
+  toggleAutoStaleField();
+}
+
+async function saveAutomation() {
+  const errEl = document.getElementById("autoError");
+  errEl.style.display = "none";
+  const id = document.getElementById("autoEditId").value;
+  const name = document.getElementById("autoName").value.trim();
+  const triggerType = document.getElementById("autoTriggerType").value;
+  const subject = document.getElementById("autoSubject").value.trim();
+  const body_html = document.getElementById("autoBodyHtml").value.trim();
+  if (!name || !subject || !body_html) { errEl.textContent = "Name, subject, and body are all required."; errEl.style.display = "block"; return; }
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  const payload = {
+    name,
+    trigger_type: triggerType,
+    stale_after_days: triggerType === "quote_stale" ? (parseInt(document.getElementById("autoStaleAfterDays").value) || 5) : null,
+    delay_days: parseInt(document.getElementById("autoDelayDays").value) || 0,
+    subject, body_html,
+    created_by: session?.user?.id || null,
+  };
+  const { error } = id
+    ? await window.sb.from("automations").update(payload).eq("id", id)
+    : await window.sb.from("automations").insert(payload);
+  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+
+  resetAutomationForm();
+  await renderAutomationList();
+  showToast("Automation saved.");
+}
+
+async function toggleAutomationActive(id, active) {
+  const { error } = await window.sb.from("automations").update({ is_active: active }).eq("id", id);
+  if (error) { showToast("Couldn't update: " + error.message); return; }
+  await renderAutomationList();
+}
+
+async function deleteAutomation(id) {
+  if (!confirm("Delete this automation? Any queued-but-unsent emails for it will also be cancelled.")) return;
+  const { error } = await window.sb.from("automations").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  await renderAutomationList();
 }
 
 /* ── Reports ───────────────────────────────────────────────── */

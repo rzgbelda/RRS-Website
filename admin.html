@@ -1464,6 +1464,56 @@
       </div>
     </div>
 
+    <!-- AUTOMATIONS MODAL -->
+    <div id="automationsModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:640px">
+        <div class="a-modal-header">
+          <h3>Automations</h3>
+          <button class="a-modal-close" onclick="closeModal('automationsModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <p style="font-size:12.5px;color:#64748b;margin:0 0 16px">A trigger &mdash; delay &mdash; email sequence, sent automatically once a day. Two triggers: a new lead comes in, or a quote sits with no order past a set number of days.</p>
+          <div id="automationList" class="tkt-teamlist" style="margin-bottom:20px"></div>
+          <div class="tkt-teamdivider"><span id="autoFormTitle">New Automation</span></div>
+          <input type="hidden" id="autoEditId">
+          <div class="cms-form-group">
+            <label class="cms-label">Name</label>
+            <input id="autoName" class="a-input" placeholder="e.g. New Lead Welcome">
+          </div>
+          <div class="tkt-form-row">
+            <div class="cms-form-group">
+              <label class="cms-label">Trigger</label>
+              <select id="autoTriggerType" class="a-input" onchange="toggleAutoStaleField()">
+                <option value="crm_lead_created">New lead created</option>
+                <option value="quote_stale">Quote sent, no order yet</option>
+              </select>
+            </div>
+            <div class="cms-form-group" id="autoStaleWrap" style="display:none">
+              <label class="cms-label">Stale After (days)</label>
+              <input id="autoStaleAfterDays" type="number" min="1" value="5" class="a-input">
+            </div>
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Send Delay (days) <span class="cms-label-hint">0 = as soon as it triggers</span></label>
+            <input id="autoDelayDays" type="number" min="0" value="0" class="a-input">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Subject Line <span class="cms-label-hint">supports {{business_name}}, {{contact_name}}, {{first_name}}</span></label>
+            <input id="autoSubject" class="a-input" placeholder="e.g. Welcome to Room Ready Supply, {{first_name}}">
+          </div>
+          <div class="cms-form-group" style="margin-bottom:0">
+            <label class="cms-label">Body (HTML)</label>
+            <textarea id="autoBodyHtml" class="a-input" rows="6" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi {{first_name}},</p>..."></textarea>
+          </div>
+          <p id="autoError" class="tkt-formerror" style="display:none"></p>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" id="autoCancelBtn" style="display:none" onclick="resetAutomationForm()">Cancel Edit</button>
+          <button class="a-btn-primary" id="autoSaveBtn" onclick="saveAutomation()">Save Automation</button>
+        </div>
+      </div>
+    </div>
+
     <!-- NEW TICKET MODAL -->
     <div id="devTicketModal" class="a-modal-overlay" style="display:none">
       <div class="a-modal tkt-modal" style="max-width:580px">
@@ -2681,7 +2731,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=81"></script>
+<script src="admin.js?v=82"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

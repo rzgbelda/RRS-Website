@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
 const sendInvoiceHandler = require('./send-invoice.js');
 
 /**
@@ -41,7 +42,11 @@ module.exports = async (req, res) => {
     if (!process.env.CRON_SECRET || auth !== `Bearer ${process.env.CRON_SECRET}`) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    return runDueReorders(supabase, res);
+    let reorderBody = {};
+    const fakeRes = { status() { return this; }, json(b) { reorderBody = b; return this; } };
+    await runDueReorders(supabase, fakeRes);
+    const automationResult = await runDueAutomations(supabase);
+    return res.status(200).json({ reorders: reorderBody, automations: automationResult });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -267,6 +272,114 @@ async function runDueReorders(supabase, res) {
   }
 
   return res.status(200).json({ processed: results.length, results });
+}
+
+function mergeFields(str, q) {
+  return String(str || '')
+    .replace(/\{\{\s*business_name\s*\}\}/g, q.business_name || '')
+    .replace(/\{\{\s*contact_name\s*\}\}/g, q.contact_name || '')
+    .replace(/\{\{\s*first_name\s*\}\}/g, (q.contact_name || '').split(' ')[0] || '');
+}
+
+/**
+ * Daily cron entry point (same sweep this file already runs for reorders):
+ * for every active automation, finds quote_requests rows that just crossed
+ * its trigger condition, queues an automation_sends row with a real
+ * eligible_at (now + delay_days), then sends anything that's already past
+ * its eligible_at and hasn't gone out yet. Two passes in one sweep rather
+ * than two separate crons -- Vercel Hobby's cron limits make a single
+ * daily entry point the practical choice, and a delay measured in days
+ * tolerates running once a day fine.
+ */
+async function runDueAutomations(supabase) {
+  const { data: automations } = await supabase.from('automations').select('*').eq('is_active', true);
+  if (!automations || !automations.length) return { queued: 0, sent: 0, skipped: 0 };
+
+  let queued = 0, sent = 0, skipped = 0;
+  const now = new Date();
+
+  for (const a of automations) {
+    try {
+      // ── Queue newly-eligible targets ────────────────────────────
+      let targets = [];
+      if (a.trigger_type === 'crm_lead_created') {
+        // Only rows from the last 14 days -- the unique constraint on
+        // automation_sends already makes re-queuing an old row harmless,
+        // but scanning the whole table every sweep forever isn't free as
+        // it grows. 14 days comfortably covers any sane delay_days value
+        // for a "welcome" style automation.
+        const cutoff = new Date(now.getTime() - 14 * 86400000).toISOString();
+        const { data } = await supabase.from('quote_requests')
+          .select('id, email').gte('created_at', cutoff).not('email', 'is', null);
+        targets = data || [];
+      } else if (a.trigger_type === 'quote_stale') {
+        const staleAfter = a.stale_after_days ?? 5;
+        const staleCutoff = new Date(now.getTime() - staleAfter * 86400000).toISOString();
+        // Bounded to the last 60 days so this doesn't rescan the entire
+        // quote_requests table forever -- same idempotency safety net as
+        // crm_lead_created above via automation_sends' unique constraint.
+        const windowStart = new Date(now.getTime() - 60 * 86400000).toISOString();
+        const { data } = await supabase.from('quote_requests')
+          .select('id, email').eq('status', 'quote_sent')
+          .lte('created_at', staleCutoff).gte('created_at', windowStart)
+          .not('email', 'is', null);
+        targets = data || [];
+      }
+
+      for (const t of targets) {
+        const eligibleAt = new Date(now.getTime() + a.delay_days * 86400000).toISOString();
+        const { error: insErr } = await supabase.from('automation_sends').insert({
+          automation_id: a.id, target_type: 'quote_request', target_id: t.id,
+          recipient_email: t.email, eligible_at: eligibleAt,
+        });
+        // 23505 = unique_violation -- already queued for this target, not a real failure
+        if (!insErr) queued++;
+        else if (insErr.code !== '23505') console.error('[create-order] automation_sends insert failed:', insErr.message);
+      }
+
+      // ── Send anything now past its delay ────────────────────────
+      const { data: due } = await supabase.from('automation_sends')
+        .select('*, quote_requests(business_name, contact_name, email, status)')
+        .eq('automation_id', a.id).is('sent_at', null).is('skipped_reason', null)
+        .lte('eligible_at', now.toISOString());
+
+      for (const s of (due || [])) {
+        const q = s.quote_requests;
+        if (!q) {
+          await supabase.from('automation_sends').update({ skipped_reason: 'target_not_found' }).eq('id', s.id);
+          skipped++; continue;
+        }
+        // A quote_stale target that converted (moved off quote_sent)
+        // during its delay window no longer needs the nudge.
+        if (a.trigger_type === 'quote_stale' && q.status !== 'quote_sent') {
+          await supabase.from('automation_sends').update({ skipped_reason: 'lead_progressed' }).eq('id', s.id);
+          skipped++; continue;
+        }
+
+        try {
+          const resend = new Resend(process.env.RESEND_API_KEY);
+          const result = await resend.emails.send({
+            from: 'Room Ready Supply <sales@roomreadysupply.com>',
+            to: q.email,
+            subject: mergeFields(a.subject, q),
+            html: mergeFields(a.body_html, q),
+          });
+          await supabase.from('automation_sends').update({ sent_at: new Date().toISOString() }).eq('id', s.id);
+          await supabase.from('campaign_email_events').insert({
+            automation_id: a.id, resend_email_id: result?.data?.id || null,
+            recipient: q.email, event_type: 'sent',
+          });
+          sent++;
+        } catch (sendErr) {
+          console.error('[create-order] automation send failed:', sendErr.message);
+        }
+      }
+    } catch (err) {
+      console.error('[create-order] automation sweep failed for', a.name, err.message);
+    }
+  }
+
+  return { queued, sent, skipped };
 }
 
 /**

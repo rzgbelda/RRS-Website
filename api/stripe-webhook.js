@@ -1,6 +1,85 @@
 const Stripe = require('stripe');
 const { createClient } = require('@supabase/supabase-js');
+const { Webhook } = require('svix');
 const { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert } = require('./_lib/send-emails');
+
+// Resend signs every webhook event with Svix; RESEND_WEBHOOK_SECRET is the
+// "whsec_..." signing secret from the Resend dashboard's Webhooks page
+// (a different value from RESEND_API_KEY). Verifying this is what stops
+// anyone from POSTing fake open/click events here to fabricate campaign
+// stats -- there is no other auth on this endpoint.
+const RESEND_EVENT_MAP = {
+  'email.sent':             'sent',
+  'email.delivered':        'delivered',
+  'email.delivery_delayed': 'delivery_delayed',
+  'email.opened':           'opened',
+  'email.clicked':          'clicked',
+  'email.bounced':          'bounced',
+  'email.complained':       'complained',
+};
+
+async function handleResendWebhook(req, res) {
+  const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    console.error('[resend webhook] RESEND_WEBHOOK_SECRET is not set -- rejecting.');
+    return res.status(500).json({ error: 'Webhook not configured' });
+  }
+
+  let payload;
+  try {
+    const rawBody = await getRawBody(req);
+    const wh = new Webhook(webhookSecret);
+    payload = wh.verify(rawBody, {
+      'svix-id': req.headers['svix-id'],
+      'svix-timestamp': req.headers['svix-timestamp'],
+      'svix-signature': req.headers['svix-signature'],
+    });
+  } catch (err) {
+    console.error('[resend webhook] signature verification failed:', err.message);
+    return res.status(400).json({ error: 'Invalid signature' });
+  }
+
+  const eventType = RESEND_EVENT_MAP[payload.type];
+  if (!eventType) return res.status(200).json({ received: true, ignored: payload.type });
+
+  const d = payload.data || {};
+  const recipient = Array.isArray(d.to) ? d.to[0] : d.to;
+  if (!recipient || !d.email_id) return res.status(200).json({ received: true, ignored: 'missing recipient/email_id' });
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY
+  );
+
+  // campaign_id/automation_id aren't in Resend's payload -- backfilled by
+  // matching resend_email_id against whichever 'sent' row this endpoint
+  // already logged for this same send (send_campaign in send-invoice.js
+  // and the automation sweep in create-order.js both insert one at send
+  // time with the real Resend id).
+  let campaignId = null, automationId = null;
+  const { data: sentRow } = await supabase
+    .from('campaign_email_events')
+    .select('campaign_id, automation_id')
+    .eq('resend_email_id', d.email_id)
+    .eq('event_type', 'sent')
+    .limit(1)
+    .maybeSingle();
+  if (sentRow) { campaignId = sentRow.campaign_id; automationId = sentRow.automation_id; }
+
+  const { error } = await supabase.from('campaign_email_events').insert({
+    campaign_id: campaignId,
+    automation_id: automationId,
+    resend_email_id: d.email_id,
+    recipient,
+    event_type: eventType,
+    link_url: d.click?.link || null,
+    occurred_at: payload.created_at || new Date().toISOString(),
+    raw: payload,
+  });
+  if (error) console.error('[resend webhook] insert failed:', error.message);
+
+  return res.status(200).json({ received: true });
+}
 
 function getRawBody(req) {
   return new Promise((resolve, reject) => {
@@ -59,6 +138,17 @@ async function bookWarpShipment(orderNumber, shippingAddr, items) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
+
+  // Resend's delivery/open/click/bounce/unsubscribe webhook shares this
+  // endpoint -- distinguished by its own svix-signature header, which
+  // Stripe never sends. Both need the raw, unparsed body for signature
+  // verification (bodyParser is already off for this whole file, for
+  // Stripe's own signing below), so this has to branch before any JSON
+  // parsing happens, not after. Sharing the file rather than adding a
+  // 13th Vercel function (Hobby plan caps at 12, already at that cap).
+  if (req.headers['svix-signature']) {
+    return handleResendWebhook(req, res);
+  }
 
   const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
   const sig = req.headers['stripe-signature'];

@@ -152,6 +152,21 @@ module.exports = async (req, res) => {
     const sent = results.filter(r => r.status === 'fulfilled').length;
     const failed = results.length - sent;
 
+    // One campaign_email_events 'sent' row per successful send, carrying
+    // Resend's own email id -- this is what lets the Resend webhook
+    // (api/stripe-webhook.js's handleResendWebhook) match a later
+    // opened/clicked/bounced event back to this campaign, since Resend's
+    // webhook payload itself carries no campaign_id of its own.
+    const eventRows = results
+      .map((r, i) => r.status === 'fulfilled' && r.value?.data?.id
+        ? { campaign_id: campaign_id || null, resend_email_id: r.value.data.id, recipient: recipients[i], event_type: 'sent' }
+        : null)
+      .filter(Boolean);
+    if (eventRows.length) {
+      const { error: eventErr } = await supabase.from('campaign_email_events').insert(eventRows);
+      if (eventErr) console.error('[send-invoice] campaign_email_events insert failed:', eventErr.message);
+    }
+
     if (campaign_id) {
       const { data: existing } = await supabase.from('campaigns').select('emails_sent').eq('id', campaign_id).single();
       await supabase.from('campaigns').update({
