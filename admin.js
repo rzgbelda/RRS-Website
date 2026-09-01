@@ -3770,30 +3770,40 @@ async function renderCrmTab() {
   _crm.leads.forEach(l => { if (!CRM_STATUS_LABEL[l.status]) l.status = "new"; });
 
   panel.innerHTML = `
-    <div class="tkt-header">
+   <div class="crm-page">
+    <div class="crm-header">
       <div>
-        <h1 class="a-page-title">CRM &amp; Leads</h1>
-        <p class="a-page-sub">Every quotation request, tracked from first contact through repeat business.</p>
+        <h1 class="crm-title">CRM &amp; Leads</h1>
+        <p class="crm-subtitle">Every quotation request, tracked from first contact through repeat business.</p>
       </div>
-      <div class="tkt-header-actions">
-        <button class="a-btn-secondary" onclick="exportCrmLeadsCsv()">Export CSV</button>
-        <button class="a-btn-secondary" onclick="openCrmImportModal()">Import CSV</button>
-        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
+      <div class="crm-header-actions">
+        <button class="crm-btn crm-btn-ghost" onclick="exportCrmLeadsCsv()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15V3M7 10l5 5 5-5M4 21h16"/></svg>
+          Export CSV
+        </button>
+        <button class="crm-btn crm-btn-ghost" onclick="openCrmImportModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
+          Import CSV
+        </button>
+        ${tktIsAdmin() ? `<button class="crm-btn crm-btn-ghost" onclick="openDevTeamModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          Staff Accounts
+        </button>` : ""}
       </div>
     </div>
 
-    <div class="tkt-statstrip" id="crmStats"></div>
+    <div class="crm-statstrip" id="crmStats"></div>
 
-    <div class="tkt-filterbar">
-      <div class="tkt-search">
+    <div class="crm-filterbar">
+      <div class="crm-search">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input id="crmSearch" type="text" placeholder="Search business or contact…" value="${escHtml(_crm.filters.q)}" oninput="setCrmFilter('q', this.value)">
       </div>
-      <select class="tkt-filtersel" onchange="setCrmFilter('source', this.value)">
+      <select class="crm-select crm-filtersel" onchange="setCrmFilter('source', this.value)">
         <option value="all">All sources</option>
         ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${_crm.filters.source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
       </select>
-      <select class="tkt-filtersel" onchange="setCrmFilter('rep', this.value)">
+      <select class="crm-select crm-filtersel" onchange="setCrmFilter('rep', this.value)">
         <option value="all">All reps</option>
         <option value="unassigned"${_crm.filters.rep==="unassigned"?" selected":""}>Unassigned</option>
         ${_crm.reps.map(r => `<option value="${r.id}"${_crm.filters.rep===r.id?" selected":""}>${escHtml(r.full_name || r.email)}</option>`).join("")}
@@ -3801,6 +3811,7 @@ async function renderCrmTab() {
     </div>
 
     <div id="crmBoardWrap"></div>
+   </div>
   `;
 
   renderCrmStats();
@@ -3813,7 +3824,7 @@ function renderCrmStats() {
   if (!el) return;
   el.innerHTML = CRM_STATUS.map(col => {
     const n = _crm.leads.filter(l => l.status === col.key).length;
-    return `<div class="tkt-stat tkt-stat-${col.key}"><span class="tkt-stat-n">${n}</span><span class="tkt-stat-l">${escHtml(col.label)}</span></div>`;
+    return `<div class="crm-stat crm-stat-${col.key}"><span class="crm-stat-n">${n}</span><span class="crm-stat-l">${escHtml(col.label)}</span></div>`;
   }).join("");
 }
 
@@ -3842,9 +3853,9 @@ function renderCrmBoard() {
   const visible = crmVisibleLeads();
 
   if (!_crm.leads.length) {
-    wrap.innerHTML = `<div class="tkt-empty">
-      <div class="tkt-empty-icon">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+    wrap.innerHTML = `<div class="crm-empty">
+      <div class="crm-empty-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
       </div>
       <h3>No leads yet</h3>
       <p>Quotation requests submitted from the site will show up here automatically.</p>
@@ -3852,18 +3863,17 @@ function renderCrmBoard() {
     return;
   }
 
-  wrap.innerHTML = `<div class="tkt-board">${CRM_STATUS.map(col => {
+  wrap.innerHTML = `<div class="crm-board">${CRM_STATUS.map(col => {
     const items = visible.filter(l => l.status === col.key);
     return `
-      <section class="tkt-col" data-status="${col.key}"
+      <section class="crm-col" data-status="${col.key}"
         ondragover="crmDragOver(event)" ondragleave="crmDragLeave(event)" ondrop="crmDrop(event,'${col.key}')">
-        <header class="tkt-col-head">
-          <span class="tkt-col-dot tkt-dot-${col.key}"></span>
-          <span class="tkt-col-title">${escHtml(col.label)}</span>
-          <span class="tkt-col-count">${items.length}</span>
+        <header class="crm-col-head">
+          <span class="crm-col-title">${escHtml(col.label)}</span>
+          <span class="crm-col-count">${items.length}</span>
         </header>
-        <div class="tkt-col-body">
-          ${items.map(crmCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
+        <div class="crm-col-body">
+          ${items.map(crmCard).join("") || `<div class="crm-col-empty">Nothing here</div>`}
         </div>
       </section>`;
   }).join("")}</div>`;
@@ -3873,23 +3883,23 @@ function crmCard(l) {
   const rep = _crm.reps.find(r => r.id === l.assigned_to);
   const aCount = _crm.activityCounts[l.id] || 0;
   return `
-    <article class="tkt-card crm-l-${l.status}" draggable="true"
+    <article class="crm-card" data-status="${l.status}" draggable="true"
       ondragstart="crmDragStart(event,'${l.id}')" ondragend="crmDragEnd(event)"
       onclick="openCrmDrawer('${l.id}')">
-      <div class="tkt-card-top">
-        <span class="tkt-num">${escHtml(l.customer_type || "General")}</span>
-        <div style="display:flex;align-items:center;gap:6px">
-          ${l.lead_source ? `<span class="tkt-pri tkt-p-enhancement">${escHtml(l.lead_source)}</span>` : ""}
-          <button class="tkt-card-del" onclick="event.stopPropagation(); deleteCrmLead('${l.id}')" title="Delete lead">
+      <div class="crm-card-top">
+        <span class="crm-type-chip">${escHtml(l.customer_type || "General")}</span>
+        <div class="crm-card-top-actions">
+          ${l.lead_source ? `<span class="crm-source-chip">${escHtml(l.lead_source)}</span>` : ""}
+          <button class="crm-card-del" onclick="event.stopPropagation(); deleteCrmLead('${l.id}')" title="Delete lead">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>
-      <p class="tkt-card-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</p>
-      ${l.contact_name || l.email ? `<p class="tkt-card-sub">${escHtml(l.contact_name || "")}${l.contact_name && l.email ? " · " : ""}${escHtml(l.email || "")}</p>` : ""}
-      <div class="tkt-card-foot">
-        <div class="tkt-card-meta">
-          ${aCount ? `<span class="tkt-chip" title="${aCount} activity entr${aCount>1?"ies":"y"}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${aCount}</span>` : ""}
+      <p class="crm-card-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</p>
+      ${l.contact_name || l.email ? `<p class="crm-card-sub">${escHtml(l.contact_name || "")}${l.contact_name && l.email ? " · " : ""}${escHtml(l.email || "")}</p>` : ""}
+      <div class="crm-card-foot">
+        <div class="crm-card-meta">
+          ${aCount ? `<span class="crm-activity-chip" title="${aCount} activity entr${aCount>1?"ies":"y"}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${aCount}</span>` : ""}
         </div>
         ${tktAvatar(rep?.email, 24)}
       </div>
@@ -3901,7 +3911,7 @@ function crmCard(l) {
    the drawer would. */
 let _crmDragId = null;
 function crmDragStart(e, id) { _crmDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
-function crmDragEnd(e)       { _crmDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
+function crmDragEnd(e)       { _crmDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".crm-col.over").forEach(c => c.classList.remove("over")); }
 function crmDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
 function crmDragLeave(e)     { e.currentTarget.classList.remove("over"); }
 async function crmDrop(e, status) {
@@ -3985,102 +3995,104 @@ async function openCrmDrawer(id) {
   const items = Array.isArray(l.requested_items) ? l.requested_items : [];
 
   body.innerHTML = `
-    <header class="tkt-dr-head">
-      <div class="tkt-dr-headtop">
-        <span class="tkt-num tkt-num-lg">Lead</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <button class="tkt-iconbtn" title="Delete lead" onclick="deleteCrmLead('${l.id}')">
+   <div class="crm-dr">
+    <header class="crm-dr-head">
+      <div class="crm-dr-headtop">
+        <span class="crm-dr-eyebrow">Lead</span>
+        <div class="crm-dr-headbtns">
+          <button class="crm-iconbtn crm-iconbtn-danger" title="Delete lead" onclick="deleteCrmLead('${l.id}')">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
           </button>
-          <button class="tkt-iconbtn" title="Close" onclick="closeCrmDrawer(true)">
+          <button class="crm-iconbtn" title="Close" onclick="closeCrmDrawer(true)">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
       </div>
-      <h2 class="tkt-dr-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</h2>
-      <div class="tkt-dr-badges">
-        <span class="tkt-type tkt-t-bug">${escHtml(l.customer_type || "—")}</span>
-        <span class="tkt-status-pill tkt-dotbg-${l.status}">${escHtml(CRM_STATUS_LABEL[l.status] || l.status)}</span>
+      <h2 class="crm-dr-title">${escHtml(l.business_name || l.contact_name || "Unnamed lead")}</h2>
+      <div class="crm-dr-badges">
+        <span class="crm-type-tag">${escHtml(l.customer_type || "—")}</span>
+        <span class="crm-status-pill crm-status-${l.status}">${escHtml(CRM_STATUS_LABEL[l.status] || l.status)}</span>
       </div>
     </header>
 
-    <div class="tkt-dr-controls">
-      <label class="tkt-dr-ctl">
-        <span>Status</span>
-        <select class="a-input" onchange="setCrmLeadStatus('${l.id}', this.value)">
+    <div class="crm-dr-controls">
+      <label class="crm-field">
+        <span class="crm-field-label">Status</span>
+        <select class="crm-select" onchange="setCrmLeadStatus('${l.id}', this.value)">
           ${CRM_STATUS.map(s => `<option value="${s.key}"${l.status===s.key?" selected":""}>${escHtml(s.label)}</option>`).join("")}
         </select>
       </label>
-      <label class="tkt-dr-ctl">
-        <span>Lead Source</span>
-        <select class="a-input" onchange="setCrmField('${l.id}','lead_source', this.value)">
+      <label class="crm-field">
+        <span class="crm-field-label">Lead Source</span>
+        <select class="crm-select" onchange="setCrmField('${l.id}','lead_source', this.value)">
           <option value=""${!l.lead_source?" selected":""}>— Not set —</option>
           ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${l.lead_source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
         </select>
       </label>
-      <label class="tkt-dr-ctl">
-        <span>Assigned Rep</span>
-        <select class="a-input" onchange="setCrmField('${l.id}','assigned_to', this.value || null)">
+      <label class="crm-field">
+        <span class="crm-field-label">Assigned Rep</span>
+        <select class="crm-select" onchange="setCrmField('${l.id}','assigned_to', this.value || null)">
           <option value=""${!l.assigned_to?" selected":""}>Unassigned</option>
           ${_crm.reps.map(r => `<option value="${r.id}"${l.assigned_to===r.id?" selected":""}>${escHtml(r.full_name || r.email)}</option>`).join("")}
         </select>
       </label>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4>Contact</h4>
-      <p class="tkt-dr-desc">${escHtml(l.contact_name || "—")}${l.email ? ` &middot; <a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a>` : ""}${(l.phone_number || l.phone) ? ` &middot; ${escHtml(l.phone_number || l.phone)}` : ""}</p>
-      ${items.length ? `<p class="tkt-dr-meta">Requested items: ${items.map(i => escHtml(`${i.name || ""} ×${i.quantity || 1}`)).join(", ")}</p>` : ""}
-      ${l.notes ? `<p class="tkt-dr-meta">Notes: ${escHtml(l.notes)}</p>` : ""}
-      <p class="tkt-dr-meta">Marketing emails: <strong style="color:${l.consent_marketing === false ? "#dc2626" : "#15803d"}">${l.consent_marketing === false ? "Opted out" : "Opted in"}</strong>
-        <button class="tkt-iconbtn" style="display:inline;padding:2px 8px;font-size:11px" onclick="toggleCrmConsent('${l.id}', ${l.consent_marketing === false})">${l.consent_marketing === false ? "Re-enable" : "Opt out"}</button>
-      </p>
-    </div>
-
-    <div class="tkt-dr-section">
-      <h4>Tags</h4>
-      <div id="crmTagPills-${l.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
-        ${(l.tags || []).map(t => `<span class="tkt-chip" style="display:inline-flex;align-items:center;gap:5px">${escHtml(t)}<button onclick="removeCrmTag('${l.id}','${escHtml(t).replace(/'/g,"&#39;")}')" style="border:none;background:none;cursor:pointer;color:#94a3b8;font-size:12px;padding:0">&times;</button></span>`).join("") || `<span style="font-size:12px;color:#94a3b8">No tags yet.</span>`}
-      </div>
-      <div style="display:flex;gap:8px">
-        <input id="crmTagInput-${l.id}" class="a-input" placeholder="e.g. vip, trade-show" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addCrmTag('${l.id}')}">
-        <button class="a-btn-secondary" style="padding:8px 14px" onclick="addCrmTag('${l.id}')">Add</button>
+    <div class="crm-dr-section">
+      <h4 class="crm-dr-h4"><span class="crm-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="M22 6l-10 7L2 6"/></svg></span>Contact</h4>
+      <p class="crm-dr-desc">${escHtml(l.contact_name || "—")}${l.email ? ` &middot; <a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a>` : ""}${(l.phone_number || l.phone) ? ` &middot; ${escHtml(l.phone_number || l.phone)}` : ""}</p>
+      ${items.length ? `<p class="crm-dr-hint">Requested items: ${items.map(i => escHtml(`${i.name || ""} ×${i.quantity || 1}`)).join(", ")}</p>` : ""}
+      ${l.notes ? `<p class="crm-dr-hint">Notes: ${escHtml(l.notes)}</p>` : ""}
+      <div class="crm-consent-row">
+        <span>Marketing emails</span>
+        <span class="crm-consent-pill ${l.consent_marketing === false ? "is-out" : "is-in"}">${l.consent_marketing === false ? "Opted out" : "Opted in"}</span>
+        <button class="crm-btn-sm" onclick="toggleCrmConsent('${l.id}', ${l.consent_marketing === false})">${l.consent_marketing === false ? "Re-enable" : "Opt out"}</button>
       </div>
     </div>
 
-    <div class="tkt-dr-section tkt-dr-facts">
-      <div><span>Created</span><strong>${fmt(l.created_at)}</strong></div>
+    <div class="crm-dr-section">
+      <h4 class="crm-dr-h4"><span class="crm-dr-h4-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41L11 3.83A2 2 0 009.59 3.24L4 3a1 1 0 00-1 1l.24 5.59a2 2 0 00.59 1.41l9.58 9.58a2 2 0 002.82 0l4.36-4.36a2 2 0 000-2.81z"/><circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" stroke="none"/></svg></span>Tags</h4>
+      <div id="crmTagPills-${l.id}" class="crm-tagpills">
+        ${(l.tags || []).map(t => `<span class="crm-tag-pill">${escHtml(t)}<button onclick="removeCrmTag('${l.id}','${escHtml(t).replace(/'/g,"&#39;")}')">&times;</button></span>`).join("") || `<span class="crm-dr-hint">No tags yet.</span>`}
+      </div>
+      <div class="crm-tag-addrow">
+        <input id="crmTagInput-${l.id}" class="crm-input" placeholder="e.g. vip, trade-show" onkeydown="if(event.key==='Enter'){event.preventDefault();addCrmTag('${l.id}')}">
+        <button class="crm-btn crm-btn-ghost" onclick="addCrmTag('${l.id}')">Add</button>
+      </div>
     </div>
 
-    <div class="tkt-dr-section">
-      <h4>Activity <span class="tkt-cnt">${(activity||[]).length}</span></h4>
-      <div class="tkt-thread">
+    <div class="crm-dr-facts">
+      <span>Created</span><strong>${fmt(l.created_at)}</strong>
+    </div>
+
+    <div class="crm-dr-section">
+      <h4 class="crm-dr-h4"><span class="crm-dr-h4-icon crm-dr-h4-icon-accent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg></span>Activity<span class="crm-count-tag">${(activity||[]).length}</span></h4>
+      <div class="crm-thread">
         ${(activity||[]).length ? activity.map(a => `
-          <div class="tkt-comment">
+          <div class="crm-activity-item">
             ${tktAvatar(a.author_name || "?", 30)}
-            <div class="tkt-comment-body">
-              <div class="tkt-comment-head">
+            <div class="crm-activity-body">
+              <div class="crm-activity-head">
                 <strong>${escHtml(a.author_name || "Staff")}</strong>
-                <span class="tkt-role-tag">${escHtml((CRM_ACTIVITY_TYPES.find(t=>t.key===a.activity_type)||{}).label || a.activity_type)}</span>
-                <span class="tkt-comment-time">${timeAgo(a.created_at)}</span>
-                <span class="tkt-comment-actions">
-                  <button type="button" onclick="deleteCrmActivity('${a.id}','${l.id}')" title="Delete">Delete</button>
-                </span>
+                <span class="crm-activity-type">${escHtml((CRM_ACTIVITY_TYPES.find(t=>t.key===a.activity_type)||{}).label || a.activity_type)}</span>
+                <span class="crm-activity-time">${timeAgo(a.created_at)}</span>
+                <button class="crm-activity-delete" type="button" onclick="deleteCrmActivity('${a.id}','${l.id}')" title="Delete">Delete</button>
               </div>
               <p>${escHtml(a.body)}</p>
             </div>
-          </div>`).join("") : `<p class="tkt-dr-meta" style="margin:0">No activity logged yet.</p>`}
+          </div>`).join("") : `<p class="crm-dr-hint" style="margin:0">No activity logged yet.</p>`}
       </div>
-      <div class="tkt-composer">
-        <textarea id="crmActivityBody" class="tkt-composer-input" rows="2" placeholder="Log a call, email, note, or follow-up…"></textarea>
-        <div class="tkt-composer-foot">
-          <select id="crmActivityType" class="tkt-composer-type">
+      <div class="crm-composer">
+        <textarea id="crmActivityBody" class="crm-composer-input" rows="2" placeholder="Log a call, email, note, or follow-up…"></textarea>
+        <div class="crm-composer-foot">
+          <select id="crmActivityType" class="crm-select crm-composer-type">
             ${CRM_ACTIVITY_TYPES.map(t => `<option value="${t.key}">${escHtml(t.label)}</option>`).join("")}
           </select>
-          <button class="a-btn-primary" onclick="submitCrmActivity('${l.id}')">Log Activity</button>
+          <button class="crm-btn crm-btn-primary" onclick="submitCrmActivity('${l.id}')">Log Activity</button>
         </div>
       </div>
     </div>
+   </div>
   `;
 }
 
@@ -4224,39 +4236,41 @@ function openCrmImportModal() {
 
 function handleCrmImportFile(file) {
   if (!file) return;
+  const label = document.getElementById("crmFilePickerText");
+  if (label) label.textContent = file.name;
   const reader = new FileReader();
   reader.onload = () => {
     let rows;
     try {
       rows = parseCrmCsv(String(reader.result));
     } catch (e) {
-      document.getElementById("crmImportPreview").innerHTML = `<p class="tkt-formerror">${escHtml(e.message)}</p>`;
+      document.getElementById("crmImportPreview").innerHTML = `<p class="crm-formerror">${escHtml(e.message)}</p>`;
       return;
     }
     _crmImportRows = rows;
     const skippedNote = rows.skipped?.length
-      ? `<p style="font-size:12px;color:#b45309;margin:8px 0 0">Skipped ${rows.skipped.length} row${rows.skipped.length===1?"":"s"} with no email, business name, or contact name (line${rows.skipped.length===1?"":"s"} ${rows.skipped.join(", ")}).</p>`
+      ? `<p class="crm-import-skipped">Skipped ${rows.skipped.length} row${rows.skipped.length===1?"":"s"} with no email, business name, or contact name (line${rows.skipped.length===1?"":"s"} ${rows.skipped.join(", ")}).</p>`
       : "";
     document.getElementById("crmImportPreview").innerHTML = `
-      <div class="table-wrap" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px">
-        <table style="width:100%;font-size:12.5px;border-collapse:collapse">
-          <thead><tr style="background:#f8fafc">
-            <th style="padding:7px 10px;text-align:left">Business</th>
-            <th style="padding:7px 10px;text-align:left">Contact</th>
-            <th style="padding:7px 10px;text-align:left">Email</th>
-            <th style="padding:7px 10px;text-align:left">Source</th>
+      <div class="crm-import-tablewrap">
+        <table class="crm-import-table">
+          <thead><tr>
+            <th>Business</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Source</th>
           </tr></thead>
           <tbody>
-            ${rows.slice(0, 5).map(r => `<tr style="border-top:1px solid #f1f5f9">
-              <td style="padding:6px 10px">${escHtml(r.business_name || "—")}</td>
-              <td style="padding:6px 10px">${escHtml(r.contact_name || "—")}</td>
-              <td style="padding:6px 10px">${escHtml(r.email || "—")}</td>
-              <td style="padding:6px 10px">${escHtml(r.lead_source || "—")}</td>
+            ${rows.slice(0, 5).map(r => `<tr>
+              <td>${escHtml(r.business_name || "—")}</td>
+              <td>${escHtml(r.contact_name || "—")}</td>
+              <td>${escHtml(r.email || "—")}</td>
+              <td>${escHtml(r.lead_source || "—")}</td>
             </tr>`).join("")}
           </tbody>
         </table>
       </div>
-      ${rows.length > 5 ? `<p style="font-size:12px;color:#94a3b8;margin:8px 0 0">…and ${rows.length - 5} more.</p>` : ""}
+      ${rows.length > 5 ? `<p class="crm-import-more">…and ${rows.length - 5} more.</p>` : ""}
       ${skippedNote}
     `;
     const summary = document.getElementById("crmImportSummary");
