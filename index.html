@@ -224,12 +224,12 @@
     </div>
 </section>
 
-<!-- Articles + FAQ ---------------------------------------------
+<!-- From the Blog ------------------------------------------------
      Replaces the old "Shop by Category" carousel, which duplicated the
      catalog's own category filters one click away and wasn't drawing
-     engagement. This gives Google real internal links into the new blog
-     (SEO Roadmap Day 17/18) instead, plus genuine FAQPage structured data
-     -- the homepage had none before this. -->
+     engagement. Gives Google real internal links into the blog instead
+     (SEO Roadmap Day 17/18). The FAQ section (with FAQPage structured
+     data) now lives after the About Us section, further down the page. -->
 <section class="home-learn-section">
   <div class="container">
     <div class="section-heading">
@@ -247,100 +247,10 @@
   </div>
 </section>
 
-<section class="home-faq-section">
-  <div class="container">
-    <div class="section-heading">
-      <h2>Frequently Asked Questions</h2>
-      <div class="heading-line"></div>
-      <p>The questions we hear most from hotels, rentals, and facility teams getting started.</p>
-    </div>
-
-    <div class="home-faq-list">
-      <div class="home-faq-item">
-        <button class="home-faq-q" type="button" aria-expanded="false">
-          <span>How does case-quantity ordering work?</span>
-          <span class="home-faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="home-faq-a">
-          <p>Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases &mdash; the more you order, the lower your per-case price, with no separate account or negotiation needed.</p>
-        </div>
-      </div>
-      <div class="home-faq-item">
-        <button class="home-faq-q" type="button" aria-expanded="false">
-          <span>Where do you ship from, and how long does an order take?</span>
-          <span class="home-faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="home-faq-a">
-          <p>Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3&ndash;5 business days after payment is confirmed. Processing time is separate from transit time &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for full carrier and delivery details.</p>
-        </div>
-      </div>
-      <div class="home-faq-item">
-        <button class="home-faq-q" type="button" aria-expanded="false">
-          <span>Do I need a business account to order?</span>
-          <span class="home-faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="home-faq-a">
-          <p>No account is required to check pricing or place an order &mdash; you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history.</p>
-        </div>
-      </div>
-      <div class="home-faq-item">
-        <button class="home-faq-q" type="button" aria-expanded="false">
-          <span>Where does Room Ready Supply ship to?</span>
-          <span class="home-faq-icon" aria-hidden="true">+</span>
-        </button>
-        <div class="home-faq-a">
-          <p>We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers &mdash; see the <a href="/shipping-policy">Shipping Policy</a> for details.</p>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "How does case-quantity ordering work?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases -- the more you order, the lower your per-case price, with no separate account or negotiation needed."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Where do you ship from, and how long does an order take?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3-5 business days after payment is confirmed. Processing time is separate from transit time."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Do I need a business account to order?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "No account is required to check pricing or place an order -- you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Where does Room Ready Supply ship to?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers."
-      }
-    }
-  ]
-}
-</script>
-
 <style>
   .home-learn-section, .home-faq-section { padding: 56px 0 64px; }
   .home-learn-section { background: #f6f9fc; }
-  .home-faq-section { background: #fff; }
+  .home-faq-section { background: #f6f9fc; }
 
   /* Articles grid */
   .home-articles-grid {
@@ -1068,6 +978,96 @@
   </div>
 
 </section>
+
+<section class="home-faq-section">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Frequently Asked Questions</h2>
+      <div class="heading-line"></div>
+      <p>The questions we hear most from hotels, rentals, and facility teams getting started.</p>
+    </div>
+
+    <div class="home-faq-list">
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>How does case-quantity ordering work?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases &mdash; the more you order, the lower your per-case price, with no separate account or negotiation needed.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Where do you ship from, and how long does an order take?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3&ndash;5 business days after payment is confirmed. Processing time is separate from transit time &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for full carrier and delivery details.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Do I need a business account to order?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>No account is required to check pricing or place an order &mdash; you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Where does Room Ready Supply ship to?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers &mdash; see the <a href="/shipping-policy">Shipping Policy</a> for details.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does case-quantity ordering work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases -- the more you order, the lower your per-case price, with no separate account or negotiation needed."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where do you ship from, and how long does an order take?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3-5 business days after payment is confirmed. Processing time is separate from transit time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need a business account to order?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No account is required to check pricing or place an order -- you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where does Room Ready Supply ship to?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers."
+      }
+    }
+  ]
+}
+</script>
 
 <div class="bottom-bar">
   <p>Rooms ready. Supplies handled. Reorder made easy.</p>
