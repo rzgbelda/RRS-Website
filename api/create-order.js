@@ -46,7 +46,8 @@ module.exports = async (req, res) => {
     const fakeRes = { status() { return this; }, json(b) { reorderBody = b; return this; } };
     await runDueReorders(supabase, fakeRes);
     const automationResult = await runDueAutomations(supabase);
-    return res.status(200).json({ reorders: reorderBody, automations: automationResult });
+    const scheduledResult = await runDueScheduledSends(supabase);
+    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -380,6 +381,73 @@ async function runDueAutomations(supabase) {
   }
 
   return { queued, sent, skipped };
+}
+
+/**
+ * Sends every campaign_scheduled_sends row past its send_at that hasn't
+ * gone out yet -- the "send later" counterpart to admin.js's immediate
+ * "Send to Segment Now". Recomputes the campaign's segment fresh at send
+ * time (not the recipient list from when it was scheduled) since a lead's
+ * stage/tags can change between scheduling and the actual send -- matches
+ * the note shown to staff when they schedule one.
+ */
+async function runDueScheduledSends(supabase) {
+  const { data: due } = await supabase
+    .from('campaign_scheduled_sends')
+    .select('*, campaigns(id, segment_customer_type, segment_lead_status, segment_lead_source, segment_tag, emails_sent)')
+    .is('sent_at', null)
+    .lte('send_at', new Date().toISOString());
+  if (!due || !due.length) return { sent: 0, failed: 0 };
+
+  let sent = 0, failed = 0;
+  for (const row of due) {
+    try {
+      const c = row.campaigns;
+      let q = supabase.from('quote_requests').select('email')
+        .not('email', 'is', null).neq('consent_marketing', false);
+      if (c?.segment_customer_type) q = q.eq('customer_type', c.segment_customer_type);
+      if (c?.segment_lead_status)   q = q.eq('status', c.segment_lead_status);
+      if (c?.segment_lead_source)   q = q.eq('lead_source', c.segment_lead_source);
+      if (c?.segment_tag)           q = q.contains('tags', [c.segment_tag]);
+      const { data: recipients } = await q;
+      const emails = [...new Set((recipients || []).map(r => (r.email || '').trim().toLowerCase()).filter(Boolean))];
+
+      if (!emails.length) {
+        await supabase.from('campaign_scheduled_sends').update({ sent_at: new Date().toISOString() }).eq('id', row.id);
+        continue;
+      }
+
+      const resend = new Resend(process.env.RESEND_API_KEY);
+      const results = await Promise.allSettled(emails.map(email =>
+        resend.emails.send({
+          from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+          to: email, subject: row.subject, html: row.body_html,
+        })
+      ));
+      const okCount = results.filter(r => r.status === 'fulfilled').length;
+      sent += okCount; failed += results.length - okCount;
+
+      const eventRows = results
+        .map((r, i) => r.status === 'fulfilled' && r.value?.data?.id
+          ? { campaign_id: row.campaign_id, resend_email_id: r.value.data.id, recipient: emails[i], event_type: 'sent' }
+          : null)
+        .filter(Boolean);
+      if (eventRows.length) await supabase.from('campaign_email_events').insert(eventRows);
+
+      await supabase.from('campaign_scheduled_sends').update({ sent_at: new Date().toISOString() }).eq('id', row.id);
+      if (row.campaign_id) {
+        await supabase.from('campaigns').update({
+          emails_sent: (c?.emails_sent || 0) + okCount,
+          last_sent_at: new Date().toISOString(),
+        }).eq('id', row.campaign_id);
+      }
+    } catch (err) {
+      console.error('[create-order] scheduled send failed for', row.id, err.message);
+      failed++;
+    }
+  }
+
+  return { sent, failed };
 }
 
 /**

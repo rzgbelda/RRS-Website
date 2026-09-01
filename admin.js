@@ -3776,6 +3776,8 @@ async function renderCrmTab() {
         <p class="a-page-sub">Every quotation request, tracked from first contact through repeat business.</p>
       </div>
       <div class="tkt-header-actions">
+        <button class="a-btn-secondary" onclick="exportCrmLeadsCsv()">Export CSV</button>
+        <button class="a-btn-secondary" onclick="openCrmImportModal()">Import CSV</button>
         ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
       </div>
     </div>
@@ -4030,6 +4032,20 @@ async function openCrmDrawer(id) {
       <p class="tkt-dr-desc">${escHtml(l.contact_name || "—")}${l.email ? ` &middot; <a href="mailto:${escHtml(l.email)}">${escHtml(l.email)}</a>` : ""}${(l.phone_number || l.phone) ? ` &middot; ${escHtml(l.phone_number || l.phone)}` : ""}</p>
       ${items.length ? `<p class="tkt-dr-meta">Requested items: ${items.map(i => escHtml(`${i.name || ""} ×${i.quantity || 1}`)).join(", ")}</p>` : ""}
       ${l.notes ? `<p class="tkt-dr-meta">Notes: ${escHtml(l.notes)}</p>` : ""}
+      <p class="tkt-dr-meta">Marketing emails: <strong style="color:${l.consent_marketing === false ? "#dc2626" : "#15803d"}">${l.consent_marketing === false ? "Opted out" : "Opted in"}</strong>
+        <button class="tkt-iconbtn" style="display:inline;padding:2px 8px;font-size:11px" onclick="toggleCrmConsent('${l.id}', ${l.consent_marketing === false})">${l.consent_marketing === false ? "Re-enable" : "Opt out"}</button>
+      </p>
+    </div>
+
+    <div class="tkt-dr-section">
+      <h4>Tags</h4>
+      <div id="crmTagPills-${l.id}" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">
+        ${(l.tags || []).map(t => `<span class="tkt-chip" style="display:inline-flex;align-items:center;gap:5px">${escHtml(t)}<button onclick="removeCrmTag('${l.id}','${escHtml(t).replace(/'/g,"&#39;")}')" style="border:none;background:none;cursor:pointer;color:#94a3b8;font-size:12px;padding:0">&times;</button></span>`).join("") || `<span style="font-size:12px;color:#94a3b8">No tags yet.</span>`}
+      </div>
+      <div style="display:flex;gap:8px">
+        <input id="crmTagInput-${l.id}" class="a-input" placeholder="e.g. vip, trade-show" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();addCrmTag('${l.id}')}">
+        <button class="a-btn-secondary" style="padding:8px 14px" onclick="addCrmTag('${l.id}')">Add</button>
+      </div>
     </div>
 
     <div class="tkt-dr-section tkt-dr-facts">
@@ -4087,6 +4103,39 @@ async function setCrmField(id, field, value) {
   renderCrmBoard();
 }
 
+async function addCrmTag(id) {
+  const input = document.getElementById(`crmTagInput-${id}`);
+  const tag = (input?.value || "").trim();
+  if (!tag) return;
+  const lead = _crm.leads.find(x => x.id === id);
+  const tags = [...new Set([...(lead?.tags || []), tag])];
+  const { error } = await window.sb.from("quote_requests").update({ tags }).eq("id", id);
+  if (error) { showToast("Couldn't add tag: " + error.message); return; }
+  if (lead) lead.tags = tags;
+  openCrmDrawer(id);
+}
+
+async function removeCrmTag(id, tag) {
+  const lead = _crm.leads.find(x => x.id === id);
+  const tags = (lead?.tags || []).filter(t => t !== tag);
+  const { error } = await window.sb.from("quote_requests").update({ tags }).eq("id", id);
+  if (error) { showToast("Couldn't remove tag: " + error.message); return; }
+  if (lead) lead.tags = tags;
+  openCrmDrawer(id);
+}
+
+async function toggleCrmConsent(id, reEnable) {
+  const consent = reEnable ? true : false;
+  if (!reEnable && !confirm("Opt this lead out of marketing emails? They'll be excluded from every campaign and automation send going forward.")) return;
+  const { error } = await window.sb.from("quote_requests")
+    .update({ consent_marketing: consent, consent_recorded_at: new Date().toISOString() }).eq("id", id);
+  if (error) { showToast("Couldn't update: " + error.message); return; }
+  const lead = _crm.leads.find(x => x.id === id);
+  if (lead) lead.consent_marketing = consent;
+  showToast(consent ? "Re-enabled marketing emails." : "Opted out of marketing emails.");
+  openCrmDrawer(id);
+}
+
 async function submitCrmActivity(id) {
   const typeEl = document.getElementById("crmActivityType");
   const bodyEl = document.getElementById("crmActivityBody");
@@ -4103,6 +4152,145 @@ async function deleteCrmActivity(activityId, leadId) {
   if (error) { showToast("Couldn't delete: " + error.message); return; }
   showToast("Activity entry deleted.");
   openCrmDrawer(leadId); // re-render the thread without it
+}
+
+/* ── CRM CSV import/export ─────────────────────────────────────
+   Reuses parseCsvRows()/stripBom() (admin.js, built for the product CSV
+   importer) for the tokenizer -- the header/column mapping here is
+   lead-specific, so it's not routed through the product-only parseCsv(). */
+
+function crmCsvCell(v) {
+  const s = String(v == null ? "" : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function exportCrmLeadsCsv() {
+  const leads = _crm.leads || [];
+  if (!leads.length) { showToast("No leads to export."); return; }
+
+  const headers = ["business_name","contact_name","email","phone_number","customer_type","lead_source","status","tags","notes","created_at"];
+  const lines = [headers.join(",")];
+  leads.forEach(l => {
+    lines.push(headers.map(h => {
+      if (h === "tags") return crmCsvCell((l.tags || []).join(";"));
+      return crmCsvCell(l[h] ?? "");
+    }).join(","));
+  });
+
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `rrs-leads-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function parseCrmCsv(text) {
+  const rawRows = parseCsvRows(stripBom(text));
+  if (rawRows.length < 2) throw new Error("CSV must have a header row and at least one data row.");
+
+  const headers = rawRows[0].map(h => h.trim().toLowerCase());
+  // Only email or business_name is required -- a lead can arrive with just
+  // a company name and no email yet (e.g. a trade-show business-card
+  // batch), matching how a lead can already be created manually in the UI
+  // with either field blank.
+  const rows = [];
+  const skipped = [];
+  for (let i = 1; i < rawRows.length; i++) {
+    const vals = rawRows[i];
+    if (vals.length === 1 && vals[0].trim() === "") continue;
+    const obj = {};
+    headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
+    if (!obj.email && !obj.business_name && !obj.contact_name) { skipped.push(i + 1); continue; }
+    rows.push(obj);
+  }
+  rows.skipped = skipped;
+  return rows;
+}
+
+let _crmImportRows = [];
+
+function openCrmImportModal() {
+  _crmImportRows = [];
+  document.getElementById("crmImportFile").value = "";
+  document.getElementById("crmImportPreview").innerHTML = "";
+  document.getElementById("crmImportSummary").style.display = "none";
+  document.getElementById("crmImportSaveBtn").disabled = true;
+  openModal("crmImportModal");
+}
+
+function handleCrmImportFile(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let rows;
+    try {
+      rows = parseCrmCsv(String(reader.result));
+    } catch (e) {
+      document.getElementById("crmImportPreview").innerHTML = `<p class="tkt-formerror">${escHtml(e.message)}</p>`;
+      return;
+    }
+    _crmImportRows = rows;
+    const skippedNote = rows.skipped?.length
+      ? `<p style="font-size:12px;color:#b45309;margin:8px 0 0">Skipped ${rows.skipped.length} row${rows.skipped.length===1?"":"s"} with no email, business name, or contact name (line${rows.skipped.length===1?"":"s"} ${rows.skipped.join(", ")}).</p>`
+      : "";
+    document.getElementById("crmImportPreview").innerHTML = `
+      <div class="table-wrap" style="overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px">
+        <table style="width:100%;font-size:12.5px;border-collapse:collapse">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:7px 10px;text-align:left">Business</th>
+            <th style="padding:7px 10px;text-align:left">Contact</th>
+            <th style="padding:7px 10px;text-align:left">Email</th>
+            <th style="padding:7px 10px;text-align:left">Source</th>
+          </tr></thead>
+          <tbody>
+            ${rows.slice(0, 5).map(r => `<tr style="border-top:1px solid #f1f5f9">
+              <td style="padding:6px 10px">${escHtml(r.business_name || "—")}</td>
+              <td style="padding:6px 10px">${escHtml(r.contact_name || "—")}</td>
+              <td style="padding:6px 10px">${escHtml(r.email || "—")}</td>
+              <td style="padding:6px 10px">${escHtml(r.lead_source || "—")}</td>
+            </tr>`).join("")}
+          </tbody>
+        </table>
+      </div>
+      ${rows.length > 5 ? `<p style="font-size:12px;color:#94a3b8;margin:8px 0 0">…and ${rows.length - 5} more.</p>` : ""}
+      ${skippedNote}
+    `;
+    const summary = document.getElementById("crmImportSummary");
+    summary.textContent = `${rows.length} lead${rows.length === 1 ? "" : "s"} ready to import.`;
+    summary.style.display = rows.length ? "block" : "none";
+    document.getElementById("crmImportSaveBtn").disabled = !rows.length;
+  };
+  reader.readAsText(file);
+}
+
+async function saveCrmImport() {
+  if (!_crmImportRows.length) return;
+  const btn = document.getElementById("crmImportSaveBtn");
+  btn.disabled = true; btn.textContent = "Importing…";
+
+  const payload = _crmImportRows.map(r => ({
+    business_name: r.business_name || null,
+    contact_name: r.contact_name || null,
+    email: r.email || null,
+    phone_number: r.phone_number || r.phone || null,
+    customer_type: r.customer_type || null,
+    lead_source: r.lead_source || "Other",
+    status: CRM_STATUS_LABEL[r.status] ? r.status : "new",
+    tags: r.tags ? r.tags.split(";").map(t => t.trim()).filter(Boolean) : [],
+    notes: r.notes || null,
+  }));
+
+  const { error, data } = await window.sb.from("quote_requests").insert(payload).select("id");
+  btn.disabled = false; btn.textContent = "Import Leads";
+  if (error) { showToast("Import failed: " + error.message); return; }
+
+  closeModal("crmImportModal");
+  showToast(`Imported ${data.length} lead${data.length === 1 ? "" : "s"}.`);
+  renderCrmTab();
 }
 
 /* ── Campaigns (Marketing Account, Phase 2/3) ─────────────────
@@ -4373,6 +4561,12 @@ async function openCampDrawer(id) {
             ${CRM_SOURCES.map(s => `<option value="${escHtml(s)}"${c.segment_lead_source===s?" selected":""}>${escHtml(s)}</option>`).join("")}
           </select>
         </label>
+        <label class="tkt-dr-ctl">
+          <span>Tag</span>
+          <input id="segTag-${c.id}" class="a-input" list="crmTagOptions" value="${escHtml(c.segment_tag || "")}" placeholder="Any"
+            onchange="setCampField('${c.id}','segment_tag',this.value.trim() || null); updateRecipientPreview('${c.id}')">
+          <datalist id="crmTagOptions">${[...new Set((_crm.leads || []).flatMap(l => l.tags || []))].map(t => `<option value="${escHtml(t)}">`).join("")}</datalist>
+        </label>
       </div>
       <div class="cms-form-group" style="margin-top:10px">
         <label class="cms-label">Note (shown on the card)</label>
@@ -4441,11 +4635,22 @@ async function openCampDrawer(id) {
         <label class="cms-label">Body (HTML)</label>
         <textarea class="a-input" id="sendBody-${c.id}" rows="6" style="font-family:ui-monospace,monospace;font-size:12.5px" placeholder="<p>Hi there,</p>..."></textarea>
       </div>
+      <div class="cms-form-group" style="display:flex;align-items:center;gap:8px">
+        <input type="email" class="a-input" id="testEmailInput-${c.id}" placeholder="you@roomreadysupply.com" style="flex:1">
+        <button class="a-btn-secondary" onclick="sendCampaignTestEmail('${c.id}')" id="testCampBtn-${c.id}" style="white-space:nowrap">Send Test</button>
+      </div>
       <p id="sendError-${c.id}" class="tkt-formerror" style="display:none"></p>
-      <button class="a-btn-primary tkt-send-btn" onclick="sendCampaignEmail('${c.id}')" id="sendCampBtn-${c.id}">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-        Send to Segment
-      </button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="a-btn-primary tkt-send-btn" onclick="sendCampaignEmail('${c.id}')" id="sendCampBtn-${c.id}">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          Send to Segment Now
+        </button>
+        <button class="a-btn-secondary" onclick="openScheduleSendModal('${c.id}')" id="scheduleCampBtn-${c.id}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 3v3M16 3v3"/></svg>
+          Schedule for Later
+        </button>
+      </div>
+      <div id="scheduledSendStatus-${c.id}" style="margin-top:8px"></div>
       ${c.emails_sent ? `<p class="tkt-dr-meta">Last sent ${fmt(c.last_sent_at)} — ${c.emails_sent} email${c.emails_sent===1?"":"s"} total.</p>` : ""}
     </div>
 
@@ -4459,6 +4664,7 @@ async function openCampDrawer(id) {
     </div>
   `;
   renderCampMetrics(c.id);
+  renderScheduledSendStatus(c.id);
   updateRecipientPreview(id);
 }
 
@@ -4528,10 +4734,13 @@ async function deleteCampContentItem(campaignId, itemId) {
 // three segment filters are set. Distinct emails only -- a lead can have
 // multiple quote_requests rows over time.
 async function computeSegmentRecipients(c) {
-  let q = window.sb.from("quote_requests").select("email").not("email", "is", null);
+  let q = window.sb.from("quote_requests").select("email")
+    .not("email", "is", null)
+    .neq("consent_marketing", false); // opted-out leads never enter any recipient list, regardless of segment match
   if (c.segment_customer_type) q = q.eq("customer_type", c.segment_customer_type);
   if (c.segment_lead_status)   q = q.eq("status", c.segment_lead_status);
   if (c.segment_lead_source)   q = q.eq("lead_source", c.segment_lead_source);
+  if (c.segment_tag)           q = q.contains("tags", [c.segment_tag]);
   const { data, error } = await q;
   if (error) return { emails: [], error };
   const emails = [...new Set((data || []).map(r => (r.email || "").trim().toLowerCase()).filter(Boolean))];
@@ -4630,8 +4839,99 @@ async function sendCampaignEmail(campaignId) {
   } catch (err) {
     errEl.textContent = err.message; errEl.style.display = "block";
   } finally {
-    btn.disabled = false; btn.textContent = "Send to Segment";
+    btn.disabled = false; btn.textContent = "Send to Segment Now";
   }
+}
+
+// Sends the exact subject/body currently in the compose form to one
+// address, bypassing segment targeting and campaign send-count tracking
+// entirely -- a real preview in a real inbox before committing to the
+// full segment, the "test email before sending" spec item.
+async function sendCampaignTestEmail(campaignId) {
+  const errEl = document.getElementById("sendError-" + campaignId);
+  errEl.style.display = "none";
+  const testEmail = document.getElementById("testEmailInput-" + campaignId).value.trim();
+  const subject = document.getElementById("sendSubject-" + campaignId).value.trim();
+  const body_html = document.getElementById("sendBody-" + campaignId).value.trim();
+  if (!testEmail) { errEl.textContent = "Enter an email address to send the test to."; errEl.style.display = "block"; return; }
+  if (!subject || !body_html) { errEl.textContent = "Subject and body are required."; errEl.style.display = "block"; return; }
+
+  const btn = document.getElementById("testCampBtn-" + campaignId);
+  btn.disabled = true; btn.textContent = "Sending…";
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({ action: "send_campaign", subject: "[TEST] " + subject, body_html, recipients: [testEmail] }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+    showToast(`Test sent to ${testEmail}.`);
+  } catch (err) {
+    errEl.textContent = err.message; errEl.style.display = "block";
+  } finally {
+    btn.disabled = false; btn.textContent = "Send Test";
+  }
+}
+
+/* ── Scheduled ("send later") campaign sends ──────────────────────
+   One pending row per campaign (enforced by a partial unique index),
+   picked up and sent by the same daily cron sweep that already runs
+   reorders and automations (api/create-order.js). */
+
+async function openScheduleSendModal(campaignId) {
+  const subject = document.getElementById("sendSubject-" + campaignId).value.trim();
+  const body_html = document.getElementById("sendBody-" + campaignId).value.trim();
+  if (!subject || !body_html) { showToast("Fill in the subject and body first."); return; }
+
+  document.getElementById("schedSendCampId").value = campaignId;
+  document.getElementById("schedSendSubject").value = subject;
+  document.getElementById("schedSendBody").value = body_html;
+  const tomorrow = new Date(Date.now() + 86400000);
+  document.getElementById("schedSendAt").value = tomorrow.toISOString().slice(0, 16);
+  openModal("scheduleSendModal");
+}
+
+async function confirmScheduleSend() {
+  const campaignId = document.getElementById("schedSendCampId").value;
+  const subject = document.getElementById("schedSendSubject").value.trim();
+  const body_html = document.getElementById("schedSendBody").value.trim();
+  const sendAtLocal = document.getElementById("schedSendAt").value;
+  if (!sendAtLocal) { showToast("Pick a date and time."); return; }
+  const sendAt = new Date(sendAtLocal);
+  if (sendAt.getTime() <= Date.now()) { showToast("Pick a time in the future."); return; }
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  // Replaces any existing pending scheduled send for this campaign
+  // (the unique index only allows one) rather than stacking a second.
+  await window.sb.from("campaign_scheduled_sends").delete().eq("campaign_id", campaignId).is("sent_at", null);
+  const { error } = await window.sb.from("campaign_scheduled_sends").insert({
+    campaign_id: campaignId, subject, body_html, send_at: sendAt.toISOString(),
+    created_by: session?.user?.id || null,
+  });
+  if (error) { showToast("Couldn't schedule: " + error.message); return; }
+
+  closeModal("scheduleSendModal");
+  showToast("Send scheduled.");
+  renderScheduledSendStatus(campaignId);
+}
+
+async function renderScheduledSendStatus(campaignId) {
+  const el = document.getElementById("scheduledSendStatus-" + campaignId);
+  if (!el) return;
+  const { data } = await window.sb.from("campaign_scheduled_sends")
+    .select("*").eq("campaign_id", campaignId).is("sent_at", null).maybeSingle();
+  if (!data) { el.innerHTML = ""; return; }
+  el.innerHTML = `<span class="tkt-recipient-pill">${_campPersonIcon} Scheduled to send ${fmt(data.send_at)}
+    <button onclick="cancelScheduledSend('${data.id}','${campaignId}')" style="margin-left:8px;border:none;background:none;color:#dc2626;cursor:pointer;font-size:11px;font-weight:700">Cancel</button></span>`;
+}
+
+async function cancelScheduledSend(id, campaignId) {
+  const { error } = await window.sb.from("campaign_scheduled_sends").delete().eq("id", id);
+  if (error) { showToast("Couldn't cancel: " + error.message); return; }
+  showToast("Scheduled send cancelled.");
+  renderScheduledSendStatus(campaignId);
 }
 
 /* ── Email template library ───────────────────────────────────── */
@@ -4821,11 +5121,17 @@ async function renderReportsTab() {
   const [
     { data: orders },
     { count: customerCount },
-    { count: productCount }
+    { count: productCount },
+    { data: campaigns },
+    { data: emailEvents },
+    { data: leadDates },
   ] = await Promise.all([
     window.sb.from("orders").select("status, total, created_at"),
     window.sb.from("profiles").select("*", { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("products").select("*", { count:"exact", head:true }).eq("is_active", true),
+    window.sb.from("campaigns").select("id, name, emails_sent").gt("emails_sent", 0),
+    window.sb.from("campaign_email_events").select("campaign_id, event_type, recipient, link_url"),
+    window.sb.from("quote_requests").select("created_at"),
   ]);
 
   const allOrders    = orders || [];
@@ -4837,6 +5143,33 @@ async function renderReportsTab() {
     const key = (o.created_at || "").slice(0,7) || "unknown";
     byMonth[key] = (byMonth[key] || 0) + Number(o.total);
   });
+
+  // ── Marketing: campaign comparison, top links, lead growth ──────
+  const events = emailEvents || [];
+  const distinctBy = (campaignId, type) =>
+    new Set(events.filter(e => e.campaign_id === campaignId && e.event_type === type).map(e => e.recipient)).size;
+  const campaignRows = (campaigns || []).map(c => {
+    const sent = distinctBy(c.id, "sent") || c.emails_sent || 0;
+    const opened = distinctBy(c.id, "opened");
+    const clicked = distinctBy(c.id, "clicked");
+    return { name: c.name, sent, opened, clicked,
+      openRate: sent ? Math.round((opened / sent) * 100) : 0,
+      clickRate: sent ? Math.round((clicked / sent) * 100) : 0 };
+  }).sort((a, b) => b.openRate - a.openRate);
+
+  const linkCounts = {};
+  events.filter(e => e.event_type === "clicked" && e.link_url).forEach(e => {
+    linkCounts[e.link_url] = (linkCounts[e.link_url] || 0) + 1;
+  });
+  const topLinks = Object.entries(linkCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+  const leadsByMonth = {};
+  (leadDates || []).forEach(l => {
+    const key = (l.created_at || "").slice(0, 7);
+    if (key) leadsByMonth[key] = (leadsByMonth[key] || 0) + 1;
+  });
+  const leadMonths = Object.entries(leadsByMonth).sort();
+  const maxLeadsInMonth = Math.max(1, ...leadMonths.map(([, n]) => n));
 
   panel.innerHTML = `
     <h2 style="font-size:22px;color:#0b2d52;margin-bottom:24px">Reports &amp; Analytics</h2>
@@ -4870,7 +5203,80 @@ async function renderReportsTab() {
             : "<p style='color:#aaa;font-size:13px'>No revenue data yet.</p>"}
         </div>
       </div>
+    </div>
+
+    <h2 style="font-size:22px;color:#0b2d52;margin:40px 0 24px">Marketing</h2>
+    <div class="a-card" style="margin-bottom:24px">
+      <div class="a-card-header"><h3>Campaign Comparison</h3></div>
+      <div style="padding:0;overflow-x:auto">
+        ${campaignRows.length ? `
+        <table style="width:100%;font-size:13px;border-collapse:collapse">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:10px 16px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Campaign</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Sent</th>
+            <th style="padding:10px 12px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Open Rate</th>
+            <th style="padding:10px 16px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Click Rate</th>
+          </tr></thead>
+          <tbody>
+            ${campaignRows.map(r => `<tr style="border-top:1px solid #f1f5f9">
+              <td style="padding:10px 16px;font-weight:600">${escHtml(r.name)}</td>
+              <td style="padding:10px 12px;text-align:right">${r.sent}</td>
+              <td style="padding:10px 12px;text-align:right"><strong style="color:#0d1f38">${r.openRate}%</strong></td>
+              <td style="padding:10px 16px;text-align:right"><strong style="color:#0d1f38">${r.clickRate}%</strong></td>
+            </tr>`).join("")}
+          </tbody>
+        </table>` : "<p style='color:#aaa;font-size:13px;padding:16px'>No campaigns sent yet.</p>"}
+      </div>
+    </div>
+
+    <div class="a-reports-grid">
+      <div class="a-card">
+        <div class="a-card-header"><h3>Top-Performing Links</h3></div>
+        <div style="padding:16px">
+          ${topLinks.length ? topLinks.map(([url, n]) => `
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;font-size:12.5px">
+              <a href="${escHtml(url)}" target="_blank" rel="noopener" style="color:#0b2d52;text-decoration:underline;word-break:break-all">${escHtml(url)}</a>
+              <strong style="white-space:nowrap">${n} click${n===1?"":"s"}</strong>
+            </div>`).join("") : "<p style='color:#aaa;font-size:13px'>No link clicks tracked yet.</p>"}
+        </div>
+      </div>
+      <div class="a-card">
+        <div class="a-card-header"><h3>Lead Growth by Month</h3></div>
+        <div style="padding:16px">
+          ${leadMonths.length ? leadMonths.map(([m, n]) => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;font-size:12.5px">
+              <span style="width:56px;flex:none;color:#64748b">${m}</span>
+              <div style="flex:1;background:#f1f5f9;border-radius:4px;height:14px;overflow:hidden">
+                <div style="width:${Math.round((n / maxLeadsInMonth) * 100)}%;background:#ED7226;height:100%"></div>
+              </div>
+              <strong style="width:24px;text-align:right">${n}</strong>
+            </div>`).join("") : "<p style='color:#aaa;font-size:13px'>No leads yet.</p>"}
+        </div>
+      </div>
+    </div>
+
+    <div class="a-card" style="margin-top:24px">
+      <div class="a-card-header"><h3>Export</h3></div>
+      <div style="padding:16px">
+        <button class="a-btn-secondary" onclick="exportCampaignReportCsv()">Export Campaign Report (CSV)</button>
+      </div>
     </div>`;
+
+  window._reportsCampaignRows = campaignRows;
+}
+
+function exportCampaignReportCsv() {
+  const rows = window._reportsCampaignRows || [];
+  if (!rows.length) { showToast("No campaign data to export."); return; }
+  const headers = ["Campaign", "Sent", "Open Rate %", "Click Rate %"];
+  const lines = [headers.join(",")];
+  rows.forEach(r => lines.push([r.name.replace(/,/g, ";"), r.sent, r.openRate, r.clickRate].join(",")));
+  const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `rrs-campaign-report-${new Date().toISOString().slice(0,10)}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /* ── Settings ──────────────────────────────────────────────── */

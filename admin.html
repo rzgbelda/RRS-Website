@@ -1464,6 +1464,53 @@
       </div>
     </div>
 
+    <!-- CRM CSV IMPORT MODAL -->
+    <div id="crmImportModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:560px">
+        <div class="a-modal-header">
+          <h3>Import Leads from CSV</h3>
+          <button class="a-modal-close" onclick="closeModal('crmImportModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <p style="font-size:12.5px;color:#64748b;margin:0 0 14px">Columns recognized: <code>business_name, contact_name, email, phone_number, customer_type, lead_source, status, tags, notes</code>. Only the header row is required to match &mdash; any column can be left out. <code>tags</code> should be semicolon-separated (e.g. <code>vip;trade-show</code>).</p>
+          <div class="cms-form-group">
+            <label class="cms-label">CSV File</label>
+            <input type="file" id="crmImportFile" accept=".csv" onchange="handleCrmImportFile(this.files[0])">
+          </div>
+          <div id="crmImportPreview"></div>
+          <p id="crmImportSummary" style="font-size:12.5px;font-weight:700;color:#0d1f38;margin-top:10px;display:none"></p>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" onclick="closeModal('crmImportModal')">Cancel</button>
+          <button class="a-btn-primary" id="crmImportSaveBtn" onclick="saveCrmImport()" disabled>Import Leads</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULE SEND MODAL -->
+    <div id="scheduleSendModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:420px">
+        <div class="a-modal-header">
+          <h3>Schedule Send</h3>
+          <button class="a-modal-close" onclick="closeModal('scheduleSendModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <input type="hidden" id="schedSendCampId">
+          <input type="hidden" id="schedSendSubject">
+          <input type="hidden" id="schedSendBody">
+          <div class="cms-form-group" style="margin-bottom:0">
+            <label class="cms-label">Send At</label>
+            <input type="datetime-local" id="schedSendAt" class="a-input">
+          </div>
+          <p style="font-size:12px;color:#94a3b8;margin:10px 0 0">Checked once a day and sent to whoever matches this campaign's segment at that time &mdash; not necessarily the same recipients as right now.</p>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" onclick="closeModal('scheduleSendModal')">Cancel</button>
+          <button class="a-btn-primary" onclick="confirmScheduleSend()">Schedule</button>
+        </div>
+      </div>
+    </div>
+
     <!-- AUTOMATIONS MODAL -->
     <div id="automationsModal" class="a-modal-overlay" style="display:none">
       <div class="a-modal" style="max-width:640px">
@@ -2731,7 +2778,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=82"></script>
+<script src="admin.js?v=83"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {
