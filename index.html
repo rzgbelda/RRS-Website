@@ -242,7 +242,7 @@
       <div class="home-articles-loading">Loading articles&hellip;</div>
     </div>
     <div class="home-articles-viewmore">
-      <a href="/blog" class="view-more-btn">View All Articles &gt;&gt;</a>
+      <a href="/blog" class="home-articles-viewmore-btn">View All Articles <span class="home-articles-viewmore-arrow">&rarr;</span></a>
     </div>
   </div>
 </section>
@@ -366,6 +366,21 @@
   .home-article-cta { font-size: 12.5px; font-weight: 800; color: #ED7226; }
 
   .home-articles-viewmore { text-align: center; margin-top: 30px; }
+  .home-articles-viewmore-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 12px 26px; border-radius: 999px;
+    background: #fff; border: 1.5px solid #ED7226;
+    color: #ED7226; font-size: 14px; font-weight: 800;
+    text-decoration: none; letter-spacing: .2px;
+    transition: background .18s, color .18s, box-shadow .18s, transform .18s;
+  }
+  .home-articles-viewmore-btn .home-articles-viewmore-arrow { transition: transform .18s; }
+  .home-articles-viewmore-btn:hover, .home-articles-viewmore-btn:focus-visible {
+    background: #ED7226; color: #fff;
+    box-shadow: 0 10px 22px rgba(237,114,38,.28); transform: translateY(-2px);
+  }
+  .home-articles-viewmore-btn:hover .home-articles-viewmore-arrow,
+  .home-articles-viewmore-btn:focus-visible .home-articles-viewmore-arrow { transform: translateX(3px); }
 
   /* FAQ accordion */
   .home-faq-list { max-width: 760px; margin: 30px auto 0; padding: 0 24px; }
@@ -390,7 +405,16 @@
 <script>
   // Real, published articles pulled live via the same window.sb client
   // every other page uses -- no separate fetch mechanism.
-  (function () {
+  //
+  // Deferred to DOMContentLoaded rather than run immediately: this block
+  // sits early in the page, but supabase.js (which sets window.sb)
+  // doesn't load until near the very end of the body -- running
+  // immediately meant window.sb didn't exist yet, the old guard bailed
+  // out silently, and the grid stayed stuck on "Loading articles..."
+  // forever with no retry. supabase.js is a plain blocking script tag
+  // (no defer/async) and sets window.sb synchronously the moment it
+  // runs, so by DOMContentLoaded every prior script has already executed.
+  document.addEventListener('DOMContentLoaded', function () {
     const grid = document.getElementById('homeArticlesGrid');
     if (!grid || !window.sb) return;
 
@@ -414,7 +438,7 @@
             </div>
           </a>`).join('');
       });
-  })();
+  });
 
   // FAQ accordion -- single-open, plain click toggle.
   (function () {
