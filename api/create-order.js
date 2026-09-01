@@ -103,8 +103,54 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 
+  // Best-effort, awaited before responding (a serverless function isn't
+  // guaranteed to keep running once its response is sent) -- RRS's own
+  // stock numbers (the only live stock data that exists -- see the
+  // fulfillment-pipeline migration) are checked against what the cart in
+  // localStorage said it was buying. "Possible" because that number isn't
+  // independently verified against a live vendor feed -- this raises a
+  // signal in the new Order Exceptions tab for staff to check rather than
+  // silently blocking a payment that already went through on data that
+  // might be stale. Failure here never blocks the order response itself.
+  if (Array.isArray(b.cart_items) && b.cart_items.length) {
+    try {
+      await flagPossibleStockouts(supabase, data.id, b.cart_items);
+    } catch (err) {
+      console.error('[create-order] stockout check failed:', err.message);
+    }
+  }
+
   res.status(200).json({ id: data.id });
 };
+
+async function flagPossibleStockouts(supabase, orderId, cartItems) {
+  const skus = [...new Set(cartItems.map(i => i.sku || i.itemNumber).filter(Boolean))];
+  if (!skus.length) return;
+
+  const { data: products } = await supabase
+    .from('products').select('id, sku, inventory(stock_qty)').in('sku', skus);
+  if (!products?.length) return;
+
+  const bySku = Object.fromEntries(products.map(p => [p.sku, p]));
+  const shortfalls = [];
+  for (const item of cartItems) {
+    const sku = item.sku || item.itemNumber;
+    const p = bySku[sku];
+    const stock = p?.inventory?.[0]?.stock_qty;
+    const qty = Number(item.quantity ?? item.qty ?? 1);
+    if (stock != null && stock < qty) {
+      shortfalls.push(`${sku}: wanted ${qty}, ${stock} on hand`);
+    }
+  }
+  if (!shortfalls.length) return;
+
+  const { error } = await supabase.from('order_exceptions').insert({
+    order_id: orderId,
+    reason_code: 'possible_stockout',
+    note: shortfalls.join('; '),
+  });
+  if (error) console.error('[create-order] order_exceptions insert failed:', error.message);
+}
 
 /**
  * Advances (or closes out) an original schedule-holding order's next due
