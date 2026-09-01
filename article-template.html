@@ -11,6 +11,10 @@
   </script>
 
   <meta charset="UTF-8" />
+  <!-- Served at /blog/post?slug=... (two path segments), so every
+       relative URL below (style.css, script.js, assets/...) would
+       otherwise resolve against /blog/ instead of site root. -->
+  <base href="/">
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Article | Room Ready Supply</title>
