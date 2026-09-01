@@ -138,7 +138,7 @@ async function buildQuotePdf(q) {
   // Overridable for non-quote documents (e.g. an invoice showing order
   // status instead of a validity date); defaults preserve exact prior
   // behaviour for real quotes.
-  const pillText = q.pill_text || (validUntil ? `VALID UNTIL ${validUntil.toUpperCase()}` : 'VALIDITY ON REQUEST');
+  const pillText = q.pill_text || (q.hide_pricing ? 'PURCHASE ORDER' : (validUntil ? `VALID UNTIL ${validUntil.toUpperCase()}` : 'VALIDITY ON REQUEST'));
   const pillW = bold.widthOfTextAtSize(pillText, 8) + 20;
   page.drawRectangle({ x: MARGIN, y: y - 17, width: pillW, height: 19, color: AMBER_BG, borderColor: rgb(0.949, 0.863, 0.682), borderWidth: 1 });
   page.drawText(pillText, { x: MARGIN + 10, y: y - 11, size: 8, font: bold, color: AMBER });
@@ -157,7 +157,7 @@ async function buildQuotePdf(q) {
 
   const panelH = 24 + billLines.length * 12.5 + 8;
   page.drawRectangle({ x: MARGIN, y: y - panelH, width: RIGHT - MARGIN, height: panelH, color: PANEL, borderColor: LINE, borderWidth: 1 });
-  page.drawText('PREPARED FOR', { x: MARGIN + 12, y: y - 15, size: 7.5, font: bold, color: GRAY_MID });
+  page.drawText(q.hide_pricing ? 'VENDOR' : 'PREPARED FOR', { x: MARGIN + 12, y: y - 15, size: 7.5, font: bold, color: GRAY_MID });
   let by = y - 29;
   billLines.forEach((line, i) => {
     page.drawText(fitText(line, RIGHT - MARGIN - 24, i === 0 ? bold : reg, i === 0 ? 10 : 9),
@@ -232,17 +232,26 @@ async function buildQuotePdf(q) {
   if (!q.message_at_bottom) drawMessageBlock();
 
   // ── Items table ──────────────────────────────────────────────────
-  const COL_QTY   = 348;
+  // hide_pricing: neutral vendor PO / packing-slip mode -- product, SKU,
+  // and qty only, no cost data, per the fulfillment-pipeline memo's
+  // "neutral packing slip" requirement.
+  const hidePricing = !!q.hide_pricing;
+  const COL_QTY   = hidePricing ? RIGHT : 348;
   const COL_PRICE = 448;
   const COL_TOTAL = RIGHT;
 
   function drawTableHead() {
     page.drawRectangle({ x: MARGIN, y: y - 20, width: RIGHT - MARGIN, height: 20, color: NAVY });
     page.drawText('PRODUCT', { x: MARGIN + 10, y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
-    const q1 = 'QTY (CASES)', q2 = 'UNIT PRICE', q3 = 'TOTAL';
-    page.drawText(q1, { x: rightOf(q1, COL_QTY, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
-    page.drawText(q2, { x: rightOf(q2, COL_PRICE, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
-    page.drawText(q3, { x: rightOf(q3, COL_TOTAL, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
+    if (hidePricing) {
+      const q1 = 'QTY (CASES)';
+      page.drawText(q1, { x: rightOf(q1, COL_QTY, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
+    } else {
+      const q1 = 'QTY (CASES)', q2 = 'UNIT PRICE', q3 = 'TOTAL';
+      page.drawText(q1, { x: rightOf(q1, COL_QTY, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
+      page.drawText(q2, { x: rightOf(q2, COL_PRICE, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
+      page.drawText(q3, { x: rightOf(q3, COL_TOTAL, 7.5, bold), y: y - 13.5, size: 7.5, font: bold, color: rgb(0.62, 0.73, 0.85) });
+    }
     y -= 20;
   }
 
@@ -266,12 +275,16 @@ async function buildQuotePdf(q) {
         page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
       }
       const nameY = y - 12.5;
-      page.drawText(fitText(it.name || 'Product', COL_QTY - MARGIN - 74, reg, 8.5),
+      const label = hidePricing && it.sku ? `${it.name || 'Product'}  (SKU: ${it.sku})` : (it.name || 'Product');
+      page.drawText(fitText(label, COL_QTY - MARGIN - 74, reg, 8.5),
         { x: MARGIN + 10, y: nameY, size: 8.5, font: reg, color: rgb(0.12, 0.18, 0.25) });
-      const qs = String(qty), ps = money(unit), ts = money(line);
-      page.drawText(qs, { x: rightOf(qs, COL_QTY, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
-      page.drawText(ps, { x: rightOf(ps, COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
-      page.drawText(ts, { x: rightOf(ts, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: NAVY });
+      const qs = String(qty);
+      page.drawText(qs, { x: rightOf(qs, COL_QTY, 8.5, hidePricing ? bold : reg), y: nameY, size: 8.5, font: hidePricing ? bold : reg, color: hidePricing ? NAVY : GRAY });
+      if (!hidePricing) {
+        const ps = money(unit), ts = money(line);
+        page.drawText(ps, { x: rightOf(ps, COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
+        page.drawText(ts, { x: rightOf(ts, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: NAVY });
+      }
       y -= 18;
     });
   }
@@ -280,7 +293,7 @@ async function buildQuotePdf(q) {
   // delivery portion of the total is, matching the emailed quote and the
   // customer-facing quote page.
   const deliveryFee = Math.max(0, Number(q.in_house_delivery_fee) || 0);
-  if (deliveryFee > 0) {
+  if (!hidePricing && deliveryFee > 0) {
     if (ensure(24)) drawTableHead();
     if (items.length % 2 === 1) {
       page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
@@ -299,7 +312,7 @@ async function buildQuotePdf(q) {
   // Freight fee: same pattern as the delivery fee row above, its own line
   // so the customer sees what the Warp/carrier freight portion is.
   const freightFee = Math.max(0, Number(q.freight_fee) || 0);
-  if (freightFee > 0) {
+  if (!hidePricing && freightFee > 0) {
     if (ensure(24)) drawTableHead();
     if ((items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 1) {
       page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
@@ -322,28 +335,35 @@ async function buildQuotePdf(q) {
   const taxAmount = Math.max(0, Number(q.tax_amount) || 0);
   const grand = q.grand_total != null ? Number(q.grand_total) : subtotal + taxAmount;
 
-  ensure(30 + 46);
-  const subLbl = 'Subtotal', subVal = money(subtotal);
-  page.drawText(subLbl, { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
-  page.drawText(subVal, { x: rightOf(subVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
-  y -= 14;
+  if (!hidePricing) {
+    ensure(30 + 46);
+    const subLbl = 'Subtotal', subVal = money(subtotal);
+    page.drawText(subLbl, { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
+    page.drawText(subVal, { x: rightOf(subVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
+    y -= 14;
 
-  const taxLbl = 'Sales Tax' + (q.shipping_state ? ` (${q.shipping_state}${q.tax_rate ? ' · ' + (Number(q.tax_rate) * 100).toFixed(2) + '%' : ''})` : '');
-  const taxVal = money(taxAmount);
-  page.drawText(fitText(taxLbl, 220, reg, 8.5), { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
-  page.drawText(taxVal, { x: rightOf(taxVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
-  y -= 18;
+    const taxLbl = 'Sales Tax' + (q.shipping_state ? ` (${q.shipping_state}${q.tax_rate ? ' · ' + (Number(q.tax_rate) * 100).toFixed(2) + '%' : ''})` : '');
+    const taxVal = money(taxAmount);
+    page.drawText(fitText(taxLbl, 220, reg, 8.5), { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
+    page.drawText(taxVal, { x: rightOf(taxVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
+    y -= 18;
 
-  page.drawRectangle({ x: MARGIN, y: y - 30, width: RIGHT - MARGIN, height: 30, color: NAVY });
-  page.drawText('TOTAL', { x: MARGIN + 12, y: y - 19, size: 9.5, font: bold, color: WHITE });
-  const gt = money(grand);
-  page.drawText(gt, { x: rightOf(gt, RIGHT - 12, 15, bold), y: y - 21, size: 15, font: bold, color: ORANGE });
-  y -= 30 + 22;
+    page.drawRectangle({ x: MARGIN, y: y - 30, width: RIGHT - MARGIN, height: 30, color: NAVY });
+    page.drawText('TOTAL', { x: MARGIN + 12, y: y - 19, size: 9.5, font: bold, color: WHITE });
+    const gt = money(grand);
+    page.drawText(gt, { x: rightOf(gt, RIGHT - 12, 15, bold), y: y - 21, size: 15, font: bold, color: ORANGE });
+    y -= 30 + 22;
+  } else {
+    y -= 10;
+  }
 
   if (q.message_at_bottom) drawMessageBlock();
 
   // ── Terms ────────────────────────────────────────────────────────
-  const terms = [
+  const terms = hidePricing ? [
+    'This is a purchase order for fulfillment only -- no pricing information is included.',
+    'Please confirm receipt and expected ship date with Room Ready Supply.',
+  ] : [
     'Sales tax is calculated based on the shipping state and included in the total above.',
     validUntil ? `Prices are per case and valid until ${validUntil}.` : 'Prices are per case.',
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
@@ -385,7 +405,8 @@ module.exports = async (req, res) => {
     }
 
     const bytes = await buildQuotePdf(q);
-    const filename = `RRS-Quotation-${String(q.quote_number || 'quote').replace(/[^A-Za-z0-9._-]/g, '')}.pdf`;
+    const prefix = q.hide_pricing ? 'RRS-PO' : 'RRS-Quotation';
+    const filename = `${prefix}-${String(q.quote_number || 'quote').replace(/[^A-Za-z0-9._-]/g, '')}.pdf`;
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);

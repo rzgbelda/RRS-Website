@@ -163,6 +163,63 @@ module.exports = async (req, res) => {
     return res.status(200).json({ success: true, sent, failed });
   }
 
+  // Vendor purchase order: emails a neutral, no-pricing packing-slip PDF
+  // (already built client-side via /api/quote-pdf with hide_pricing:true)
+  // to a vendor's contact_email, and logs the send so staff can see at a
+  // glance whether an order's vendor-fulfilled lines have already gone
+  // out. Dispatched from this file rather than a new one for the same
+  // Vercel Hobby 12-function-cap reason as send_campaign above.
+  if (req.body?.action === 'send_vendor_po') {
+    const { order_id, vendor_id, po_number, line_items, pdf_base64 } = req.body;
+    if (!order_id || !vendor_id || !po_number) {
+      return res.status(400).json({ error: 'order_id, vendor_id, and po_number are required.' });
+    }
+    if (!Array.isArray(line_items) || !line_items.length) {
+      return res.status(400).json({ error: 'At least one line item is required.' });
+    }
+    if (!pdf_base64) return res.status(400).json({ error: 'pdf_base64 is required.' });
+
+    const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    if (!token) return res.status(401).json({ error: 'Not signed in.' });
+    const { data: caller, error: callerErr } = await supabase.auth.getUser(token);
+    if (callerErr || !caller?.user) return res.status(401).json({ error: 'Invalid session.' });
+    const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.user.id).single();
+    if (!['owner', 'marketing'].includes(callerProfile?.role)) {
+      return res.status(403).json({ error: 'Only Owner or Marketing accounts can send vendor purchase orders.' });
+    }
+
+    const { data: vendor, error: vendorErr } = await supabase
+      .from('vendors').select('name, contact_email').eq('id', vendor_id).single();
+    if (vendorErr || !vendor?.contact_email) {
+      return res.status(404).json({ error: 'Vendor not found or has no contact email on file.' });
+    }
+
+    let resend;
+    try { resend = getResend(); } catch (e) { return res.status(500).json({ error: e.message }); }
+
+    try {
+      await resend.emails.send({
+        from: 'Room Ready Supply <orders@roomreadysupply.com>',
+        to: vendor.contact_email,
+        subject: `Purchase Order ${po_number} — Room Ready Supply`,
+        html: '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Hi ' + esc(vendor.name) + ' team,</p>' +
+          '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Please find attached purchase order <strong>' + esc(po_number) + '</strong> for fulfillment. Reply to this email or call (252) 227-0073 with any questions.</p>' +
+          '<p style="font-family:sans-serif;font-size:13px;color:#94a3b8;">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962</p>',
+        attachments: [{ filename: `RRS-PO-${po_number}.pdf`, content: pdf_base64 }],
+      });
+    } catch (e) {
+      console.error('[send-invoice] vendor PO send failed:', e.message);
+      return res.status(500).json({ error: 'Could not send purchase order email: ' + e.message });
+    }
+
+    const { error: logErr } = await supabase.from('vendor_purchase_orders').insert({
+      order_id, vendor_id, po_number, line_items, sent_to_email: vendor.contact_email,
+    });
+    if (logErr) console.error('[send-invoice] vendor PO log insert failed:', logErr.message);
+
+    return res.status(200).json({ success: true, sent_to: vendor.contact_email });
+  }
+
   if (!Stripe) return res.status(500).json({ error: 'stripe module not available' });
 
   const { quote_request_id, order_id, preview_only } = req.body || {};
