@@ -49,7 +49,7 @@ Reconstructed from git log, not a surviving plan doc:
 | Day | Task | Why |
 |---|---|---|
 | 15 | Claim/verify Google Business Profile, add `sameAs` to homepage schema | Highest-leverage local-SEO move available, currently missing entirely | ✅ Done (2026-09-01) — Google Business Profile created (category: Wholesaler) and Facebook Page claimed; both added to `sameAs` on the homepage's LocalBusiness schema and best-deals.html's Organization schema |
-| 16 | Post-delivery review-request email flow | Prerequisite for ever adding `aggregateRating` schema |
+| 16 | Post-delivery review-request email flow | Prerequisite for ever adding `aggregateRating` schema | ✅ Done (2026-09-02) — reused the trigger→delay→email automation engine built for the marketing work (a 3rd trigger type, `order_delivered`, alongside the existing lead/quote triggers) rather than building a second system. A real "Post-Delivery Review Request" automation is seeded (3-day delay, links to the Day 15 Google Business Profile), created **paused** — staff review the copy and delay in Campaigns → Automations before turning it on. `aggregateRating` schema itself is still a separate, later step: real reviews have to actually accumulate first |
 
 ### Days 17–22 — Content & backlinks (the actual biggest gap)
 

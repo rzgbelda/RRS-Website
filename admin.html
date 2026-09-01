@@ -1560,6 +1560,7 @@
               <select id="autoTriggerType" class="camp-select" onchange="toggleAutoStaleField()">
                 <option value="crm_lead_created">New lead created</option>
                 <option value="quote_stale">Quote sent, no order yet</option>
+                <option value="order_delivered">Order marked delivered</option>
               </select>
             </div>
             <div class="camp-field" id="autoStaleWrap" style="display:none">
@@ -1584,6 +1585,7 @@
             <code class="camp-mergefield">{{business_name}}</code>
             <code class="camp-mergefield">{{contact_name}}</code>
             <code class="camp-mergefield">{{first_name}}</code>
+            <code class="camp-mergefield">{{review_link}}</code>
           </div>
           <p id="autoError" class="camp-formerror" style="display:none"></p>
         </div>

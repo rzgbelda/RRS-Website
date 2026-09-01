@@ -5050,6 +5050,7 @@ async function deleteEmailTemplate(id) {
 const AUTO_TRIGGER_LABEL = {
   crm_lead_created: "New lead created",
   quote_stale: "Quote sent, no order yet",
+  order_delivered: "Order marked delivered",
 };
 
 async function openAutomationsModal() {

@@ -275,11 +275,18 @@ async function runDueReorders(supabase, res) {
   return res.status(200).json({ processed: results.length, results });
 }
 
+// Real Google Business Profile URL, added to index.html's LocalBusiness
+// sameAs during SEO Roadmap Day 15 -- the same profile a {{review_link}}
+// merge field should point customers at, since that's the one Google
+// Search/Maps results actually surface.
+const GOOGLE_REVIEW_LINK = 'https://share.google/mnYHNLqIcB85IWzDU';
+
 function mergeFields(str, q) {
   return String(str || '')
     .replace(/\{\{\s*business_name\s*\}\}/g, q.business_name || '')
     .replace(/\{\{\s*contact_name\s*\}\}/g, q.contact_name || '')
-    .replace(/\{\{\s*first_name\s*\}\}/g, (q.contact_name || '').split(' ')[0] || '');
+    .replace(/\{\{\s*first_name\s*\}\}/g, (q.contact_name || '').split(' ')[0] || '')
+    .replace(/\{\{\s*review_link\s*\}\}/g, GOOGLE_REVIEW_LINK);
 }
 
 /**
@@ -302,7 +309,8 @@ async function runDueAutomations(supabase) {
   for (const a of automations) {
     try {
       // ── Queue newly-eligible targets ────────────────────────────
-      let targets = [];
+      let targets = []; // { id, email } for either a quote_requests or orders row
+      let targetType = 'quote_request';
       if (a.trigger_type === 'crm_lead_created') {
         // Only rows from the last 14 days -- the unique constraint on
         // automation_sends already makes re-queuing an old row harmless,
@@ -325,12 +333,24 @@ async function runDueAutomations(supabase) {
           .lte('created_at', staleCutoff).gte('created_at', windowStart)
           .not('email', 'is', null);
         targets = data || [];
+      } else if (a.trigger_type === 'order_delivered') {
+        // Review-request flow (SEO Roadmap Day 16): fires once per order
+        // staff mark 'delivered'. Bounded to the last 45 days for the same
+        // scan-cost reason as the two triggers above -- orders_updated_at
+        // doesn't exist, so this reads off created_at, wide enough that a
+        // slow-to-mark-delivered order still gets queued.
+        targetType = 'order';
+        const windowStart = new Date(now.getTime() - 45 * 86400000).toISOString();
+        const { data } = await supabase.from('orders')
+          .select('id, customer_email').eq('status', 'delivered')
+          .gte('created_at', windowStart).not('customer_email', 'is', null);
+        targets = (data || []).map(o => ({ id: o.id, email: o.customer_email }));
       }
 
       for (const t of targets) {
         const eligibleAt = new Date(now.getTime() + a.delay_days * 86400000).toISOString();
         const { error: insErr } = await supabase.from('automation_sends').insert({
-          automation_id: a.id, target_type: 'quote_request', target_id: t.id,
+          automation_id: a.id, target_type: targetType, target_id: t.id,
           recipient_email: t.email, eligible_at: eligibleAt,
         });
         // 23505 = unique_violation -- already queued for this target, not a real failure
@@ -340,20 +360,40 @@ async function runDueAutomations(supabase) {
 
       // ── Send anything now past its delay ────────────────────────
       const { data: due } = await supabase.from('automation_sends')
-        .select('*, quote_requests(business_name, contact_name, email, status)')
-        .eq('automation_id', a.id).is('sent_at', null).is('skipped_reason', null)
+        .select('*').eq('automation_id', a.id).is('sent_at', null).is('skipped_reason', null)
         .lte('eligible_at', now.toISOString());
 
       for (const s of (due || [])) {
-        const q = s.quote_requests;
-        if (!q) {
+        // Looked up per-row rather than embedded in the select above,
+        // since target_id can point at either quote_requests or orders --
+        // one column can't carry two different foreign keys/embeds.
+        let mergeSource = null;
+        if (s.target_type === 'order') {
+          const { data: o } = await supabase.from('orders')
+            .select('business_name, customer_name, customer_email, status').eq('id', s.target_id).maybeSingle();
+          mergeSource = o ? {
+            business_name: o.business_name, contact_name: o.customer_name, email: o.customer_email, status: o.status,
+          } : null;
+        } else {
+          const { data: q } = await supabase.from('quote_requests')
+            .select('business_name, contact_name, email, status').eq('id', s.target_id).maybeSingle();
+          mergeSource = q;
+        }
+
+        if (!mergeSource) {
           await supabase.from('automation_sends').update({ skipped_reason: 'target_not_found' }).eq('id', s.id);
           skipped++; continue;
         }
         // A quote_stale target that converted (moved off quote_sent)
         // during its delay window no longer needs the nudge.
-        if (a.trigger_type === 'quote_stale' && q.status !== 'quote_sent') {
+        if (a.trigger_type === 'quote_stale' && mergeSource.status !== 'quote_sent') {
           await supabase.from('automation_sends').update({ skipped_reason: 'lead_progressed' }).eq('id', s.id);
+          skipped++; continue;
+        }
+        // An order un-marked from 'delivered' (a correction) shouldn't
+        // still get asked to review a delivery that's now in question.
+        if (a.trigger_type === 'order_delivered' && mergeSource.status !== 'delivered') {
+          await supabase.from('automation_sends').update({ skipped_reason: 'status_changed' }).eq('id', s.id);
           skipped++; continue;
         }
 
@@ -361,14 +401,14 @@ async function runDueAutomations(supabase) {
           const resend = new Resend(process.env.RESEND_API_KEY);
           const result = await resend.emails.send({
             from: 'Room Ready Supply <sales@roomreadysupply.com>',
-            to: q.email,
-            subject: mergeFields(a.subject, q),
-            html: mergeFields(a.body_html, q),
+            to: mergeSource.email,
+            subject: mergeFields(a.subject, mergeSource),
+            html: mergeFields(a.body_html, mergeSource),
           });
           await supabase.from('automation_sends').update({ sent_at: new Date().toISOString() }).eq('id', s.id);
           await supabase.from('campaign_email_events').insert({
             automation_id: a.id, resend_email_id: result?.data?.id || null,
-            recipient: q.email, event_type: 'sent',
+            recipient: mergeSource.email, event_type: 'sent',
           });
           sent++;
         } catch (sendErr) {
