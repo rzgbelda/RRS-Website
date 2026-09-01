@@ -224,296 +224,214 @@
     </div>
 </section>
 
-<!-- Shop by Category ---------------------------------------------
-     Gives buyers a route in by what they actually need, and gives
-     Google real internal links into each category landing page
-     instead of one undifferentiated catalog URL. Real anchor tags
-     throughout (not JS-only click handlers) so this stays fully
-     crawlable regardless of the carousel behavior layered on top. -->
-<section class="cat-nav-section">
+<!-- Articles + FAQ ---------------------------------------------
+     Replaces the old "Shop by Category" carousel, which duplicated the
+     catalog's own category filters one click away and wasn't drawing
+     engagement. This gives Google real internal links into the new blog
+     (SEO Roadmap Day 17/18) instead, plus genuine FAQPage structured data
+     -- the homepage had none before this. -->
+<section class="home-learn-section">
   <div class="container">
     <div class="section-heading">
-      <h2>Shop by Category</h2>
+      <h2>From the Blog</h2>
       <div class="heading-line"></div>
-      <p>Wholesale hospitality supplies by the case, with volume pricing at 6 and 30 cases.</p>
+      <p>Buying guides for hospitality and facility teams, written from real case pricing and real inventory.</p>
     </div>
 
-    <div class="cat-carousel">
-      <button class="cat-carousel-arrow left" aria-label="Scroll categories left" type="button">&#8249;</button>
-
-      <div class="cat-carousel-track" id="catCarouselTrack">
-        <a href="/category/bed-sheets-linens" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260980/mfqflat.png" alt="Bed Sheets & Linens" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Bed Sheets &amp; Linens</h3>
-            <p>Flat, fitted and pillowcases in T-180, T-200, T-250 and microfiber</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/towels" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260974/ebathtowel.png" alt="Towels" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Towels</h3>
-            <p>Bath, hand and wash cloths in economy, premium and luxury cotton</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/paper-products" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/green-heritage-pro-2-ply-bathroom-tissue.jpg" alt="Paper Products" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Paper Products</h3>
-            <p>Bath tissue, kitchen roll, multifold and hardwound towels</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/cleaning-chemicals" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/cloroxprotm-pine-sol-multi-surface-cleaner.jpg" alt="Cleaning Chemicals" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Cleaning Chemicals</h3>
-            <p>EPA-registered disinfectants, bleach, glass cleaner and detergents</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/pillows-mattress-protectors" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1783260975/pillows.png" alt="Pillows & Mattress Protectors" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Pillows &amp; Mattress Protectors</h3>
-            <p>Waterproof protectors and poly-fill pillows in every bed size</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/trash-liners-can-liners" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/napco-black-heavy-duty-municipal-liners.jpg" alt="Trash Liners & Can Liners" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Trash Liners &amp; Can Liners</h3>
-            <p>Low density, high density and heavy-gauge recycled resin</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/gloves-ppe" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/empresstm-blue-nitrile-powder-free-gloves.jpg" alt="Gloves & PPE" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Gloves &amp; PPE</h3>
-            <p>Powder-free nitrile gloves, standard and exam grade</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/guest-amenities" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1787087610/dovvebarsoap.png" alt="Guest Amenities" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Guest Amenities</h3>
-            <p>Soap bars, shampoo, conditioner, body wash and lotion</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-        <a href="/category/laundry-cleaning-chemicals" class="cat-carousel-card">
-          <div class="cat-carousel-img"><img src="https://res.cloudinary.com/ddx3g4yse/image/upload/v1787336496/LD_grnwoxi_tbf.png" alt="Laundry & Cleaning Chemicals" loading="lazy"></div>
-          <div class="cat-carousel-body">
-            <h3>Laundry &amp; Cleaning Chemicals</h3>
-            <p>Commercial detergent, bleach, fabric softener and stain treatment</p>
-            <span class="cat-carousel-cta">Want to Know More? <span aria-hidden="true">&rarr;</span></span>
-          </div>
-        </a>
-      </div>
-
-      <button class="cat-carousel-arrow right" aria-label="Scroll categories right" type="button">&#8250;</button>
+    <div id="homeArticlesGrid" class="home-articles-grid">
+      <div class="home-articles-loading">Loading articles&hellip;</div>
     </div>
-
-    <div class="cat-carousel-dots" id="catCarouselDots" aria-hidden="true"></div>
+    <div class="home-articles-viewmore">
+      <a href="/blog" class="view-more-btn">View All Articles &gt;&gt;</a>
+    </div>
   </div>
 </section>
 
+<section class="home-faq-section">
+  <div class="container">
+    <div class="section-heading">
+      <h2>Frequently Asked Questions</h2>
+      <div class="heading-line"></div>
+      <p>The questions we hear most from hotels, rentals, and facility teams getting started.</p>
+    </div>
+
+    <div class="home-faq-list">
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>How does case-quantity ordering work?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases &mdash; the more you order, the lower your per-case price, with no separate account or negotiation needed.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Where do you ship from, and how long does an order take?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3&ndash;5 business days after payment is confirmed. Processing time is separate from transit time &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for full carrier and delivery details.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Do I need a business account to order?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>No account is required to check pricing or place an order &mdash; you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history.</p>
+        </div>
+      </div>
+      <div class="home-faq-item">
+        <button class="home-faq-q" type="button" aria-expanded="false">
+          <span>Where does Room Ready Supply ship to?</span>
+          <span class="home-faq-icon" aria-hidden="true">+</span>
+        </button>
+        <div class="home-faq-a">
+          <p>We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers &mdash; see the <a href="/shipping-policy">Shipping Policy</a> for details.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How does case-quantity ordering work?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Every product is sold by the case, not individually. Volume pricing kicks in automatically at 6 cases and again at 30 cases -- the more you order, the lower your per-case price, with no separate account or negotiation needed."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where do you ship from, and how long does an order take?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Orders ship from our warehouse in Plymouth, North Carolina and are typically processed within 3-5 business days after payment is confirmed. Processing time is separate from transit time."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need a business account to order?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No account is required to check pricing or place an order -- you can request business pricing or a formal quote directly from the site. Creating a free account does unlock reorder scheduling and order history."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Where does Room Ready Supply ship to?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "We currently ship within the United States. Some restrictions may apply to Alaska, Hawaii, U.S. territories, and locations that can't be serviced by our carriers."
+      }
+    }
+  ]
+}
+</script>
+
 <style>
-  .cat-nav-section { padding: 56px 0 64px; background: #f6f9fc; }
+  .home-learn-section, .home-faq-section { padding: 56px 0 64px; }
+  .home-learn-section { background: #f6f9fc; }
+  .home-faq-section { background: #fff; }
 
-  .cat-carousel { position: relative; max-width: 1180px; margin: 30px auto 0; padding: 0 24px; }
-
-  .cat-carousel-track {
-    display: flex; gap: 18px; overflow-x: auto; scroll-snap-type: x mandatory;
-    padding: 4px 2px 10px; scrollbar-width: none;
+  /* Articles grid */
+  .home-articles-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 22px; max-width: 1180px; margin: 30px auto 0; padding: 0 24px;
   }
-  .cat-carousel-track::-webkit-scrollbar { display: none; }
+  @media (max-width: 900px) { .home-articles-grid { grid-template-columns: 1fr; max-width: 480px; } }
+  .home-articles-loading { grid-column: 1 / -1; text-align: center; color: #5B6C7E; font-size: 14px; padding: 30px 0; }
 
-  .cat-carousel-card {
-    flex: 0 0 240px; scroll-snap-align: start;
+  .home-article-card {
     display: flex; flex-direction: column; background: #fff;
     border: 1.5px solid #e2e8f0; border-radius: 16px; overflow: hidden;
     text-decoration: none; transition: border-color .18s, box-shadow .18s, transform .18s;
   }
-  .cat-carousel-card:hover, .cat-carousel-card:focus-visible {
-    border-color: #ED7226; box-shadow: 0 12px 28px rgba(11,31,56,.12); transform: translateY(-4px);
+  .home-article-card:hover, .home-article-card:focus-visible {
+    border-color: #ED7226; box-shadow: 0 12px 28px rgba(11,31,56,.1); transform: translateY(-4px);
   }
-  .cat-carousel-card:hover .cat-carousel-img img { transform: scale(1.06); }
+  .home-article-img { width: 100%; height: 170px; overflow: hidden; background: #f6f9fc; }
+  .home-article-img img { width: 100%; height: 100%; object-fit: cover; }
+  .home-article-body { padding: 18px 20px 22px; display: flex; flex-direction: column; flex: 1; }
+  .home-article-card h3 { font-size: 16px; font-weight: 800; color: #0B1F38; margin: 0 0 8px; line-height: 1.35; }
+  .home-article-card p { font-size: 13px; color: #5B6C7E; line-height: 1.55; margin: 0 0 14px; flex: 1; }
+  .home-article-cta { font-size: 12.5px; font-weight: 800; color: #ED7226; }
 
-  .cat-carousel-img { width: 100%; height: 150px; overflow: hidden; background: #f6f9fc; }
-  .cat-carousel-img img {
-    width: 100%; height: 100%; object-fit: contain; padding: 14px;
-    transition: transform .35s ease;
-  }
+  .home-articles-viewmore { text-align: center; margin-top: 30px; }
 
-  .cat-carousel-body { padding: 16px 18px 20px; display: flex; flex-direction: column; flex: 1; }
-  .cat-carousel-card h3 { font-size: 15px; font-weight: 800; color: #0B1F38; margin: 0 0 6px; }
-  .cat-carousel-card p  { font-size: 12.5px; color: #5B6C7E; line-height: 1.5; margin: 0 0 14px; flex: 1; }
-  .cat-carousel-cta {
-    display: inline-flex; align-items: center; gap: 5px;
-    font-size: 12.5px; font-weight: 800; color: #ED7226;
+  /* FAQ accordion */
+  .home-faq-list { max-width: 760px; margin: 30px auto 0; padding: 0 24px; }
+  .home-faq-item { border: 1.5px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px; overflow: hidden; }
+  .home-faq-q {
+    width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    background: #fff; border: none; text-align: left; cursor: pointer;
+    padding: 16px 20px; font-size: 15px; font-weight: 700; color: #0B1F38; font-family: inherit;
   }
-  .cat-carousel-cta span { transition: transform .18s ease; }
-  .cat-carousel-card:hover .cat-carousel-cta span { transform: translateX(3px); }
-
-  .cat-carousel-arrow {
-    position: absolute; top: 50%; transform: translateY(-50%);
-    width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid #e2e8f0;
-    background: #fff; color: #0B1F38; font-size: 22px; line-height: 1; cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 6px 18px rgba(11,31,56,.1); z-index: 2;
-    transition: border-color .15s, color .15s, box-shadow .15s;
+  .home-faq-icon {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    background: #f6f9fc; color: #ED7226; font-size: 16px; font-weight: 700; line-height: 1;
+    display: flex; align-items: center; justify-content: center; transition: transform .2s ease;
   }
-  .cat-carousel-arrow:hover { border-color: #ED7226; color: #ED7226; }
-  .cat-carousel-arrow.left  { left: -6px; }
-  .cat-carousel-arrow.right { right: -6px; }
-  .cat-carousel-arrow[disabled] { opacity: .35; cursor: default; box-shadow: none; }
-  .cat-carousel-arrow[disabled]:hover { border-color: #e2e8f0; color: #0B1F38; }
-
-  .cat-carousel-dots {
-    display: flex; justify-content: center; gap: 7px; margin-top: 16px;
-  }
-  .cat-carousel-dots .dot {
-    width: 7px; height: 7px; border-radius: 50%; background: #d7dee8;
-    cursor: pointer; padding: 0; border: none; transition: background .15s, width .15s;
-  }
-  .cat-carousel-dots .dot.active { background: #ED7226; width: 20px; border-radius: 4px; }
-
-  @media (max-width: 640px) {
-    .cat-carousel-arrow { display: none; }
-    .cat-carousel-card { flex-basis: 200px; }
-  }
+  .home-faq-item.open .home-faq-icon { transform: rotate(45deg); }
+  .home-faq-a { max-height: 0; overflow: hidden; transition: max-height .25s ease; }
+  .home-faq-item.open .home-faq-a { max-height: 220px; }
+  .home-faq-a p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.7; color: #5B6C7E; }
+  .home-faq-a a { color: #ED7226; }
 </style>
 
 <script>
-  // Real <a> cards in a scroll-snap track -- crawlable and keyboard/touch
-  // usable with zero JS, the arrows/dots/auto-rotate are pure enhancement
-  // on top. Auto-rotate loops back to the start at the end rather than
-  // stopping dead, and pauses on hover/touch/focus so it never fights a
-  // visitor actively browsing -- resumes a few seconds after they let go.
+  // Real, published articles pulled live via the same window.sb client
+  // every other page uses -- no separate fetch mechanism.
   (function () {
-    const track = document.getElementById('catCarouselTrack');
-    const dotsWrap = document.getElementById('catCarouselDots');
-    if (!track || !dotsWrap) return;
+    const grid = document.getElementById('homeArticlesGrid');
+    if (!grid || !window.sb) return;
 
-    const cards = Array.from(track.children);
-    const leftBtn = document.querySelector('.cat-carousel-arrow.left');
-    const rightBtn = document.querySelector('.cat-carousel-arrow.right');
+    window.sb.from('articles')
+      .select('slug, title, excerpt, cover_image_url')
+      .eq('status', 'published')
+      .order('published_at', { ascending: false })
+      .limit(3)
+      .then(({ data, error }) => {
+        if (error || !data || !data.length) {
+          grid.innerHTML = '<div class="home-articles-loading">New articles are on the way &mdash; check back soon.</div>';
+          return;
+        }
+        grid.innerHTML = data.map(a => `
+          <a class="home-article-card" href="/blog/post?slug=${encodeURIComponent(a.slug)}">
+            ${a.cover_image_url ? `<div class="home-article-img"><img src="${a.cover_image_url}" alt="" loading="lazy"></div>` : ''}
+            <div class="home-article-body">
+              <h3>${a.title}</h3>
+              ${a.excerpt ? `<p>${a.excerpt}</p>` : ''}
+              <span class="home-article-cta">Read More &rarr;</span>
+            </div>
+          </a>`).join('');
+      });
+  })();
 
-    dotsWrap.innerHTML = cards.map((_, i) =>
-      '<button class="dot' + (i === 0 ? ' active' : '') + '" data-i="' + i + '" aria-label="Go to category ' + (i + 1) + '"></button>'
-    ).join('');
-    const dots = Array.from(dotsWrap.children);
-
-    // Index is tracked as real state, not reverse-computed from scrollLeft
-    // each time. Dividing scrollLeft by a recalculated card width drifted
-    // out of sync after a few rotations (sub-pixel rounding compounding
-    // across repeated getBoundingClientRect() reads), which is what made
-    // the dots go out of sync with the actual visible card -- and because
-    // autoplay's tick() computed its *next* target off that same drifted
-    // read, it would sometimes recompute the card already showing, which
-    // looked like the carousel had silently stopped advancing.
-    let activeIndex = 0;
-
-    function cardStep() {
-      const card = cards[0];
-      const style = getComputedStyle(track);
-      const gap = parseFloat(style.columnGap || style.gap || '18');
-      return card.getBoundingClientRect().width + gap;
-    }
-
-    function goTo(idx) {
-      // Wraps in both directions -- a rotating carousel, not a dead-ended
-      // one -- so the left arrow from card 1 loops to the last card and
-      // the right arrow from the last card loops back to the first.
-      activeIndex = ((idx % cards.length) + cards.length) % cards.length;
-      track.scrollTo({ left: cardStep() * activeIndex, behavior: 'smooth' });
-      updateUI();
-    }
-
-    // Only used to keep the dots in sync when a visitor drags/swipes the
-    // track directly (not via the arrows/dots/autoplay, which already set
-    // activeIndex themselves in goTo()) -- reconciles state to wherever
-    // the scroll actually snapped to once it settles.
-    function syncIndexFromScroll() {
-      activeIndex = Math.max(0, Math.min(cards.length - 1, Math.round(track.scrollLeft / cardStep())));
-      updateUI();
-    }
-
-    function updateUI() {
-      dots.forEach((d, i) => d.classList.toggle('active', i === activeIndex));
-    }
-
-    leftBtn?.addEventListener('click', () => { goTo(activeIndex - 1); restartAutoplay(); });
-    rightBtn?.addEventListener('click', () => { goTo(activeIndex + 1); restartAutoplay(); });
-    dots.forEach(d => d.addEventListener('click', () => { goTo(Number(d.dataset.i)); restartAutoplay(); }));
-
-    // Debounced rather than per-frame: this only needs to run once a
-    // manual drag/swipe has actually settled, not continuously while
-    // goTo()'s own smooth-scroll animation is in flight (which would
-    // otherwise call syncIndexFromScroll() mid-animation and fight the
-    // activeIndex goTo() just set).
-    let scrollSettleTimer = null;
-    track.addEventListener('scroll', () => {
-      if (scrollSettleTimer) clearTimeout(scrollSettleTimer);
-      scrollSettleTimer = setTimeout(syncIndexFromScroll, 120);
-    }, { passive: true });
-    window.addEventListener('resize', updateUI);
-    updateUI();
-
-    // ── Auto-rotate ──────────────────────────────────────────────
-    const AUTOPLAY_MS = 4000;
-    const RESUME_DELAY_MS = 6000;
-    let autoplayTimer = null;
-    let resumeTimer = null;
-
-    function tick() {
-      goTo(activeIndex + 1);
-    }
-
-    function startAutoplay() {
-      stopAutoplay();
-      autoplayTimer = setInterval(tick, AUTOPLAY_MS);
-    }
-    function stopAutoplay() {
-      if (autoplayTimer) clearInterval(autoplayTimer);
-      autoplayTimer = null;
-    }
-    function restartAutoplay() {
-      stopAutoplay();
-      if (resumeTimer) clearTimeout(resumeTimer);
-      resumeTimer = setTimeout(startAutoplay, RESUME_DELAY_MS);
-    }
-
-    // All pause triggers route through restartAutoplay() (stop now, resume
-    // after RESUME_DELAY_MS) rather than some resuming instantly on their
-    // own -- a mix of instant-resume and delayed-resume handlers here
-    // previously meant a stray event (e.g. a spurious focusin some
-    // accessibility tooling fires on load) could leave autoplay parked in
-    // a stopped state with nothing left to restart it.
-    track.addEventListener('mouseenter', stopAutoplay);
-    track.addEventListener('mouseleave', restartAutoplay);
-    track.addEventListener('touchstart', restartAutoplay, { passive: true });
-    track.addEventListener('focusin', stopAutoplay);
-    track.addEventListener('focusout', restartAutoplay);
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopAutoplay(); else restartAutoplay();
+  // FAQ accordion -- single-open, plain click toggle.
+  (function () {
+    document.querySelectorAll('.home-faq-item').forEach(item => {
+      const btn = item.querySelector('.home-faq-q');
+      btn?.addEventListener('click', () => {
+        const isOpen = item.classList.contains('open');
+        document.querySelectorAll('.home-faq-item.open').forEach(open => {
+          open.classList.remove('open');
+          open.querySelector('.home-faq-q')?.setAttribute('aria-expanded', 'false');
+        });
+        if (!isOpen) {
+          item.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
     });
-
-    // Always auto-rotates -- deliberately not gated on prefers-reduced-
-    // motion. That media feature can be true without a visitor realizing
-    // it (some OS "reduce transparency/motion" toggles, battery-saver
-    // modes, some privacy extensions), and gating on it silently produced
-    // a carousel that looked broken (frozen dots, no movement) for anyone
-    // in that state -- confirmed live during testing. It still pauses on
-    // hover/touch/keyboard focus either way, which is the part that
-    // actually matters for not fighting an active visitor.
-    startAutoplay();
   })();
 </script>
 
