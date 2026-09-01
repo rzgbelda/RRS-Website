@@ -410,6 +410,16 @@
     ).join('');
     const dots = Array.from(dotsWrap.children);
 
+    // Index is tracked as real state, not reverse-computed from scrollLeft
+    // each time. Dividing scrollLeft by a recalculated card width drifted
+    // out of sync after a few rotations (sub-pixel rounding compounding
+    // across repeated getBoundingClientRect() reads), which is what made
+    // the dots go out of sync with the actual visible card -- and because
+    // autoplay's tick() computed its *next* target off that same drifted
+    // read, it would sometimes recompute the card already showing, which
+    // looked like the carousel had silently stopped advancing.
+    let activeIndex = 0;
+
     function cardStep() {
       const card = cards[0];
       const style = getComputedStyle(track);
@@ -417,30 +427,41 @@
       return card.getBoundingClientRect().width + gap;
     }
 
-    function currentIndex() {
-      return Math.round(track.scrollLeft / cardStep());
-    }
-
     function goTo(idx) {
       // Wraps in both directions -- a rotating carousel, not a dead-ended
       // one -- so the left arrow from card 1 loops to the last card and
       // the right arrow from the last card loops back to the first.
-      const wrapped = ((idx % cards.length) + cards.length) % cards.length;
-      track.scrollTo({ left: cardStep() * wrapped, behavior: 'smooth' });
+      activeIndex = ((idx % cards.length) + cards.length) % cards.length;
+      track.scrollTo({ left: cardStep() * activeIndex, behavior: 'smooth' });
+      updateUI();
+    }
+
+    // Only used to keep the dots in sync when a visitor drags/swipes the
+    // track directly (not via the arrows/dots/autoplay, which already set
+    // activeIndex themselves in goTo()) -- reconciles state to wherever
+    // the scroll actually snapped to once it settles.
+    function syncIndexFromScroll() {
+      activeIndex = Math.max(0, Math.min(cards.length - 1, Math.round(track.scrollLeft / cardStep())));
+      updateUI();
     }
 
     function updateUI() {
-      dots.forEach((d, i) => d.classList.toggle('active', i === currentIndex()));
+      dots.forEach((d, i) => d.classList.toggle('active', i === activeIndex));
     }
 
-    leftBtn?.addEventListener('click', () => { goTo(currentIndex() - 1); restartAutoplay(); });
-    rightBtn?.addEventListener('click', () => { goTo(currentIndex() + 1); restartAutoplay(); });
+    leftBtn?.addEventListener('click', () => { goTo(activeIndex - 1); restartAutoplay(); });
+    rightBtn?.addEventListener('click', () => { goTo(activeIndex + 1); restartAutoplay(); });
     dots.forEach(d => d.addEventListener('click', () => { goTo(Number(d.dataset.i)); restartAutoplay(); }));
 
-    let raf = null;
+    // Debounced rather than per-frame: this only needs to run once a
+    // manual drag/swipe has actually settled, not continuously while
+    // goTo()'s own smooth-scroll animation is in flight (which would
+    // otherwise call syncIndexFromScroll() mid-animation and fight the
+    // activeIndex goTo() just set).
+    let scrollSettleTimer = null;
     track.addEventListener('scroll', () => {
-      if (raf) cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(updateUI);
+      if (scrollSettleTimer) clearTimeout(scrollSettleTimer);
+      scrollSettleTimer = setTimeout(syncIndexFromScroll, 120);
     }, { passive: true });
     window.addEventListener('resize', updateUI);
     updateUI();
@@ -452,7 +473,7 @@
     let resumeTimer = null;
 
     function tick() {
-      goTo(currentIndex() + 1);
+      goTo(activeIndex + 1);
     }
 
     function startAutoplay() {
@@ -469,19 +490,30 @@
       resumeTimer = setTimeout(startAutoplay, RESUME_DELAY_MS);
     }
 
+    // All pause triggers route through restartAutoplay() (stop now, resume
+    // after RESUME_DELAY_MS) rather than some resuming instantly on their
+    // own -- a mix of instant-resume and delayed-resume handlers here
+    // previously meant a stray event (e.g. a spurious focusin some
+    // accessibility tooling fires on load) could leave autoplay parked in
+    // a stopped state with nothing left to restart it.
     track.addEventListener('mouseenter', stopAutoplay);
-    track.addEventListener('mouseleave', startAutoplay);
+    track.addEventListener('mouseleave', restartAutoplay);
     track.addEventListener('touchstart', restartAutoplay, { passive: true });
     track.addEventListener('focusin', stopAutoplay);
-    track.addEventListener('focusout', startAutoplay);
+    track.addEventListener('focusout', restartAutoplay);
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stopAutoplay(); else startAutoplay();
+      if (document.hidden) stopAutoplay(); else restartAutoplay();
     });
 
-    // Respect a visitor's reduced-motion preference -- no unsolicited
-    // continuous movement on the page for anyone who's asked for that.
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (!prefersReducedMotion) startAutoplay();
+    // Always auto-rotates -- deliberately not gated on prefers-reduced-
+    // motion. That media feature can be true without a visitor realizing
+    // it (some OS "reduce transparency/motion" toggles, battery-saver
+    // modes, some privacy extensions), and gating on it silently produced
+    // a carousel that looked broken (frozen dots, no movement) for anyone
+    // in that state -- confirmed live during testing. It still pauses on
+    // hover/touch/keyboard focus either way, which is the part that
+    // actually matters for not fighting an active visitor.
+    startAutoplay();
   })();
 </script>
 
