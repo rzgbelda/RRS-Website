@@ -121,7 +121,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -135,7 +135,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
-  "sub-distributors", "seo", "reports", "dev-tickets",
+  "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions",
 ];
 
 // Per direct CEO instruction: role='admin' is now the narrow, Azure-style
@@ -268,7 +268,8 @@ function switchTab(tab) {
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
-      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns" }[tab] || tab;
+      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
+      "vendors":"Vendors", "order-exceptions":"Order Exceptions" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -286,6 +287,8 @@ function switchTab(tab) {
   if (tab === "best-deals")       renderBestDealsTab();
   if (tab === "crm")              renderCrmTab();
   if (tab === "campaigns")        renderCampaignsTab();
+  if (tab === "vendors")          renderVendorsTab();
+  if (tab === "order-exceptions") renderExceptionsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -819,6 +822,7 @@ function openAddProduct() {
   toggleFlatPricing();
   recalcTierPricing();
   updateMetaCharCounts();
+  loadProductVendorOptions();
   openModal("productModal");
 }
 
@@ -944,10 +948,25 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
+let _prodVendorCache = null;
+async function loadProductVendorOptions() {
+  if (_prodVendorCache) return _prodVendorCache;
+  const { data } = await window.sb.from("vendors").select("id, name").eq("is_active", true).order("name");
+  _prodVendorCache = data || [];
+  const sel = document.getElementById("prodVendor");
+  if (sel) {
+    sel.innerHTML = `<option value="">RRS-fulfilled (default)</option>` +
+      _prodVendorCache.map(v => `<option value="${v.id}">${escHtml(v.name)}</option>`).join("");
+  }
+  return _prodVendorCache;
+}
+
 async function openEditProduct(id) {
   const { data: p } = await window.sb.from("products").select("*, inventory(stock_qty, status)").eq("id", id).single();
   if (!p) return;
   document.getElementById("modalTitle").textContent = "Edit Product";
+  await loadProductVendorOptions();
+  setVal("prodVendor", p.vendor_id || "");
   setVal("editProductId",  p.id);
   setVal("prodName",       p.name           || "");
   setVal("prodSku",        p.sku            || "");
@@ -1091,6 +1110,7 @@ async function saveProduct() {
     // title/description instead of treating "" as a deliberately-empty tag.
     meta_title       : (document.getElementById("prodMetaTitle")?.value || "").trim() || null,
     meta_description : (document.getElementById("prodMetaDescription")?.value || "").trim() || null,
+    vendor_id        : document.getElementById("prodVendor")?.value || null,
     // Flat-price products carry no tiers at all -- getTierPrice() (script.js)
     // already falls back to the base price at any quantity when tier1/2/3
     // are null, so this is the whole mechanism, not a partial one.
@@ -3001,6 +3021,7 @@ async function openOrderModal(id) {
       </tbody>
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
+    <div id="orderVendorPoPanel-${o.id}"></div>
     ${(o.label_url || o.tracking_number || o.bol_number || o.pro_number) ? `
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
     <h4 style="margin-bottom:12px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Shipping</h4>
@@ -3086,6 +3107,103 @@ async function openOrderModal(id) {
   const taxStateEl = document.getElementById("orderTaxState");
   if (taxStateEl) taxStateEl.value = addr.state || "";
   openModal("orderModal");
+  renderOrderVendorPoPanel(o);
+}
+
+// Groups this order's line items by vendor (via products.vendor_id) and
+// offers a one-click "Send Purchase Order" per vendor -- builds the
+// neutral no-pricing PDF client-side via /api/quote-pdf (hide_pricing)
+// then emails it via /api/send-invoice's send_vendor_po action. Only
+// products explicitly tagged to a vendor show here; everything else is
+// RRS-fulfilled as today, no panel shown if nothing is vendor-tagged.
+async function renderOrderVendorPoPanel(o) {
+  const panel = document.getElementById(`orderVendorPoPanel-${o.id}`);
+  if (!panel || !o.order_items?.length) return;
+
+  const productIds = [...new Set(o.order_items.map(i => i.product_id).filter(Boolean))];
+  if (!productIds.length) return;
+
+  const { data: products } = await window.sb
+    .from("products").select("id, sku, vendor_id, vendors(id, name, contact_email)")
+    .in("id", productIds).not("vendor_id", "is", null);
+  if (!products?.length) return;
+
+  const vendorByProductId = Object.fromEntries(products.map(p => [p.id, p.vendors]));
+  const skuByProductId = Object.fromEntries(products.map(p => [p.id, p.sku]));
+  const { data: alreadySent } = await window.sb
+    .from("vendor_purchase_orders").select("vendor_id, po_number").eq("order_id", o.id);
+  const sentVendorIds = new Set((alreadySent || []).map(x => x.vendor_id));
+
+  const groups = {};
+  o.order_items.forEach(i => {
+    const v = vendorByProductId[i.product_id];
+    if (!v) return;
+    if (!groups[v.id]) groups[v.id] = { vendor: v, items: [] };
+    groups[v.id].items.push({ ...i, sku: skuByProductId[i.product_id] });
+  });
+  const vendorIds = Object.keys(groups);
+  if (!vendorIds.length) return;
+
+  panel.innerHTML = `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Vendor Fulfillment</h4>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      ${vendorIds.map(vid => {
+        const g = groups[vid];
+        const sent = sentVendorIds.has(vid);
+        return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+          <div>
+            <strong style="font-size:13px;color:#0d1f38">${escHtml(g.vendor.name)}</strong>
+            <span style="font-size:12px;color:#64748b"> &middot; ${g.items.length} item${g.items.length === 1 ? "" : "s"}</span>
+            <div style="font-size:11.5px;color:#94a3b8;margin-top:2px">${g.items.map(i => escHtml(i.name || i.product_name || "Product") + " &times;" + (i.quantity ?? 1)).join(", ")}</div>
+          </div>
+          ${sent
+            ? `<span style="font-size:12px;color:#15803d;font-weight:700">&#10003; PO Sent</span>`
+            : `<button onclick='sendVendorPo(${JSON.stringify(o.id)}, ${JSON.stringify(vid)})' style="background:#0b2d52;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap">Send Purchase Order</button>`}
+        </div>`;
+      }).join("")}
+    </div>`;
+}
+
+async function sendVendorPo(orderId, vendorId) {
+  const { data: o } = await window.sb.from("orders").select("order_number, order_items(*)").eq("id", orderId).single();
+  if (!o) { showToast("Couldn't load order."); return; }
+
+  const { data: products } = await window.sb
+    .from("products").select("id, sku").eq("vendor_id", vendorId);
+  const skuByProductId = Object.fromEntries((products || []).map(p => [p.id, p.sku]));
+  const items = (o.order_items || [])
+    .filter(i => skuByProductId[i.product_id])
+    .map(i => ({ name: i.name || i.product_name || "Product", sku: skuByProductId[i.product_id], quantity: i.quantity ?? 1 }));
+  if (!items.length) { showToast("No line items for this vendor."); return; }
+
+  const poNumber = `${o.order_number}-${vendorId.slice(0, 4).toUpperCase()}`;
+
+  const pdfRes = await fetch("/api/quote-pdf", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      quote_number: poNumber, doc_label: "Purchase Order", hide_pricing: true,
+      quote_items: items.map(i => ({ name: i.name, sku: i.sku, quantity: i.quantity, unit_price: 0 })),
+    }),
+  });
+  if (!pdfRes.ok) { showToast("Couldn't build PO PDF."); return; }
+  const pdfBuf = await pdfRes.arrayBuffer();
+  const pdfBase64 = btoa(new Uint8Array(pdfBuf).reduce((s, b) => s + String.fromCharCode(b), ""));
+
+  const { data: { session } } = await window.sb.auth.getSession();
+  const sendRes = await fetch("/api/send-invoice", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token || ""}` },
+    body: JSON.stringify({
+      action: "send_vendor_po", order_id: orderId, vendor_id: vendorId,
+      po_number: poNumber, line_items: items, pdf_base64: pdfBase64,
+    }),
+  });
+  const result = await sendRes.json();
+  if (!sendRes.ok) { showToast("Couldn't send PO: " + (result.error || "unknown error")); return; }
+
+  showToast(`Purchase order sent to ${result.sent_to}.`);
+  openOrderModal(orderId);
 }
 
 // Applies real, stored sales tax to an order that hasn't been paid yet --
@@ -5939,6 +6057,178 @@ async function deleteBestDeal(id) {
   if (error) { showToast("Couldn't delete: " + error.message); return; }
   showToast("Deal removed.");
   renderBestDealsTab();
+}
+
+/* ============================================================
+   VENDORS TAB
+============================================================ */
+
+async function renderVendorsTab() {
+  const list = document.getElementById("vendorsList");
+  if (!list) return;
+  list.innerHTML = `<div class="a-empty" style="padding:40px">Loading…</div>`;
+
+  const { data: vendors, error } = await window.sb
+    .from("vendors")
+    .select("*")
+    .order("name", { ascending: true });
+
+  if (error) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">Couldn't load: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!vendors || !vendors.length) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">No vendors yet. Click "+ Add Vendor" to onboard the first one.</div>`;
+    return;
+  }
+
+  list.innerHTML = vendors.map(v => `
+    <div class="a-card" style="padding:16px 18px;display:flex;gap:14px;align-items:flex-start;${v.is_active ? "" : "opacity:.55"}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+          <strong style="font-size:14px;color:#0d1f38">${escHtml(v.name)}</strong>
+          <span class="a-badge ${v.is_active ? "a-badge-green" : "a-badge-yellow"}">${v.is_active ? "Active" : "Inactive"}</span>
+          ${v.category ? `<span class="a-badge">${escHtml(v.category)}</span>` : ""}
+        </div>
+        <div style="font-size:12.5px;color:#64748b">${escHtml(v.contact_name || "—")} &middot; ${escHtml(v.contact_email)}${v.contact_phone ? " &middot; " + escHtml(v.contact_phone) : ""}</div>
+        <div style="font-size:12px;color:#94a3b8;margin-top:2px">Estimated ship time: ${v.estimated_ship_days} day${v.estimated_ship_days === 1 ? "" : "s"}${v.notes ? " &middot; " + escHtml(v.notes) : ""}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex:none">
+        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px" onclick="editVendor('${v.id}')">Edit</button>
+        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px;color:#dc2626" onclick="deleteVendor('${v.id}')">Delete</button>
+      </div>
+    </div>`).join("");
+}
+
+function openAddVendor() {
+  document.getElementById("vendorModalTitle").textContent = "Add Vendor";
+  document.getElementById("vndId").value = "";
+  document.getElementById("vndName").value = "";
+  document.getElementById("vndCategory").value = "";
+  document.getElementById("vndContactName").value = "";
+  document.getElementById("vndContactPhone").value = "";
+  document.getElementById("vndContactEmail").value = "";
+  document.getElementById("vndShipDays").value = "3";
+  document.getElementById("vndNotes").value = "";
+  document.getElementById("vndActive").value = "true";
+  openModal("vendorModal");
+}
+
+async function editVendor(id) {
+  const { data: v } = await window.sb.from("vendors").select("*").eq("id", id).single();
+  if (!v) return;
+  document.getElementById("vendorModalTitle").textContent = "Edit Vendor";
+  document.getElementById("vndId").value = v.id;
+  document.getElementById("vndName").value = v.name;
+  document.getElementById("vndCategory").value = v.category || "";
+  document.getElementById("vndContactName").value = v.contact_name || "";
+  document.getElementById("vndContactPhone").value = v.contact_phone || "";
+  document.getElementById("vndContactEmail").value = v.contact_email;
+  document.getElementById("vndShipDays").value = v.estimated_ship_days;
+  document.getElementById("vndNotes").value = v.notes || "";
+  document.getElementById("vndActive").value = String(v.is_active);
+  openModal("vendorModal");
+}
+
+async function saveVendor() {
+  const name = document.getElementById("vndName").value.trim();
+  const contactEmail = document.getElementById("vndContactEmail").value.trim();
+  const id = document.getElementById("vndId").value;
+
+  if (!name) { showToast("Vendor name is required."); return; }
+  if (!contactEmail) { showToast("Contact email is required — purchase orders send here."); return; }
+
+  const btn = document.getElementById("vndSaveBtn");
+  btn.disabled = true; btn.textContent = "Saving…";
+
+  const payload = {
+    name,
+    category: document.getElementById("vndCategory").value.trim() || null,
+    contact_name: document.getElementById("vndContactName").value.trim() || null,
+    contact_phone: document.getElementById("vndContactPhone").value.trim() || null,
+    contact_email: contactEmail,
+    estimated_ship_days: parseInt(document.getElementById("vndShipDays").value) || 3,
+    notes: document.getElementById("vndNotes").value.trim() || null,
+    is_active: document.getElementById("vndActive").value === "true",
+  };
+  const { error } = id
+    ? await window.sb.from("vendors").update(payload).eq("id", id)
+    : await window.sb.from("vendors").insert(payload);
+
+  btn.disabled = false; btn.textContent = "Save Vendor";
+  if (error) { showToast("Couldn't save: " + error.message); return; }
+
+  closeModal("vendorModal");
+  showToast("Vendor saved.");
+  renderVendorsTab();
+}
+
+async function deleteVendor(id) {
+  if (!confirm("Remove this vendor? Products tagged to it will revert to RRS-fulfilled.")) return;
+  const { error } = await window.sb.from("vendors").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  showToast("Vendor removed.");
+  renderVendorsTab();
+}
+
+/* ============================================================
+   ORDER EXCEPTIONS TAB
+============================================================ */
+
+async function renderExceptionsTab() {
+  const list = document.getElementById("exceptionsList");
+  if (!list) return;
+  list.innerHTML = `<div class="a-empty" style="padding:40px">Loading…</div>`;
+
+  const { data: exceptions, error } = await window.sb
+    .from("order_exceptions")
+    .select("*, orders(order_number, customer_name, business_name)")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">Couldn't load: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!exceptions || !exceptions.length) {
+    list.innerHTML = `<div class="a-empty" style="padding:40px">No exceptions. Everything's flowing through fulfillment normally.</div>`;
+    return;
+  }
+
+  const reasonLabel = {
+    possible_stockout: "Possible Stockout",
+    supplier_stockout: "Supplier Stockout",
+    vendor_unresponsive: "Vendor Unresponsive",
+    address_issue: "Address Issue",
+    other: "Other",
+  };
+
+  list.innerHTML = exceptions.map(x => `
+    <div class="a-card" style="padding:16px 18px;display:flex;gap:14px;align-items:flex-start;${x.status === "resolved" ? "opacity:.55" : ""}">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
+          <strong style="font-size:14px;color:#0d1f38">${escHtml(x.orders?.order_number || "Order not found")}</strong>
+          <span class="a-badge a-badge-red">${escHtml(reasonLabel[x.reason_code] || x.reason_code)}</span>
+          <span class="a-badge ${x.status === "resolved" ? "a-badge-green" : "a-badge-yellow"}">${x.status === "resolved" ? "Resolved" : "Open"}</span>
+        </div>
+        <div style="font-size:12.5px;color:#64748b">${escHtml(x.orders?.customer_name || x.orders?.business_name || "—")}</div>
+        ${x.note ? `<div style="font-size:12px;color:#94a3b8;margin-top:2px">${escHtml(x.note)}</div>` : ""}
+        <div style="font-size:11px;color:#94a3b8;margin-top:4px">Flagged ${fmt(x.created_at)}${x.resolved_at ? " &middot; resolved " + fmt(x.resolved_at) : ""}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex:none">
+        ${x.orders?.order_number ? `<button class="a-btn-secondary" style="font-size:12px;padding:6px 12px" onclick="switchTab('orders');document.getElementById('orderSearch').value='${escHtml(x.orders.order_number)}';renderOrdersTable('${escHtml(x.orders.order_number)}')">View Order</button>` : ""}
+        ${x.status !== "resolved" ? `<button class="a-btn-primary" style="font-size:12px;padding:6px 12px" onclick="resolveException('${x.id}')">Resolve</button>` : ""}
+      </div>
+    </div>`).join("");
+}
+
+async function resolveException(id) {
+  const { data: { user } } = await window.sb.auth.getUser();
+  const { error } = await window.sb.from("order_exceptions")
+    .update({ status: "resolved", resolved_at: new Date().toISOString(), resolved_by: user?.id || null })
+    .eq("id", id);
+  if (error) { showToast("Couldn't resolve: " + error.message); return; }
+  showToast("Exception resolved.");
+  renderExceptionsTab();
 }
 
 /* ============================================================

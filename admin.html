@@ -81,6 +81,17 @@
         Users
       </a>
 
+      <span class="a-nav-section admin-only-nav">Fulfillment</span>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="vendors">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        Vendors
+      </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="order-exceptions">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        Order Exceptions
+        <span id="exceptionsNavCount" class="a-nav-count" style="display:none"></span>
+      </a>
+
       <span class="a-nav-section admin-only-nav">Marketing</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="crm">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -1867,6 +1878,81 @@
       </div>
     </div>
 
+    <!-- ============ VENDORS TAB ============ -->
+    <div id="tab-vendors" class="a-tab" style="display:none">
+      <div class="a-page-header" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+        <div>
+          <h1 class="a-page-title">Vendors</h1>
+          <p class="a-page-sub">The roster of suppliers RRS dropships from. Tag a product to a vendor in the product editor, then send that vendor a purchase order straight from an order.</p>
+        </div>
+        <button class="a-btn-primary" onclick="openAddVendor()">+ Add Vendor</button>
+      </div>
+      <div id="vendorsList" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div><!-- /vendors tab -->
+
+    <!-- VENDOR MODAL -->
+    <div id="vendorModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal" style="max-width:480px">
+        <div class="a-modal-header">
+          <h3 id="vendorModalTitle">Add Vendor</h3>
+          <button class="a-modal-close" onclick="closeModal('vendorModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <input type="hidden" id="vndId">
+          <div class="cms-form-group">
+            <label class="cms-label">Vendor Name</label>
+            <input id="vndName" class="a-input" placeholder="e.g. American Blossom Linens">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Category <span class="cms-label-hint">optional</span></label>
+            <input id="vndCategory" class="a-input" placeholder="e.g. Linens">
+          </div>
+          <div class="tkt-form-row">
+            <div class="cms-form-group">
+              <label class="cms-label">Contact Name</label>
+              <input id="vndContactName" class="a-input" placeholder="e.g. Jonas">
+            </div>
+            <div class="cms-form-group">
+              <label class="cms-label">Contact Phone</label>
+              <input id="vndContactPhone" class="a-input" placeholder="optional">
+            </div>
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Contact Email <span class="cms-label-hint">purchase orders send here</span></label>
+            <input id="vndContactEmail" type="email" class="a-input" placeholder="orders@vendor.com">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Estimated Ship Days</label>
+            <input id="vndShipDays" type="number" min="1" value="3" class="a-input">
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Notes <span class="cms-label-hint">optional</span></label>
+            <textarea id="vndNotes" class="a-input" rows="2" style="resize:vertical"></textarea>
+          </div>
+          <div class="cms-form-group">
+            <label class="cms-label">Status</label>
+            <select id="vndActive" class="a-input">
+              <option value="true">Active</option>
+              <option value="false">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="a-modal-footer">
+          <button class="a-btn-secondary" onclick="closeModal('vendorModal')">Cancel</button>
+          <button class="a-btn-primary" id="vndSaveBtn" onclick="saveVendor()">Save Vendor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ ORDER EXCEPTIONS TAB ============ -->
+    <div id="tab-order-exceptions" class="a-tab" style="display:none">
+      <div class="a-page-header" style="margin-bottom:24px">
+        <h1 class="a-page-title">Order Exceptions</h1>
+        <p class="a-page-sub">Orders flagged for a stock or fulfillment issue before they ship &mdash; check and resolve rather than letting a stale inventory number silently fail a customer.</p>
+      </div>
+      <div id="exceptionsList" style="display:flex;flex-direction:column;gap:12px"></div>
+    </div><!-- /order-exceptions tab -->
+
     <!-- ============ SUB-DISTRIBUTORS TAB ============ -->
     <div id="tab-sub-distributors" class="a-tab" style="display:none">
 
@@ -2082,6 +2168,18 @@
         <div class="a-field">
           <label>SEO Description <span class="a-field-hint" id="prodMetaDescCount">0 / 155</span></label>
           <textarea id="prodMetaDescription" rows="2" maxlength="300" placeholder="Auto-generated from the product overview if left blank" oninput="updateMetaCharCounts()"></textarea>
+        </div>
+
+        <!-- Fulfillment vendor -- null (default) means RRS ships it from
+             its own warehouse, unchanged for every product until staff
+             deliberately tag one. Tagging it here is what makes the order
+             modal's "Send Purchase Order" button appear for orders
+             containing this product. -->
+        <div class="a-field">
+          <label>Fulfillment Vendor <span class="a-field-hint">optional &mdash; leave blank if RRS ships this</span></label>
+          <select id="prodVendor">
+            <option value="">RRS-fulfilled (default)</option>
+          </select>
         </div>
 
         <!-- Row 3b: Escape hatch for products that don't need volume tiers
@@ -2583,7 +2681,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=80"></script>
+<script src="admin.js?v=81"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {
