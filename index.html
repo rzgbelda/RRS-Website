@@ -288,6 +288,26 @@
   .home-faq-item.open .home-faq-a { max-height: 220px; }
   .home-faq-a p { margin: 0; padding: 0 20px 18px; font-size: 14px; line-height: 1.7; color: #5B6C7E; }
   .home-faq-a a { color: #ED7226; }
+
+  /* Social links */
+  .home-social-section { background: #f6f9fc; padding: 36px 0; }
+  .home-social-inner {
+    display: flex; flex-direction: column; align-items: center; gap: 16px;
+  }
+  .home-social-label {
+    font-size: 12.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+    color: #5B6C7E;
+  }
+  .home-social-links { display: flex; gap: 14px; }
+  .home-social-link {
+    display: flex; align-items: center; justify-content: center;
+    width: 42px; height: 42px; border-radius: 50%;
+    background: #fff; border: 1.5px solid #e2e8f0; color: #0B1F38;
+    transition: background .18s, border-color .18s, color .18s, transform .18s;
+  }
+  .home-social-link:hover, .home-social-link:focus-visible {
+    background: #ED7226; border-color: #ED7226; color: #fff; transform: translateY(-2px);
+  }
 </style>
 
 <script>
@@ -1068,6 +1088,20 @@
   ]
 }
 </script>
+
+<section class="home-social-section">
+  <div class="container home-social-inner">
+    <span class="home-social-label">Follow Room Ready Supply</span>
+    <div class="home-social-links">
+      <a href="https://www.facebook.com/roomreadysupply" target="_blank" rel="noopener" class="home-social-link" aria-label="Room Ready Supply on Facebook">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M22 12.06C22 6.51 17.52 2 12 2S2 6.51 2 12.06c0 5.02 3.66 9.18 8.44 9.94v-7.03H7.9v-2.91h2.54V9.85c0-2.51 1.49-3.9 3.77-3.9 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.89h2.78l-.44 2.91h-2.34V22c4.78-.76 8.44-4.92 8.44-9.94Z"/></svg>
+      </a>
+      <a href="https://www.tiktok.com/@roomreadysupply" target="_blank" rel="noopener" class="home-social-link" aria-label="Room Ready Supply on TikTok">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M16.6 5.82c-.7-.77-1.15-1.75-1.25-2.82h-3.13v13.44c0 1.53-1.24 2.77-2.77 2.77a2.77 2.77 0 0 1-2.77-2.77 2.77 2.77 0 0 1 2.77-2.77c.28 0 .55.04.8.12V10.6a6.06 6.06 0 0 0-.8-.05A5.98 5.98 0 0 0 3.5 16.53a5.98 5.98 0 0 0 5.95 5.98 5.98 5.98 0 0 0 5.95-5.98V9.42a8.16 8.16 0 0 0 4.76 1.52V7.8c-1.32 0-2.55-.44-3.56-1.98Z"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
 
 <div class="bottom-bar">
   <p>Rooms ready. Supplies handled. Reorder made easy.</p>
