@@ -1315,15 +1315,25 @@ body.admin-body {
   .cms-btn-row > * { flex: 1 1 100% !important; }
 }
 
-/* CMS card breathing room */
+/* CMS card breathing room + refined card chrome. .a-input has no real
+   base styling of its own site-wide (it relies on browser input
+   defaults) -- redefining it globally is out of scope here and risks
+   every other admin page, so the upgraded field/card look below is
+   scoped to these two tabs only, same pattern as the rest of this
+   block. */
 #tab-manage-hero .a-card,
 #tab-manage-about .a-card {
   padding: 32px !important;
+  border-radius: 16px;
+  border-color: var(--border-soft);
+  box-shadow: 0 1px 2px rgba(11,47,99,0.03), 0 8px 24px rgba(11,47,99,0.04);
+  transition: box-shadow .2s;
 }
 #tab-manage-hero .a-card-section-title,
 #tab-manage-about .a-card-section-title {
   margin-bottom: 28px;
   padding-bottom: 16px;
+  color: var(--navy);
 }
 #tab-manage-hero .cms-form-group,
 #tab-manage-about .cms-form-group {
@@ -1336,6 +1346,63 @@ body.admin-body {
 #tab-manage-hero .cms-two-col,
 #tab-manage-about .cms-two-col {
   gap: 24px;
+}
+
+/* Refined field styling -- a real border/background/focus treatment in
+   place of the plain browser-default box .a-input renders as everywhere
+   else in admin. */
+#tab-manage-hero .cms-input,
+#tab-manage-about .cms-input {
+  border: 1.5px solid var(--border) !important;
+  border-radius: 10px !important;
+  background: var(--bg-subtle) !important;
+  color: var(--text) !important;
+  font-family: inherit !important;
+  transition: border-color .16s, background .16s, box-shadow .16s;
+}
+#tab-manage-hero .cms-input:hover,
+#tab-manage-about .cms-input:hover {
+  border-color: #c7d2e0 !important;
+}
+#tab-manage-hero .cms-input:focus,
+#tab-manage-about .cms-input:focus {
+  outline: none !important;
+  border-color: var(--orange) !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 3.5px rgba(245,130,32,0.12) !important;
+}
+#tab-manage-hero .cms-label,
+#tab-manage-about .cms-label {
+  color: var(--navy);
+  font-weight: 700;
+}
+
+/* Outline / primary buttons on these two pages -- slightly more
+   deliberate hover/press feedback than the shared .a-btn defaults. */
+#tab-manage-hero .a-btn-outline,
+#tab-manage-about .a-btn-outline {
+  border-radius: 10px;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+#tab-manage-hero .a-btn-outline:hover,
+#tab-manage-about .a-btn-outline:hover {
+  background: var(--bg-subtle);
+  border-color: #c7d2e0;
+}
+#tab-manage-hero .a-btn-primary,
+#tab-manage-about .a-btn-primary {
+  border-radius: 10px;
+  box-shadow: 0 3px 10px rgba(245,130,32,0.28);
+  transition: transform .12s, box-shadow .12s;
+}
+#tab-manage-hero .a-btn-primary:hover,
+#tab-manage-about .a-btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(245,130,32,0.36);
+}
+#tab-manage-hero .a-btn-primary:active,
+#tab-manage-about .a-btn-primary:active {
+  transform: translateY(0);
 }
 
 /* ─────────────────────────────────────────
