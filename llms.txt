@@ -1,0 +1,29 @@
+# Room Ready Supply
+
+> Room Ready Supply is a wholesale supplier of hospitality and facility products -- towels, bed linens, paper products, cleaning chemicals, trash liners, guest amenities, gloves/PPE, and pillows/mattress protectors -- sold by the case to hotels, vacation rentals, restaurants, healthcare facilities, and cleaning companies across the United States. Pricing is tiered by case quantity (standard, 6+ cases, 30+ cases) and shown directly on every product page; no account is required to see pricing or place an order.
+
+## Core pages
+
+- [Catalog](https://www.roomreadysupply.com/catalog): Full product catalog, filterable by category.
+- [Best Deals](https://www.roomreadysupply.com/best-deals): Currently discounted products.
+- [About Us](https://www.roomreadysupply.com/#about-us): Company background, based in Plymouth, North Carolina, serving the East Coast and shipping nationwide.
+- [Shipping Policy](https://www.roomreadysupply.com/shipping-policy): Shipping origin, carriers, processing times, and delivery areas.
+
+## Categories
+
+- [Towels](https://www.roomreadysupply.com/category/towels)
+- [Bed Sheets & Linens](https://www.roomreadysupply.com/category/bed-sheets-linens)
+- [Paper Products](https://www.roomreadysupply.com/category/paper-products)
+- [Cleaning Chemicals](https://www.roomreadysupply.com/category/cleaning-chemicals)
+- [Laundry & Cleaning Chemicals](https://www.roomreadysupply.com/category/laundry-cleaning-chemicals)
+- [Trash Liners & Can Liners](https://www.roomreadysupply.com/category/trash-liners-can-liners)
+- [Guest Amenities](https://www.roomreadysupply.com/category/guest-amenities)
+- [Gloves & PPE](https://www.roomreadysupply.com/category/gloves-ppe)
+- [Pillows & Mattress Protectors](https://www.roomreadysupply.com/category/pillows-mattress-protectors)
+
+## Buying guides
+
+- [How Much Toilet Paper & Paper Towels Should a Hotel Stock Per Room?](https://www.roomreadysupply.com/blog/post?slug=how-much-toilet-paper-should-a-hotel-stock): Formula for sizing a paper products order by room count and occupancy.
+- [Bath Towel Buying Guide for Vacation Rentals & Boutique Hotels](https://www.roomreadysupply.com/blog/post?slug=bath-towel-buying-guide-vacation-rentals-boutique-hotels): GSM, cotton grade, and case sizing for commercial-durability towel buying.
+- [Trash Liner Sizing Guide: Picking the Right Can Liner for Every Bin](https://www.roomreadysupply.com/blog/post?slug=trash-liner-sizing-guide-right-can-liner-every-bin): Matching liner size and gauge to bin size and use case.
+- [Full blog index](https://www.roomreadysupply.com/blog)
