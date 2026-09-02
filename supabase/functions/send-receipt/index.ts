@@ -432,6 +432,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from:    "Room Ready Supply <orders@roomreadysupply.com>",
+        // orders@ is not a monitored inbox -- the body already tells the
+        // customer to email sales@, so Reply also needs to land there.
+        reply_to: "sales@roomreadysupply.com",
         to:      [order.customer_email],
         subject: `Order Confirmed — #${order.order_number}`,
         html,

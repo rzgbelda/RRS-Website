@@ -153,6 +153,10 @@ function internalAlertHtml(order) {
 async function sendCustomerConfirmation(order) {
   return getResend().emails.send({
     from: 'Room Ready Supply <orders@roomreadysupply.com>',
+    // orders@ is not a monitored inbox -- sales@ is the only mailbox
+    // staff actually checks, so a customer hitting Reply needs to land
+    // there, not at an address nobody reads.
+    reply_to: 'sales@roomreadysupply.com',
     to: order.customer_email,
     subject: 'Order Confirmed — ' + order.order_number,
     html: customerEmailHtml(order),

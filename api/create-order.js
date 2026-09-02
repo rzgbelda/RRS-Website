@@ -484,6 +484,8 @@ async function runDueScheduledSends(supabase) {
       const results = await Promise.allSettled(emails.map(email =>
         resend.emails.send({
           from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+          // marketing@ is not a monitored inbox -- sales@ is.
+          reply_to: 'sales@roomreadysupply.com',
           to: email, subject: row.subject,
           html: row.body_html + unsubscribeFooter(email),
           headers: unsubscribeHeaders(email),

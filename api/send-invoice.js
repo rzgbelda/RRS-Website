@@ -168,6 +168,9 @@ module.exports = async (req, res) => {
     const results = await Promise.allSettled(recipients.map(email =>
       resend.emails.send({
         from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+        // marketing@ is not a monitored inbox -- sales@ is the only
+        // mailbox staff actually checks.
+        reply_to: 'sales@roomreadysupply.com',
         to: email,
         subject,
         html: body_html + unsubscribeFooter(email),
@@ -240,6 +243,9 @@ module.exports = async (req, res) => {
     try {
       await resend.emails.send({
         from: 'Room Ready Supply <orders@roomreadysupply.com>',
+        // orders@ is not a monitored inbox -- the body below tells the
+        // vendor to reply, so the reply needs to actually land somewhere.
+        reply_to: 'sales@roomreadysupply.com',
         to: vendor.contact_email,
         subject: `Purchase Order ${po_number} — Room Ready Supply`,
         html: '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Hi ' + esc(vendor.name) + ' team,</p>' +

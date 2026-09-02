@@ -194,6 +194,9 @@ async function sendFreightShippingEmail(opts: {
     headers: { "Authorization": `Bearer ${RESEND_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
       from:    "Room Ready Supply <orders@roomreadysupply.com>",
+      // orders@ is not a monitored inbox -- the body already tells the
+      // customer to email sales@, so Reply also needs to land there.
+      reply_to: "sales@roomreadysupply.com",
       to:      [opts.customer_email],
       subject: `Your freight order #${opts.order_number} is booked — tracking #${opts.tracking_number}`,
       html,
