@@ -1,6 +1,28 @@
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 const sendInvoiceHandler = require('./send-invoice.js');
+const { buildUnsubscribeUrl } = require('./product-meta.js');
+
+// Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
+// List-Unsubscribe header (RFC 8058) plus a visible unsubscribe link in
+// the body on marketing mail. Both automation drip sends and scheduled
+// campaign sends below are bulk mail in that sense, even though the
+// automation ones read as more "transactional" in tone.
+function unsubscribeFooter(email) {
+  const url = buildUnsubscribeUrl(email);
+  return '<p style="font-family:sans-serif;font-size:12px;color:#94a3b8;margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">' +
+    'Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962<br>' +
+    '<a href="' + url + '" style="color:#94a3b8;">Unsubscribe from marketing emails</a>' +
+    '</p>';
+}
+
+function unsubscribeHeaders(email) {
+  const url = buildUnsubscribeUrl(email);
+  return {
+    'List-Unsubscribe': '<' + url + '>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
 
 /**
  * Creates an order row using the service role key, bypassing RLS.
@@ -403,7 +425,8 @@ async function runDueAutomations(supabase) {
             from: 'Room Ready Supply <sales@roomreadysupply.com>',
             to: mergeSource.email,
             subject: mergeFields(a.subject, mergeSource),
-            html: mergeFields(a.body_html, mergeSource),
+            html: mergeFields(a.body_html, mergeSource) + unsubscribeFooter(mergeSource.email),
+            headers: unsubscribeHeaders(mergeSource.email),
           });
           await supabase.from('automation_sends').update({ sent_at: new Date().toISOString() }).eq('id', s.id);
           await supabase.from('campaign_email_events').insert({
@@ -461,7 +484,9 @@ async function runDueScheduledSends(supabase) {
       const results = await Promise.allSettled(emails.map(email =>
         resend.emails.send({
           from: 'Room Ready Supply <marketing@roomreadysupply.com>',
-          to: email, subject: row.subject, html: row.body_html,
+          to: email, subject: row.subject,
+          html: row.body_html + unsubscribeFooter(email),
+          headers: unsubscribeHeaders(email),
         })
       ));
       const okCount = results.filter(r => r.status === 'fulfilled').length;

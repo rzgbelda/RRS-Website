@@ -19,6 +19,30 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+// Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
+// List-Unsubscribe header (RFC 8058) plus a visible unsubscribe link in
+// the body on marketing mail -- missing both is a strong spam-folder
+// signal. buildUnsubscribeUrl lives in api/product-meta.js (the file
+// that already serves the public, unauthenticated /unsubscribe route)
+// so the HMAC token logic exists in exactly one place.
+const { buildUnsubscribeUrl } = require('./product-meta.js');
+
+function unsubscribeFooter(email) {
+  const url = buildUnsubscribeUrl(email);
+  return '<p style="font-family:sans-serif;font-size:12px;color:#94a3b8;margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">' +
+    'Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962<br>' +
+    '<a href="' + url + '" style="color:#94a3b8;">Unsubscribe from marketing emails</a>' +
+    '</p>';
+}
+
+function unsubscribeHeaders(email) {
+  const url = buildUnsubscribeUrl(email);
+  return {
+    'List-Unsubscribe': '<' + url + '>',
+    'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+  };
+}
+
 function invoiceEmailHtml(o) {
   const rows = o.items.map(i =>
     '<tr>' +
@@ -146,7 +170,8 @@ module.exports = async (req, res) => {
         from: 'Room Ready Supply <marketing@roomreadysupply.com>',
         to: email,
         subject,
-        html: body_html,
+        html: body_html + unsubscribeFooter(email),
+        headers: unsubscribeHeaders(email),
       })
     ));
     const sent = results.filter(r => r.status === 'fulfilled').length;

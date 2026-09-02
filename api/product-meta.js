@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 /**
  * Serves /product?item=... with its SEO tags already filled in.
@@ -415,10 +416,89 @@ async function lookupProduct(item) {
   return product;
 }
 
+/* ── unsubscribe ─────────────────────────────────────────────────
+ * Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
+ * List-Unsubscribe link on marketing mail, and the click target needs
+ * to work with no login (the recipient is often not a site account at
+ * all -- just a quote_requests row). Dispatched from this file rather
+ * than a new one for the same Vercel Hobby 12-function-cap reason as
+ * every other multi-route file in api/ -- this is already the file
+ * handling public, unauthenticated GET requests by query-param.
+ *
+ * The token is an HMAC of the email, keyed by the service-role key
+ * (already a server-only secret, no new env var needed), so a link
+ * can't be forged to unsubscribe an address that never received one.
+ */
+function unsubscribeToken(email) {
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+  return crypto.createHmac('sha256', secret).update(email.trim().toLowerCase()).digest('hex').slice(0, 32);
+}
+
+function buildUnsubscribeUrl(email) {
+  const e = (email || '').trim().toLowerCase();
+  if (!e) return 'https://www.roomreadysupply.com/unsubscribe';
+  const token = unsubscribeToken(e);
+  return 'https://www.roomreadysupply.com/unsubscribe?email=' + encodeURIComponent(e) + '&token=' + token;
+}
+
+function unsubscribePage(message) {
+  return '<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Unsubscribe | Room Ready Supply</title>' +
+    '<meta name="robots" content="noindex">' +
+    '<style>body{font-family:-apple-system,Segoe UI,Roboto,sans-serif;max-width:520px;margin:80px auto;padding:0 24px;color:#0B1F38;text-align:center;}' +
+    'h1{font-size:22px;margin-bottom:12px;}p{color:#5B6C7E;line-height:1.6;}a{color:#ED7226;}</style></head>' +
+    '<body><h1>Room Ready Supply</h1><p>' + message + '</p><p><a href="/">Return to the site</a></p></body></html>';
+}
+
+async function handleUnsubscribe(req, res, url) {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  const email = (url.searchParams.get('email') || '').trim().toLowerCase();
+  const token = (url.searchParams.get('token') || '').trim();
+
+  if (!email || !token) {
+    res.status(400).send(unsubscribePage('This unsubscribe link is missing information and could not be processed.'));
+    return;
+  }
+
+  let expected;
+  try { expected = unsubscribeToken(email); } catch { expected = null; }
+  const tokenBuf = Buffer.from(token, 'hex');
+  const expectedBuf = Buffer.from(expected || '', 'hex');
+  const valid = expected && tokenBuf.length === expectedBuf.length && crypto.timingSafeEqual(tokenBuf, expectedBuf);
+  if (!valid) {
+    res.status(403).send(unsubscribePage('This unsubscribe link is invalid or has expired.'));
+    return;
+  }
+
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    await supabase.from('quote_requests')
+      .update({ consent_marketing: false, consent_recorded_at: new Date().toISOString() })
+      .ilike('email', email);
+  } catch (err) {
+    console.error('[product-meta] unsubscribe update failed:', err.message);
+    res.status(500).send(unsubscribePage('Something went wrong processing your request. Please email sales@roomreadysupply.com and we will remove you manually.'));
+    return;
+  }
+
+  res.status(200).send(unsubscribePage(
+    'You (' + email.replace(/[<>&"]/g, '') + ') have been unsubscribed from Room Ready Supply marketing emails. ' +
+    'You may still receive transactional emails about orders you place.'
+  ));
+}
+
 /* ── handler ─────────────────────────────────────────────────── */
 
 module.exports = async (req, res) => {
   const url = new URL(req.url, 'https://www.roomreadysupply.com');
+
+  if (url.pathname === '/unsubscribe') {
+    await handleUnsubscribe(req, res, url);
+    return;
+  }
+
   const isArticleRoute = url.pathname === '/blog/post' || url.searchParams.has('slug');
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -488,3 +568,4 @@ module.exports.injectArticleMeta   = injectArticleMeta;
 module.exports.buildArticleJsonLd  = buildArticleJsonLd;
 module.exports.buildArticleMetaDesc = buildArticleMetaDesc;
 module.exports.lookupArticle       = lookupArticle;
+module.exports.buildUnsubscribeUrl = buildUnsubscribeUrl;

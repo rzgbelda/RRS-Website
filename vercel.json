@@ -325,6 +325,10 @@
       "destination": "/api/product-meta"
     },
     {
+      "source": "/unsubscribe",
+      "destination": "/api/product-meta"
+    },
+    {
       "source": "/cart",
       "destination": "/cart.html"
     },
