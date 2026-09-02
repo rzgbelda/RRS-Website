@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
-  <link rel="stylesheet" href="admin.css?v=3" />
+  <link rel="stylesheet" href="admin.css?v=4" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -1810,17 +1810,17 @@
 
             <div class="cms-form-group">
               <label class="cms-label">Main Heading <span class="cms-label-hint">use | for line breaks</span></label>
-              <input id="heroHeading" class="a-input cms-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies">
+              <input id="heroHeading" class="a-input cms-input" placeholder="Keep Your|Rooms Ready|Without Chasing Supplies" oninput="updateHeroPreview()">
             </div>
 
             <div class="cms-form-group">
               <label class="cms-label">Highlight Text <span class="cms-label-hint">the orange-coloured line</span></label>
-              <input id="heroHighlight" class="a-input cms-input" placeholder="Without Chasing Supplies">
+              <input id="heroHighlight" class="a-input cms-input" placeholder="Without Chasing Supplies" oninput="updateHeroPreview()">
             </div>
 
             <div class="cms-form-group" style="margin-bottom:0">
               <label class="cms-label">Description</label>
-              <textarea id="heroDescription" class="a-input cms-input" rows="5" placeholder="Room Ready Supply helps hotels, motels..." style="resize:vertical;"></textarea>
+              <textarea id="heroDescription" class="a-input cms-input" rows="5" placeholder="Room Ready Supply helps hotels, motels..." style="resize:vertical;" oninput="updateHeroPreview()"></textarea>
             </div>
           </div>
 
@@ -1832,11 +1832,26 @@
             <div class="cms-btn-row">
               <div class="cms-form-group" style="margin:0;flex:1">
                 <label class="cms-label">Primary Button</label>
-                <input id="heroBtnPrimary" class="a-input cms-input" placeholder="Shop Catalog">
+                <input id="heroBtnPrimary" class="a-input cms-input" placeholder="Shop Catalog" oninput="updateHeroPreview()">
               </div>
               <div class="cms-form-group" style="margin:0;flex:1">
                 <label class="cms-label">Secondary Button</label>
-                <input id="heroBtnSecondary" class="a-input cms-input" placeholder="Request Business Pricing">
+                <input id="heroBtnSecondary" class="a-input cms-input" placeholder="Request Business Pricing" oninput="updateHeroPreview()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Live preview -->
+          <div class="cms-preview-panel">
+            <div class="cms-preview-label"><span class="cms-live-dot"></span> Live Preview</div>
+            <div class="cms-preview-hero" id="heroPreviewBg">
+              <div class="cms-preview-hero-inner">
+                <h2 class="cms-preview-heading" id="heroPreviewHeading"></h2>
+                <p class="cms-preview-desc" id="heroPreviewDesc"></p>
+                <div class="cms-preview-btns">
+                  <span class="cms-preview-btn cms-preview-btn-primary" id="heroPreviewBtn1"></span>
+                  <span class="cms-preview-btn cms-preview-btn-secondary" id="heroPreviewBtn2"></span>
+                </div>
               </div>
             </div>
           </div>
@@ -1849,12 +1864,12 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             Hero Banner Image
           </div>
-          <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:16/9;">
+          <div class="cms-image-frame" style="aspect-ratio:16/9;">
             <img fetchpriority="high" width="1600" height="900" id="heroBannerImg" src="assets/img/banner1.jpg" alt="Hero Banner" style="width:100%;height:100%;object-fit:cover;display:block;">
           </div>
           <div class="cms-form-group">
             <label class="cms-label">Image URL</label>
-            <input id="heroBannerUrl" class="a-input cms-input" placeholder="assets/img/banner1.jpg" oninput="document.getElementById('heroBannerImg').src=this.value||'assets/img/banner1.jpg'">
+            <input id="heroBannerUrl" class="a-input cms-input" placeholder="assets/img/banner1.jpg" oninput="document.getElementById('heroBannerImg').src=this.value||'assets/img/banner1.jpg';updateHeroPreview()">
           </div>
           <input type="file" id="heroBannerFile" accept="image/*" style="display:none" onchange="previewHeroBanner(this)">
           <button class="a-btn-outline" onclick="document.getElementById('heroBannerFile').click()" style="width:100%;justify-content:center;">
@@ -1896,25 +1911,25 @@
             <div class="cms-btn-row">
               <div class="cms-form-group" style="margin:0;flex:0 0 160px">
                 <label class="cms-label">Section Tag</label>
-                <input id="aboutTag" class="a-input cms-input" placeholder="ABOUT US">
+                <input id="aboutTag" class="a-input cms-input" placeholder="ABOUT US" oninput="updateAboutPreview()">
               </div>
               <div class="cms-form-group" style="margin:0;flex:1">
                 <label class="cms-label">Main Title</label>
-                <input id="aboutTitle" class="a-input cms-input" placeholder="We Help Operators Stay Ready">
+                <input id="aboutTitle" class="a-input cms-input" placeholder="We Help Operators Stay Ready" oninput="updateAboutPreview()">
               </div>
             </div>
 
             <div class="cms-form-group">
               <label class="cms-label">Paragraph 1</label>
-              <textarea id="aboutP1" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens..."></textarea>
+              <textarea id="aboutP1" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Keeping rooms, rentals, kitchens..." oninput="updateAboutPreview()"></textarea>
             </div>
             <div class="cms-form-group">
               <label class="cms-label">Paragraph 2</label>
-              <textarea id="aboutP2" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides..."></textarea>
+              <textarea id="aboutP2" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Room Ready Supply provides..." oninput="updateAboutPreview()"></textarea>
             </div>
             <div class="cms-form-group" style="margin-bottom:0">
               <label class="cms-label">Paragraph 3</label>
-              <textarea id="aboutP3" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple..."></textarea>
+              <textarea id="aboutP3" class="a-input cms-input" rows="3" style="resize:vertical;" placeholder="Our goal is simple..." oninput="updateAboutPreview()"></textarea>
             </div>
           </div>
 
@@ -1923,8 +1938,22 @@
             <div class="a-card-section-title">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
               Feature Cards
+              <span class="cms-label-hint" style="margin-left:auto;font-weight:400;text-transform:none;letter-spacing:normal;">drag ⠿ to reorder</span>
             </div>
             <div id="aboutFeatures" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+
+          <!-- Live preview -->
+          <div class="cms-preview-panel">
+            <div class="cms-preview-label"><span class="cms-live-dot"></span> Live Preview</div>
+            <div class="cms-preview-about">
+              <div class="cms-preview-about-img" id="aboutPreviewImg"></div>
+              <div class="cms-preview-about-body">
+                <span class="cms-preview-tag" id="aboutPreviewTag"></span>
+                <h3 class="cms-preview-title" id="aboutPreviewTitle"></h3>
+                <p class="cms-preview-about-p" id="aboutPreviewP1"></p>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1935,12 +1964,12 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             About Image
           </div>
-          <div style="border-radius:10px;overflow:hidden;background:#f0f3f9;margin-bottom:16px;aspect-ratio:4/3;">
+          <div class="cms-image-frame" style="aspect-ratio:4/3;">
             <img width="1400" height="933" id="aboutBannerImg" src="assets/img/banner3.jpg" alt="About" style="width:100%;height:100%;object-fit:cover;display:block;" loading="lazy">
           </div>
           <div class="cms-form-group">
             <label class="cms-label">Image URL</label>
-            <input id="aboutBannerUrl" class="a-input cms-input" placeholder="assets/img/banner3.jpg" oninput="document.getElementById('aboutBannerImg').src=this.value||'assets/img/banner3.jpg'">
+            <input id="aboutBannerUrl" class="a-input cms-input" placeholder="assets/img/banner3.jpg" oninput="document.getElementById('aboutBannerImg').src=this.value||'assets/img/banner3.jpg';updateAboutPreview()">
           </div>
           <input type="file" id="aboutBannerFile" accept="image/*" style="display:none" onchange="previewAboutBanner(this)">
           <button class="a-btn-outline" onclick="document.getElementById('aboutBannerFile').click()" style="width:100%;justify-content:center;">
@@ -2828,7 +2857,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=87"></script>
+<script src="admin.js?v=88"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

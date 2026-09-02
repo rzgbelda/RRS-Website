@@ -6664,7 +6664,7 @@ function paymentBadgeLabel(paymentStatus) {
 
 async function loadHeroSection() {
   const { data } = await window.sb.from("site_content").select("*").eq("section", "hero").single();
-  if (!data) return;
+  if (!data) { updateHeroPreview(); return; }
   const c = data.content || {};
   setVal("heroHeading",      c.heading      || "Keep Your|Rooms Ready|Without Chasing Supplies");
   setVal("heroHighlight",    c.highlight    || "Without Chasing Supplies");
@@ -6674,6 +6674,36 @@ async function loadHeroSection() {
   setVal("heroBannerUrl",    c.bannerUrl    || "assets/img/banner1.jpg");
   const img = document.getElementById("heroBannerImg");
   if (img && c.bannerUrl) img.src = c.bannerUrl;
+  updateHeroPreview();
+}
+
+// Mirrors the same heading/highlight-splitting logic the live homepage
+// uses (heading text split on "|" into separate lines, the segment
+// matching heroHighlight rendered in orange) so what staff sees here
+// matches what ships, not an approximation of it.
+function updateHeroPreview() {
+  const heading   = document.getElementById("heroHeading")?.value || "";
+  const highlight = document.getElementById("heroHighlight")?.value || "";
+  const desc      = document.getElementById("heroDescription")?.value || "";
+  const btn1      = document.getElementById("heroBtnPrimary")?.value || "";
+  const btn2      = document.getElementById("heroBtnSecondary")?.value || "";
+  const bannerUrl = document.getElementById("heroBannerUrl")?.value || "assets/img/banner1.jpg";
+
+  const headingEl = document.getElementById("heroPreviewHeading");
+  if (headingEl) {
+    headingEl.innerHTML = heading.split("|").map(line => {
+      const isHighlight = highlight && line.trim() === highlight.trim();
+      return isHighlight ? `<span class="cms-preview-highlight">${escHtml(line)}</span>` : escHtml(line);
+    }).join("<br>");
+  }
+  const descEl = document.getElementById("heroPreviewDesc");
+  if (descEl) descEl.textContent = desc;
+  const btn1El = document.getElementById("heroPreviewBtn1");
+  if (btn1El) btn1El.textContent = btn1 || "Shop Catalog";
+  const btn2El = document.getElementById("heroPreviewBtn2");
+  if (btn2El) btn2El.textContent = btn2 || "Request Business Pricing";
+  const bg = document.getElementById("heroPreviewBg");
+  if (bg) bg.style.backgroundImage = bannerUrl ? `url("${bannerUrl}")` : "";
 }
 
 async function saveHeroSection() {
@@ -6703,16 +6733,34 @@ async function saveHeroSection() {
   }
 }
 
-function previewHeroBanner(input) {
+// Was a local-only FileReader preview that wrote the bare filename (e.g.
+// "photo.jpg") into heroBannerUrl -- looked like it worked because the
+// <img> briefly showed the local file, but Save Changes would persist a
+// path that resolves nowhere on the live site. Now uploads to the same
+// "product-images" Storage bucket admin's other image pickers already
+// use, and writes the real public URL.
+async function previewHeroBanner(input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById("heroBannerImg").src = e.target.result;
-    document.getElementById("heroBannerUrl").value = file.name;
-    showToast("Image previewed — save to apply");
-  };
-  reader.readAsDataURL(file);
+  input.value = ""; // allow picking the same filename again later
+  const img = document.getElementById("heroBannerImg");
+  const zone = img?.closest(".cms-image-frame");
+  zone?.classList.add("is-uploading");
+  showToast("Uploading…");
+  try {
+    const ext  = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `site-content/hero-${Date.now()}.${ext}`;
+    const { error } = await window.sb.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: { publicUrl } } = window.sb.storage.from("product-images").getPublicUrl(path);
+    img.src = publicUrl;
+    document.getElementById("heroBannerUrl").value = publicUrl;
+    showToast("Image uploaded — Save Changes to apply");
+  } catch (err) {
+    showToast("Upload failed: " + err.message);
+  } finally {
+    zone?.classList.remove("is-uploading");
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -6742,24 +6790,64 @@ async function loadAboutSection() {
     if (c.features) _aboutFeatures = c.features;
   }
   renderAboutFeatures();
+  updateAboutPreview();
 }
+
+function updateAboutPreview() {
+  const tag   = document.getElementById("aboutTag")?.value || "ABOUT US";
+  const title = document.getElementById("aboutTitle")?.value || "";
+  const p1    = document.getElementById("aboutP1")?.value || "";
+  const bannerUrl = document.getElementById("aboutBannerUrl")?.value || "assets/img/banner3.jpg";
+
+  const tagEl = document.getElementById("aboutPreviewTag");
+  if (tagEl) tagEl.textContent = tag;
+  const titleEl = document.getElementById("aboutPreviewTitle");
+  if (titleEl) titleEl.textContent = title;
+  const p1El = document.getElementById("aboutPreviewP1");
+  if (p1El) p1El.textContent = p1;
+  const imgEl = document.getElementById("aboutPreviewImg");
+  if (imgEl) imgEl.style.backgroundImage = bannerUrl ? `url("${bannerUrl}")` : "";
+}
+
+let _aboutFeatureDragIndex = null;
 
 function renderAboutFeatures() {
   const container = document.getElementById("aboutFeatures");
   if (!container) return;
   container.innerHTML = _aboutFeatures.map((f, i) => `
-    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:center;background:#f9fafb;border-radius:8px;padding:12px 14px;">
-      <input class="a-input" placeholder="Feature title" value="${escHtml(f.title)}"
-        oninput="_aboutFeatures[${i}].title=this.value" style="margin:0">
-      <input class="a-input" placeholder="Short description" value="${escHtml(f.desc)}"
-        oninput="_aboutFeatures[${i}].desc=this.value" style="margin:0">
-      <button onclick="_aboutFeatures.splice(${i},1);renderAboutFeatures()"
-        style="background:#fee2e2;color:#ef4444;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px;">✕</button>
+    <div class="cms-feature-row" draggable="true"
+      ondragstart="_aboutFeatureDragIndex=${i};this.classList.add('is-dragging')"
+      ondragend="this.classList.remove('is-dragging')"
+      ondragover="event.preventDefault();this.classList.add('is-dragover')"
+      ondragleave="this.classList.remove('is-dragover')"
+      ondrop="event.preventDefault();this.classList.remove('is-dragover');reorderAboutFeature(_aboutFeatureDragIndex,${i})">
+      <span class="cms-feature-handle" title="Drag to reorder">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>
+      </span>
+      <div class="cms-feature-fields">
+        <input class="a-input cms-input" placeholder="Feature title" value="${escHtml(f.title)}"
+          oninput="_aboutFeatures[${i}].title=this.value">
+        <input class="a-input cms-input" placeholder="Short description" value="${escHtml(f.desc)}"
+          oninput="_aboutFeatures[${i}].desc=this.value">
+      </div>
+      <button class="cms-feature-remove" title="Remove feature" onclick="_aboutFeatures.splice(${i},1);renderAboutFeatures()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
     </div>
   `).join("") + `
-    <button onclick="_aboutFeatures.push({icon:'assets/icons/au1.svg',title:'',desc:''});renderAboutFeatures()"
-      style="margin-top:4px;padding:8px 16px;background:#f0f7ff;color:#1a4a8a;border:1.5px dashed #1a4a8a;border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;">+ Add Feature</button>
+    <button class="cms-feature-add" onclick="_aboutFeatures.push({icon:'assets/icons/au1.svg',title:'',desc:''});renderAboutFeatures()">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add Feature
+    </button>
   `;
+}
+
+function reorderAboutFeature(from, to) {
+  if (from === null || from === to || from === undefined) return;
+  const [moved] = _aboutFeatures.splice(from, 1);
+  _aboutFeatures.splice(to, 0, moved);
+  _aboutFeatureDragIndex = null;
+  renderAboutFeatures();
 }
 
 async function saveAboutSection() {
@@ -6790,16 +6878,29 @@ async function saveAboutSection() {
   }
 }
 
-function previewAboutBanner(input) {
+// See previewHeroBanner's comment -- same real-upload fix, same bucket.
+async function previewAboutBanner(input) {
   const file = input.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    document.getElementById("aboutBannerImg").src = e.target.result;
-    document.getElementById("aboutBannerUrl").value = file.name;
-    showToast("Image previewed — save to apply");
-  };
-  reader.readAsDataURL(file);
+  input.value = "";
+  const img = document.getElementById("aboutBannerImg");
+  const zone = img?.closest(".cms-image-frame");
+  zone?.classList.add("is-uploading");
+  showToast("Uploading…");
+  try {
+    const ext  = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `site-content/about-${Date.now()}.${ext}`;
+    const { error } = await window.sb.storage.from("product-images").upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { data: { publicUrl } } = window.sb.storage.from("product-images").getPublicUrl(path);
+    img.src = publicUrl;
+    document.getElementById("aboutBannerUrl").value = publicUrl;
+    showToast("Image uploaded — Save Changes to apply");
+  } catch (err) {
+    showToast("Upload failed: " + err.message);
+  } finally {
+    zone?.classList.remove("is-uploading");
+  }
 }
 
 /* ============================================================
