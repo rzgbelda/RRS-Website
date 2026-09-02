@@ -152,6 +152,23 @@ function isTabAllowed(tab) {
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
+// CRM & Leads and Campaigns are view-only for Owner by design (RRS-25
+// follow-up): Owner can see everything there for oversight, but only
+// Marketing can actually configure or change it. RLS (see migration
+// 20260902f_crm_campaigns_owner_readonly.sql) is the real enforcement
+// -- this is the UI-side guard so an Owner clicking Save gets a clear
+// "you can't edit this" toast instead of a confusing RLS error, and so
+// the buttons don't look clickable when they'd silently fail.
+function isCrmCampaignsReadOnly() {
+  return window._adminRole === "owner";
+}
+
+function blockIfCrmReadOnly() {
+  if (!isCrmCampaignsReadOnly()) return false;
+  showToast("Owner accounts can view CRM & Leads and Campaigns, but only Marketing can make changes here.");
+  return true;
+}
+
 function landingTabFor(role) {
   if (role === "developer") return "dev-tickets";
   if (role === "marketing") return "crm";
@@ -3772,6 +3789,10 @@ async function renderCrmTab() {
 
   panel.innerHTML = `
    <div class="crm-page">
+    ${isCrmCampaignsReadOnly() ? `<div class="crm-readonly-banner">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      View only — only Marketing accounts can make changes here.
+    </div>` : ""}
     <div class="crm-header">
       <div>
         <h1 class="crm-title">CRM &amp; Leads</h1>
@@ -3924,6 +3945,7 @@ async function crmDrop(e, status) {
 }
 
 async function setCrmLeadStatus(id, status) {
+  if (blockIfCrmReadOnly()) return;
   const lead = _crm.leads.find(x => x.id === id);
   if (!lead || lead.status === status) return;
   const from = lead.status;
@@ -3940,6 +3962,7 @@ async function setCrmLeadStatus(id, status) {
 // cascades to crm_activity_log. Callable either from a card's quick-delete
 // button (drawer isn't open yet) or from inside the open drawer.
 async function deleteCrmLead(id) {
+  if (blockIfCrmReadOnly()) return;
   const l = _crm.leads.find(x => x.id === id);
   if (!l) return;
   if (!confirm(`Delete the lead "${l.business_name || l.contact_name || "Unnamed lead"}"? This also removes its activity log and can't be undone.`)) return;
@@ -4109,6 +4132,7 @@ document.addEventListener("keydown", e => {
 });
 
 async function setCrmField(id, field, value) {
+  if (blockIfCrmReadOnly()) return;
   const lead = _crm.leads.find(x => x.id === id);
   const { error } = await window.sb.from("quote_requests").update({ [field]: value }).eq("id", id);
   if (error) { showToast("Couldn't update: " + error.message); return; }
@@ -4117,6 +4141,7 @@ async function setCrmField(id, field, value) {
 }
 
 async function addCrmTag(id) {
+  if (blockIfCrmReadOnly()) return;
   const input = document.getElementById(`crmTagInput-${id}`);
   const tag = (input?.value || "").trim();
   if (!tag) return;
@@ -4129,6 +4154,7 @@ async function addCrmTag(id) {
 }
 
 async function removeCrmTag(id, tag) {
+  if (blockIfCrmReadOnly()) return;
   const lead = _crm.leads.find(x => x.id === id);
   const tags = (lead?.tags || []).filter(t => t !== tag);
   const { error } = await window.sb.from("quote_requests").update({ tags }).eq("id", id);
@@ -4138,6 +4164,7 @@ async function removeCrmTag(id, tag) {
 }
 
 async function toggleCrmConsent(id, reEnable) {
+  if (blockIfCrmReadOnly()) return;
   const consent = reEnable ? true : false;
   if (!reEnable && !confirm("Opt this lead out of marketing emails? They'll be excluded from every campaign and automation send going forward.")) return;
   const { error } = await window.sb.from("quote_requests")
@@ -4150,6 +4177,7 @@ async function toggleCrmConsent(id, reEnable) {
 }
 
 async function submitCrmActivity(id) {
+  if (blockIfCrmReadOnly()) return;
   const typeEl = document.getElementById("crmActivityType");
   const bodyEl = document.getElementById("crmActivityBody");
   const body = (bodyEl?.value || "").trim();
@@ -4160,6 +4188,7 @@ async function submitCrmActivity(id) {
 }
 
 async function deleteCrmActivity(activityId, leadId) {
+  if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this activity entry? This cannot be undone.")) return;
   const { error } = await window.sb.from("crm_activity_log").delete().eq("id", activityId);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
@@ -4283,6 +4312,7 @@ function handleCrmImportFile(file) {
 }
 
 async function saveCrmImport() {
+  if (blockIfCrmReadOnly()) return;
   if (!_crmImportRows.length) return;
   const btn = document.getElementById("crmImportSaveBtn");
   btn.disabled = true; btn.textContent = "Importing…";
@@ -4352,6 +4382,10 @@ async function renderCampaignsTab() {
 
   panel.innerHTML = `
    <div class="camp-page">
+    ${isCrmCampaignsReadOnly() ? `<div class="crm-readonly-banner">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      View only — only Marketing accounts can make changes here.
+    </div>` : ""}
     <div class="camp-header">
       <div>
         <h1 class="camp-title">Campaigns</h1>
@@ -4543,6 +4577,7 @@ async function campDrop(e, status) {
 }
 
 async function createNewCampaign() {
+  if (blockIfCrmReadOnly()) return;
   const { data, error } = await window.sb.from("campaigns").insert({ name: "Untitled Campaign", campaign_type: "email", status: "draft" }).select().single();
   if (error) { showToast("Couldn't create campaign: " + error.message); return; }
   _camp.campaigns.unshift(data);
@@ -4552,6 +4587,7 @@ async function createNewCampaign() {
 }
 
 async function setCampField(id, field, value) {
+  if (blockIfCrmReadOnly()) return;
   const c = _camp.campaigns.find(x => x.id === id);
   const { error } = await window.sb.from("campaigns").update({ [field]: value }).eq("id", id);
   if (error) { showToast("Couldn't update: " + error.message); return; }
@@ -4769,6 +4805,7 @@ document.addEventListener("keydown", e => {
 });
 
 async function deleteCampaign(id) {
+  if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this campaign? Its content calendar entries go with it.")) return;
   const { error } = await window.sb.from("campaigns").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
@@ -4793,6 +4830,7 @@ function renderCampContentListHtml(items) {
 }
 
 async function addCampContentItem(campaignId) {
+  if (blockIfCrmReadOnly()) return;
   const date = document.getElementById("ccDate-" + campaignId).value;
   const type = document.getElementById("ccType-" + campaignId).value;
   const title = document.getElementById("ccTitle-" + campaignId).value.trim();
@@ -4809,6 +4847,7 @@ async function addCampContentItem(campaignId) {
 }
 
 async function deleteCampContentItem(campaignId, itemId) {
+  if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("campaign_content").delete().eq("id", itemId);
   if (error) { showToast("Couldn't remove: " + error.message); return; }
   const { data: content } = await window.sb.from("campaign_content").select("*").eq("campaign_id", campaignId).order("scheduled_date");
@@ -4896,6 +4935,7 @@ async function renderCampMetrics(campaignId) {
 }
 
 async function sendCampaignEmail(campaignId) {
+  if (blockIfCrmReadOnly()) return;
   const errEl = document.getElementById("sendError-" + campaignId);
   errEl.style.display = "none";
   const c = _camp.campaigns.find(x => x.id === campaignId);
@@ -4937,6 +4977,7 @@ async function sendCampaignEmail(campaignId) {
 // entirely -- a real preview in a real inbox before committing to the
 // full segment, the "test email before sending" spec item.
 async function sendCampaignTestEmail(campaignId) {
+  if (blockIfCrmReadOnly()) return;
   const errEl = document.getElementById("sendError-" + campaignId);
   errEl.style.display = "none";
   const testEmail = document.getElementById("testEmailInput-" + campaignId).value.trim();
@@ -4983,6 +5024,7 @@ async function openScheduleSendModal(campaignId) {
 }
 
 async function confirmScheduleSend() {
+  if (blockIfCrmReadOnly()) return;
   const campaignId = document.getElementById("schedSendCampId").value;
   const subject = document.getElementById("schedSendSubject").value.trim();
   const body_html = document.getElementById("schedSendBody").value.trim();
@@ -5017,6 +5059,7 @@ async function renderScheduledSendStatus(campaignId) {
 }
 
 async function cancelScheduledSend(id, campaignId) {
+  if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("campaign_scheduled_sends").delete().eq("id", id);
   if (error) { showToast("Couldn't cancel: " + error.message); return; }
   showToast("Scheduled send cancelled.");
@@ -5068,6 +5111,7 @@ function editEmailTemplate(t) {
 }
 
 async function saveEmailTemplate() {
+  if (blockIfCrmReadOnly()) return;
   const errEl = document.getElementById("tplError");
   errEl.style.display = "none";
   const id = document.getElementById("tplEditId").value;
@@ -5089,6 +5133,7 @@ async function saveEmailTemplate() {
 }
 
 async function deleteEmailTemplate(id) {
+  if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this template?")) return;
   const { error } = await window.sb.from("email_templates").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }
@@ -5164,6 +5209,7 @@ function editAutomation(a) {
 }
 
 async function saveAutomation() {
+  if (blockIfCrmReadOnly()) return;
   const errEl = document.getElementById("autoError");
   errEl.style.display = "none";
   const id = document.getElementById("autoEditId").value;
@@ -5193,12 +5239,14 @@ async function saveAutomation() {
 }
 
 async function toggleAutomationActive(id, active) {
+  if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("automations").update({ is_active: active }).eq("id", id);
   if (error) { showToast("Couldn't update: " + error.message); return; }
   await renderAutomationList();
 }
 
 async function deleteAutomation(id) {
+  if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this automation? Any queued-but-unsent emails for it will also be cancelled.")) return;
   const { error } = await window.sb.from("automations").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + error.message); return; }

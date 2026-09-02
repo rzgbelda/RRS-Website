@@ -3201,6 +3201,21 @@ body.admin-body {
 
 .crm-page { --crm-ink: #101b30; --crm-ink-soft: #5c6b82; --crm-ink-faint: #93a1b5; --crm-line: #e7ebf2; --crm-canvas: #f6f8fb; }
 
+/* Owner-viewing-read-only banner, shown on both CRM & Leads and
+   Campaigns (see isCrmCampaignsReadOnly() in admin.js). */
+.crm-readonly-banner {
+  display: flex; align-items: center; gap: 9px;
+  padding: 11px 16px;
+  margin-bottom: 18px;
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  border-radius: 10px;
+  color: #9a3412;
+  font-size: 13px;
+  font-weight: 600;
+}
+.crm-readonly-banner svg { flex-shrink: 0; color: #ea580c; }
+
 /* ── Page header ─────────────────────────────────────────────── */
 .crm-header {
   display: flex; align-items: flex-start; justify-content: space-between;
