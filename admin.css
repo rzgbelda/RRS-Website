@@ -2867,6 +2867,25 @@ body.admin-body {
 .camp-cc-add { display: grid; grid-template-columns: 130px 110px 1fr auto; gap: 8px; }
 @media (max-width: 620px) { .camp-cc-add { grid-template-columns: 1fr 1fr; } }
 
+/* ── Site-wide deliverability health strip ───────────────────── */
+.camp-deliverability {
+  border-radius: 14px; padding: 16px 20px; margin-bottom: 16px;
+  border: 1px solid var(--camp-line); background: var(--camp-canvas);
+}
+.camp-deliverability.is-healthy { border-color: #bbf7d0; background: #f0fdf4; }
+.camp-deliverability.is-warn { border-color: #fecaca; background: #fef2f2; }
+.camp-dh-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.camp-dh-title { font-size: 13.5px; font-weight: 800; color: var(--camp-ink); }
+.is-healthy .camp-dh-title::before { content: "●"; color: #16a34a; margin-right: 7px; font-size: 10px; }
+.is-warn .camp-dh-title::before { content: "●"; color: #dc2626; margin-right: 7px; font-size: 10px; }
+.camp-dh-window { font-size: 11px; color: var(--camp-ink-faint); }
+.camp-dh-stats { display: flex; gap: 28px; margin-top: 12px; flex-wrap: wrap; }
+.camp-dh-stat { display: flex; flex-direction: column; }
+.camp-dh-n { font-size: 20px; font-weight: 800; color: var(--camp-ink); font-variant-numeric: tabular-nums; }
+.camp-dh-stat.is-bad .camp-dh-n { color: #dc2626; }
+.camp-dh-l { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--camp-ink-faint); margin-top: 2px; }
+.camp-dh-hint { font-size: 12px; color: #b91c1c; margin: 12px 0 0; line-height: 1.5; }
+
 /* ── Email performance metrics ───────────────────────────────── */
 .camp-metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
 @media (max-width: 480px) { .camp-metrics-grid { grid-template-columns: repeat(2, 1fr); } }
@@ -2877,6 +2896,12 @@ body.admin-body {
 .camp-metric-n { font-size: 19px; font-weight: 800; color: var(--camp-ink); font-variant-numeric: tabular-nums; }
 .camp-metric-l { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--camp-ink-faint); margin-top: 2px; }
 .camp-metric-pct { font-size: 10.5px; font-weight: 700; color: var(--orange-dark); margin-top: 3px; }
+/* Spam complaints hurt sender reputation more than any other single
+   signal, so a nonzero count is flagged red rather than blending in
+   as a neutral stat like the other tiles. */
+.camp-metric-tile-warn { background: #fef2f2; border-color: #fecaca; }
+.camp-metric-tile-warn .camp-metric-n,
+.camp-metric-tile-warn .camp-metric-pct { color: #dc2626; }
 
 .camp-dr-facts {
   display: flex; align-items: center; gap: 6px;

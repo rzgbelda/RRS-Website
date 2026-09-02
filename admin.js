@@ -4373,6 +4373,8 @@ async function renderCampaignsTab() {
       </div>
     </div>
 
+    <div id="campDeliverability"></div>
+
     <div class="camp-statstrip" id="campStats"></div>
 
     <div class="camp-filterbar">
@@ -4388,6 +4390,55 @@ async function renderCampaignsTab() {
 
   renderCampStats();
   renderCampBoard();
+  renderCampDeliverability();
+}
+
+// Site-wide deliverability health, across EVERY send in the last 30 days
+// (campaigns + automations together, not per-campaign) -- a reputation
+// problem shows up as a rising bounce/complaint rate across the whole
+// sending domain before it's visible on any single campaign's own
+// metrics tile. Same campaign_email_events table renderCampMetrics
+// already reads, just aggregated without a campaign_id filter.
+async function renderCampDeliverability() {
+  const el = document.getElementById("campDeliverability");
+  if (!el) return;
+
+  const since = new Date(Date.now() - 30 * 86400000).toISOString();
+  const { data: events, error } = await window.sb
+    .from("campaign_email_events").select("event_type, recipient").gte("occurred_at", since);
+  if (error || !events || !events.length) { el.innerHTML = ""; return; }
+
+  const distinctBy = type => new Set(events.filter(e => e.event_type === type).map(e => e.recipient)).size;
+  const sent = distinctBy("sent") || new Set(events.map(e => e.recipient)).size;
+  if (!sent) { el.innerHTML = ""; return; }
+
+  const bounced = distinctBy("bounced");
+  const complained = distinctBy("complained");
+  const unsubscribed = distinctBy("unsubscribed");
+  const bounceRate = (bounced / sent) * 100;
+  const complaintRate = (complained / sent) * 100;
+
+  // Thresholds from Gmail/Yahoo's own bulk-sender guidance: keep bounce
+  // rate under 10% and spam-complaint rate under 0.3% (0.1% is their
+  // "good" bar) to avoid inbox-placement penalties.
+  const bounceWarn = bounceRate >= 10;
+  const complaintWarn = complaintRate >= 0.3;
+  const healthy = !bounceWarn && !complaintWarn;
+
+  el.innerHTML = `
+    <div class="camp-deliverability ${healthy ? "is-healthy" : "is-warn"}">
+      <div class="camp-dh-head">
+        <span class="camp-dh-title">${healthy ? "Deliverability looks healthy" : "Deliverability needs attention"}</span>
+        <span class="camp-dh-window">Last 30 days, all sends</span>
+      </div>
+      <div class="camp-dh-stats">
+        <div class="camp-dh-stat"><span class="camp-dh-n">${sent}</span><span class="camp-dh-l">Sent</span></div>
+        <div class="camp-dh-stat${bounceWarn ? " is-bad" : ""}"><span class="camp-dh-n">${bounceRate.toFixed(1)}%</span><span class="camp-dh-l">Bounce rate</span></div>
+        <div class="camp-dh-stat${complaintWarn ? " is-bad" : ""}"><span class="camp-dh-n">${complaintRate.toFixed(2)}%</span><span class="camp-dh-l">Complaint rate</span></div>
+        <div class="camp-dh-stat"><span class="camp-dh-n">${unsubscribed}</span><span class="camp-dh-l">Unsubscribed</span></div>
+      </div>
+      ${healthy ? "" : `<p class="camp-dh-hint">${bounceWarn ? "Bounce rate is above the 10% threshold Gmail/Yahoo flag for bulk senders. " : ""}${complaintWarn ? "Spam-complaint rate is above 0.3% -- this is the strongest signal inbox providers use to junk future mail. " : ""}Consider pausing sends to this segment until it's cleaned up.</p>`}
+    </div>`;
 }
 
 function renderCampStats() {
@@ -4830,12 +4881,13 @@ async function renderCampMetrics(campaignId) {
     { label: "Opened",       n: distinctBy("opened") },
     { label: "Clicked",      n: distinctBy("clicked") },
     { label: "Bounced",      n: distinctBy("bounced") },
+    { label: "Complained",   n: distinctBy("complained"), warn: true },
     { label: "Unsubscribed", n: distinctBy("unsubscribed") },
   ];
 
   el.innerHTML = `<div class="camp-metrics-grid">
     ${stats.map(s => `
-      <div class="camp-metric-tile">
+      <div class="camp-metric-tile${s.warn && s.n > 0 ? " camp-metric-tile-warn" : ""}">
         <div class="camp-metric-n">${s.n}</div>
         <div class="camp-metric-l">${s.label}</div>
         <div class="camp-metric-pct">${sent ? Math.round((s.n / sent) * 100) : 0}%</div>
