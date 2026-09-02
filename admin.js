@@ -3744,7 +3744,7 @@ const CRM_STATUS = [
   { key:"repeat_customer", label:"Repeat Customer" },
 ];
 const CRM_STATUS_LABEL = Object.fromEntries(CRM_STATUS.map(s => [s.key, s.label]));
-const CRM_SOURCES = ["Seamless","Landing Page","Website Checkout","Referral","Cold Call","Trade Show","Other"];
+const CRM_SOURCES = ["Seamless","Landing Page","Facebook","Website Checkout","Referral","Cold Call","Trade Show","Other"];
 const CRM_ACTIVITY_TYPES = [
   { key:"call",      label:"Call" },
   { key:"email",      label:"Email" },
