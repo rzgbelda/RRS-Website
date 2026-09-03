@@ -3950,7 +3950,7 @@ async function setCrmLeadStatus(id, status) {
   if (!lead || lead.status === status) return;
   const from = lead.status;
   const { error } = await window.sb.from("quote_requests").update({ status }).eq("id", id);
-  if (error) { showToast("Couldn't update lead: " + error.message); return; }
+  if (error) { showToast("Couldn't update lead: " + friendlyDbError(error)); return; }
   lead.status = status;
   await logCrmActivity(id, "status_change", `Moved from "${CRM_STATUS_LABEL[from] || from}" to "${CRM_STATUS_LABEL[status] || status}"`, true);
   renderCrmStats();
@@ -3967,7 +3967,7 @@ async function deleteCrmLead(id) {
   if (!l) return;
   if (!confirm(`Delete the lead "${l.business_name || l.contact_name || "Unnamed lead"}"? This also removes its activity log and can't be undone.`)) return;
   const { error } = await window.sb.from("quote_requests").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   _crm.leads = _crm.leads.filter(x => x.id !== id);
   const overlay = document.getElementById("crmDrawerOverlay");
   if (overlay && overlay.classList.contains("open")) closeCrmDrawer(true);
@@ -3990,7 +3990,7 @@ async function logCrmActivity(quoteRequestId, type, body, silent) {
     activity_type: type,
     body,
   });
-  if (error) { if (!silent) showToast("Couldn't log activity: " + error.message); return; }
+  if (error) { if (!silent) showToast("Couldn't log activity: " + friendlyDbError(error)); return; }
   _crm.activityCounts[quoteRequestId] = (_crm.activityCounts[quoteRequestId] || 0) + 1;
 }
 
@@ -4135,7 +4135,7 @@ async function setCrmField(id, field, value) {
   if (blockIfCrmReadOnly()) return;
   const lead = _crm.leads.find(x => x.id === id);
   const { error } = await window.sb.from("quote_requests").update({ [field]: value }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
   if (lead) lead[field] = value;
   renderCrmBoard();
 }
@@ -4148,7 +4148,7 @@ async function addCrmTag(id) {
   const lead = _crm.leads.find(x => x.id === id);
   const tags = [...new Set([...(lead?.tags || []), tag])];
   const { error } = await window.sb.from("quote_requests").update({ tags }).eq("id", id);
-  if (error) { showToast("Couldn't add tag: " + error.message); return; }
+  if (error) { showToast("Couldn't add tag: " + friendlyDbError(error)); return; }
   if (lead) lead.tags = tags;
   openCrmDrawer(id);
 }
@@ -4158,7 +4158,7 @@ async function removeCrmTag(id, tag) {
   const lead = _crm.leads.find(x => x.id === id);
   const tags = (lead?.tags || []).filter(t => t !== tag);
   const { error } = await window.sb.from("quote_requests").update({ tags }).eq("id", id);
-  if (error) { showToast("Couldn't remove tag: " + error.message); return; }
+  if (error) { showToast("Couldn't remove tag: " + friendlyDbError(error)); return; }
   if (lead) lead.tags = tags;
   openCrmDrawer(id);
 }
@@ -4169,7 +4169,7 @@ async function toggleCrmConsent(id, reEnable) {
   if (!reEnable && !confirm("Opt this lead out of marketing emails? They'll be excluded from every campaign and automation send going forward.")) return;
   const { error } = await window.sb.from("quote_requests")
     .update({ consent_marketing: consent, consent_recorded_at: new Date().toISOString() }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
   const lead = _crm.leads.find(x => x.id === id);
   if (lead) lead.consent_marketing = consent;
   showToast(consent ? "Re-enabled marketing emails." : "Opted out of marketing emails.");
@@ -4191,7 +4191,7 @@ async function deleteCrmActivity(activityId, leadId) {
   if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this activity entry? This cannot be undone.")) return;
   const { error } = await window.sb.from("crm_activity_log").delete().eq("id", activityId);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   showToast("Activity entry deleted.");
   openCrmDrawer(leadId); // re-render the thread without it
 }
@@ -4579,7 +4579,7 @@ async function campDrop(e, status) {
 async function createNewCampaign() {
   if (blockIfCrmReadOnly()) return;
   const { data, error } = await window.sb.from("campaigns").insert({ name: "Untitled Campaign", campaign_type: "email", status: "draft" }).select().single();
-  if (error) { showToast("Couldn't create campaign: " + error.message); return; }
+  if (error) { showToast("Couldn't create campaign: " + friendlyDbError(error)); return; }
   _camp.campaigns.unshift(data);
   renderCampStats();
   renderCampBoard();
@@ -4590,7 +4590,7 @@ async function setCampField(id, field, value) {
   if (blockIfCrmReadOnly()) return;
   const c = _camp.campaigns.find(x => x.id === id);
   const { error } = await window.sb.from("campaigns").update({ [field]: value }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
   if (c) c[field] = value;
 }
 
@@ -4808,7 +4808,7 @@ async function deleteCampaign(id) {
   if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this campaign? Its content calendar entries go with it.")) return;
   const { error } = await window.sb.from("campaigns").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   _camp.campaigns = _camp.campaigns.filter(c => c.id !== id);
   closeCampDrawer(true);
   renderCampStats();
@@ -4839,7 +4839,7 @@ async function addCampContentItem(campaignId) {
   const { data, error } = await window.sb.from("campaign_content").insert({
     campaign_id: campaignId, scheduled_date: date, content_type: type, title,
   }).select().single();
-  if (error) { showToast("Couldn't add: " + error.message); return; }
+  if (error) { showToast("Couldn't add: " + friendlyDbError(error)); return; }
 
   const { data: content } = await window.sb.from("campaign_content").select("*").eq("campaign_id", campaignId).order("scheduled_date");
   document.getElementById("campContentList-" + campaignId).innerHTML = renderCampContentListHtml(content || []);
@@ -4849,7 +4849,7 @@ async function addCampContentItem(campaignId) {
 async function deleteCampContentItem(campaignId, itemId) {
   if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("campaign_content").delete().eq("id", itemId);
-  if (error) { showToast("Couldn't remove: " + error.message); return; }
+  if (error) { showToast("Couldn't remove: " + friendlyDbError(error)); return; }
   const { data: content } = await window.sb.from("campaign_content").select("*").eq("campaign_id", campaignId).order("scheduled_date");
   document.getElementById("campContentList-" + campaignId).innerHTML = renderCampContentListHtml(content || []);
 }
@@ -5041,7 +5041,7 @@ async function confirmScheduleSend() {
     campaign_id: campaignId, subject, body_html, send_at: sendAt.toISOString(),
     created_by: session?.user?.id || null,
   });
-  if (error) { showToast("Couldn't schedule: " + error.message); return; }
+  if (error) { showToast("Couldn't schedule: " + friendlyDbError(error)); return; }
 
   closeModal("scheduleSendModal");
   showToast("Send scheduled.");
@@ -5061,7 +5061,7 @@ async function renderScheduledSendStatus(campaignId) {
 async function cancelScheduledSend(id, campaignId) {
   if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("campaign_scheduled_sends").delete().eq("id", id);
-  if (error) { showToast("Couldn't cancel: " + error.message); return; }
+  if (error) { showToast("Couldn't cancel: " + friendlyDbError(error)); return; }
   showToast("Scheduled send cancelled.");
   renderScheduledSendStatus(campaignId);
 }
@@ -5125,7 +5125,7 @@ async function saveEmailTemplate() {
   const { error } = id
     ? await window.sb.from("email_templates").update(payload).eq("id", id)
     : await window.sb.from("email_templates").insert(payload);
-  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+  if (error) { errEl.textContent = friendlyDbError(error); errEl.style.display = "block"; return; }
 
   resetTemplateForm();
   await renderEmailTemplateList();
@@ -5136,7 +5136,7 @@ async function deleteEmailTemplate(id) {
   if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this template?")) return;
   const { error } = await window.sb.from("email_templates").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   await renderEmailTemplateList();
 }
 
@@ -5231,7 +5231,7 @@ async function saveAutomation() {
   const { error } = id
     ? await window.sb.from("automations").update(payload).eq("id", id)
     : await window.sb.from("automations").insert(payload);
-  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+  if (error) { errEl.textContent = friendlyDbError(error); errEl.style.display = "block"; return; }
 
   resetAutomationForm();
   await renderAutomationList();
@@ -5241,7 +5241,7 @@ async function saveAutomation() {
 async function toggleAutomationActive(id, active) {
   if (blockIfCrmReadOnly()) return;
   const { error } = await window.sb.from("automations").update({ is_active: active }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
   await renderAutomationList();
 }
 
@@ -5249,7 +5249,7 @@ async function deleteAutomation(id) {
   if (blockIfCrmReadOnly()) return;
   if (!confirm("Delete this automation? Any queued-but-unsent emails for it will also be cancelled.")) return;
   const { error } = await window.sb.from("automations").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   await renderAutomationList();
 }
 
@@ -5492,7 +5492,7 @@ async function saveArticle(id) {
 async function deleteArticle(id) {
   if (!confirm("Delete this article? This cannot be undone.")) return;
   const { error } = await window.sb.from("articles").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   _blog.articles = _blog.articles.filter(x => x.id !== id);
   const overlay = document.getElementById("articleDrawerOverlay");
   if (overlay && overlay.classList.contains("open")) closeArticleDrawer(true);
@@ -6180,7 +6180,7 @@ async function deleteDevTicket(id) {
   if (t.screenshot_url) await window.sb.storage.from("dev-note-screenshots").remove([t.screenshot_url]);
   if (t.attachment_url) await window.sb.storage.from("dev-note-screenshots").remove([t.attachment_url]);
   const { error } = await window.sb.from("dev_tickets").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   closeTicketDrawer(true);
   showToast("Ticket deleted.");
   renderDevTicketsTab();
@@ -6388,7 +6388,7 @@ document.addEventListener("keydown", e => {
 async function setTicketField(id, field, value) {
   const t = _tkt.tickets.find(x => x.id === id);
   const { error } = await window.sb.from("dev_tickets").update({ [field]: value }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + error.message); return; }
+  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
   if (t) t[field] = value;
   renderTicketStats(); renderTicketBoard();
   showToast("Ticket updated.");
@@ -6450,7 +6450,7 @@ async function saveEditTicketComment(commentId) {
 async function deleteTicketComment(commentId, ticketId) {
   if (!confirm("Delete this comment? This cannot be undone.")) return;
   const { error } = await window.sb.from("dev_ticket_comments").delete().eq("id", commentId);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   showToast("Comment deleted.");
   _tkt.comments[ticketId] = Math.max(0, (_tkt.comments[ticketId] || 1) - 1);
   await openTicketDrawer(ticketId);
@@ -6641,6 +6641,23 @@ document.querySelectorAll(".a-modal-close, .a-modal-cancel, [id^=cancel][id$=Mod
 });
 
 /* ── Toast ─────────────────────────────────────────────────── */
+
+// Turns a raw Supabase/Postgres error into something a non-technical
+// staff member can actually act on, instead of "new row for relation
+// quote_requests violates check constraint quote_requests_status_check"
+// or "permission denied for table quote_requests". Falls back to the
+// original message for anything not recognized, so an unexpected error
+// is never silently swallowed.
+function friendlyDbError(error) {
+  const msg = error?.message || String(error || "");
+  if (/permission denied|row-level security|violates row-level/i.test(msg)) {
+    return "You don't have permission to make this change.";
+  }
+  if (/violates check constraint|violates foreign key|violates unique constraint|violates not-null/i.test(msg)) {
+    return "That change isn't allowed — please try a different value or contact support if this keeps happening.";
+  }
+  return msg;
+}
 
 function showToast(msg) {
   let toast = document.getElementById("adminToast");
@@ -7097,7 +7114,7 @@ async function saveBestDeal() {
 async function deleteBestDeal(id) {
   if (!confirm("Remove this deal from the campaign?")) return;
   const { error } = await window.sb.from("best_deals").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   showToast("Deal removed.");
   renderBestDealsTab();
 }
@@ -7209,7 +7226,7 @@ async function saveVendor() {
 async function deleteVendor(id) {
   if (!confirm("Remove this vendor? Products tagged to it will revert to RRS-fulfilled.")) return;
   const { error } = await window.sb.from("vendors").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + error.message); return; }
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   showToast("Vendor removed.");
   renderVendorsTab();
 }
