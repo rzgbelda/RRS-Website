@@ -539,6 +539,10 @@ body.admin-body {
   box-shadow: 0 4px 14px rgba(245,130,32,0.42);
 }
 .a-btn-primary:active { transform: translateY(0); }
+.a-btn-primary:disabled {
+  opacity: .5; cursor: not-allowed;
+  transform: none; box-shadow: none;
+}
 .a-btn-primary.a-btn-danger {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   box-shadow: 0 2px 8px rgba(239,68,68,0.25);

@@ -2218,6 +2218,7 @@ async function renderOrdersTable(filter) {
         ${o.label_url ? `<a href="${escHtml(o.label_url)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#0B1F38;color:#fff;text-decoration:none;">&#128438; Label</a>` : ""}
         ${o.pro_number && rowIsEstes ? `<a href="https://www.estes-express.com/myestes/tracking/details?proNumber=${encodeURIComponent(o.pro_number)}" target="_blank" rel="noopener" class="a-btn-sm" style="background:#1d4ed8;color:#fff;text-decoration:none;">&#128666; BOL</a>` : ""}
         ${o.pro_number && !rowIsEstes ? `<span class="a-btn-sm" style="background:#1d4ed8;color:#fff;cursor:default;" title="Warp tracking #${escHtml(o.pro_number)}">&#128666; ${escHtml(o.pro_number)}</span>` : ""}
+        <button class="a-btn-sm" style="background:#fee2e2;color:#dc2626;" onclick="openDeleteOrderModal('${o.id}', '${escHtml(o.order_number).replace(/'/g, "\\'")}')" title="Delete order">Delete</button>
       </td>
     </tr>`;
   }).join("") || `<tr><td colspan="8" class="a-empty">No orders yet.</td></tr>`;
@@ -2230,6 +2231,60 @@ document.getElementById("orderPaymentFilter")?.addEventListener("change", () => 
 async function updateOrderStatus(orderId, status) {
   await window.sb.from("orders").update({ status, updated_at: new Date().toISOString() }).eq("id", orderId);
   showToast("Order status updated.");
+}
+
+// Deleting an order is permanent -- it's a financial/audit record, and
+// unlike a status change there's no undo. A plain confirm() is too easy
+// to click through on muscle memory, so this requires typing the exact
+// order number before the Delete button in the modal itself enables --
+// same friction level as GitHub's "type the repo name to delete it"
+// pattern. order_items and any order-linked rows with
+// `on delete cascade` (see supabase/schema.sql) clean up automatically;
+// nothing else needs to be deleted separately.
+let _deleteOrderId = null;
+let _deleteOrderNumber = null;
+
+function openDeleteOrderModal(orderId, orderNumber) {
+  _deleteOrderId = orderId;
+  _deleteOrderNumber = orderNumber;
+  const modal = document.getElementById("deleteOrderModal");
+  if (!modal) return;
+  document.getElementById("deleteOrderNumberLabel").textContent = orderNumber;
+  document.getElementById("deleteOrderConfirmInput").value = "";
+  document.getElementById("deleteOrderConfirmBtn").disabled = true;
+  modal.style.display = "flex";
+  document.getElementById("deleteOrderConfirmInput").focus();
+}
+
+function closeDeleteOrderModal() {
+  const modal = document.getElementById("deleteOrderModal");
+  if (modal) modal.style.display = "none";
+  _deleteOrderId = null;
+  _deleteOrderNumber = null;
+}
+
+function onDeleteOrderConfirmInput(value) {
+  const btn = document.getElementById("deleteOrderConfirmBtn");
+  if (btn) btn.disabled = value.trim() !== _deleteOrderNumber;
+}
+
+async function confirmDeleteOrder() {
+  if (!_deleteOrderId) return;
+  const btn = document.getElementById("deleteOrderConfirmBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Deleting…"; }
+
+  const { error } = await window.sb.from("orders").delete().eq("id", _deleteOrderId);
+
+  if (error) {
+    showToast("Couldn't delete order: " + friendlyDbError(error));
+    if (btn) { btn.disabled = false; btn.textContent = "Delete Order"; }
+    return;
+  }
+
+  showToast(`Order ${_deleteOrderNumber} deleted.`);
+  closeDeleteOrderModal();
+  if (btn) btn.textContent = "Delete Order";
+  renderOrdersTable(document.getElementById("orderSearch")?.value.trim() || "");
 }
 
 // Orders created from an invoice or payment-terms agreement (see

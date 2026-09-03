@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
-  <link rel="stylesheet" href="admin.css?v=5" />
+  <link rel="stylesheet" href="admin.css?v=6" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -2680,6 +2680,30 @@
   </div>
 </div>
 
+<!-- DELETE ORDER MODAL -->
+<!-- Permanent -- an order is a financial/audit record. Type-to-confirm
+     (must match the exact order number) rather than a plain confirm()
+     dialog, which is too easy to click through on muscle memory. -->
+<div id="deleteOrderModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal" style="max-width:440px">
+    <div class="a-modal-header">
+      <h3>Delete Order</h3>
+      <button class="a-modal-close" onclick="closeDeleteOrderModal()">&#x2715;</button>
+    </div>
+    <div class="a-modal-body">
+      <p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">
+        This permanently deletes order <strong id="deleteOrderNumberLabel"></strong> and all of its line items. This cannot be undone.
+      </p>
+      <p style="font-size:13px;color:#64748b;margin:0 0 8px;">Type the order number to confirm:</p>
+      <input type="text" id="deleteOrderConfirmInput" class="a-input" placeholder="Order number" oninput="onDeleteOrderConfirmInput(this.value)" style="width:100%;font-family:monospace;">
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" style="width:auto" onclick="closeDeleteOrderModal()">Cancel</button>
+      <button class="a-btn-primary" id="deleteOrderConfirmBtn" disabled style="width:auto;background:#dc2626;" onclick="confirmDeleteOrder()">Delete Order</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT ORDER ITEMS MODAL -->
 <!-- Locked once an order is paid (see the payment_status check next to the
      "Edit Items" button) -- changing what was billed after money actually
@@ -2857,7 +2881,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=90"></script>
+<script src="admin.js?v=91"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {
