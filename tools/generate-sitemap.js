@@ -35,6 +35,9 @@ const STATIC_PAGES = [
   { path: '/supplies-for-cleaning-companies', changefreq: 'monthly', priority: '0.9' },
   { path: '/auto-reorder',                    changefreq: 'monthly', priority: '0.8' },
   { path: '/quote-match',                     changefreq: 'monthly', priority: '0.8' },
+  { path: '/hotel-supplies-north-carolina',   changefreq: 'monthly', priority: '0.9' },
+  { path: '/hotel-supplies-virginia',         changefreq: 'monthly', priority: '0.9' },
+  { path: '/hotel-supplies-outer-banks',      changefreq: 'monthly', priority: '0.9' },
 ];
 
 function slugify(s) {

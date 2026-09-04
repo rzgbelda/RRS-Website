@@ -20,6 +20,7 @@ const PUBLIC_PAGES = [
   '/', '/catalog', '/privacy', '/terms', '/shipping-policy', '/login', '/blog',
   '/supplies-for-rv-parks', '/supplies-for-campgrounds', '/supplies-for-short-term-rentals',
   '/supplies-for-cleaning-companies', '/auto-reorder', '/quote-match',
+  '/hotel-supplies-north-carolina', '/hotel-supplies-virginia', '/hotel-supplies-outer-banks',
 ];
 
 const CATEGORY_SLUGS = [
