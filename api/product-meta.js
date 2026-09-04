@@ -133,7 +133,16 @@ function computeTitleParts(p) {
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
   const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
   const cleanName = String(p.name || '').replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, '').trim();
-  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+  // Dimensions get written two ways across the catalog -- a size field of
+  // `27" × 54"` versus a name containing `27x54` -- so the separator has to
+  // normalize away too, not just punctuation. Stripping only non-alphanumerics
+  // left `2754` vs `27x54...`, which never matched, and the size was then
+  // prepended to a name that already carried it ("27\" × 54\" 27x54 Bath
+  // Towels"). Collapse the x/× separator only when it actually sits between
+  // two digits, so product words keep their letters (Luxury stays Luxury).
+  const norm = s => s.toLowerCase()
+    .replace(/(\d)\s*[×x]\s*(\d)/g, '$1$2')
+    .replace(/[^a-z0-9]/g, '');
   const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : '';
   return { prefix, cleanName };

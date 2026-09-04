@@ -106,22 +106,22 @@ serve(async (req) => {
 
     const accessToken = await getAccessToken();
 
-    const [queries, pages] = await Promise.all([
-      queryPerformance(accessToken, ["query"], 25, 28),
-      queryPerformance(accessToken, ["page"], 15, 28),
+    // Row limits were 25/15, which silently truncated the query list
+    // alphabetically -- most of the site's real search data never reached
+    // the dashboard, and `totals` below was summing only that truncated
+    // slice, under-reporting actual impressions. Pull a real working set
+    // instead; GSC's own API caps at 25,000 rows per request.
+    const [queries, pages, totalsRow] = await Promise.all([
+      queryPerformance(accessToken, ["query"], 1000, 28),
+      queryPerformance(accessToken, ["page"], 200, 28),
+      // No dimensions = one row of true site-wide totals, rather than a
+      // sum over however many query rows came back.
+      queryPerformance(accessToken, [], 1, 28),
     ]);
 
-    const totals = queries.reduce(
-      (acc: any, r: any) => {
-        acc.clicks += r.clicks || 0;
-        acc.impressions += r.impressions || 0;
-        return acc;
-      },
-      { clicks: 0, impressions: 0 },
-    );
-    const avgPosition = queries.length
-      ? queries.reduce((s: number, r: any) => s + (r.position || 0), 0) / queries.length
-      : 0;
+    const t0 = totalsRow[0] || { clicks: 0, impressions: 0, ctr: 0, position: 0 };
+    const totals = { clicks: t0.clicks || 0, impressions: t0.impressions || 0 };
+    const avgPosition = t0.position || 0;
 
     return new Response(
       JSON.stringify({
