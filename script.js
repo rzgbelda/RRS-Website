@@ -24,7 +24,7 @@ async function loadSiteHeader() {
   const slot = document.getElementById("site-header-slot");
   if (!slot) return;
   try {
-    const res = await fetch("/partials/site-header.html");
+    const res = await fetch("/partials/site-header");
     if (!res.ok) throw new Error("HTTP " + res.status);
     slot.outerHTML = await res.text();
   } catch (err) {
