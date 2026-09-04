@@ -929,6 +929,11 @@ const CATEGORY_ARTICLE_MAP = {
   "paper-products": { slug: "how-much-toilet-paper-should-a-hotel-stock", title: "How Much Toilet Paper & Paper Towels Should a Hotel Stock Per Room?" },
   "towels": { slug: "bath-towel-buying-guide-vacation-rentals-boutique-hotels", title: "Bath Towel Buying Guide for Vacation Rentals & Boutique Hotels" },
   "trash-liners-can-liners": { slug: "trash-liner-sizing-guide-right-can-liner-every-bin", title: "Trash Liner Sizing Guide: Picking the Right Can Liner for Every Bin" },
+  // Day 21 additions
+  "bed-sheets-linens": { slug: "hotel-bed-sheet-thread-count-guide", title: "Hotel Bed Sheet Guide: Thread Count, T-180 vs. Microfiber, and Sizing by the Case" },
+  "guest-amenities": { slug: "guest-amenities-bulk-vs-individually-wrapped", title: "Guest Amenities: Bulk Dispensers vs. Individually Wrapped, and How to Order Either by the Case" },
+  "gloves-ppe": { slug: "nitrile-gloves-housekeeping-teams-sizing-guide", title: "Nitrile Gloves for Housekeeping Teams: Powder-Free vs. Exam Grade, and Getting Sizing Right" },
+  "cleaning-chemicals": { slug: "epa-registered-disinfectants-what-hotels-need", title: "EPA-Registered Disinfectants: What Hotels Actually Need to Stock" },
 };
 
 function getActiveCategories() {
