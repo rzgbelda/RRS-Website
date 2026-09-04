@@ -26,6 +26,13 @@ const STATIC_PAGES = [
   { path: '/shipping-policy', changefreq: 'monthly', priority: '0.5' },
   { path: '/terms',           changefreq: 'yearly',  priority: '0.3' },
   { path: '/privacy',         changefreq: 'yearly',  priority: '0.3' },
+
+  // SEO landing pages (regional/vertical/offer) -- same priority as the
+  // 9 category pages since they're the same kind of curated entry point.
+  { path: '/supplies-for-rv-parks',           changefreq: 'monthly', priority: '0.9' },
+  { path: '/supplies-for-campgrounds',        changefreq: 'monthly', priority: '0.9' },
+  { path: '/supplies-for-short-term-rentals', changefreq: 'monthly', priority: '0.9' },
+  { path: '/supplies-for-cleaning-companies', changefreq: 'monthly', priority: '0.9' },
 ];
 
 function slugify(s) {

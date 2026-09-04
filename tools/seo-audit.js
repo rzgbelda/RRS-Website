@@ -18,6 +18,8 @@ const LIMITS = { titleMin: 30, titleMax: 60, descMin: 70, descMax: 160 };
 // Pages that should be indexed and fully tagged.
 const PUBLIC_PAGES = [
   '/', '/catalog', '/privacy', '/terms', '/shipping-policy', '/login', '/blog',
+  '/supplies-for-rv-parks', '/supplies-for-campgrounds', '/supplies-for-short-term-rentals',
+  '/supplies-for-cleaning-companies',
 ];
 
 const CATEGORY_SLUGS = [
