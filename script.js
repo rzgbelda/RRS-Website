@@ -3581,12 +3581,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 // -- Stat counter animation ----------------------------------
+// The real value is now the element's actual starting textContent (set
+// directly in the HTML, e.g. "500+") -- this animation is purely a
+// count-up visual flourish layered on top of content that is already
+// correct. Previously the HTML started at a literal "0" and relied
+// entirely on this script (an IntersectionObserver-gated animation,
+// threshold 0.5) to ever show the real number -- a bounced visitor, a
+// short viewport, a JS error earlier on the page, or any crawler/tool
+// that doesn't scroll or doesn't run JS at all would see a permanent
+// "0 Businesses Served" instead. If anything here fails now, the
+// number was already right before this ran.
 (function () {
   const counters = document.querySelectorAll('.stat-count');
   if (!counters.length) return;
 
   function animateCounter(el) {
     const target = parseInt(el.dataset.target, 10);
+    if (!Number.isFinite(target)) return; // malformed data-target -- leave the real starting text alone
     const suffix = el.dataset.suffix || '';
     const duration = parseInt(el.dataset.duration, 10) || 1600;
     const start = performance.now();
@@ -3599,10 +3610,13 @@ document.addEventListener('DOMContentLoaded', function() {
       const current = Math.floor(eased * target);
       el.textContent = current + suffix;
       if (progress < 1) requestAnimationFrame(step);
+      else el.textContent = target + suffix; // land exactly on the real value, no float/round drift
     }
 
     requestAnimationFrame(step);
   }
+
+  if (!('IntersectionObserver' in window)) return; // no observer support -- real value is already showing, nothing to enhance
 
   const observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (entry) {
