@@ -33,7 +33,9 @@
       "Bash(node \"C:/Users/rguti/AppData/Local/Temp/claude/c--Users-rguti-OneDrive-Documents-RRS-Website/afe0e8d6-34c1-40ac-ad77-89b816de6cc4/scratchpad/check-pages.js\")",
       "Bash(node --check \"c:/Users/rguti/OneDrive/Documents/RRS-Website/admin.js\")",
       "Bash(git reset *)",
-      "Bash(curl -s 'https://giprkvlyouwfzjlaibkq.supabase.co/rest/v1/orders?select=id,receipt_url,paid_at,stripe_livemode&limit=1' -H 'apikey: sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN' -H 'Authorization: Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN' --max-time 20)"
+      "Bash(curl -s 'https://giprkvlyouwfzjlaibkq.supabase.co/rest/v1/orders?select=id,receipt_url,paid_at,stripe_livemode&limit=1' -H 'apikey: sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN' -H 'Authorization: Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN' --max-time 20)",
+      "WebFetch(domain:www.palmettolinen.com)",
+      "PowerShell(& \"C:\\\\Users\\\\rguti\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-rguti-OneDrive-Documents-RRS-Website\\\\afe0e8d6-34c1-40ac-ad77-89b816de6cc4\\\\scratchpad\\\\th.ps1\" -Urls @\\('https://www.palmettolinen.com/wholesale-bed-sheets.html','https://www.palmettolinen.com/wholesale-mattress-pads','https://www.palmettolinen.com/blog/','https://www.palmettolinen.com/info.html','https://www.etcmb.com/virginia-beach','http://www.broadwaypapernc.com/janitorial-supplies.html','https://www.etcmb.com/about-us'\\))"
     ],
     "additionalDirectories": [
       "C:\\Users\\rguti\\AppData\\Local\\Temp"
