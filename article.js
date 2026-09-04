@@ -47,7 +47,8 @@ async function loadArticlePage() {
 
   const dateEl = document.getElementById("articleMeta");
   if (dateEl && article.published_at) {
-    dateEl.textContent = new Date(article.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    const formatted = new Date(article.published_at).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
+    dateEl.textContent = "By Renz Belda · " + formatted;
   }
 
   const coverEl = document.getElementById("articleCoverImg");
