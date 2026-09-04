@@ -140,8 +140,12 @@ function computeTitleParts(p) {
   // prepended to a name that already carried it ("27\" × 54\" 27x54 Bath
   // Towels"). Collapse the x/× separator only when it actually sits between
   // two digits, so product words keep their letters (Luxury stays Luxury).
+  // The separator may be flanked by units/quotes rather than sitting
+  // directly between digits (`4.0" x 3.1"` vs `4.0x3.1`), so allow
+  // non-alphanumerics on either side before collapsing it -- otherwise
+  // `40x31` never matches `4031` and the size gets prepended twice.
   const norm = s => s.toLowerCase()
-    .replace(/(\d)\s*[×x]\s*(\d)/g, '$1$2')
+    .replace(/(\d[^a-z0-9]*)[×x]([^a-z0-9]*\d)/g, '$1$2')
     .replace(/[^a-z0-9]/g, '');
   const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
   const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : '';
