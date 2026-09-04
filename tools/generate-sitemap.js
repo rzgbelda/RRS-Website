@@ -33,6 +33,8 @@ const STATIC_PAGES = [
   { path: '/supplies-for-campgrounds',        changefreq: 'monthly', priority: '0.9' },
   { path: '/supplies-for-short-term-rentals', changefreq: 'monthly', priority: '0.9' },
   { path: '/supplies-for-cleaning-companies', changefreq: 'monthly', priority: '0.9' },
+  { path: '/auto-reorder',                    changefreq: 'monthly', priority: '0.8' },
+  { path: '/quote-match',                     changefreq: 'monthly', priority: '0.8' },
 ];
 
 function slugify(s) {
