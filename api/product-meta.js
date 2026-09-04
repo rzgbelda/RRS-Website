@@ -148,7 +148,15 @@ function computeTitleParts(p) {
     .replace(/(\d[^a-z0-9]*)[×x]([^a-z0-9]*\d)/g, '$1$2')
     .replace(/[^a-z0-9]/g, '');
   const nameAlreadyHasSize = sizeStr && norm(cleanName).includes(norm(sizeStr));
-  const prefix = (sizeStr && !nameAlreadyHasSize) ? `${sizeStr} ` : '';
+  // Not every "Size:" clause is a size. Some are prose compatibility notes
+  // ("Fits Two 9\" Jumbo Rolls") or verbose three-axis dimensions
+  // ("Approx. 16.18\" W × 11.22\" H × 3.05\" D"). Prefixing those produced
+  // titles like "Wholesale Fits Two 9\" Jumbo Rolls Tissue", where the note
+  // crowded the real product name down to one word. Only lead with a size
+  // when it is a compact measurement, and let anything else fall through to
+  // the product name alone.
+  const isCompactSize = sizeStr.length <= 14 && !/\b(fits|approx)\b/i.test(sizeStr);
+  const prefix = (sizeStr && !nameAlreadyHasSize && isCompactSize) ? `${sizeStr} ` : '';
   return { prefix, cleanName };
 }
 
