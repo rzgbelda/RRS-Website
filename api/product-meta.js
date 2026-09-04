@@ -183,11 +183,26 @@ function buildSeoTitleTag(p) {
   return `${lead}${effectivePrefix}${trimmedName}`;
 }
 
-// Mirrors populateProductPage()'s metaDesc, including its quirk of
-// testing overview's length even when description supplied the text.
+// A hard slice(0, 155) cut mid-word on effectively every product
+// ("...SFI® Certif…"), and the ellipsis was decided by overview's length
+// even when description had supplied the text -- so some descriptions were
+// truncated with no ellipsis and others got one without being cut. Trim to
+// the last whole word instead, and base the ellipsis on the text actually
+// used. Kept under 160 so Google doesn't truncate it a second time.
+const META_DESC_MAX = 155;
+function truncateAtWord(s, max) {
+  if (s.length <= max) return { text: s, truncated: false };
+  const cut = s.slice(0, max + 1);
+  const lastSpace = cut.lastIndexOf(' ');
+  const text = (lastSpace > 0 ? cut.slice(0, lastSpace) : s.slice(0, max))
+    .replace(/[\s,;:.\-–—]+$/, '');
+  return { text, truncated: true };
+}
+
 function buildMetaDesc(p) {
-  const base = (p.overview || p.description || '').replace(/\s+/g, ' ').trim().slice(0, 155);
-  return base + ((p.overview || '').length > 155 ? '…' : '');
+  const source = (p.overview || p.description || '').replace(/\s+/g, ' ').trim();
+  const { text, truncated } = truncateAtWord(source, META_DESC_MAX);
+  return text + (truncated ? '…' : '');
 }
 
 // Mirrors categorySlug() in script.js.
@@ -216,6 +231,16 @@ function escText(s) {
 function setAttrById(html, id, attr, value) {
   const re = new RegExp('(<[^>]*\\bid="' + id + '"[^>]*\\b' + attr + '=")[^"]*(")', 'i');
   return html.replace(re, (m, before, after) => before + escAttr(value) + after);
+}
+
+// Fills an element's visible text, anchored on its id the same way the
+// helpers above are. Used for the <h1>, which otherwise ships to crawlers
+// as the literal placeholder "Product Name" -- the real name only arrived
+// once client-side JS ran, wasting the strongest on-page signal on the
+// first-pass render (and on any crawler that never runs JS at all).
+function setTextById(html, id, value) {
+  const re = new RegExp('(<([a-z0-9]+)[^>]*\\bid="' + id + '"[^>]*>)[\\s\\S]*?(</\\2>)', 'i');
+  return html.replace(re, (m, open, _tag, close) => open + escText(value) + close);
 }
 
 // Every target tag in product.html carries its id on the <script>, so this
@@ -295,6 +320,10 @@ function injectMeta(html, p) {
   out = setAttrById(out, 'ogDescription',   'content', metaDesc);
   out = setAttrById(out, 'ogImage',         'content', image);
   out = setAttrById(out, 'ogUrl',           'content', pageUrl);
+  // Must match what populateProductPage() writes client-side -- it uses
+  // seoTitle (script.js: setText("productName", seoTitle)), so using the
+  // bare name here would make the heading visibly change once JS ran.
+  out = setTextById(out, 'productName', seoTitle);
   out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;
@@ -307,9 +336,9 @@ function stripHtmlToText(html) {
 }
 
 function buildArticleMetaDesc(a) {
-  const base = (a.excerpt || stripHtmlToText(a.body_html)).slice(0, 155);
   const source = a.excerpt || stripHtmlToText(a.body_html);
-  return base + (source.length > 155 ? '…' : '');
+  const { text, truncated } = truncateAtWord(source, META_DESC_MAX);
+  return text + (truncated ? '…' : '');
 }
 
 function buildArticleJsonLd(a, title, metaDesc, pageUrl) {
@@ -359,6 +388,10 @@ function injectArticleMeta(html, a) {
   out = setAttrById(out, 'ogDescription',   'content', metaDesc);
   out = setAttrById(out, 'ogImage',         'content', image);
   out = setAttrById(out, 'ogUrl',           'content', pageUrl);
+  // Same placeholder problem as the product <h1>: this shipped as the
+  // literal word "Article" until client-side JS replaced it. article.js
+  // sets textContent to article.title, so use exactly that.
+  out = setTextById(out, 'articleTitle', a.title || '');
   out = setScriptContentById(out, 'articleJsonLd',    buildArticleJsonLd(a, titleTag, metaDesc, pageUrl));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildArticleBreadcrumbJsonLd(a, pageUrl));
   return out;
