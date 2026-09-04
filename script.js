@@ -9,7 +9,34 @@ let isSliding = false;
    PAGE LOAD
 ========================= */
 
-document.addEventListener("DOMContentLoaded", () => {
+// New SEO landing pages (regional/vertical/offer pages, not the 9
+// existing category pages, which keep their inline copy-pasted chrome
+// unchanged) use a shared header/nav partial instead of duplicating it
+// per file. Only those new pages carry the slot div, so this is a
+// no-op on every existing page. Must finish -- and be awaited -- BEFORE
+// setupMobileNav()/updateCartBadge()/setupLogin()/setupAccountDropdown()
+// run below, since all four query the DOM for elements (#navHamburger,
+// #cart-count, #logout-btn, .account-dropdown) that only exist once
+// this injected HTML has landed; each of those functions no-ops
+// silently on a missing element rather than erroring, so a timing bug
+// here would fail invisibly instead of loudly.
+async function loadSiteHeader() {
+  const slot = document.getElementById("site-header-slot");
+  if (!slot) return;
+  try {
+    const res = await fetch("/partials/site-header.html");
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    slot.outerHTML = await res.text();
+  } catch (err) {
+    console.error("[loadSiteHeader] could not load shared header:", err.message);
+    // Leave the empty slot in place rather than throwing -- the rest of
+    // the page (and the DOMContentLoaded handlers below) still run;
+    // the page is just missing top nav chrome instead of being broken.
+  }
+}
+
+document.addEventListener("DOMContentLoaded", async () => {
+  await loadSiteHeader();
   setupMobileNav();
   updateCartBadge();
   updateQuoteBadge();
