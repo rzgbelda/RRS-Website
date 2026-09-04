@@ -66,6 +66,35 @@ async function loadArticlePage() {
   if (bodyEl) bodyEl.innerHTML = article.body_html || "";
 
   reveal();
+  loadRelatedArticles(article.id);
+}
+
+// SEO Roadmap Day 19: related-posts module. Simple "every other
+// published article" rather than a topic-similarity match -- there are
+// only 3 articles as of Day 18/19, so any published article is
+// relevant; this scales fine as more publish (Day 21+) since it's
+// capped at 3 and just excludes the one being read.
+async function loadRelatedArticles(currentId) {
+  const wrap = document.getElementById("articleRelated");
+  const grid = document.getElementById("articleRelatedGrid");
+  if (!wrap || !grid) return;
+
+  const { data: related, error } = await window.sb
+    .from("articles")
+    .select("slug, title, excerpt")
+    .eq("status", "published")
+    .neq("id", currentId)
+    .order("published_at", { ascending: false })
+    .limit(3);
+
+  if (error || !related || !related.length) return;
+
+  grid.innerHTML = related.map(a => `
+    <a class="article-related-card" href="/blog/post?slug=${encodeURIComponent(a.slug)}">
+      <p class="rel-title">${escArticleHtml(a.title)}</p>
+      ${a.excerpt ? `<p class="rel-excerpt">${escArticleHtml(a.excerpt)}</p>` : ""}
+    </a>`).join("");
+  wrap.style.display = "";
 }
 
 document.addEventListener("DOMContentLoaded", () => {

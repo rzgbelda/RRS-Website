@@ -4311,6 +4311,16 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
+.product-guide-link {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: #FFF7F0; border: 1.5px solid #F6D9BE; border-radius: 10px;
+  padding: 10px 16px; margin: 14px 0 22px; max-width: 620px;
+  color: #ED7226; font-size: 13.5px; font-weight: 700;
+  text-decoration: none; transition: background .15s, border-color .15s;
+}
+.product-guide-link:hover { background: #FDEDE0; border-color: #ED7226; }
+.product-guide-link .product-guide-title { text-decoration: underline; }
+
 .pricing-tier-cards{
   display:flex;
   gap:16px;

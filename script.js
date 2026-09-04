@@ -917,6 +917,20 @@ function categorySlug(name) {
   return String(name || "").toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+// SEO Roadmap Day 19: internal linking pass. A category's buying guide,
+// keyed by category slug -- hand-maintained rather than a live query
+// (only 3 articles exist as of Day 18; a live "does an article mention
+// this category" lookup would be overkill for a handful of entries).
+// Extend this map each time a new cornerstone article ships (Day 21+).
+// Used by both product-template.html (product -> guide) and the 9
+// category pages (category -> guide) so the link only ever appears
+// where a real, relevant article exists -- never a placeholder link.
+const CATEGORY_ARTICLE_MAP = {
+  "paper-products": { slug: "how-much-toilet-paper-should-a-hotel-stock", title: "How Much Toilet Paper & Paper Towels Should a Hotel Stock Per Room?" },
+  "towels": { slug: "bath-towel-buying-guide-vacation-rentals-boutique-hotels", title: "Bath Towel Buying Guide for Vacation Rentals & Boutique Hotels" },
+  "trash-liners-can-liners": { slug: "trash-liner-sizing-guide-right-can-liner-every-bin", title: "Trash Liner Sizing Guide: Picking the Right Can Liner for Every Bin" },
+};
+
 function getActiveCategories() {
   return Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
 }
@@ -1252,6 +1266,20 @@ function populateProductPage(product) {
 
   setText("productDescription", product.description);
   setText("overviewDescription", product.overview || product.description);
+
+  // Day 19 internal link: a "Read our buying guide" callout under the
+  // description, only when this product's category actually has one.
+  const guideWrap = document.getElementById("productGuideLink");
+  if (guideWrap) {
+    const guide = CATEGORY_ARTICLE_MAP[categorySlug(product.category)];
+    if (guide) {
+      guideWrap.href = `/blog/post?slug=${encodeURIComponent(guide.slug)}`;
+      guideWrap.querySelector(".product-guide-title").textContent = guide.title;
+      guideWrap.style.display = "";
+    } else {
+      guideWrap.style.display = "none";
+    }
+  }
 
   setText("productPrice", `$${price.toFixed(2)}`);
 
