@@ -68,7 +68,7 @@ function agreementEmailHtml(o) {
     '</div>' +
 
     '<div style="background:#f8fafc;border-top:1.5px solid #e2e8f0;padding:20px 40px;text-align:center;">' +
-    '<p style="font-size:12px;color:#94a3b8;margin:0;">Room Ready Supply &bull; 609 Washington St., Plymouth, NC 27962 &bull; <a href="https://www.roomreadysupply.com" style="color:' + BRAND.orange + ';text-decoration:none;">roomreadysupply.com</a></p>' +
+    '<p style="font-size:12px;color:#94a3b8;margin:0;">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962 &bull; <a href="https://www.roomreadysupply.com" style="color:' + BRAND.orange + ';text-decoration:none;">roomreadysupply.com</a></p>' +
     '</div>' +
 
     '</div></body></html>';
