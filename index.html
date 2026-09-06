@@ -352,7 +352,13 @@
   });
 
   // FAQ accordion -- single-open, plain click toggle.
-  (function () {
+  //
+  // Deferred to DOMContentLoaded: this script tag sits early in the page
+  // (line ~317), but the .home-faq-item markup it queries for doesn't
+  // exist until much later in the body. Running immediately meant
+  // querySelectorAll always returned an empty list and no click handler
+  // was ever attached -- the accordion looked static because it was.
+  document.addEventListener('DOMContentLoaded', function () {
     document.querySelectorAll('.home-faq-item').forEach(item => {
       const btn = item.querySelector('.home-faq-q');
       btn?.addEventListener('click', () => {
@@ -367,7 +373,7 @@
         }
       });
     });
-  })();
+  });
 </script>
 
 <section class="serve-section">
