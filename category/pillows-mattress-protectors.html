@@ -298,7 +298,7 @@
           var slug = p.slug || p.itemNumber;
           var price = p.price1 || p.price;
           return '<a class="cat-card" href="/product?item=' + encodeURIComponent(slug) + '">'
-            + '<img src="' + (p.image || '/assets/img/product-placeholder.svg') + '" alt="' + (p.name || '').replace(/"/g, '&quot;') + '" loading="lazy" onerror="this.src='/assets/img/product-placeholder.svg'">'
+            + '<img src="' + (p.image || '/assets/img/product-placeholder.svg') + '" alt="' + (p.name || '').replace(/"/g, '&quot;') + '" loading="lazy" onerror="this.src=\'/assets/img/product-placeholder.svg\'">'
             + '<h3>' + (p.name || 'Product') + '</h3>'
             + (p.caseQty ? '<div class="meta">Case qty: ' + p.caseQty + '</div>' : '')
             + (price ? '<div class="price">' + money(price) + ' <span>/ ' + (p.priceBy || 'case') + '</span></div>' : '')
