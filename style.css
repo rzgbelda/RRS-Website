@@ -8644,3 +8644,41 @@ input.qty-input:focus {
   .vq-item-row { animation: none; }
   .uq-ai-result { animation: none; }
 }
+
+/* Areas We Serve / Who We Supply -- internal-link block above the bottom
+   bar. Exists so the regional and segment landing pages have a real
+   inbound link from the site's strongest page; they were orphaned and
+   had never received an impression. */
+.serve-links {
+  background: #f6f9fc;
+  border-top: 1px solid #e2e8f0;
+  padding: 34px 24px 30px;
+}
+.serve-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 26px;
+}
+.serve-col h2 {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  color: #94a3b8;
+  margin: 0 0 12px;
+}
+.serve-col ul { list-style: none; margin: 0; padding: 0; }
+.serve-col li { margin: 0 0 8px; }
+.serve-col a {
+  font-size: 14px;
+  color: #0B1F38;
+  text-decoration: none;
+  font-weight: 600;
+}
+.serve-col a:hover { color: #ED7226; text-decoration: underline; }
+@media (max-width: 600px) {
+  .serve-links { padding: 26px 16px 22px; }
+  .serve-inner { gap: 20px; }
+}
