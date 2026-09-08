@@ -104,6 +104,46 @@ serve(async (req) => {
       });
     }
 
+    // Buying a label spends real money, and this endpoint has to stay
+    // callable by guest customers (payment.html fires it right after
+    // checkout, when there may be no signed-in user) -- so it can't be
+    // gated on a staff role. Gate on the state of the order instead: it
+    // must exist, must actually be paid, and must not already have a
+    // label. Without this, the endpoint could be called repeatedly with
+    // any order id to run up charges on the Shippo account.
+    const guard = createClient(SUPABASE_URL, SUPABASE_SERVICE, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const { data: guardOrder, error: guardErr } = await guard
+      .from("orders")
+      .select("id, payment_status, tracking_number")
+      .eq("id", order_id)
+      .single();
+
+    if (guardErr || !guardOrder) {
+      return new Response(JSON.stringify({ error: "Order not found" }), {
+        status: 404,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    // 'authorized' counts: payment.html buys a label for a card payment
+    // that is authorized but not yet captured. What must NOT pass is
+    // 'processing' (ACH still clearing, can bounce) or 'pending_invoice'
+    // (nothing paid at all) -- the same rule the checkout page applies
+    // before it calls this.
+    if (!["paid", "authorized"].includes(guardOrder.payment_status)) {
+      return new Response(JSON.stringify({ error: "Order is not paid" }), {
+        status: 403,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+    if (guardOrder.tracking_number) {
+      return new Response(JSON.stringify({ error: "A label already exists for this order" }), {
+        status: 409,
+        headers: { ...CORS, "Content-Type": "application/json" },
+      });
+    }
+
     const PRODUCT_DIMS: Record<string, { weight_lbs: number; length_in: number; width_in: number; height_in: number }> = {};
     const DEFAULT = { weight_lbs: 20, length_in: 14, width_in: 12, height_in: 10 };
 

@@ -9,6 +9,7 @@
 
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
+const requireStaff = require('./_lib/require-staff');
 
 let _resend = null;
 function getResend() {
@@ -83,6 +84,14 @@ module.exports = async (req, res) => {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
+
+  // Staff only. The recipient is already re-read from the database rather
+  // than taken from the body, so this can't be aimed at an arbitrary
+  // address -- but unauthenticated it still lets anyone trigger mail to
+  // staff at will, so it gets the same gate as the other service-role
+  // endpoints.
+  const staff = await requireStaff(req, res);
+  if (!staff) return;
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});

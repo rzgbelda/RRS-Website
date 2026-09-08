@@ -3,3 +3,14 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# Secrets -- never commit. The service role key, Stripe secret key and
+# Resend key all live in Vercel's environment variables; a .env file that
+# slips into a commit leaks all of them, and git history keeps the leak
+# even after the file is deleted.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.vercel

@@ -1,6 +1,7 @@
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
+const requireStaff = require('./_lib/require-staff');
 
 let _resend = null;
 function getResend() {
@@ -76,6 +77,13 @@ function agreementEmailHtml(o) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Staff only: this sends mail from our verified sending domain to an
+  // address taken straight from the request body. Left unauthenticated it
+  // is an open relay for phishing under the roomreadysupply.com name, and
+  // a fast way to get the domain's sending reputation burned.
+  const staff = await requireStaff(req, res);
+  if (!staff) return;
 
   const { contact_name, business_name, email, total, quote_request_id, order_id, preview_only } = req.body || {};
   if (!contact_name || !business_name || !email) {

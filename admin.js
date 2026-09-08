@@ -2580,9 +2580,10 @@ async function lookupPaymentProof(orderId) {
   if (btn) { btn.disabled = true; btn.textContent = "Searching Stripe…"; }
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch("/api/lookup-payment-proof", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
       body: JSON.stringify({ order_id: orderId }),
     });
     const result = await res.json();
@@ -6664,7 +6665,7 @@ async function notifyTicketEvent(ticket, event, message) {
     const { data: { session } } = await window.sb.auth.getSession();
     await fetch("/api/notify-ticket", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
       body: JSON.stringify({
         event,
         message,
@@ -7674,9 +7675,13 @@ async function createSdLogin() {
   if (password.length < 8) return showErr('Password must be at least 8 characters.');
 
   try {
+    // Must send the signed-in staff member's own access token, not the
+    // publishable anon key -- the function verifies the caller holds a
+    // staff role before it will create an account.
+    const { data: { session } } = await window.sb.auth.getSession();
     var res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/create-subdist-user', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + window.sb.supabaseKey },
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
       body: JSON.stringify({ email, password, name, sub_distributor_id: id }),
     });
     var data = await res.json();
@@ -8151,9 +8156,10 @@ async function saveManualQuote() {
   btn.disabled = true; btn.textContent = "Creating…";
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch("/api/admin-create-quote", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
       body: JSON.stringify({
         business_name: document.getElementById("mqBusinessName").value.trim(),
         contact_name:  document.getElementById("mqContactName").value.trim(),
@@ -8797,9 +8803,14 @@ async function previewQuote() {
   if (btn) { btn.textContent = "Loading…"; btn.disabled = true; }
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch(SEND_QUOTE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + (session?.access_token || ""),
+      },
       body: JSON.stringify({ ...payload, preview_only: true }),
     });
     const data = await res.json();
@@ -8905,9 +8916,14 @@ async function doSendQuote(payload) {
   if (btn) { btn.textContent = "Sending…"; btn.disabled = true; }
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch(SEND_QUOTE_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SUPABASE_ANON_KEY },
+      headers: {
+        "Content-Type": "application/json",
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": "Bearer " + (session?.access_token || ""),
+      },
       body: JSON.stringify(payload),
     });
     const data = await res.json();
@@ -9190,9 +9206,10 @@ async function previewTermsAgreement() {
   if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch("/api/send-terms-agreement", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
       body: JSON.stringify({ ...payload, preview_only: true }),
     });
     const data = await res.json();
@@ -9218,9 +9235,10 @@ async function sendTermsAgreementFromPreview() {
   if (btn) { btn.disabled = true; btn.textContent = "Sending…"; }
 
   try {
+    const { data: { session } } = await window.sb.auth.getSession();
     const res = await fetch("/api/send-terms-agreement", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
       body: JSON.stringify(payload),
     });
     const data = await res.json();

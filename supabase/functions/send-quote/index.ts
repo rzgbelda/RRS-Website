@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 const RESEND_API_KEY   = Deno.env.get("RESEND_API_KEY")   ?? "";
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")     ?? "";
@@ -221,6 +222,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   try {
+    // Staff only -- this emails a priced quote to a customer from our
+    // sending domain. verify_jwt alone is satisfied by the public anon key.
+    const staff = await requireStaff(req, CORS);
+    if (!staff.ok) return staff.response;
+
     const body = await req.json();
     const { quote_request_id, items, message, preview_only, net_30_terms,
             fulfillment_method, in_house_delivery_fee, freight_fee, shipping_state } = body;

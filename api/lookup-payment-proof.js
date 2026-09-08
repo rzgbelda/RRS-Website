@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const requireStaff = require('./_lib/require-staff');
 
 let Stripe;
 try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
@@ -19,6 +20,12 @@ try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   if (!Stripe) return res.status(500).json({ error: 'stripe module not available' });
+
+  // Staff only: this returns Stripe receipt URLs and payment intent IDs for
+  // an arbitrary order id, and writes them back to the orders row. Left
+  // open, order ids could be enumerated to harvest payment proof.
+  const staff = await requireStaff(req, res);
+  if (!staff) return;
 
   const { order_id } = req.body || {};
   if (!order_id) return res.status(400).json({ error: 'order_id is required' });

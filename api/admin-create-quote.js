@@ -1,4 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
+const requireStaff = require('./_lib/require-staff');
 
 /**
  * Creates a quote_requests row for a customer the admin is entering by hand
@@ -19,6 +20,12 @@ const { createClient } = require('@supabase/supabase-js');
  */
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Staff only: this writes to the CRM with the service role key, which
+  // bypasses RLS. Without this, anyone on the internet could inject rows
+  // into quote_requests.
+  const staff = await requireStaff(req, res);
+  if (!staff) return;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
