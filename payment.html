@@ -839,15 +839,18 @@
           }
 
           if (checkout.referral) {
-            var sdRes = await window.sb.from('sub_distributors')
-              .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
-            if (sdRes.data) {
-              var commAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
+            // Resolved through lookup_referral_code() -- sub_distributors is
+            // staff-only under RLS (it holds affiliate email/phone/notes), and
+            // this runs as an anonymous guest at checkout.
+            var sdRes = await window.sb.rpc('lookup_referral_code', { p_code: checkout.referral });
+            var sdRow = Array.isArray(sdRes.data) ? sdRes.data[0] : sdRes.data;
+            if (sdRow) {
+              var commAmt = ((window._orderTotal || 0) * (sdRow.commission_pct || 0) / 100);
               await window.sb.from('order_referrals').insert({
                 order_id: orderInsert.data.id,
                 referral_code: checkout.referral.toUpperCase(),
-                sub_distributor_id: sdRes.data.id,
-                commission_pct: sdRes.data.commission_pct,
+                sub_distributor_id: sdRow.id,
+                commission_pct: sdRow.commission_pct,
                 commission_amount: commAmt,
                 source: 'checkout',
               });
@@ -1174,16 +1177,18 @@
                 }).catch(function(err) { console.error('[receipt] send error:', err); });
               }
               if (checkout.referral) {
-                // Look up sub-distributor by referral code and save to order_referrals
-                var sdRes = await window.sb.from('sub_distributors')
-                  .select('id, commission_pct').eq('referral_code', checkout.referral.toUpperCase()).eq('status', 'active').single();
-                if (sdRes.data) {
-                  var commissionAmt = ((window._orderTotal || 0) * (sdRes.data.commission_pct || 0) / 100);
+                // Look up sub-distributor by referral code and save to
+                // order_referrals. Via lookup_referral_code() -- the base
+                // table is staff-only under RLS and this runs as a guest.
+                var sdRes = await window.sb.rpc('lookup_referral_code', { p_code: checkout.referral });
+                var sdRow = Array.isArray(sdRes.data) ? sdRes.data[0] : sdRes.data;
+                if (sdRow) {
+                  var commissionAmt = ((window._orderTotal || 0) * (sdRow.commission_pct || 0) / 100);
                   await window.sb.from('order_referrals').insert({
                     order_id: orderInsert.data.id,
                     referral_code: checkout.referral.toUpperCase(),
-                    sub_distributor_id: sdRes.data.id,
-                    commission_pct: sdRes.data.commission_pct,
+                    sub_distributor_id: sdRow.id,
+                    commission_pct: sdRow.commission_pct,
                     commission_amount: commissionAmt,
                     source: 'checkout',
                   });

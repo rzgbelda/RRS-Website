@@ -3373,13 +3373,15 @@ async function validateRegCode() {
 
   statusEl.style.color = '#888'; statusEl.textContent = 'Checking code…';
 
-  // Check sub-distributor codes first
-  const { data: sd } = await window.sb
-    .from('sub_distributors')
-    .select('id,name,commission_pct')
-    .eq('referral_code', code)
-    .eq('status', 'active')
-    .maybeSingle();
+  // Check sub-distributor codes first.
+  // Goes through lookup_referral_code() rather than selecting the table:
+  // sub_distributors holds affiliate email, phone and internal notes, so it
+  // is staff-only under RLS. The function returns just id/name/commission
+  // for an exact active code -- enough to validate a referral, useless for
+  // harvesting affiliate contact details.
+  const { data: sdRows } = await window.sb
+    .rpc('lookup_referral_code', { p_code: code });
+  const sd = Array.isArray(sdRows) ? sdRows[0] : sdRows;
 
   if (sd) {
     _regValidatedDistributor = { id: sd.id, name: sd.name, commission_pct: sd.commission_pct, employee_id: null };
@@ -3390,21 +3392,18 @@ async function validateRegCode() {
     return;
   }
 
-  // Check employee codes
-  const { data: emp } = await window.sb
-    .from('sub_distributor_employees')
-    .select('id,name,sub_distributor_id,sub_distributors(name,commission_pct)')
-    .eq('referral_code', code)
-    .eq('status', 'active')
-    .maybeSingle();
+  // Check employee codes (same reasoning as above)
+  const { data: empRows } = await window.sb
+    .rpc('lookup_employee_referral_code', { p_code: code });
+  const emp = Array.isArray(empRows) ? empRows[0] : empRows;
 
   if (emp) {
-    const sdName = emp.sub_distributors?.name || 'Sub-Distributor';
+    const sdName = emp.sub_distributor_name || 'Sub-Distributor';
     _regValidatedDistributor = {
       id: emp.sub_distributor_id,
       name: sdName,
-      commission_pct: emp.sub_distributors?.commission_pct || 0,
-      employee_id: emp.id,
+      commission_pct: emp.commission_pct || 0,
+      employee_id: emp.employee_id,
     };
     statusEl.style.color = '#22c55e';
     statusEl.textContent = '✓ Valid code – ' + emp.name + ' (' + sdName + ')';
@@ -3557,12 +3556,12 @@ async function validateReferralCode(code) {
 
   if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Checking…'; }
 
-  const { data: sd } = await window.sb
-    .from('sub_distributors')
-    .select('id,name,commission_pct')
-    .eq('referral_code', code)
-    .eq('status', 'active')
-    .maybeSingle();
+  // Via lookup_referral_code() -- the base table is staff-only under RLS
+  // because it holds affiliate email/phone/notes. See the migration
+  // 20260909_secure_sub_distributors_lookup.sql.
+  const { data: sdRows } = await window.sb
+    .rpc('lookup_referral_code', { p_code: code });
+  const sd = Array.isArray(sdRows) ? sdRows[0] : sdRows;
 
   if (sd) {
     _checkoutReferral = { sub_distributor_id: sd.id, employee_id: null, commission_pct: sd.commission_pct, name: sd.name };
@@ -3570,19 +3569,16 @@ async function validateReferralCode(code) {
     return;
   }
 
-  const { data: emp } = await window.sb
-    .from('sub_distributor_employees')
-    .select('id,name,sub_distributor_id,sub_distributors(name,commission_pct)')
-    .eq('referral_code', code)
-    .eq('status', 'active')
-    .maybeSingle();
+  const { data: empRows } = await window.sb
+    .rpc('lookup_employee_referral_code', { p_code: code });
+  const emp = Array.isArray(empRows) ? empRows[0] : empRows;
 
   if (emp) {
     _checkoutReferral = {
       sub_distributor_id: emp.sub_distributor_id,
-      employee_id: emp.id,
-      commission_pct: emp.sub_distributors ? emp.sub_distributors.commission_pct : 0,
-      name: emp.name + ' (' + (emp.sub_distributors ? emp.sub_distributors.name : '') + ')',
+      employee_id: emp.employee_id,
+      commission_pct: emp.commission_pct || 0,
+      name: emp.employee_name + ' (' + (emp.sub_distributor_name || '') + ')',
     };
     if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '✓ Applied – ' + _checkoutReferral.name; }
     return;
