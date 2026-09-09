@@ -82,12 +82,24 @@ serve(async (req) => {
       });
     }
 
-    // Link to sub_distributor record if provided
+    // Link to sub_distributor record if provided. This previously failed
+    // silently on every call -- sub_distributors had no user_id column
+    // until 20260910a_sub_distributors_add_user_id.sql -- so the error is
+    // now surfaced instead of swallowed, even though the auth account and
+    // profile were already created successfully at this point.
+    let linkWarning: string | null = null;
     if (sub_distributor_id) {
-      await supabase.from("sub_distributors").update({ user_id: userId }).eq("id", sub_distributor_id);
+      const { error: linkError } = await supabase
+        .from("sub_distributors")
+        .update({ user_id: userId })
+        .eq("id", sub_distributor_id);
+      if (linkError) {
+        console.error("[create-subdist-user] failed to link sub_distributor:", linkError.message);
+        linkWarning = "Account was created, but linking it to the affiliate record failed: " + linkError.message;
+      }
     }
 
-    return new Response(JSON.stringify({ success: true, user_id: userId }), {
+    return new Response(JSON.stringify({ success: true, user_id: userId, warning: linkWarning }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
   } catch (e) {

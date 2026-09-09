@@ -7686,6 +7686,7 @@ async function createSdLogin() {
     });
     var data = await res.json();
     if (data.error) return showErr('Error: ' + data.error);
+    if (data.warning) return showErr(data.warning);
     errEl.style.display = 'none';
     showToast('Login created for ' + email + '. They can now sign in to the admin portal.');
   } catch(e) {
