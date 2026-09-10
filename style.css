@@ -8414,9 +8414,10 @@ input.qty-input:focus {
 }
 .uq-section-label svg { color: #ED7226; flex-shrink: 0; }
 .uq-optional-badge {
-  margin-left: auto; font-size: 11px; font-weight: 700;
+  margin-left: 4px; font-size: 11px; font-weight: 700;
   color: #94a3b8; background: #f1f5f9;
   padding: 3px 10px; border-radius: 20px; letter-spacing: .04em;
+  align-self: center;
 }
 .uq-section-hint { font-size: 13.5px; color: #64748b; line-height: 1.55; margin: 0 0 20px; padding-left: 41px; }
 .uq-divider { height: 1px; background: #e4eaf2; margin: 0; }
