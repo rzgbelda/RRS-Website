@@ -226,6 +226,18 @@ function cleanPrice(price) {
   return Number(String(price || '').replace('$', '').replace(',', '').trim()) || 0;
 }
 
+// Mirror of script.js's optimizeImageUrl(). 46 product images are stored
+// at 450x450 -- under Google Merchant Center's 500px minimum -- so pad
+// every Cloudinary image to a uniform 800x800 on white. Done on the fly
+// by Cloudinary, no re-uploads. Both the crawled Product JSON-LD and the
+// og:image go through this so the server-rendered tags match the
+// client-rendered ones.
+function optimizeImageUrl(url) {
+  if (!url || !url.includes('res.cloudinary.com') || !url.includes('/upload/')) return url;
+  if (/\/upload\/[^/]*(?:f_auto|q_auto|c_pad|w_800)/.test(url)) return url;
+  return url.replace('/upload/', '/upload/c_pad,w_800,h_800,b_white,f_auto,q_auto/');
+}
+
 /* ── HTML injection ──────────────────────────────────────────── */
 
 function escAttr(s) {
@@ -308,7 +320,7 @@ function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
     '@type': 'Product',
     name: seoTitle,
     description: metaDesc,
-    image: p.image_url || '',
+    image: optimizeImageUrl(p.image_url) || '',
     sku: p.sku || slugify(p.name),
     brand: { '@type': 'Brand', name: 'Room Ready Supply' },
     offers: offer,
@@ -345,7 +357,7 @@ function injectMeta(html, p) {
   const metaDesc = (p.meta_description || '').trim() || buildMetaDesc(p);
   const slug = slugify(p.sku || p.name);
   const pageUrl = 'https://www.roomreadysupply.com/product?item=' + encodeURIComponent(slug);
-  const image = p.image_url || '';
+  const image = optimizeImageUrl(p.image_url) || '';
 
   let out = html.replace(
     /<title>[\s\S]*?<\/title>/i,

@@ -144,8 +144,13 @@ const PRODUCTS_SUPABASE_ANON = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 // entirely) pass through unchanged.
 function optimizeImageUrl(url) {
   if (!url || !url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
-  if (url.includes("/upload/f_auto") || url.includes("/upload/q_auto")) return url; // already transformed
-  return url.replace("/upload/", "/upload/f_auto,q_auto/");
+  if (/\/upload\/[^/]*(?:f_auto|q_auto|c_pad|w_800)/.test(url)) return url; // already transformed
+  // c_pad,w_800,h_800,b_white: 46 product images are stored at 450x450,
+  // under Google Merchant Center's 500px minimum ("Image too small for
+  // upcoming enforcement"). Padding every image to a uniform 800x800 on
+  // a white ground fixes those and normalizes the rest -- Cloudinary does
+  // it on the fly, no re-uploads. f_auto/q_auto keep the byte size down.
+  return url.replace("/upload/", "/upload/c_pad,w_800,h_800,b_white,f_auto,q_auto/");
 }
 
 function mapDbProductToLegacyShape(row) {
