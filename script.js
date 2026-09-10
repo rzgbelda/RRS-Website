@@ -1221,6 +1221,33 @@ function populateProductPage(product) {
   setMeta("ogUrl",           "content", pageUrl);
 
   const priceVal = price > 0 ? price.toFixed(2) : null;
+  const offer = {
+    "@type": "Offer",
+    url: pageUrl,
+    priceCurrency: "USD",
+    price: priceVal,
+    // Google recommends this even for prices with no planned end date --
+    // an unset value is otherwise treated as "unknown" freshness. Rolling
+    // 90-day window; regenerated on every page load either way.
+    priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    availability: "https://schema.org/InStock",
+    seller: { "@type": "Organization", name: "Room Ready Supply" }
+  };
+
+  // shipping_weight for Google Merchant Center -- kept in sync with
+  // api/product-meta.js's buildProductJsonLd(). product.weight is the
+  // per-case pounds value shown to shoppers as "N lbs" just below.
+  // Missing it here is what disapproved every product in Shopping in
+  // late Aug 2026.
+  const weightLbs = Number(product.weight);
+  if (weightLbs > 0) {
+    offer.shippingDetails = {
+      "@type": "OfferShippingDetails",
+      shippingDestination: { "@type": "DefinedRegion", addressCountry: "US" },
+      weight: { "@type": "QuantitativeValue", value: weightLbs, unitCode: "LBR" }
+    };
+  }
+
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -1233,18 +1260,7 @@ function populateProductPage(product) {
     image: product.image,
     sku: product.itemNumber || product.slug,
     brand: { "@type": "Brand", name: "Room Ready Supply" },
-    offers: {
-      "@type": "Offer",
-      url: pageUrl,
-      priceCurrency: "USD",
-      price: priceVal,
-      // Google recommends this even for prices with no planned end date --
-      // an unset value is otherwise treated as "unknown" freshness. Rolling
-      // 90-day window; regenerated on every page load either way.
-      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      availability: "https://schema.org/InStock",
-      seller: { "@type": "Organization", name: "Room Ready Supply" }
-    }
+    offers: offer
   };
   const ldEl = document.getElementById("productJsonLd");
   if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);

@@ -25,7 +25,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -270,6 +270,39 @@ function setScriptContentById(html, id, obj) {
 // data too, across all ~120 product pages.
 function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
   const priceVal = cleanPrice(p.price || p.price_tier1);
+
+  const offer = {
+    '@type': 'Offer',
+    url: pageUrl,
+    priceCurrency: 'USD',
+    price: priceVal > 0 ? priceVal.toFixed(2) : null,
+    priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
+    availability: 'https://schema.org/InStock',
+    seller: { '@type': 'Organization', name: 'Room Ready Supply' },
+  };
+
+  // Google Merchant Center reads shipping_weight off this shippingDetails
+  // block. Every product in the DB carries a real per-case weight in
+  // pounds (same value shown to shoppers as "N lbs" on the page, and the
+  // same unit WARP/Shippo are handed); without it here, GMC disapproves
+  // the listing for "Missing shipping weight" -- which is what took all
+  // ~132 products out of Shopping in late Aug 2026.
+  const weightLbs = Number(p.weight);
+  if (weightLbs > 0) {
+    offer.shippingDetails = {
+      '@type': 'OfferShippingDetails',
+      shippingDestination: {
+        '@type': 'DefinedRegion',
+        addressCountry: 'US',
+      },
+      weight: {
+        '@type': 'QuantitativeValue',
+        value: weightLbs,
+        unitCode: 'LBR', // UN/CEFACT code for pound
+      },
+    };
+  }
+
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -278,15 +311,7 @@ function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
     image: p.image_url || '',
     sku: p.sku || slugify(p.name),
     brand: { '@type': 'Brand', name: 'Room Ready Supply' },
-    offers: {
-      '@type': 'Offer',
-      url: pageUrl,
-      priceCurrency: 'USD',
-      price: priceVal > 0 ? priceVal.toFixed(2) : null,
-      priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      availability: 'https://schema.org/InStock',
-      seller: { '@type': 'Organization', name: 'Room Ready Supply' },
-    },
+    offers: offer,
   };
 }
 
