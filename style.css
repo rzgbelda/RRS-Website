@@ -8536,7 +8536,9 @@ input.qty-input:focus {
 .uq-ai-result--success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
 .uq-ai-result--warn    { background: #fef9c3; color: #713f12; border: 1px solid #fef08a; }
 .uq-ai-unmatched       { font-weight: 400; color: #64748b; margin-left: 6px; }
-.uq-upload-benefits { display: flex; flex-direction: column; gap: 15px; padding-top: 4px; }
+/* Offset so the first benefit lines up with the top of the drop-zone,
+   not the section hint that sits above it in the left column. */
+.uq-upload-benefits { display: flex; flex-direction: column; gap: 15px; padding-top: 68px; }
 .uq-benefit-item { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; color: #475569; line-height: 1.45; }
 .uq-benefit-item svg { flex-shrink: 0; margin-top: 1px; }
 
