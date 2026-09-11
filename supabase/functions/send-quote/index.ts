@@ -465,7 +465,27 @@ serve(async (req) => {
     }
     if (updErr) console.error("[send-quote] quote_requests update failed:", updErr.message);
 
-    return new Response(JSON.stringify({ success: true, quote_number }), {
+    // TEMP diagnostic: read the row straight back after the update instead
+    // of trusting updErr alone. Three separate raw-SQL/REST tests this
+    // session proved the write itself is valid and RLS isn't the blocker,
+    // yet real sends keep leaving status='new'/confirm_token=null with NO
+    // updErr ever logged for tiers 2/3 -- which should be structurally
+    // impossible if the update ran and truly succeeded. This will show
+    // definitively whether the row actually changed, and returns it in the
+    // response (not just logs) so a real send's result is visible without
+    // another round of log-hunting.
+    const { data: verifyRow, error: verifyErr } = await sb
+      .from("quote_requests")
+      .select("status, confirm_token, quote_number")
+      .eq("id", quote_request_id)
+      .single();
+    console.log("[send-quote] post-update verification:", verifyErr ? verifyErr.message : JSON.stringify(verifyRow));
+
+    return new Response(JSON.stringify({
+      success: true,
+      quote_number,
+      _debug_verify: verifyErr ? { error: verifyErr.message } : verifyRow,
+    }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 

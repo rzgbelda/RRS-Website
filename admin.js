@@ -8953,7 +8953,11 @@ async function doSendQuote(payload) {
 
     document.getElementById("quoteComposerModal").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
-    if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nOpen it now to save a PDF copy?`)) {
+    // TEMP diagnostic: surface what the function actually verified got
+    // saved, right in this popup, so a real send's DB-write result is
+    // visible without a trip to Supabase's log viewer.
+    console.log("[send-quote] server-verified row after update:", data._debug_verify);
+    if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nServer verified: ${JSON.stringify(data._debug_verify)}\n\nOpen it now to save a PDF copy?`)) {
       window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
     }
     renderQuoteRequestsTable();
