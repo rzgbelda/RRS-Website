@@ -388,8 +388,31 @@ serve(async (req) => {
     // invalidates whichever link was in the earlier email -- consistent
     // with a resend replacing quote_items/grand_total wholesale too.
 
-    // Update status to quoted + save full quote snapshot for customer portal
-    let { error: updErr } = await sb.from("quote_requests").update({
+    // Update status to quoted + save full quote snapshot for customer portal.
+    //
+    // Some columns here may not exist live yet (freight_fee from 20260831c,
+    // confirm_token from 20260912_quote_confirm.sql), so an attempt that
+    // names a missing column is retried with that column dropped rather
+    // than failing the whole send -- the email has already gone out by
+    // this point, so refusing to record it would be strictly worse.
+    //
+    // The error code to look for is PGRST204, NOT Postgres's own 42703.
+    // PostgREST returns 42703 for a SELECT naming a missing column, but
+    // PGRST204 ("Could not find the 'x' column ... in the schema cache")
+    // for an INSERT/UPDATE body naming one -- a different code for the
+    // same underlying problem. This retry originally only checked 42703,
+    // so it never fired on an update: every send emailed the customer a
+    // quote while silently leaving the row at status='new' with no
+    // quote_number and no confirm_token, which is what made every
+    // "Confirm This Order" link 404 with "Quote not found".
+    //
+    // Built as one payload with optional keys deleted per attempt rather
+    // than three near-identical object literals: the previous shape made
+    // it easy for the retries to drift out of sync with the original.
+    const MISSING_COL_CODES = ["PGRST204", "42703"];
+    const OPTIONAL_COLS = ["freight_fee", "confirm_token"];
+
+    const updatePayload: Record<string, unknown> = {
       status:           "quoted",
       quoted_at:        new Date().toISOString(),
       quote_number,
@@ -407,85 +430,53 @@ serve(async (req) => {
       grand_total:      grand_amt,
       customer_visible: true,
       confirm_token:    confirm_token,
-    }).eq("id", quote_request_id);
-    // TEMP diagnostic: log every attempt's outcome, not just the final one,
-    // so a real repro tells us exactly which tier failed and with what --
-    // the single logged line so far could have come from any of the three
-    // attempts, since only the last one was ever logged.
-    console.log("[send-quote] tier1 result:", updErr ? `${updErr.code} ${updErr.message}` : "OK");
-    if (updErr && updErr.code === "42703") {
-      // freight_fee hasn't been migrated live yet (20260831c) -- retry
-      // without it rather than fail the whole send; the email/PDF still
-      // shows the correct freight line either way since that's already
-      // rendered from the in-memory freightFee, not read back from the DB.
-      ({ error: updErr } = await sb.from("quote_requests").update({
-        status:           "quoted",
-        quoted_at:        new Date().toISOString(),
-        quote_number,
-        quote_items:      items,
-        valid_until:      valid_until.split("T")[0],
-        quote_message:    message || null,
-        net_30_terms:     !!net_30_terms,
-        fulfillment_method:    isInHouse ? "in_house" : "ship",
-        in_house_delivery_fee: fee_amt,
-        shipping_state:   shipping_state || null,
-        tax_rate,
-        tax_amount:       tax_amt,
-        subtotal:         subtotal_amt,
-        grand_total:      grand_amt,
-        customer_visible: true,
-        confirm_token:    confirm_token,
-      }).eq("id", quote_request_id));
-    }
-    console.log("[send-quote] tier2 result:", updErr ? `${updErr.code} ${updErr.message}` : "OK (or tier1 already succeeded)");
-    if (updErr && updErr.code === "42703") {
-      // confirm_token itself (20260912_quote_confirm.sql) hasn't been
-      // migrated live yet either -- drop just that column rather than
-      // fail the send. The email below still renders the Confirm This
-      // Order button with this token in the URL regardless (it's held in
-      // the confirm_token local var, not read back from the row) -- it
-      // will just 404 on /quote-confirm until the migration is run,
-      // which is a one-time gap during rollout, not an ongoing one.
-      ({ error: updErr } = await sb.from("quote_requests").update({
-        status:           "quoted",
-        quoted_at:        new Date().toISOString(),
-        quote_number,
-        quote_items:      items,
-        valid_until:      valid_until.split("T")[0],
-        quote_message:    message || null,
-        net_30_terms:     !!net_30_terms,
-        fulfillment_method:    isInHouse ? "in_house" : "ship",
-        shipping_state:   shipping_state || null,
-        tax_rate,
-        tax_amount:       tax_amt,
-        subtotal:         subtotal_amt,
-        grand_total:      grand_amt,
-        customer_visible: true,
-      }).eq("id", quote_request_id));
-    }
-    if (updErr) console.error("[send-quote] quote_requests update failed:", updErr.message);
+    };
 
-    // TEMP diagnostic: read the row straight back after the update instead
-    // of trusting updErr alone. Three separate raw-SQL/REST tests this
-    // session proved the write itself is valid and RLS isn't the blocker,
-    // yet real sends keep leaving status='new'/confirm_token=null with NO
-    // updErr ever logged for tiers 2/3 -- which should be structurally
-    // impossible if the update ran and truly succeeded. This will show
-    // definitively whether the row actually changed, and returns it in the
-    // response (not just logs) so a real send's result is visible without
-    // another round of log-hunting.
-    const { data: verifyRow, error: verifyErr } = await sb
+    let updErr: { code?: string; message: string } | null = null;
+    // At most one retry per optional column, plus the initial attempt.
+    for (let attempt = 0; attempt <= OPTIONAL_COLS.length; attempt++) {
+      ({ error: updErr } = await sb
+        .from("quote_requests")
+        .update(updatePayload)
+        .eq("id", quote_request_id));
+
+      if (!updErr) break;
+      if (!MISSING_COL_CODES.includes(updErr.code ?? "")) break;
+
+      // Drop whichever optional column this error named and try again.
+      // Matching on the message rather than assuming an order means a
+      // column becoming available (or a new one going missing) doesn't
+      // silently strip the wrong field.
+      const named = OPTIONAL_COLS.find(
+        (col) => col in updatePayload && updErr!.message.includes(`'${col}'`),
+      );
+      if (!named) break;
+      console.log(`[send-quote] '${named}' not in schema, retrying without it`);
+      delete updatePayload[named];
+    }
+
+    if (updErr) console.error("[send-quote] quote_requests update failed:", updErr.code, updErr.message);
+
+    // Read the row back rather than trusting updErr alone. Kept from the
+    // debugging of the PGRST204 bug above: that failure mode emailed the
+    // customer a real quote while the row silently stayed at status='new'
+    // with no confirm_token, and nothing anywhere said so. This makes a
+    // recurrence obvious in the logs on the very first send instead of
+    // only surfacing later as a broken "Confirm This Order" link.
+    const { data: savedRow } = await sb
       .from("quote_requests")
-      .select("status, confirm_token, quote_number")
+      .select("status, confirm_token")
       .eq("id", quote_request_id)
       .single();
-    console.log("[send-quote] post-update verification:", verifyErr ? verifyErr.message : JSON.stringify(verifyRow));
+    if (savedRow && (savedRow.status !== "quoted" || !savedRow.confirm_token)) {
+      console.error(
+        "[send-quote] WARNING: quote emailed but row not fully saved --",
+        `status=${savedRow.status} confirm_token=${savedRow.confirm_token ? "set" : "null"}`,
+        "-- the Confirm This Order link in that email will not work.",
+      );
+    }
 
-    return new Response(JSON.stringify({
-      success: true,
-      quote_number,
-      _debug_verify: verifyErr ? { error: verifyErr.message } : verifyRow,
-    }), {
+    return new Response(JSON.stringify({ success: true, quote_number }), {
       headers: { ...CORS, "Content-Type": "application/json" },
     });
 

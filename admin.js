@@ -2548,7 +2548,12 @@ async function saveFreightFee(orderId) {
     .update({ freight_fee: newFee, total: newTotal, updated_at: new Date().toISOString() })
     .eq("id", orderId);
   if (error) {
-    alert(error.code === "42703"
+    // PGRST204 is the code for a missing column in an INSERT/UPDATE body;
+    // 42703 is what a SELECT naming one returns. Both are checked because
+    // this is the same "column not migrated yet" case either way, and
+    // checking only 42703 here would drop staff back to a raw error
+    // message that doesn't name the migration to run.
+    alert(error.code === "PGRST204" || error.code === "42703"
       ? "Freight billing isn't set up on the database yet — run the migration 20260831b_orders_freight_fee.sql in Supabase, then try again."
       : "Could not save the freight fee: " + error.message);
     return;
@@ -3314,9 +3319,12 @@ async function saveOrderTax(orderId) {
     .update({ tax_rate: rate, tax_amount: taxAmount, total: newTotal, updated_at: new Date().toISOString() })
     .eq("id", orderId);
   if (error) {
-    // 42703 = undefined column -- the tax_rate/tax_amount columns this
-    // needs (20260820_order_sales_tax.sql) haven't been added live yet.
-    alert(error.code === "42703"
+    // Undefined column -- the tax_rate/tax_amount columns this needs
+    // (20260820_order_sales_tax.sql) haven't been added live yet.
+    // PGRST204 is the code an UPDATE body gets for a missing column;
+    // 42703 is the SELECT equivalent. Checking both so this keeps naming
+    // the migration to run instead of falling through to a raw error.
+    alert(error.code === "PGRST204" || error.code === "42703"
       ? "Sales tax isn't set up on the database yet — run the migration 20260820_order_sales_tax.sql in Supabase, then try again."
       : "Could not save the tax: " + error.message);
     return;
@@ -8953,11 +8961,7 @@ async function doSendQuote(payload) {
 
     document.getElementById("quoteComposerModal").style.display = "none";
     document.getElementById("quoteDetailModal").style.display = "none";
-    // TEMP diagnostic: surface what the function actually verified got
-    // saved, right in this popup, so a real send's DB-write result is
-    // visible without a trip to Supabase's log viewer.
-    console.log("[send-quote] server-verified row after update:", data._debug_verify);
-    if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nServer verified: ${JSON.stringify(data._debug_verify)}\n\nOpen it now to save a PDF copy?`)) {
+    if (confirm(`✅ Quote ${data.quote_number} sent successfully!\n\nOpen it now to save a PDF copy?`)) {
       window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
     }
     renderQuoteRequestsTable();
