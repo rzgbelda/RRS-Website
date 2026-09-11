@@ -8247,7 +8247,9 @@ function openQuoteDetail(id) {
             <span style="text-align:center;font-weight:700;color:#0d2c50">${i.quantity}</span>
           </div>`).join("")}
       </div>`
-    : `<div style="padding:14px;background:#f8fafc;border-radius:10px;font-size:13px;color:#94a3b8;text-align:center;margin-top:8px">No specific products listed</div>`;
+    : `<div style="padding:14px;background:#f8fafc;border-radius:10px;font-size:13px;color:#94a3b8;text-align:center;margin-top:8px">
+        No specific products requested by the customer.${r.status !== "quoted" ? ` Use <strong style="color:#0d2c50">Add Products &amp; Send</strong> below to price this quote.` : ""}
+      </div>`;
 
   const fileHtml = r.file_url
     ? `<a href="${r.file_url}" target="_blank" style="display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:8px 14px;background:#fff7f0;border:1px solid #fed7aa;border-radius:8px;color:#e8621a;font-size:13px;font-weight:600;text-decoration:none">
