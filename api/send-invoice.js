@@ -139,15 +139,25 @@ module.exports = async (req, res) => {
   // already at that cap, and this needs the same order-creation logic
   // already below in this file (a confirmed quote becomes a real order,
   // visible in the admin Orders tab) rather than duplicating it.
-  if (req.method === 'GET' && req.query?.confirm_token) {
-    const token = req.query.confirm_token;
+  if (req.method === 'GET' && typeof req.query?.confirm_token !== 'undefined') {
+    const token = String(req.query.confirm_token || '').trim();
+    if (!token) return res.status(400).json({ error: 'confirm_token is required' });
+
     const { data, error } = await supabase
       .from('quote_requests')
       .select('contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at')
       .eq('confirm_token', token)
       .single();
 
-    if (error || !data) return res.status(404).json({ error: 'Quote not found' });
+    if (error || !data) {
+      // Surfaced in server logs (not to the customer) so a mismatch between
+      // what's in the email link and what's actually stored -- e.g. a
+      // partial-migration rollback dropping confirm_token off the
+      // quote_requests update -- is diagnosable from Vercel's logs instead
+      // of only ever showing as "Quote not found" with no further trail.
+      console.error('[send-invoice] confirm_token lookup failed for token', token, error?.message || 'no matching row');
+      return res.status(404).json({ error: 'Quote not found' });
+    }
     return res.status(200).json(data);
   }
 
