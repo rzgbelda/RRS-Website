@@ -6,6 +6,55 @@ let currentFeaturedIndex = 0;
 let isSliding = false;
 
 /* =========================
+   AFFILIATE SUBDOMAIN ATTRIBUTION
+========================= */
+// Visiting an affiliate's own subdomain (trustmark.roomreadysupply.com)
+// previously attributed NOTHING to that affiliate -- every existing path
+// (checkout's referral field, registration) depended entirely on a
+// customer manually typing a code into a field labelled "optional". A
+// customer who landed on the subdomain and just checked out became an
+// ordinary, unattributed order. This resolves the subdomain itself, which
+// is a far more reliable signal than asking every visitor to type
+// something in.
+//
+// Root domain and www both resolve to null -- only a real affiliate
+// subdomain (anything.roomreadysupply.com other than www) counts.
+function getAffiliateSubdomain() {
+  const host = window.location.hostname;
+  const suffix = ".roomreadysupply.com";
+  if (!host.endsWith(suffix)) return null;
+  const sub = host.slice(0, -suffix.length);
+  if (!sub || sub === "www") return null;
+  return sub;
+}
+
+// Resolves the current subdomain to its affiliate's referral code exactly
+// once per page load, memoized -- every call site (checkout, registration)
+// awaits this instead of re-querying. Returns null on the main site, an
+// unrecognized subdomain, or if the lookup fails; callers already treat a
+// missing referral as "no attribution", the same as before this existed.
+let _affiliateSubdomainLookup = null;
+function resolveAffiliateSubdomain() {
+  if (_affiliateSubdomainLookup) return _affiliateSubdomainLookup;
+  const sub = getAffiliateSubdomain();
+  if (!sub || !window.sb) {
+    _affiliateSubdomainLookup = Promise.resolve(null);
+    return _affiliateSubdomainLookup;
+  }
+  _affiliateSubdomainLookup = window.sb
+    .rpc("lookup_affiliate_by_subdomain", { p_subdomain: sub })
+    .then(function (res) {
+      const row = Array.isArray(res.data) ? res.data[0] : res.data;
+      return row || null;
+    })
+    .catch(function (err) {
+      console.error("[affiliate-subdomain] lookup failed:", err.message || err);
+      return null;
+    });
+  return _affiliateSubdomainLookup;
+}
+
+/* =========================
    PAGE LOAD
 ========================= */
 
@@ -3361,6 +3410,25 @@ function openRegisterModal(prefill) {
   if (err) { err.style.display = 'none'; err.textContent = ''; }
   document.getElementById('reg-step-1').style.display = 'block';
   document.getElementById('reg-step-success').style.display = 'none';
+
+  // On an affiliate's own subdomain, registering here should attribute to
+  // them without the customer having to know a code exists at all -- same
+  // reasoning as autoFillReferralCode() at checkout. Locked so it can't be
+  // cleared/overwritten while on that subdomain.
+  resolveAffiliateSubdomain().then(function (affiliate) {
+    if (!affiliate || !affiliate.referral_code) return;
+    const yesRadio = document.getElementById('regSubDistYes');
+    const codeInput = document.getElementById('regSubDistCode');
+    if (!yesRadio || !codeInput) return;
+    yesRadio.checked = true;
+    toggleSubDistFields(true);
+    codeInput.value = affiliate.referral_code;
+    codeInput.readOnly = true;
+    codeInput.style.background = '#f8fafc';
+    codeInput.style.cursor = 'not-allowed';
+    document.querySelectorAll('input[name="regSubDist"]').forEach(function (r) { r.disabled = true; });
+    validateRegCode();
+  });
 }
 
 function closeRegisterModal() {
@@ -3611,6 +3679,30 @@ async function validateReferralCode(code) {
 async function autoFillReferralCode() {
   const codeInput = document.getElementById('checkout-referral-code');
   if (!codeInput || !window.sb) return;
+
+  // The subdomain the customer is actually shopping on takes priority
+  // over everything else -- it's what makes an affiliate's storefront
+  // actually attribute sales to them. Locked (not just pre-filled) so a
+  // customer on trustmark.roomreadysupply.com can't accidentally blank it
+  // or type over it with an unrelated code; the field still shows what
+  // was applied and why, it's just not editable while on that subdomain.
+  const affiliate = await resolveAffiliateSubdomain();
+  if (affiliate && affiliate.referral_code) {
+    codeInput.value = affiliate.referral_code;
+    codeInput.readOnly = true;
+    codeInput.style.background = '#f8fafc';
+    codeInput.style.cursor = 'not-allowed';
+    const applyBtn = document.getElementById('checkout-referral-apply-btn');
+    if (applyBtn) applyBtn.style.display = 'none';
+    validateReferralCode(affiliate.referral_code);
+    const statusEl = document.getElementById('referral-code-status');
+    if (statusEl) statusEl.textContent = '✓ Shopping via ' + affiliate.name + '’s storefront';
+    return;
+  }
+
+  // Not on an affiliate subdomain -- fall back to the existing behavior:
+  // a signed-in returning customer who previously used a code gets it
+  // pre-filled (editable) so they don't have to remember/retype it.
   const { data: { user } } = await window.sb.auth.getUser().catch(function() { return { data: { user: null } }; });
   if (!user) return;
   const { data: link } = await window.sb
