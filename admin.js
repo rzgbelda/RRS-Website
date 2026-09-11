@@ -8089,7 +8089,10 @@ async function renderQuoteRequestsTable() {
       <td><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></td>
       <td style="max-width:220px;font-size:12px;line-height:1.4">${itemsStr}</td>
       <td><span style="padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;${badge}">${r.status||"new"}</span></td>
-      <td><button class="a-btn a-btn-sm" onclick="openQuoteDetail('${r.id}')">View</button></td>
+      <td>
+        <button class="a-btn a-btn-sm" onclick="openQuoteDetail('${r.id}')">View</button>
+        <button class="a-btn a-btn-sm" onclick="deleteQuoteRequest('${r.id}')" style="color:#dc2626;border-color:#fecaca;margin-left:4px">Delete</button>
+      </td>
     </tr>`;
   }).join("");
 
@@ -8107,6 +8110,22 @@ async function renderQuoteRequestsTable() {
     document.getElementById("quoteStatusFilter")?.addEventListener("change", renderQuoteRequestsTable);
     _quoteFiltersWired = true;
   }
+}
+
+// Deletes the underlying quote_requests row -- same table deleteCrmLead()
+// removes from the CRM board, just reachable from this table's own
+// "Delete" button so test/junk entries can be cleared without switching
+// views. Re-runs the table's own fetch afterward rather than patching
+// allQuoteRequests locally, so search/filter state and the row count stay
+// consistent with whatever's actually in the database.
+async function deleteQuoteRequest(id) {
+  const r = allQuoteRequests.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`Delete the quote request from "${r.business_name || r.contact_name || "this customer"}"? This can't be undone.`)) return;
+  const { error } = await window.sb.from("quote_requests").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
+  showToast("Quote request deleted.");
+  renderQuoteRequestsTable();
 }
 
 // r.terms_status/terms_sent_at/terms_accepted_at are populated by
