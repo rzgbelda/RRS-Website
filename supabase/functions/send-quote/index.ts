@@ -408,6 +408,11 @@ serve(async (req) => {
       customer_visible: true,
       confirm_token:    confirm_token,
     }).eq("id", quote_request_id);
+    // TEMP diagnostic: log every attempt's outcome, not just the final one,
+    // so a real repro tells us exactly which tier failed and with what --
+    // the single logged line so far could have come from any of the three
+    // attempts, since only the last one was ever logged.
+    console.log("[send-quote] tier1 result:", updErr ? `${updErr.code} ${updErr.message}` : "OK");
     if (updErr && updErr.code === "42703") {
       // freight_fee hasn't been migrated live yet (20260831c) -- retry
       // without it rather than fail the whole send; the email/PDF still
@@ -432,6 +437,7 @@ serve(async (req) => {
         confirm_token:    confirm_token,
       }).eq("id", quote_request_id));
     }
+    console.log("[send-quote] tier2 result:", updErr ? `${updErr.code} ${updErr.message}` : "OK (or tier1 already succeeded)");
     if (updErr && updErr.code === "42703") {
       // confirm_token itself (20260912_quote_confirm.sql) hasn't been
       // migrated live yet either -- drop just that column rather than
