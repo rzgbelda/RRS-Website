@@ -4283,16 +4283,25 @@ span.flatpickr-weekday {
   margin-bottom: 20px;
 }
 
-.stars {
-  color: #ED7226;
-  font-size: 19px;
+/* Replaced a hardcoded five-star rating that sat on every product page
+   with no reviews behind it -- these state things that are actually true
+   of every item in the catalog. */
+.product-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 20px;
 }
 
-.stars span {
-  color: #1e5a9c;
-  font-size: 14px;
-  margin-left: 8px;
+.product-badges .pb-item {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0B1F38;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 30px;
+  padding: 5px 12px;
+  white-space: nowrap;
 }
 
 .product-desc {

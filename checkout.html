@@ -401,6 +401,20 @@
 <script src="warp-freight.js?v=15"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
 <script>
+// Fires once the checkout page actually loads with a non-empty cart, rather
+// than on the cart's checkout link -- a click can be abandoned mid-navigation,
+// arriving here cannot.
+document.addEventListener('DOMContentLoaded', function () {
+  var cart = getCart();
+  if (!cart.length) return;
+  trackEcommerce('begin_checkout', {
+    currency: 'USD',
+    value: cartValue(cart),
+    items: cart.map(function (i) { return gaItem(i); }),
+  });
+});
+</script>
+<script>
 // Pickup skips the address entirely -- there's nothing to ship to, and
 // the live freight-rate panel (which needs a ZIP to quote against) has
 // nothing to quote. Toggling back to Ship restores both and re-fires the

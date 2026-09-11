@@ -373,6 +373,18 @@ function injectMeta(html, p) {
   // seoTitle (script.js: setText("productName", seoTitle)), so using the
   // bare name here would make the heading visibly change once JS ran.
   out = setTextById(out, 'productName', seoTitle);
+  // The spec line and overview are the only real, product-specific prose on
+  // the page, and they shipped to crawlers as the placeholders "Product
+  // description will appear here." -- the actual text arrived only after
+  // populateProductPage() ran client-side. Google renders JS on a slower
+  // second pass, and the AI crawlers (GPTBot, ClaudeBot, PerplexityBot) do
+  // not run it at all, so every product page read as thin boilerplate to
+  // them. Both values are already fetched above; mirroring exactly what
+  // script.js writes (description, then overview||description) keeps the
+  // server text and the client text identical, so nothing visibly changes
+  // when JS takes over.
+  out = setTextById(out, 'productDescription',  p.description || '');
+  out = setTextById(out, 'overviewDescription', p.overview || p.description || '');
   out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;

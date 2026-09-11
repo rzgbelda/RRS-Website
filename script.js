@@ -298,6 +298,56 @@ async function fetchCatalogProducts() {
 }
 
 /* =========================
+   ANALYTICS (GA4 ECOMMERCE)
+========================= */
+
+// GA4 was installed site-wide but only ever fired one custom event
+// (generate_lead, on the volume-quote form), so there was no way to see
+// what organic traffic actually did: no product views, no cart adds, no
+// checkout starts. That made every SEO change unmeasurable in revenue
+// terms. These helpers emit the standard GA4 ecommerce events so the
+// existing property can report the funnel without any new dependency or
+// tag-manager container.
+//
+// Deliberately sends only product/order fields (SKU, name, price, qty) --
+// never customer names, emails, addresses, or payment details.
+function trackEcommerce(eventName, params) {
+  // gtag is loaded async per page; a missing tag must never break the cart.
+  if (typeof gtag !== "function") return;
+  try {
+    gtag("event", eventName, params);
+  } catch (err) {
+    console.warn("[analytics]", eventName, "failed:", err && err.message);
+  }
+}
+
+// Maps one cart/product line to GA4's `items` shape.
+function gaItem(p, qty) {
+  const price =
+    typeof cleanPrice === "function"
+      ? cleanPrice(p.price || p.price1 || 0)
+      : Number(p.price || p.price1 || 0) || 0;
+  const item = {
+    item_id: p.itemNumber || p.sku || p.slug || "",
+    item_name: p.name || "",
+    price: price,
+    quantity: Number(qty != null ? qty : p.quantity) || 1,
+  };
+  if (p.category || p.category_name) item.item_category = p.category || p.category_name;
+  return item;
+}
+
+function cartValue(cart) {
+  return cart.reduce((sum, i) => {
+    const price =
+      typeof cleanPrice === "function"
+        ? cleanPrice(i.price || i.price1 || 0)
+        : Number(i.price || i.price1 || 0) || 0;
+    return sum + price * (Number(i.quantity) || 0);
+  }, 0);
+}
+
+/* =========================
    CART HELPERS
 ========================= */
 
@@ -1515,6 +1565,12 @@ function populateProductPage(product) {
     moqNote.style.display = show ? "" : "none";
     if (show) moqNote.textContent = `Minimum order: ${moq} dozen`;
   }
+
+  trackEcommerce("view_item", {
+    currency: "USD",
+    value: cleanPrice(product.price || product.price1) || 0,
+    items: [gaItem(product, 1)],
+  });
 }
 
 function injectProductVariantSelector(variants, activeProduct) {
@@ -1698,6 +1754,11 @@ function setupAddToCartButtons() {
 
       saveCart(cart);
       updateCartBadge();
+      trackEcommerce("add_to_cart", {
+        currency: "USD",
+        value: (cleanPrice(product.price) || 0) * quantity,
+        items: [gaItem(product, quantity)],
+      });
       flyToCart(button);
     };
   });

@@ -327,6 +327,26 @@ var _confirmCheckout = {};
   if (confTaxRateEl) confTaxRateEl.textContent = checkout.state ? ' (' + checkout.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
   document.getElementById('confTotal').textContent = '$' + total.toFixed(2);
 
+  // GA4 purchase -- the event that lets Google Analytics attribute real
+  // revenue back to organic search. Guarded by order number in
+  // localStorage so a refresh or a back-navigation to this page cannot
+  // count the same order twice and inflate reported revenue.
+  try {
+    var trackedKey = 'rrs_ga_purchase_' + orderNum;
+    if (total > 0 && !localStorage.getItem(trackedKey)) {
+      trackEcommerce('purchase', {
+        transaction_id: orderNum,
+        currency: 'USD',
+        value: total,
+        tax: Number(tax.toFixed(2)),
+        items: items.map(function (i) { return gaItem(i); }),
+      });
+      localStorage.setItem(trackedKey, '1');
+    }
+  } catch (err) {
+    console.warn('[analytics] purchase tracking skipped:', err && err.message);
+  }
+
   // Delivery info
   document.getElementById('confContact').textContent = checkout.contact || '...';
   document.getElementById('confBusiness').textContent = checkout.business || '...';
