@@ -8072,7 +8072,13 @@ async function renderQuoteRequestsTable() {
 
   tbody.innerHTML = rows.map(r => {
     const date     = new Date(r.created_at).toLocaleDateString();
-    const items    = r.requested_items;
+    // requested_items is what the customer submitted through the public
+    // form, so it's legitimately empty on a staff-created quote -- nobody
+    // submitted anything. Once such a quote has been priced and sent,
+    // fall back to quote_items (what we actually quoted them) rather than
+    // showing "No products listed" next to a quote that plainly has
+    // products on it.
+    const items    = r.requested_items?.length ? r.requested_items : r.quote_items;
     const itemsStr = items?.length
       ? items.map(i => `${i.name} ×${i.quantity}`).join(", ")
       : "<em style='color:#94a3b8'>No products listed</em>";
@@ -8243,9 +8249,17 @@ function openQuoteDetail(id) {
   const invoiceable = r.status === "quoted" && quoteItemsTotal(r) > 0;
   if (invoiceBtn) invoiceBtn.style.display = invoiceable ? "flex" : "none";
 
-  const items = r.requested_items;
+  // requested_items = what the customer asked for through the public
+  // form; quote_items = what we actually priced and sent them. A
+  // staff-created quote has no requested_items (nobody submitted a form),
+  // so fall back to the priced items rather than claiming there are no
+  // products on a quote that clearly has some. Labelled so it stays
+  // clear which of the two is being shown.
+  const usingQuoted = !r.requested_items?.length && r.quote_items?.length;
+  const items = usingQuoted ? r.quote_items : r.requested_items;
   const itemsHtml = items?.length
-    ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
+    ? `${usingQuoted ? `<p style="margin:8px 0 0;font-size:11.5px;color:#94a3b8">Items you quoted (the customer didn't submit a product list).</p>` : ""}
+       <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
         <div style="display:grid;grid-template-columns:1fr 90px;background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
           <span>Product</span><span style="text-align:center">Qty</span>
         </div>
