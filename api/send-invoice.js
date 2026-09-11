@@ -143,18 +143,28 @@ module.exports = async (req, res) => {
     const token = String(req.query.confirm_token || '').trim();
     if (!token) return res.status(400).json({ error: 'confirm_token is required' });
 
-    const { data, error } = await supabase
-      .from('quote_requests')
-      .select('contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at')
-      .eq('confirm_token', token)
-      .single();
+    // freight_fee (20260831c) hasn't been migrated live yet on this table --
+    // confirmed live via an actual failed send: the column-list select
+    // itself throws 42703, which made every real confirm link 404 as
+    // "Quote not found" even though the row and token matched. Same
+    // fallback shape this file already uses elsewhere (baseCols/
+    // baseColsNoFreight at the order-invoice path below) rather than a
+    // hardcoded assumption the column exists.
+    const selectCols = 'contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at';
+    const selectColsNoFreight = 'contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, status, confirmed_at';
+
+    let { data, error } = await supabase
+      .from('quote_requests').select(selectCols).eq('confirm_token', token).single();
+    if (error && error.code === '42703') {
+      ({ data, error } = await supabase
+        .from('quote_requests').select(selectColsNoFreight).eq('confirm_token', token).single());
+    }
 
     if (error || !data) {
       // Surfaced in server logs (not to the customer) so a mismatch between
-      // what's in the email link and what's actually stored -- e.g. a
-      // partial-migration rollback dropping confirm_token off the
-      // quote_requests update -- is diagnosable from Vercel's logs instead
-      // of only ever showing as "Quote not found" with no further trail.
+      // what's in the email link and what's actually stored is
+      // diagnosable from Vercel's logs instead of only ever showing as
+      // "Quote not found" with no further trail.
       console.error('[send-invoice] confirm_token lookup failed for token', token, error?.message || 'no matching row');
       return res.status(404).json({ error: 'Quote not found' });
     }
@@ -165,13 +175,22 @@ module.exports = async (req, res) => {
     const { confirm_token } = req.body || {};
     if (!confirm_token) return res.status(400).json({ error: 'confirm_token is required' });
 
-    const { data: q, error: qErr } = await supabase
-      .from('quote_requests')
-      .select('id, contact_name, business_name, email, phone, phone_number, customer_type, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, shipping_street, shipping_city, shipping_zip, grand_total, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at, confirmed_order_id')
-      .eq('confirm_token', confirm_token)
-      .single();
+    // Same freight_fee gap as the GET branch above -- fall back without it
+    // rather than let the select itself throw and 404 a real match.
+    const confirmCols = 'id, contact_name, business_name, email, phone, phone_number, customer_type, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, shipping_street, shipping_city, shipping_zip, grand_total, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at, confirmed_order_id';
+    const confirmColsNoFreight = 'id, contact_name, business_name, email, phone, phone_number, customer_type, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, shipping_street, shipping_city, shipping_zip, grand_total, net_30_terms, fulfillment_method, in_house_delivery_fee, status, confirmed_at, confirmed_order_id';
 
-    if (qErr || !q) return res.status(404).json({ error: 'Quote not found' });
+    let { data: q, error: qErr } = await supabase
+      .from('quote_requests').select(confirmCols).eq('confirm_token', confirm_token).single();
+    if (qErr && qErr.code === '42703') {
+      ({ data: q, error: qErr } = await supabase
+        .from('quote_requests').select(confirmColsNoFreight).eq('confirm_token', confirm_token).single());
+    }
+
+    if (qErr || !q) {
+      console.error('[send-invoice] confirm_quote lookup failed for token', confirm_token, qErr?.message || 'no matching row');
+      return res.status(404).json({ error: 'Quote not found' });
+    }
 
     // Already confirmed -- return success with the existing order rather
     // than an error, so a double-click or a page refresh doesn't look
