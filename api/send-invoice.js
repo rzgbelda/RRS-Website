@@ -127,12 +127,129 @@ function invoiceEmailHtml(o) {
  * usual order-confirmation emails the moment she completes payment.
  */
 module.exports = async (req, res) => {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
+
+  // Backs the public /quote-confirm page (GET fetches the quote by token,
+  // POST records confirmation) -- same token-gated pattern as
+  // api/terms-agreement.js. Handled here rather than a new file: Vercel's
+  // Hobby plan caps serverless functions at 12 and this project is
+  // already at that cap, and this needs the same order-creation logic
+  // already below in this file (a confirmed quote becomes a real order,
+  // visible in the admin Orders tab) rather than duplicating it.
+  if (req.method === 'GET' && req.query?.confirm_token) {
+    const token = req.query.confirm_token;
+    const { data, error } = await supabase
+      .from('quote_requests')
+      .select('contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at')
+      .eq('confirm_token', token)
+      .single();
+
+    if (error || !data) return res.status(404).json({ error: 'Quote not found' });
+    return res.status(200).json(data);
+  }
+
+  if (req.method === 'POST' && req.body?.action === 'confirm_quote') {
+    const { confirm_token } = req.body || {};
+    if (!confirm_token) return res.status(400).json({ error: 'confirm_token is required' });
+
+    const { data: q, error: qErr } = await supabase
+      .from('quote_requests')
+      .select('id, contact_name, business_name, email, phone, phone_number, customer_type, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, shipping_street, shipping_city, shipping_zip, grand_total, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at, confirmed_order_id')
+      .eq('confirm_token', confirm_token)
+      .single();
+
+    if (qErr || !q) return res.status(404).json({ error: 'Quote not found' });
+
+    // Already confirmed -- return success with the existing order rather
+    // than an error, so a double-click or a page refresh doesn't look
+    // broken and, more importantly, doesn't create a second order for
+    // the same quote.
+    if (q.status === 'accepted' && q.confirmed_order_id) {
+      return res.status(200).json({ success: true, already_confirmed: true });
+    }
+
+    if (!Array.isArray(q.quote_items) || !q.quote_items.length) {
+      return res.status(400).json({ error: 'This quote has no priced items to confirm.' });
+    }
+
+    const order_number = 'RRS-CONF-' + Date.now();
+    const items = q.quote_items;
+    const itemsTotal = items.reduce((s, i) => s + Number(i.quantity || 0) * Number(i.unit_price || 0), 0);
+    const deliveryFee = Number(q.in_house_delivery_fee) || 0;
+    const freightFee = Number(q.freight_fee) || 0;
+    // grand_total was already computed and snapshotted by send-quote at
+    // send time (items + fees + tax) -- reused here rather than
+    // recomputed, so what the customer saw in the email is exactly what
+    // the resulting order says it's worth, even if the site's tax table
+    // changed in the meantime.
+    const total = Number(q.grand_total) || (itemsTotal + deliveryFee + freightFee);
+
+    const { data: order, error: orderErr } = await supabase
+      .from('orders')
+      .insert({
+        order_number,
+        customer_name:  q.contact_name,
+        customer_email: q.email,
+        business_name:  q.business_name || 'N/A',
+        subtotal:       itemsTotal,
+        total,
+        payment_method: 'card',
+        payment_status: 'pending_invoice',
+        status:         'pending',
+        order_type:     'invoice',
+        fulfillment_method:    q.fulfillment_method === 'in_house' ? 'in_house' : 'ship',
+        in_house_delivery_fee: deliveryFee,
+        shipping_address: (q.shipping_street || q.shipping_city || q.shipping_state || q.shipping_zip)
+          ? { street: q.shipping_street || '', city: q.shipping_city || '', state: q.shipping_state || '', zip: q.shipping_zip || '' }
+          : null,
+        notes: 'Confirmed by customer via emailed quote ' + (q.quote_number || ''),
+      })
+      .select('id')
+      .single();
+
+    if (orderErr) {
+      console.error('[send-invoice/confirm] order insert failed:', orderErr.message);
+      return res.status(500).json({ error: 'Could not create the order: ' + orderErr.message });
+    }
+
+    const orderItems = items.map(i => ({
+      order_id: order.id,
+      product_name: i.name,
+      price_per_case: i.unit_price,
+      quantity: i.quantity,
+    }));
+    const { error: itemsErr } = await supabase.from('order_items').insert(orderItems);
+    if (itemsErr) console.error('[send-invoice/confirm] order_items insert failed:', itemsErr.message);
+
+    const { error: qUpdateErr } = await supabase
+      .from('quote_requests')
+      .update({ status: 'accepted', confirmed_at: new Date().toISOString(), confirmed_order_id: order.id })
+      .eq('id', q.id);
+    if (qUpdateErr) console.error('[send-invoice/confirm] quote_requests update failed:', qUpdateErr.message);
+
+    // Best-effort internal notification -- staff need to know a quote was
+    // confirmed so someone actually goes and sends the payment link from
+    // the Orders tab; a failed alert email should never make the
+    // confirmation itself look like it failed to the customer.
+    try {
+      await getResend().emails.send({
+        from: 'Room Ready Supply <sales@roomreadysupply.com>',
+        to: process.env.INTERNAL_ALERT_EMAIL || 'eric@roomreadysupply.com',
+        subject: '✅ Quote Confirmed — ' + (q.business_name || q.contact_name) + ' — ' + order_number,
+        html: '<div style="font-family:sans-serif;padding:20px;">' +
+          '<p><strong>' + esc(q.contact_name) + '</strong> (' + esc(q.business_name) + ', ' + esc(q.email) + ') just confirmed quote ' + esc(q.quote_number || '') + '.</p>' +
+          '<p>Order <strong>' + order_number + '</strong> was created (total $' + total.toFixed(2) + ') -- send the payment link from the Orders tab when ready.</p>' +
+          '</div>',
+      });
+    } catch (e) { console.error('[send-invoice/confirm] internal alert failed:', e.message); }
+
+    return res.status(200).json({ success: true, order_number });
+  }
+
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   // Campaign broadcast send -- dispatched from this same file rather than a
   // new one (Vercel's Hobby plan caps serverless functions at 12, and this

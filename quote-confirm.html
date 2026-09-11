@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Confirm Your Order — Room Ready Supply</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f1f5f9;color:#1e293b;min-height:100vh}
+
+.qc-header{background:#0B1F38;padding:28px 24px;text-align:center}
+.qc-header p{color:#ED7226;font-size:11px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;margin:0 0 6px}
+.qc-header h1{color:#fff;font-size:22px;font-weight:900}
+
+.qc-page{max-width:640px;margin:36px auto;padding:0 16px 80px}
+.qc-card{background:#fff;border-radius:16px;padding:36px 40px;box-shadow:0 4px 24px rgba(0,0,0,.06)}
+
+.qc-loading,.qc-error{text-align:center;padding:60px 20px;color:#64748b;font-size:14px}
+
+.qc-meta{display:flex;gap:32px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid #e2e8f0}
+.qc-meta div p:first-child{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#94a3b8;margin-bottom:3px}
+.qc-meta div p:last-child{font-size:14px;font-weight:700;color:#0B1F38}
+
+table.qc-items{width:100%;border-collapse:collapse;margin:20px 0}
+table.qc-items th{text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;padding:0 12px 8px 0;border-bottom:2px solid #0B1F38}
+table.qc-items td{padding:10px 12px 10px 0;font-size:13px;color:#334155;border-bottom:1px solid #f1f5f9}
+table.qc-items td.qc-num{text-align:right;font-variant-numeric:tabular-nums}
+table.qc-items tfoot td{border-bottom:none;padding-top:8px}
+table.qc-items tfoot tr.qc-total td{font-size:16px;font-weight:800;color:#0B1F38;padding-top:14px}
+
+.qc-note{background:#fffbf7;border:1.5px solid #fde8d4;border-radius:12px;padding:16px 20px;margin:20px 0;font-size:13px;color:#334155;line-height:1.6}
+
+.qc-confirm-btn{display:block;width:100%;background:#ED7226;color:#fff;border:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;margin-top:8px}
+.qc-confirm-btn:hover{opacity:.92}
+.qc-confirm-btn:disabled{opacity:.6;cursor:not-allowed}
+
+.qc-accepted{text-align:center;padding:20px 0}
+.qc-accepted .qc-check{width:56px;height:56px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
+.qc-accepted h2{font-size:19px;font-weight:800;color:#0B1F38;margin-bottom:8px}
+.qc-accepted p{font-size:14px;color:#64748b;line-height:1.6}
+
+.qc-footer{text-align:center;padding:20px;color:#94a3b8;font-size:12px}
+.qc-footer a{color:#ED7226;text-decoration:none}
+</style>
+</head>
+<body>
+
+<div class="qc-header">
+  <p>Room Ready Supply</p>
+  <h1>Confirm Your Order</h1>
+</div>
+
+<div class="qc-page">
+  <div class="qc-card" id="qcCard">
+    <div class="qc-loading">Loading…</div>
+  </div>
+</div>
+
+<div class="qc-footer">
+  Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962<br>
+  <a href="mailto:sales@roomreadysupply.com">sales@roomreadysupply.com</a> &bull; (252) 227-0073
+</div>
+
+<script>
+function esc(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function money(n) {
+  return '$' + Number(n || 0).toFixed(2);
+}
+
+const params = new URLSearchParams(location.search);
+const token = params.get('token');
+const card = document.getElementById('qcCard');
+
+function renderError(msg) {
+  card.innerHTML = '<div class="qc-error">' + esc(msg) + '</div>';
+}
+
+function renderConfirmed(data) {
+  card.innerHTML =
+    '<div class="qc-accepted">' +
+    '<div class="qc-check"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg></div>' +
+    '<h2>Order Confirmed</h2>' +
+    '<p>Thanks, ' + esc(data.contact_name) + ' &mdash; your order has been confirmed' +
+    (data.confirmed_at ? ' on ' + new Date(data.confirmed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '') +
+    '.<br>We\'ll follow up shortly with a payment link to complete your order.</p>' +
+    '</div>';
+}
+
+function renderPending(data) {
+  const items = Array.isArray(data.quote_items) ? data.quote_items : [];
+  const rows = items.map(function (i) {
+    const line = Number(i.quantity || 0) * Number(i.unit_price || 0);
+    return '<tr>' +
+      '<td>' + esc(i.name) + '</td>' +
+      '<td class="qc-num">' + esc(i.quantity) + '</td>' +
+      '<td class="qc-num">' + money(i.unit_price) + '</td>' +
+      '<td class="qc-num">' + money(line) + '</td>' +
+      '</tr>';
+  }).join('');
+
+  const deliveryFee = Number(data.in_house_delivery_fee) || 0;
+  const freightFee = Number(data.freight_fee) || 0;
+  const feeRow = deliveryFee > 0
+    ? '<tr><td>In-House Delivery</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(deliveryFee) + '</td></tr>'
+    : freightFee > 0
+      ? '<tr><td>Freight / Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(freightFee) + '</td></tr>'
+      : '';
+
+  card.innerHTML =
+    '<div class="qc-meta">' +
+    '<div><p>Quote</p><p>' + esc(data.quote_number || '&mdash;') + '</p></div>' +
+    '<div><p>Prepared For</p><p>' + esc(data.business_name) + '</p></div>' +
+    (data.valid_until ? '<div><p>Valid Until</p><p>' + new Date(data.valid_until).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) + '</p></div>' : '') +
+    '</div>' +
+    '<p style="font-size:15px;line-height:1.6;margin-bottom:16px">Dear ' + esc(data.contact_name) + ', please review your quote below and confirm to start processing.</p>' +
+    '<table class="qc-items">' +
+    '<thead><tr><th>Product</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>' +
+    '<tbody>' + rows + feeRow + '</tbody>' +
+    '<tfoot>' +
+    '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Subtotal</td><td class="qc-num">' + money(data.subtotal) + '</td></tr>' +
+    (Number(data.tax_amount) > 0 ? '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Sales Tax' + (data.shipping_state ? ' (' + esc(data.shipping_state) + ')' : '') + '</td><td class="qc-num">' + money(data.tax_amount) + '</td></tr>' : '') +
+    '<tr class="qc-total"><td colspan="3" style="text-align:right">Total</td><td class="qc-num">' + money(data.grand_total) + '</td></tr>' +
+    '</tfoot>' +
+    '</table>' +
+    (data.net_30_terms ? '<div class="qc-note">Payment terms: Net 30 days upon credit approval.</div>' : '') +
+    '<button class="qc-confirm-btn" id="confirmBtn" onclick="confirmOrder()">Confirm This Order</button>' +
+    '<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">Confirming lets us start preparing your order. We\'ll follow up with a payment link once it\'s confirmed.</p>';
+}
+
+async function loadQuote() {
+  if (!token) return renderError('This link is missing its reference code. Please use the link from your email, or contact sales@roomreadysupply.com.');
+
+  try {
+    const res = await fetch('/api/send-invoice?confirm_token=' + encodeURIComponent(token));
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not load this quote.');
+
+    if (data.status === 'accepted') renderConfirmed(data);
+    else renderPending(data);
+
+    window._quoteData = data;
+  } catch (err) {
+    renderError(err.message);
+  }
+}
+
+async function confirmOrder() {
+  const btn = document.getElementById('confirmBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
+
+  try {
+    const res = await fetch('/api/send-invoice', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'confirm_quote', confirm_token: token }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not confirm your order.');
+
+    renderConfirmed({ ...window._quoteData, confirmed_at: new Date().toISOString() });
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = 'Confirm This Order'; }
+    alert(err.message);
+  }
+}
+
+loadQuote();
+</script>
+
+</body>
+</html>

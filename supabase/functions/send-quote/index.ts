@@ -35,6 +35,19 @@ function getTaxRate(stateCode?: string): number {
   return TAX_RATES[String(stateCode || "").trim().toUpperCase()] || 0;
 }
 
+// Unguessable token for the public /quote-confirm page -- same role as
+// terms_token on terms_agreements (see api/send-terms-agreement.js): the
+// link in the email IS the credential, since quote_requests holds
+// customer PII and stays staff-only under RLS otherwise. 24 random bytes,
+// base64url so it's URL-safe with no padding to escape.
+function generateConfirmToken(): string {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
 const RRS = {
   name:    "Room Ready Supply",
   address: "609 Washington St, Plymouth, NC 27962",
@@ -55,8 +68,9 @@ function buildQuoteHtml(payload: {
   in_house_delivery_fee?: number;
   freight_fee?: number;
   shipping_state?: string;
+  confirm_url?: string;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, freight_fee, shipping_state } = payload;
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, freight_fee, shipping_state, confirm_url } = payload;
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const deliveryFee = Number(in_house_delivery_fee) || 0;
   const freightFee = Number(freight_fee) || 0;
@@ -183,6 +197,15 @@ function buildQuoteHtml(payload: {
       </tfoot>
     </table>
 
+    ${confirm_url ? `
+    <!-- Confirm This Order -->
+    <div style="margin-top:24px;text-align:center">
+      <a href="${confirm_url}" style="display:inline-block;padding:16px 40px;background:#e8621a;color:#fff;font-size:15px;font-weight:800;text-decoration:none;border-radius:10px;letter-spacing:.02em">
+        Confirm This Order
+      </a>
+      <p style="margin:12px 0 0;font-size:12px;color:#94a3b8">Confirming lets us start preparing your order. We'll follow up with a payment link once it's confirmed.</p>
+    </div>` : ""}
+
     <!-- Terms -->
     <div style="margin-top:24px;padding:16px 20px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0">
       <p style="margin:0 0 6px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#64748b">Terms & Conditions</p>
@@ -277,6 +300,18 @@ serve(async (req) => {
     const quote_date   = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     const valid_until_fmt = new Date(valid_until).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
+    // Generated here (before the DB update further down) so buildQuoteHtml
+    // can link the "Confirm This Order" button to it. Harmless to generate
+    // even on a preview send -- it's pure randomness, no DB call -- but
+    // the button itself only points at a real confirm link when this
+    // isn't a preview (see confirm_url below), matching how every other
+    // preview in this codebase (invoiceEmailHtml, terms-agreement) shows
+    // '#preview-only' rather than a link that would actually work.
+    const confirm_token = generateConfirmToken();
+    const confirm_url = preview_only
+      ? "#preview-only"
+      : `https://www.roomreadysupply.com/quote-confirm?token=${confirm_token}`;
+
     const html = buildQuoteHtml({
       quote_number,
       quote_date,
@@ -296,6 +331,7 @@ serve(async (req) => {
       in_house_delivery_fee: isInHouse ? deliveryFee : 0,
       freight_fee: freightFee,
       shipping_state,
+      confirm_url,
     });
 
     // Preview mode — just return the HTML
@@ -342,6 +378,13 @@ serve(async (req) => {
     const tax_rate      = getTaxRate(shipping_state);
     const tax_amt       = taxable_amt * tax_rate;
     const grand_amt      = taxable_amt + tax_amt;
+    // confirm_token was already generated above (before buildQuoteHtml, so
+    // the email's button could link to it) -- reused here, not
+    // regenerated, so the token in the sent email matches the one saved
+    // to the row. Resending an already-quoted request (e.g. a price
+    // correction) does generate a fresh one on that later call, which
+    // invalidates whichever link was in the earlier email -- consistent
+    // with a resend replacing quote_items/grand_total wholesale too.
 
     // Update status to quoted + save full quote snapshot for customer portal
     let { error: updErr } = await sb.from("quote_requests").update({
@@ -361,6 +404,7 @@ serve(async (req) => {
       subtotal:         subtotal_amt,
       grand_total:      grand_amt,
       customer_visible: true,
+      confirm_token:    confirm_token,
     }).eq("id", quote_request_id);
     if (updErr && updErr.code === "42703") {
       // freight_fee hasn't been migrated live yet (20260831c) -- retry
@@ -377,6 +421,32 @@ serve(async (req) => {
         net_30_terms:     !!net_30_terms,
         fulfillment_method:    isInHouse ? "in_house" : "ship",
         in_house_delivery_fee: fee_amt,
+        shipping_state:   shipping_state || null,
+        tax_rate,
+        tax_amount:       tax_amt,
+        subtotal:         subtotal_amt,
+        grand_total:      grand_amt,
+        customer_visible: true,
+        confirm_token:    confirm_token,
+      }).eq("id", quote_request_id));
+    }
+    if (updErr && updErr.code === "42703") {
+      // confirm_token itself (20260912_quote_confirm.sql) hasn't been
+      // migrated live yet either -- drop just that column rather than
+      // fail the send. The email below still renders the Confirm This
+      // Order button with this token in the URL regardless (it's held in
+      // the confirm_token local var, not read back from the row) -- it
+      // will just 404 on /quote-confirm until the migration is run,
+      // which is a one-time gap during rollout, not an ongoing one.
+      ({ error: updErr } = await sb.from("quote_requests").update({
+        status:           "quoted",
+        quoted_at:        new Date().toISOString(),
+        quote_number,
+        quote_items:      items,
+        valid_until:      valid_until.split("T")[0],
+        quote_message:    message || null,
+        net_30_terms:     !!net_30_terms,
+        fulfillment_method:    isInHouse ? "in_house" : "ship",
         shipping_state:   shipping_state || null,
         tax_rate,
         tax_amount:       tax_amt,
