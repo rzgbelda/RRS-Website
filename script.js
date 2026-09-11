@@ -3694,9 +3694,16 @@ async function autoFillReferralCode() {
     codeInput.style.cursor = 'not-allowed';
     const applyBtn = document.getElementById('checkout-referral-apply-btn');
     if (applyBtn) applyBtn.style.display = 'none';
-    validateReferralCode(affiliate.referral_code);
+    // validateReferralCode is async and writes its own status text on
+    // completion -- await it first so this subdomain-specific message
+    // (more informative than its generic "✓ Applied – <name>") is the one
+    // left standing, not overwritten by a race.
+    await validateReferralCode(affiliate.referral_code);
     const statusEl = document.getElementById('referral-code-status');
-    if (statusEl) statusEl.textContent = '✓ Shopping via ' + affiliate.name + '’s storefront';
+    if (statusEl) {
+      statusEl.style.color = '#22c55e';
+      statusEl.textContent = '✓ Shopping via ' + affiliate.name + '’s storefront';
+    }
     return;
   }
 
