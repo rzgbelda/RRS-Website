@@ -4293,6 +4293,43 @@ span.flatpickr-weekday {
   margin-bottom: 20px;
 }
 
+/* Buyer reassurance under the add-to-cart block: every line states
+   something already true and published elsewhere on the site. */
+.product-assurance {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 16px 0 0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.product-assurance li {
+  position: relative;
+  padding-left: 22px;
+  margin-bottom: 9px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #5B6C7E;
+}
+
+.product-assurance li:last-child { margin-bottom: 0; }
+
+.product-assurance li::before {
+  content: "\2713";
+  position: absolute;
+  left: 0;
+  top: 0;
+  color: #ED7226;
+  font-weight: 800;
+}
+
+.product-assurance a {
+  color: #ED7226;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.product-assurance a:hover { text-decoration: underline; }
+
 .product-badges .pb-item {
   font-size: 12px;
   font-weight: 600;
