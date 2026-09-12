@@ -75,9 +75,19 @@ function invoiceEmailHtml(o) {
 
   const taxAmount = Number(o.tax_amount) || 0;
   const taxLabel = 'Sales Tax' + (o.shipping_state ? ' (' + esc(o.shipping_state) + (o.tax_rate ? ' · ' + (Number(o.tax_rate) * 100).toFixed(2) + '%' : '') + ')' : '');
+  // Owner-issued credit, shown as its own negative line after tax so the
+  // customer can see exactly what was taken off and why.
+  const creditAmt = Number(o.credit_amount) || 0;
+  const creditRow = creditAmt > 0
+    ? '<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Credit' +
+      (o.credit_note ? '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">' + esc(o.credit_note) + '</span>' : '') +
+      '</td><td style="padding:6px 0;font-size:13px;color:#16a34a;font-weight:700;text-align:right;">&minus;$' + creditAmt.toFixed(2) + '</td></tr>'
+    : '';
+
   const totalsRows =
     '<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">Subtotal</td><td style="padding:6px 0;font-size:13px;color:#334155;text-align:right;">$' + o.subtotal.toFixed(2) + '</td></tr>' +
     '<tr><td style="padding:6px 0;font-size:13px;color:#64748b;">' + taxLabel + '</td><td style="padding:6px 0;font-size:13px;color:#334155;text-align:right;">$' + taxAmount.toFixed(2) + '</td></tr>' +
+    creditRow +
     '<tr style="border-top:2px solid #e2e8f0;"><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;">Total Due</td><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;text-align:right;">$' + o.total.toFixed(2) + '</td></tr>';
 
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
@@ -426,6 +436,9 @@ module.exports = async (req, res) => {
   // getting a payment link sent for the first time -- no new order, the
   // one that's already there just gets a Stripe link and an email.
   let items, itemsTotal, deliveryFee, freightFee, taxAmount, total;
+  // Only quote-sourced invoices carry a credit today; orders default to 0
+  // so the shared invoice/Stripe code below can read them unconditionally.
+  let creditAmount = 0, creditNote = '';
   let contact_name, business_name, email, shipping_state, tax_rate, notes;
   let existingOrder = null;
 
@@ -507,15 +520,21 @@ module.exports = async (req, res) => {
     shipping_state = o.shipping_address?.state || '';
     existingOrder  = o;
   } else {
-    const qCols = 'id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, freight_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount';
-    const qColsNoFreight = 'id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount';
+    const qBase = 'id, business_name, contact_name, email, quote_number, quote_items, grand_total, status, fulfillment_method, in_house_delivery_fee, shipping_street, shipping_city, shipping_state, shipping_zip, tax_rate, tax_amount';
+    // Both freight_fee and the credit columns are optional here: either may
+    // not be migrated live yet. Try the fullest column list first and peel
+    // off whichever one PostgREST rejects, rather than failing an invoice
+    // over a column that is only ever additive.
+    const qColAttempts = [
+      qBase + ', freight_fee, credit_amount, credit_note',
+      qBase + ', freight_fee',
+      qBase + ', credit_amount, credit_note',
+      qBase,
+    ];
     let q, qErr;
-    ({ data: q, error: qErr } = await supabase.from('quote_requests').select(qCols).eq('id', quote_request_id).single());
-    if (qErr && qErr.code === '42703') {
-      // freight_fee hasn't been migrated live yet -- fall back to the
-      // column list without it (treated as 0 below) instead of failing
-      // the whole invoice send over one missing optional column.
-      ({ data: q, error: qErr } = await supabase.from('quote_requests').select(qColsNoFreight).eq('id', quote_request_id).single());
+    for (const cols of qColAttempts) {
+      ({ data: q, error: qErr } = await supabase.from('quote_requests').select(cols).eq('id', quote_request_id).single());
+      if (!qErr || qErr.code !== '42703') break;
     }
 
     if (qErr || !q) return res.status(404).json({ error: 'Quote request not found' });
@@ -555,7 +574,23 @@ module.exports = async (req, res) => {
     // The fallback must add the fee and tax back in; grand_total already
     // includes both.
     total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + freightFee + taxAmount;
-    if (!total || total <= 0) return res.status(400).json({ error: 'Quote total is $0 -- nothing to invoice.' });
+
+    // Owner-issued credit (20260912b). Applied AFTER tax deliberately, so
+    // the tax figure the customer already saw on their quote doesn't move;
+    // the credit reduces what's owed, not what's taxable. Clamped so a
+    // credit larger than the balance bills $0 rather than going negative
+    // and handing Stripe an invalid amount.
+    creditAmount = Math.max(0, parseFloat(q.credit_amount) || 0);
+    creditNote = (q.credit_note || '').trim();
+    if (creditAmount > 0) total = Math.max(0, total - creditAmount);
+
+    if (!total || total <= 0) {
+      return res.status(400).json({
+        error: creditAmount > 0
+          ? 'Credit covers the full quote total -- there is nothing left to invoice.'
+          : 'Quote total is $0 -- nothing to invoice.',
+      });
+    }
 
     contact_name   = q.contact_name || 'there';
     business_name  = q.business_name || '';
@@ -586,6 +621,8 @@ module.exports = async (req, res) => {
         total,
         delivery_fee: deliveryFee,
         freight_fee: freightFee,
+        credit_amount: creditAmount,
+        credit_note: creditNote,
         payment_link: '#preview-only',
       }),
     });
@@ -660,6 +697,31 @@ module.exports = async (req, res) => {
   const stripe = Stripe(rawKey);
 
   let link;
+  // An owner-issued credit has to come off what Stripe actually charges,
+  // not just the emailed invoice -- otherwise the customer is billed the
+  // full amount while the invoice promises a discount. Stripe rejects
+  // negative line items, so the credit is applied as a one-off amount_off
+  // coupon, which is the supported way to reduce a Payment Link total.
+  let creditCoupon = null;
+  if (creditAmount > 0) {
+    try {
+      creditCoupon = await stripe.coupons.create({
+        amount_off: Math.round(creditAmount * 100),
+        currency: 'usd',
+        duration: 'once',
+        name: creditNote ? ('Credit — ' + creditNote).slice(0, 40) : 'Credit',
+        max_redemptions: 1,
+      });
+    } catch (err) {
+      // Never silently bill full price against a discounted invoice.
+      console.error('[send-invoice] credit coupon failed:', err.message);
+      return res.status(500).json({
+        error: 'Could not apply the $' + creditAmount.toFixed(2) +
+          ' credit to the payment link, so no invoice was sent (the customer would have been charged full price). ' + err.message,
+      });
+    }
+  }
+
   try {
     link = await stripe.paymentLinks.create({
       // Explicit rather than left to omit-and-let-Stripe-decide: offers ACH
@@ -703,6 +765,7 @@ module.exports = async (req, res) => {
         },
         quantity: 1,
       }] : []),
+      ...(creditCoupon ? { discounts: [{ coupon: creditCoupon.id }] } : {}),
       payment_intent_data: {
         metadata: { order_number, order_type: 'invoice', quote_number: existingOrder ? '' : (_q.quote_number || '') },
       },
@@ -740,6 +803,8 @@ module.exports = async (req, res) => {
         total,
         delivery_fee: deliveryFee,
         freight_fee: freightFee,
+        credit_amount: creditAmount,
+        credit_note: creditNote,
         payment_link: link.url,
       }),
     });

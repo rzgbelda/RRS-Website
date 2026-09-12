@@ -8281,6 +8281,7 @@ function openQuoteDetail(id) {
     : "";
 
   const termsBadge = termsStatusBadge(r);
+  const creditHtml = buildQuoteCreditHtml(r);
 
   document.getElementById("quoteDetailBody").innerHTML = `
     <!-- Status pill -->
@@ -8352,6 +8353,8 @@ function openQuoteDetail(id) {
       ${itemsHtml}
     </div>
 
+    ${creditHtml}
+
     ${r.notes ? `
     <!-- Notes -->
     <div style="margin-bottom:16px">
@@ -8374,6 +8377,119 @@ function openQuoteDetail(id) {
       : "";
   }
   document.getElementById("quoteDetailModal").style.display = "flex";
+}
+
+/* ── Quote credit (owner only) ──────────────────────────────── */
+
+// A flat dollar credit deducted from the invoice total, applied after tax
+// so the tax figure the customer already saw on their quote doesn't move.
+//
+// Only an owner account may set it. The real enforcement is in the
+// database (is_owner() RLS policy + the credit trigger added in
+// 20260912b) -- this read-only rendering for everyone else is a UX
+// affordance so sales/marketing can still SEE an applied credit, not a
+// security boundary on its own.
+function buildQuoteCreditHtml(r) {
+  const isOwner = window._adminRole === "owner";
+  const amount  = Number(r.credit_amount) || 0;
+  const note    = r.credit_note || "";
+
+  const issuedLine = amount > 0 && r.credit_issued_at
+    ? `<p style="font-size:11px;color:#94a3b8;margin:8px 0 0">Issued ${new Date(r.credit_issued_at).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</p>`
+    : "";
+
+  if (!isOwner) {
+    // Greyed-out, non-interactive view for every non-owner role.
+    return `
+    <div style="margin-bottom:20px;padding:14px 16px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc;opacity:.75">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0">Invoice Credit</p>
+        <span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:#64748b;background:#e2e8f0;border-radius:20px;padding:2px 8px">
+          <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          Owner only
+        </span>
+      </div>
+      ${amount > 0
+        ? `<p style="font-size:15px;font-weight:800;color:#0d2c50;margin:0">&minus;$${amount.toFixed(2)}</p>
+           ${note ? `<p style="font-size:12.5px;color:#64748b;margin:6px 0 0">${esc(note)}</p>` : ""}
+           ${issuedLine}`
+        : `<p style="font-size:13px;color:#94a3b8;margin:0">No credit applied to this quote.</p>`}
+    </div>`;
+  }
+
+  return `
+    <div style="margin-bottom:20px;padding:14px 16px;border:1px solid #fed7aa;border-radius:10px;background:#fffdfa">
+      <p style="font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:#94a3b8;margin:0 0 10px">Invoice Credit</p>
+      <div style="display:grid;grid-template-columns:150px 1fr;gap:8px;margin-bottom:10px">
+        <input id="quoteCreditAmount" class="a-input" type="number" min="0" step="0.01" placeholder="0.00"
+               style="height:34px;font-size:12.5px" value="${amount > 0 ? amount.toFixed(2) : ""}">
+        <input id="quoteCreditNote" class="a-input" placeholder="Reason (shown on the invoice)"
+               style="height:34px;font-size:12.5px" value="${esc(note)}">
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <button class="a-btn-primary" style="height:34px;padding:0 14px;font-size:12.5px;white-space:nowrap" onclick="saveQuoteCredit()">Save Credit</button>
+        <span id="quoteCreditNoteMsg" style="font-size:11.5px;color:#64748b">Deducted from the invoice total after tax.</span>
+      </div>
+      ${issuedLine}
+    </div>`;
+}
+
+async function saveQuoteCredit() {
+  if (!currentQuoteId) return;
+  const amtEl  = document.getElementById("quoteCreditAmount");
+  const noteEl = document.getElementById("quoteCreditNote");
+  const msgEl  = document.getElementById("quoteCreditNoteMsg");
+  const btn    = document.querySelector('[onclick="saveQuoteCredit()"]');
+  if (!amtEl) return;
+
+  const amount = Math.round((parseFloat(amtEl.value) || 0) * 100) / 100;
+  if (amount < 0) {
+    if (msgEl) { msgEl.textContent = "A credit can't be negative."; msgEl.style.color = "#dc2626"; }
+    return;
+  }
+
+  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
+  const total = r ? (Number(r.grand_total) || quoteItemsTotal(r) || 0) : 0;
+  if (total > 0 && amount > total) {
+    if (!confirm(`That credit ($${amount.toFixed(2)}) is larger than the quote total ($${total.toFixed(2)}). Apply it anyway?`)) return;
+  }
+
+  if (btn) { btn.textContent = "Saving…"; btn.disabled = true; }
+
+  // credit_issued_by / credit_issued_at are stamped by the database
+  // trigger from auth.uid(), never sent from here -- a client-supplied
+  // "who issued this" on a money field can't be trusted.
+  const { error } = await window.sb.from("quote_requests").update({
+    credit_amount: amount,
+    credit_note: noteEl?.value.trim() || null,
+  }).eq("id", currentQuoteId);
+
+  if (btn) { btn.textContent = "Save Credit"; btn.disabled = false; }
+
+  if (error) {
+    if (msgEl) {
+      // 42501 is the trigger's own "owner only" rejection; anything else
+      // is a genuine failure worth showing verbatim.
+      msgEl.textContent = error.code === "42501" || /owner account/i.test(error.message || "")
+        ? "Only an owner account can set a credit."
+        : `Couldn't save: ${error.message}`;
+      msgEl.style.color = "#dc2626";
+    }
+    return;
+  }
+
+  if (r) {
+    r.credit_amount = amount;
+    r.credit_note = noteEl?.value.trim() || null;
+    r.credit_issued_at = amount > 0 ? new Date().toISOString() : null;
+  }
+  if (msgEl) {
+    msgEl.textContent = amount > 0
+      ? `Credit of $${amount.toFixed(2)} saved.`
+      : "Credit removed.";
+    msgEl.style.color = "#16a34a";
+  }
+  renderQuoteRequestsTable?.();
 }
 
 // Sets/changes the shipping address on an already-created quote request
