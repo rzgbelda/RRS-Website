@@ -122,6 +122,7 @@ function renderPending(data) {
     '<tfoot>' +
     '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Subtotal</td><td class="qc-num">' + money(data.subtotal) + '</td></tr>' +
     (Number(data.tax_amount) > 0 ? '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Sales Tax' + (data.shipping_state ? ' (' + esc(data.shipping_state) + ')' : '') + '</td><td class="qc-num">' + money(data.tax_amount) + '</td></tr>' : '') +
+    (Number(data.credit_amount) > 0 ? '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Credit' + (data.credit_note ? ' (' + esc(data.credit_note) + ')' : '') + '</td><td class="qc-num" style="color:#16a34a;font-weight:700">&minus;' + money(data.credit_amount) + '</td></tr>' : '') +
     '<tr class="qc-total"><td colspan="3" style="text-align:right">Total</td><td class="qc-num">' + money(data.grand_total) + '</td></tr>' +
     '</tfoot>' +
     '</table>' +

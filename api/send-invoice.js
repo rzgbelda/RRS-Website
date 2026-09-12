@@ -160,7 +160,7 @@ module.exports = async (req, res) => {
     // fallback shape this file already uses elsewhere (baseCols/
     // baseColsNoFreight at the order-invoice path below) rather than a
     // hardcoded assumption the column exists.
-    const selectCols = 'contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, status, confirmed_at';
+    const selectCols = 'contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, freight_fee, credit_amount, credit_note, status, confirmed_at';
     const selectColsNoFreight = 'contact_name, business_name, email, quote_number, quote_items, subtotal, tax_amount, tax_rate, shipping_state, grand_total, valid_until, net_30_terms, fulfillment_method, in_house_delivery_fee, status, confirmed_at';
 
     let { data, error } = await supabase
@@ -573,16 +573,20 @@ module.exports = async (req, res) => {
     // everything needed to invoice regardless, so fall back to summing it.
     // The fallback must add the fee and tax back in; grand_total already
     // includes both.
-    total = q.grand_total > 0 ? q.grand_total : itemsTotal + deliveryFee + freightFee + taxAmount;
-
-    // Owner-issued credit (20260912b). Applied AFTER tax deliberately, so
-    // the tax figure the customer already saw on their quote doesn't move;
-    // the credit reduces what's owed, not what's taxable. Clamped so a
-    // credit larger than the balance bills $0 rather than going negative
-    // and handing Stripe an invalid amount.
+    // Owner-issued credit (20260912b), applied AFTER tax so the tax figure
+    // the customer already saw doesn't move -- the credit reduces what's
+    // owed, not what's taxable. It's shown as its own line on the invoice
+    // and as a Stripe coupon further down.
     creditAmount = Math.max(0, parseFloat(q.credit_amount) || 0);
     creditNote = (q.credit_note || '').trim();
-    if (creditAmount > 0) total = Math.max(0, total - creditAmount);
+
+    // send-quote already subtracts the credit before snapshotting
+    // grand_total, so that value is net and must NOT be discounted again --
+    // doing so would take the credit off twice. The fallback path below
+    // rebuilds the total from raw parts, so that one does need it applied.
+    total = q.grand_total > 0
+      ? q.grand_total
+      : Math.max(0, itemsTotal + deliveryFee + freightFee + taxAmount - creditAmount);
 
     if (!total || total <= 0) {
       return res.status(400).json({

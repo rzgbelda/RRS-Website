@@ -69,15 +69,21 @@ function buildQuoteHtml(payload: {
   freight_fee?: number;
   shipping_state?: string;
   confirm_url?: string;
+  credit_amount?: number;
+  credit_note?: string;
 }) {
-  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, freight_fee, shipping_state, confirm_url } = payload;
+  const { quote_number, quote_date, valid_until, customer, items, message, net_30_terms, in_house_delivery_fee, freight_fee, shipping_state, confirm_url, credit_amount, credit_note } = payload;
   const itemsTotal = items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
   const deliveryFee = Number(in_house_delivery_fee) || 0;
   const freightFee = Number(freight_fee) || 0;
   const subtotal = itemsTotal + deliveryFee + freightFee;
   const taxRate = getTaxRate(shipping_state);
   const tax = subtotal * taxRate;
-  const grandTotal = subtotal + tax;
+  // Owner-issued credit, applied after tax so the tax figure quoted stays
+  // the real tax on the goods. Clamped so a credit larger than the quote
+  // shows a $0 total rather than a negative one.
+  const credit = Math.max(0, Number(credit_amount) || 0);
+  const grandTotal = Math.max(0, subtotal + tax - credit);
 
   const rows = items.map((i, idx) => {
     const line = i.quantity * i.unit_price;
@@ -191,6 +197,11 @@ function buildQuoteHtml(payload: {
           <td colspan="3" style="padding:8px 16px;font-size:12px;color:#64748b;text-align:right">Sales Tax${shipping_state ? ` (${shipping_state} · ${(taxRate * 100).toFixed(2)}%)` : ""}</td>
           <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#0d2c50;text-align:right">$${tax.toFixed(2)}</td>
         </tr>
+        ${credit > 0 ? `
+        <tr style="background:#f8fafc">
+          <td colspan="3" style="padding:8px 16px;font-size:12px;color:#64748b;text-align:right">Credit${credit_note ? ` (${credit_note})` : ""}</td>
+          <td style="padding:8px 16px;font-size:13px;font-weight:700;color:#16a34a;text-align:right">&minus;$${credit.toFixed(2)}</td>
+        </tr>` : ""}
         <tr style="background:#0d2c50">
           <td colspan="3" style="padding:14px 16px;font-size:13px;font-weight:700;color:#fff;text-align:right">TOTAL</td>
           <td style="padding:14px 16px;font-size:16px;font-weight:800;color:#f59e0b;text-align:right">$${grandTotal.toFixed(2)}</td>
@@ -298,6 +309,11 @@ serve(async (req) => {
 
     if (qrErr || !qr) throw new Error("Quote request not found");
 
+    // Owner-issued credit (20260912b). Taken from the stored row rather
+    // than the request body so a non-owner can't introduce one by crafting
+    // a send-quote call. Older rows predate the column entirely.
+    const creditAmount = Math.max(0, Number(qr.credit_amount) || 0);
+
     const quote_number = `RRS-${new Date().getFullYear()}-${String(qr.id).slice(0,6).toUpperCase()}`;
     const quote_date   = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     const valid_until_fmt = new Date(valid_until).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
@@ -334,6 +350,11 @@ serve(async (req) => {
       freight_fee: freightFee,
       shipping_state,
       confirm_url,
+      // Read from the row, never from the request body -- only an owner can
+      // set this (20260912b), so accepting it from the client would hand
+      // anyone who can send a quote a way around that.
+      credit_amount: creditAmount,
+      credit_note: qr.credit_note || "",
     });
 
     // Preview mode — just return the HTML
@@ -379,7 +400,12 @@ serve(async (req) => {
     const taxable_amt  = subtotal_amt + fee_amt + freightFee;
     const tax_rate      = getTaxRate(shipping_state);
     const tax_amt       = taxable_amt * tax_rate;
-    const grand_amt      = taxable_amt + tax_amt;
+    // The credit comes off grand_total here so every downstream consumer
+    // of that snapshot -- the confirm page, the order created on confirm,
+    // and the Stripe payment link -- sees the discounted figure and agrees
+    // with what the customer was emailed. Clamped at 0 so an over-credit
+    // never produces a negative total.
+    const grand_amt      = Math.max(0, taxable_amt + tax_amt - creditAmount);
     // confirm_token was already generated above (before buildQuoteHtml, so
     // the email's button could link to it) -- reused here, not
     // regenerated, so the token in the sent email matches the one saved
