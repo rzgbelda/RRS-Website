@@ -60,6 +60,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
         My Dashboard
       </a>
+      <a href="#" class="a-nav-item" data-tab="partner-products" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.3 12 12l-8.5-4.7M12 12v9M3.5 7.3v9.4L12 21l8.5-4.3V7.3L12 3z"/></svg>
+        Products
+      </a>
 
       <span class="a-nav-section admin-only-nav">Catalog</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="products">
@@ -1435,6 +1439,18 @@
            (20260916_affiliate_self_service_rls.sql), never other
            affiliates' data. -->
     </div><!-- /partner tab -->
+
+    <!-- ============ PARTNER PRODUCTS (AFFILIATE, READ-ONLY) TAB ============ -->
+    <div id="tab-partner-products" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderPartnerProductsTab() in admin.js.
+           Read-only catalog view for role='sub_distributor' logins: our
+           selling price only, no cost/margin, no edit or delete controls.
+           Product data itself is public (public_read_active_products,
+           schema.sql) so no new RLS policy is needed here -- this tab
+           only needs to select a safe column list and render nothing
+           editable, matching the "overview yes, cost no, cannot change
+           anything" scope Eric asked for. -->
+    </div><!-- /partner-products tab -->
 
     <!-- ============ DEVELOPER TICKETS TAB ============ -->
     <div id="tab-dev-tickets" class="a-tab" style="display:none">

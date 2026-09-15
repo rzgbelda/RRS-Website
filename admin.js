@@ -151,7 +151,7 @@ const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "ma
 // other non-admin-only tab -- all of which show company-wide figures, not
 // the affiliate's own. Allow-listed like every other non-owner role now,
 // so a tab added later is closed to affiliates by default too.
-const AFFILIATE_TABS = ["partner"];
+const AFFILIATE_TABS = ["partner", "partner-products"];
 
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
@@ -300,7 +300,7 @@ function switchTab(tab) {
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
-      "sales-tax":"Sales Tax", "partner":"My Dashboard" }[tab] || tab;
+      "sales-tax":"Sales Tax", "partner":"My Dashboard", "partner-products":"Products" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -323,6 +323,7 @@ function switchTab(tab) {
   if (tab === "blog")             renderBlogTab();
   if (tab === "sales-tax")        renderSalesTaxTab();
   if (tab === "partner")          renderPartnerTab();
+  if (tab === "partner-products") renderPartnerProductsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -10188,6 +10189,139 @@ async function renderPartnerTab() {
       </table>` : `<div class="pt-empty">No referred orders yet. Share your link or referral code to get started.</div>`}
     </div>
   `;
+}
+
+/* ── Partner products (affiliate, read-only catalog) ─────────────
+   What role='sub_distributor' sees under Products: our selling price on
+   every active item, nothing they can edit, and -- deliberately -- no
+   cost, no landed cost, no margin. Staff's renderProductsTable() selects
+   "*", which is fine there because RLS + is_admin() already gate who can
+   even reach that screen; this is a different audience, so the query
+   itself only names public-safe columns rather than relying on hiding
+   fields in the render step. products.cost_per_case/landed_cost/
+   vendor_id are simply never requested.
+
+   No new RLS policy needed: public_read_active_products (schema.sql)
+   already lets any authenticated (or anonymous) caller read active
+   products -- the same policy the storefront itself runs on. This tab
+   is a read-only window onto data that was already public; it adds no
+   new access, only a column list scoped to what an affiliate should
+   see and a UI with no write controls at all. */
+async function renderPartnerProductsTab() {
+  const wrap = document.getElementById("tab-partner-products");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { data: products, error } = await window.sb
+    .from("products")
+    .select(`
+      id, name, sku, description, overview, image_url, category_name,
+      price, sale_price, is_on_sale, case_qty, pack_size, unit,
+      price_tier1, price_tier2, price_tier3, product_tier,
+      product_family, variant_label, moq
+    `)
+    .eq("is_active", true)
+    .order("category_name")
+    .order("name");
+
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load products: ${escHtml(error.message)}</div>`;
+    return;
+  }
+
+  const rows = products || [];
+  const categories = [...new Set(rows.map(p => p.category_name).filter(Boolean))].sort();
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Product catalog</h2>
+        <p class="pt-sub">Our current selling price on every active product &mdash; for your reference when quoting customers. Read-only.</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:14px 18px">
+      <input type="text" id="ptProdSearch" placeholder="Search products&hellip;"
+        class="a-input" style="max-width:320px;display:inline-block;margin-right:10px"
+        oninput="ptFilterProducts()">
+      <select id="ptProdCategory" class="a-input" style="max-width:220px;display:inline-block"
+        onchange="ptFilterProducts()">
+        <option value="">All categories</option>
+        ${categories.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Products</h3><span id="ptProdCount">${rows.length} total</span></div>
+      ${rows.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Product</th><th>Category</th><th>Case / Pack</th>
+          <th class="num">Price</th>
+        </tr></thead>
+        <tbody id="ptProdBody">
+          ${rows.map(p => ptProductRow(p)).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No active products found.</div>`}
+    </div>
+  `;
+
+  window._ptProducts = rows;
+}
+
+// One product row: name/image/tier badge, category, case+pack sizing,
+// and the price a customer actually pays -- the tier range when the
+// product has volume pricing, sale price struck through the list price
+// when on sale, otherwise the flat price. Never cost, never margin.
+function ptProductRow(p) {
+  const img = escHtml(p.image_url || "assets/img/product-placeholder.svg");
+  const tierBadge = p.product_tier ? `<span class="a-badge a-badge-gray" style="margin-left:6px">${escHtml(p.product_tier)}</span>` : "";
+  const variantNote = p.product_family && p.variant_label
+    ? `<br><small class="pt-muted">${escHtml(p.variant_label)}</small>` : "";
+
+  const tierPrices = [p.price_tier1, p.price_tier2, p.price_tier3]
+    .map(Number).filter(n => n > 0);
+  let priceCell;
+  if (tierPrices.length) {
+    const min = Math.min(...tierPrices), max = Math.max(...tierPrices);
+    priceCell = min === max ? stMoney(min) : `${stMoney(min)}&ndash;${stMoney(max)}`;
+  } else if (p.is_on_sale && p.sale_price) {
+    priceCell = `<span class="pt-muted" style="text-decoration:line-through">${stMoney(p.price)}</span> ${stMoney(p.sale_price)}`;
+  } else {
+    priceCell = stMoney(p.price);
+  }
+
+  return `
+    <tr data-name="${escHtml((p.name || "").toLowerCase())}" data-category="${escHtml(p.category_name || "")}">
+      <td>
+        <div style="display:flex;align-items:center;gap:10px">
+          <img src="${img}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.src='assets/img/product-placeholder.svg'">
+          <div>
+            <span class="pt-strong">${escHtml(p.name)}</span>${tierBadge}
+            ${variantNote}
+          </div>
+        </div>
+      </td>
+      <td>${escHtml(p.category_name || "&mdash;")}</td>
+      <td>${p.case_qty || 1} / ${p.pack_size || 1} ${escHtml(p.unit || "Case")}</td>
+      <td class="num pt-strong">${priceCell}</td>
+    </tr>`;
+}
+
+function ptFilterProducts() {
+  const q = (document.getElementById("ptProdSearch")?.value || "").toLowerCase().trim();
+  const cat = document.getElementById("ptProdCategory")?.value || "";
+  const rows = document.querySelectorAll("#ptProdBody tr");
+  let visible = 0;
+  rows.forEach(tr => {
+    const matchesQ = !q || tr.dataset.name.includes(q);
+    const matchesCat = !cat || tr.dataset.category === cat;
+    const show = matchesQ && matchesCat;
+    tr.style.display = show ? "" : "none";
+    if (show) visible++;
+  });
+  const countEl = document.getElementById("ptProdCount");
+  if (countEl) countEl.textContent = `${visible} of ${(window._ptProducts || []).length}`;
 }
 
 // Quote status as the affiliate should read it. Deliberately plain words
