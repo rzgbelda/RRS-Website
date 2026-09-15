@@ -10230,6 +10230,14 @@ async function renderPartnerProductsTab() {
   }
 
   const rows = products || [];
+
+  // Same grouping key the public catalog uses to collapse size/variant
+  // rows into one card (script.js renderProductGrid): product_family.
+  // Flat here means "grouped into families," not "one row per SKU" --
+  // 312 rows of "200 Hospitality Full Flat Sheet -- 81x102 / 81x104 /
+  // 81x109..." is exactly the redundancy Eric flagged. A product with no
+  // family (or the only member of one) stays its own single-row group.
+  const groups = ptGroupProducts(rows);
   const categories = [...new Set(rows.map(p => p.category_name).filter(Boolean))].sort();
 
   wrap.innerHTML = `
@@ -10251,77 +10259,143 @@ async function renderPartnerProductsTab() {
       </select>
     </div>
 
-    <div class="pt-card">
-      <div class="pt-card-head"><h3>Products</h3><span id="ptProdCount">${rows.length} total</span></div>
-      ${rows.length ? `
-      <table class="pt-table">
-        <thead><tr>
-          <th>Product</th><th>Category</th><th>Case / Pack</th>
-          <th class="num">Price</th>
-        </tr></thead>
-        <tbody id="ptProdBody">
-          ${rows.map(p => ptProductRow(p)).join("")}
-        </tbody>
-      </table>` : `<div class="pt-empty">No active products found.</div>`}
+    <div class="pt-card" style="padding:0">
+      <div class="pt-card-head" style="padding:16px 18px"><h3>Products</h3><span id="ptProdCount">${groups.length} product${groups.length === 1 ? "" : "s"} &middot; ${rows.length} option${rows.length === 1 ? "" : "s"}</span></div>
+      ${groups.length ? `
+      <div id="ptProdList">
+        ${groups.map((g, i) => ptGroupRow(g, i)).join("")}
+      </div>` : `<div class="pt-empty">No active products found.</div>`}
     </div>
   `;
 
   window._ptProducts = rows;
+  window._ptGroups = groups;
 }
 
-// One product row: name/image/tier badge, category, case+pack sizing,
-// and the price a customer actually pays -- the tier range when the
-// product has volume pricing, sale price struck through the list price
-// when on sale, otherwise the flat price. Never cost, never margin.
-function ptProductRow(p) {
-  const img = escHtml(p.image_url || "assets/img/product-placeholder.svg");
-  const tierBadge = p.product_tier ? `<span class="a-badge a-badge-gray" style="margin-left:6px">${escHtml(p.product_tier)}</span>` : "";
-  const variantNote = p.product_family && p.variant_label
-    ? `<br><small class="pt-muted">${escHtml(p.variant_label)}</small>` : "";
+// Collapses flat product rows into one entry per product_family (the
+// same key script.js's public-facing renderProductGrid groups by), so a
+// product sold in many sizes/colors appears once with its variants
+// tucked behind a toggle instead of as N separate rows. A row with no
+// family, or the only member of one, is its own single-variant group --
+// mirrors renderProductGrid's soloIdx fallback.
+function ptGroupProducts(rows) {
+  const byFamily = new Map();
+  const order = [];
+  let soloIdx = 0;
 
-  const tierPrices = [p.price_tier1, p.price_tier2, p.price_tier3]
-    .map(Number).filter(n => n > 0);
-  let priceCell;
-  if (tierPrices.length) {
-    const min = Math.min(...tierPrices), max = Math.max(...tierPrices);
-    priceCell = min === max ? stMoney(min) : `${stMoney(min)}&ndash;${stMoney(max)}`;
-  } else if (p.is_on_sale && p.sale_price) {
-    priceCell = `<span class="pt-muted" style="text-decoration:line-through">${stMoney(p.price)}</span> ${stMoney(p.sale_price)}`;
-  } else {
-    priceCell = stMoney(p.price);
-  }
+  rows.forEach(p => {
+    const key = p.product_family ? "f:" + p.product_family : "solo:" + soloIdx++;
+    if (!byFamily.has(key)) { byFamily.set(key, []); order.push(key); }
+    byFamily.get(key).push(p);
+  });
 
-  return `
-    <tr data-name="${escHtml((p.name || "").toLowerCase())}" data-category="${escHtml(p.category_name || "")}">
-      <td>
-        <div style="display:flex;align-items:center;gap:10px">
-          <img src="${img}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.src='assets/img/product-placeholder.svg'">
-          <div>
-            <span class="pt-strong">${escHtml(p.name)}</span>${tierBadge}
-            ${variantNote}
-          </div>
-        </div>
-      </td>
-      <td>${escHtml(p.category_name || "&mdash;")}</td>
-      <td>${p.case_qty || 1} / ${p.pack_size || 1} ${escHtml(p.unit || "Case")}</td>
-      <td class="num pt-strong">${priceCell}</td>
-    </tr>`;
+  return order.map(key => {
+    const variants = byFamily.get(key);
+    const first = variants[0];
+    const prices = variants.flatMap(v => [v.price, v.price_tier1, v.price_tier2, v.price_tier3, v.is_on_sale ? v.sale_price : null])
+      .map(Number).filter(n => n > 0);
+    return {
+      key,
+      family: first.product_family || null,
+      name: first.product_family || first.name,
+      image: first.image_url,
+      category: first.category_name,
+      variants,
+      minPrice: prices.length ? Math.min(...prices) : 0,
+      maxPrice: prices.length ? Math.max(...prices) : 0,
+    };
+  });
+}
+
+// One collapsed product row. A single-variant group renders its real
+// price the same way the old flat row did; a multi-variant family shows
+// a price range and a chevron that expands to one row per variant, each
+// with its own size/label and exact price -- never a fake pooled price
+// standing in for N real ones. Never cost, never margin, either level.
+function ptGroupRow(g, idx) {
+  const img = escHtml(g.image || "assets/img/product-placeholder.svg");
+  const hasVariants = g.variants.length > 1;
+  const tiers = [...new Set(g.variants.map(v => v.product_tier).filter(Boolean))];
+  const tierBadges = tiers.map(t => `<span class="a-badge a-badge-gray" style="margin-left:6px">${escHtml(t)}</span>`).join("");
+  const rowId = "ptGroup" + idx;
+
+  const priceCell = g.minPrice === g.maxPrice
+    ? stMoney(g.minPrice)
+    : `${stMoney(g.minPrice)}&ndash;${stMoney(g.maxPrice)}`;
+
+  const chevron = hasVariants ? `
+    <svg class="pt-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .15s">
+      <polyline points="9 6 15 12 9 18"/>
+    </svg>` : `<span style="width:14px;flex-shrink:0"></span>`;
+
+  const parentRow = `
+    <div class="pt-prow${hasVariants ? " pt-prow--clickable" : ""}" data-name="${escHtml(g.name.toLowerCase())}" data-category="${escHtml(g.category || "")}"
+      ${hasVariants ? `onclick="ptToggleGroup('${rowId}', this)"` : ""}>
+      ${chevron}
+      <img src="${img}" style="width:38px;height:38px;object-fit:cover;border-radius:6px;flex-shrink:0" onerror="this.src='assets/img/product-placeholder.svg'">
+      <div class="pt-prow-name">
+        <span class="pt-strong">${escHtml(g.name)}</span>${tierBadges}
+        ${hasVariants ? `<br><small class="pt-muted">${g.variants.length} options</small>` : ""}
+      </div>
+      <div class="pt-prow-cat">${escHtml(g.category || "&mdash;")}</div>
+      <div class="pt-prow-price num pt-strong">${priceCell}</div>
+    </div>`;
+
+  if (!hasVariants) return parentRow;
+
+  const childRows = g.variants.map(v => {
+    const label = v.variant_label || v.name;
+    const tierPrices = [v.price_tier1, v.price_tier2, v.price_tier3].map(Number).filter(n => n > 0);
+    let vPrice;
+    if (tierPrices.length) {
+      const min = Math.min(...tierPrices), max = Math.max(...tierPrices);
+      vPrice = min === max ? stMoney(min) : `${stMoney(min)}&ndash;${stMoney(max)}`;
+    } else if (v.is_on_sale && v.sale_price) {
+      vPrice = `<span class="pt-muted" style="text-decoration:line-through">${stMoney(v.price)}</span> ${stMoney(v.sale_price)}`;
+    } else {
+      vPrice = stMoney(v.price);
+    }
+    return `
+      <div class="pt-vrow">
+        <span class="pt-vrow-label">${escHtml(label)}</span>
+        <span class="pt-vrow-case">${v.case_qty || 1} / ${v.pack_size || 1} ${escHtml(v.unit || "Case")}</span>
+        <span class="pt-vrow-price num">${vPrice}</span>
+      </div>`;
+  }).join("");
+
+  return `${parentRow}<div id="${rowId}" class="pt-vlist" hidden>${childRows}</div>`;
+}
+
+function ptToggleGroup(rowId, headerEl) {
+  const el = document.getElementById(rowId);
+  if (!el) return;
+  el.hidden = !el.hidden;
+  headerEl.querySelector(".pt-chevron")?.style.setProperty("transform", el.hidden ? "" : "rotate(90deg)");
 }
 
 function ptFilterProducts() {
   const q = (document.getElementById("ptProdSearch")?.value || "").toLowerCase().trim();
   const cat = document.getElementById("ptProdCategory")?.value || "";
-  const rows = document.querySelectorAll("#ptProdBody tr");
+  const items = document.querySelectorAll("#ptProdList > .pt-prow");
   let visible = 0;
-  rows.forEach(tr => {
-    const matchesQ = !q || tr.dataset.name.includes(q);
-    const matchesCat = !cat || tr.dataset.category === cat;
+  items.forEach(row => {
+    const matchesQ = !q || row.dataset.name.includes(q);
+    const matchesCat = !cat || row.dataset.category === cat;
     const show = matchesQ && matchesCat;
-    tr.style.display = show ? "" : "none";
+    row.style.display = show ? "" : "none";
+    // The variant list sits right after its parent row in the DOM
+    // (ptGroupRow's return). A filtered-out row must force its variant
+    // list closed too, but a filtered-BACK-in row must not force it
+    // open -- that would override the user's own collapse/expand state,
+    // stored on the same element as its `hidden` attribute (ptToggleGroup).
+    // Only ever override toward hidden, never toward visible.
+    const next = row.nextElementSibling;
+    if (next && next.classList.contains("pt-vlist") && !show) next.style.display = "none";
+    else if (next && next.classList.contains("pt-vlist")) next.style.removeProperty("display");
     if (show) visible++;
   });
   const countEl = document.getElementById("ptProdCount");
-  if (countEl) countEl.textContent = `${visible} of ${(window._ptProducts || []).length}`;
+  if (countEl) countEl.textContent = `${visible} of ${(window._ptGroups || []).length} products`;
 }
 
 // Quote status as the affiliate should read it. Deliberately plain words

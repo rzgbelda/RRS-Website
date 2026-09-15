@@ -3826,3 +3826,44 @@ select.crm-filtersel { width: auto; min-width: 150px; }
   .pt-table th, .pt-table td { padding-left: 12px; padding-right: 12px; }
   .pt-card { overflow-x: auto; }
 }
+
+/* ── Grouped product list (Partner Products tab) ──────────────────
+   Replaces a flat .pt-table for the product catalog: same product in
+   many sizes/colors (product_family) collapses to one row with a
+   chevron instead of N near-identical rows. Div-based, not <table>, so
+   the expandable variant list can sit as a sibling block between rows
+   without fighting <tbody> row semantics. */
+.pt-prow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #f4f7fa;
+}
+.pt-prow--clickable { cursor: pointer; user-select: none; }
+.pt-prow--clickable:hover { background: #fcfdfe; }
+.pt-chevron { color: #94a3b8; }
+.pt-prow-name { flex: 1 1 auto; min-width: 0; }
+.pt-prow-cat  { flex: 0 0 180px; font-size: 13px; color: #334155; }
+.pt-prow-price { flex: 0 0 120px; font-size: 13px; }
+
+.pt-vlist {
+  background: #fafbfd;
+  border-bottom: 1px solid #f4f7fa;
+}
+.pt-vrow {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 18px 9px 64px; /* aligns under the parent row's name column */
+  font-size: 12.5px; color: #64748b;
+  border-top: 1px solid #f4f7fa;
+}
+.pt-vrow:first-child { border-top: none; }
+.pt-vrow-label { flex: 1 1 auto; min-width: 0; }
+.pt-vrow-case  { flex: 0 0 180px; color: #94a3b8; }
+.pt-vrow-price { flex: 0 0 120px; font-weight: 600; color: #334155; }
+
+@media (max-width: 720px) {
+  .pt-prow { flex-wrap: wrap; }
+  .pt-prow-cat { display: none; } /* redundant with the filter dropdown at this width */
+  .pt-prow-price { flex: 0 0 auto; margin-left: auto; }
+  .pt-vrow { padding-left: 18px; flex-wrap: wrap; }
+  .pt-vrow-case { flex: 1 1 100%; order: 3; }
+}
