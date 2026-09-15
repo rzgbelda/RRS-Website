@@ -1396,17 +1396,119 @@ function cvtUpdateMappedCount() {
   if (el) el.textContent = count;
 }
 
+/* Derives product_family / variant_label from a product NAME, so a vendor
+   file that has no such columns (almost none do) still produces grouped
+   size-dropdown cards instead of one card per size.
+
+   Vendor names are near-universally "<Family> <sep> <size>, <spec>, <pack>"
+   -- e.g. "Ringspun Cotton Bath Towel - 27\" x 50\", 14 lb/dozen, White,
+   Case of 48". Everything before the separator names the product; the size
+   and pack after it are what distinguishes one SKU from its siblings.
+
+   Grouping is keyed on the NAME rather than the SKU because the name is what
+   the card title shows -- so the title and its dropdown can never disagree.
+
+   The pack form (Case of 48 vs Individual) belongs in the LABEL, not the
+   family: those are different SKUs at very different prices, and merging
+   them into one option would hide that from the buyer.
+
+   Returns {family, label}; blank family means "leave this row ungrouped". */
+const CVT_NAME_SEP = /\s[–—-]\s/;  // en dash, em dash, or hyphen, space-padded
+const CVT_PACK_RE  = /\b(Case of \d+ Sets|Case of \d+ Pairs|Case of \d+|Individual Set|Individual Pair|Individually|Individual|Open Stock|Pack of \d+|Box of \d+)\b/i;
+const CVT_UNAVAIL_RE = /\s*[–-]\s*Currently Unavailable\s*$/i;
+
+function cvtDeriveVariant(name) {
+  const s = String(name || "").trim();
+  const m = s.match(CVT_NAME_SEP);
+  if (!m) return { family: "", label: "" };
+
+  const family = s.slice(0, m.index).trim();
+  const rest   = s.slice(m.index + m[0].length).trim();
+  if (!family || !rest) return { family: "", label: "" };
+
+  const parts = rest.split(",").map(x => x.trim());
+  let size = parts[0] || "";
+
+  let pack = "";
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const pm = parts[i].match(CVT_PACK_RE);
+    if (pm) { pack = pm[0]; break; }
+  }
+
+  // "Currently Unavailable" is stock status, not an option a buyer picks.
+  size = size.replace(CVT_UNAVAIL_RE, "").trim();
+  pack = pack.replace(CVT_UNAVAIL_RE, "").trim();
+
+  let label = size;
+  if (pack && pack.toLowerCase() !== size.toLowerCase()) {
+    label = size ? `${size} - ${pack}` : pack;
+  }
+  return { family, label: label.trim() };
+}
+
+/* Runs cvtDeriveVariant over every row and keeps only the groupings worth
+   rendering. Returns Map(row -> {family, label}); {"",""} means ungrouped.
+
+   Two rules decide what survives:
+    - a family needs 2+ members, since a one-option dropdown is worse than
+      none, and every member needs a non-empty label;
+    - a repeated SKU doesn't count toward its family's size. Vendor files do
+      repeat rows, and counting a repeat could manufacture a two-option
+      dropdown out of a single real product. The importer upserts by SKU, so
+      the repeat never becomes a second product anyway. */
+function cvtGroupVariants(rows, nameCol, skuCol) {
+  const derived = new Map();
+  if (!nameCol) return derived;
+
+  const famCount = {};
+  const seenSku = new Set();
+  for (const r of rows) {
+    const d = cvtDeriveVariant(r[nameCol]);
+    derived.set(r, d);
+    const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
+    if (sku && seenSku.has(sku)) continue;
+    if (sku) seenSku.add(sku);
+    if (d.family && d.label) famCount[d.family] = (famCount[d.family] || 0) + 1;
+  }
+  for (const [r, d] of derived) {
+    if (!d.family || !d.label || famCount[d.family] < 2) {
+      derived.set(r, { family: "", label: "" });
+    }
+  }
+  return derived;
+}
+
 function cvtBuildAndDownload() {
   const BOM = "﻿";
   const headers = CVT_COLS.map(c => c.key);
   const lines = [headers.map(h => `"${h}"`).join(",")];
+
+  // Auto-derive the variant columns only when the vendor file didn't supply
+  // them -- an explicit mapping always wins over anything guessed here.
+  const autoVariants = !_cvtMapping.product_family && !_cvtMapping.variant_label;
+  const derived = autoVariants
+    ? cvtGroupVariants(_cvtSourceRows, _cvtMapping.name, _cvtMapping.sku)
+    : new Map();
+
   for (const srcRow of _cvtSourceRows) {
     const vals = headers.map(h => {
       const srcCol = _cvtMapping[h] || "";
-      const v = srcCol ? String(srcRow[srcCol] ?? "") : "";
+      let v = srcCol ? String(srcRow[srcCol] ?? "") : "";
+      if (!srcCol && autoVariants && (h === "product_family" || h === "variant_label")) {
+        const d = derived.get(srcRow) || { family: "", label: "" };
+        v = h === "product_family" ? d.family : d.label;
+      }
       return `"${v.replace(/"/g,'""')}"`;
     });
     lines.push(vals.join(","));
+  }
+
+  if (autoVariants) {
+    const groupedRows = [...derived.values()].filter(d => d.family).length;
+    const famTotal = new Set([...derived.values()].filter(d => d.family).map(d => d.family)).size;
+    if (groupedRows) {
+      showToast(`Auto-grouped ${groupedRows} rows into ${famTotal} size-variant families`);
+    }
   }
   const csv  = BOM + lines.join("\r\n");
   const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
