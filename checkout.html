@@ -377,9 +377,20 @@
         You'll receive final pricing, availability, and delivery details in your confirmation.
       </p>
 
+      <!-- Restates shipping-policy.html section 7 at the moment of decision.
+           Required, and recorded server-side with the exact wording shown
+           (see api/create-order.js), so there is evidence of what was agreed
+           to even if this copy is edited later. -->
+      <label class="ack-check" for="ackDeliveryEstimate">
+        <input type="checkbox" id="ackDeliveryEstimate" onchange="syncSubmitEnabled()">
+        <span id="ackDeliveryEstimateText">I acknowledge that the stated delivery date is an estimate only and may be affected by carrier delays, area conditions, weather, holidays, or other unforeseen circumstances beyond Room Ready Supply's control.</span>
+      </label>
+
       <div class="submit-order-actions">
         <button
           class="submit-order-btn"
+          id="submitOrderBtn"
+          disabled
           onclick="saveCheckoutAndProceed()"
         >
           Review and Submit Order Request
@@ -400,6 +411,30 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js?v=15"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
+<script>
+// The delivery-estimate box gates submission. Held in one place so the
+// button can never drift out of sync with the checkbox.
+function syncSubmitEnabled() {
+  var box = document.getElementById('ackDeliveryEstimate');
+  var btn = document.getElementById('submitOrderBtn');
+  if (box && btn) btn.disabled = !box.checked;
+}
+document.addEventListener('DOMContentLoaded', syncSubmitEnabled);
+</script>
+<style>
+  .ack-check {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: 4px 0 14px;
+    padding: 12px 14px;
+    background: #fbfcfe;
+    border: 1px solid #e2e8f0; border-radius: 10px;
+    font-size: 12.5px; line-height: 1.55; color: #475569;
+    cursor: pointer;
+  }
+  .ack-check input { flex-shrink: 0; margin-top: 2px; width: 16px; height: 16px; accent-color: #ED7226; cursor: pointer; }
+  .ack-check:hover { border-color: #cbd5e1; }
+  .submit-order-btn:disabled { opacity: .55; cursor: not-allowed; }
+</style>
 <script>
 // Fires once the checkout page actually loads with a non-empty cart, rather
 // than on the cart's checkout link -- a click can be abandoned mid-navigation,
@@ -508,7 +543,15 @@ async function saveCheckoutAndProceed() {
     reorderFrequency, reorderNextDate, reorderCustomDates,
     referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',
     fulfillmentMethod,
+    // Carried through to api/create-order.js, which writes the audit row.
+    // The wording travels with it so the record shows what was on screen.
+    deliveryAck: !!document.getElementById('ackDeliveryEstimate')?.checked,
+    deliveryAckText: document.getElementById('ackDeliveryEstimateText')?.textContent || '',
   };
+  if (!data.deliveryAck) {
+    alert('Please acknowledge the delivery estimate notice before submitting.');
+    return;
+  }
   if (!data.business) { alert('Please enter your business name.'); return; }
   if (!data.phone)    { alert('Please enter your phone number.'); return; }
   if (fulfillmentMethod === 'ship' && !data.street) { alert('Please enter your delivery address.'); return; }

@@ -232,6 +232,7 @@ function buildQuoteHtml(payload: {
             ? `<li>Freight is included in the total above.</li>`
             : `<li>Freight is additional unless otherwise noted.</li>`}
         <li>Minimum order quantities may apply.</li>
+        <li>Any delivery date given is an estimate only and is not guaranteed. Delivery may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control. We will make reasonable efforts to process and ship promptly but cannot guarantee a specific delivery date.</li>
       </ul>
     </div>
 

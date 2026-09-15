@@ -31,6 +31,9 @@ table.qc-items tfoot tr.qc-total td{font-size:16px;font-weight:800;color:#0B1F38
 
 .qc-note{background:#fffbf7;border:1.5px solid #fde8d4;border-radius:12px;padding:16px 20px;margin:20px 0;font-size:13px;color:#334155;line-height:1.6}
 
+.qc-ack{display:flex;align-items:flex-start;gap:10px;margin:18px 0 12px;padding:12px 14px;background:#fbfcfe;border:1px solid #e2e8f0;border-radius:10px;font-size:12.5px;line-height:1.55;color:#475569;cursor:pointer}
+.qc-ack input{flex-shrink:0;margin-top:2px;width:16px;height:16px;accent-color:#ED7226;cursor:pointer}
+.qc-ack:hover{border-color:#cbd5e1}
 .qc-confirm-btn{display:block;width:100%;background:#ED7226;color:#fff;border:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;margin-top:8px}
 .qc-confirm-btn:hover{opacity:.92}
 .qc-confirm-btn:disabled{opacity:.6;cursor:not-allowed}
@@ -127,7 +130,13 @@ function renderPending(data) {
     '</tfoot>' +
     '</table>' +
     (data.net_30_terms ? '<div class="qc-note">Payment terms: Net 30 days upon credit approval.</div>' : '') +
-    '<button class="qc-confirm-btn" id="confirmBtn" onclick="confirmOrder()">Confirm This Order</button>' +
+    // Same acknowledgement as checkout, at the equivalent moment of
+    // decision. Required, and recorded with the exact wording shown.
+    '<label class="qc-ack" for="qcAck">' +
+      '<input type="checkbox" id="qcAck" onchange="document.getElementById(\'confirmBtn\').disabled = !this.checked">' +
+      '<span id="qcAckText">I acknowledge that the stated delivery date is an estimate only and may be affected by carrier delays, area conditions, weather, holidays, or other unforeseen circumstances beyond Room Ready Supply\'s control.</span>' +
+    '</label>' +
+    '<button class="qc-confirm-btn" id="confirmBtn" disabled onclick="confirmOrder()">Confirm This Order</button>' +
     '<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">Confirming lets us start preparing your order. We\'ll follow up with a payment link once it\'s confirmed.</p>';
 }
 
@@ -150,13 +159,21 @@ async function loadQuote() {
 
 async function confirmOrder() {
   const btn = document.getElementById('confirmBtn');
+  const ack = document.getElementById('qcAck');
+  if (!ack || !ack.checked) return;   // button is disabled, but never trust that alone
   if (btn) { btn.disabled = true; btn.textContent = 'Confirming…'; }
 
   try {
     const res = await fetch('/api/send-invoice', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'confirm_quote', confirm_token: token }),
+      body: JSON.stringify({
+        action: 'confirm_quote',
+        confirm_token: token,
+        // The exact wording on screen, so the record reflects what this
+        // customer actually read rather than whatever the copy says later.
+        delivery_ack_text: (document.getElementById('qcAckText') || {}).textContent || '',
+      }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not confirm your order.');

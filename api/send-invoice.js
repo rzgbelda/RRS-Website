@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
+const { recordAcknowledgement } = require('./_lib/acknowledgements');
 
 let Stripe;
 try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
@@ -118,6 +119,15 @@ function invoiceEmailHtml(o) {
     '<a href="' + esc(o.payment_link) + '" style="display:block;background:' + BRAND.orange + ';color:#fff;text-decoration:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;margin-bottom:24px;">Pay Invoice Now &rarr;</a>' +
 
     '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions about this invoice? Reply to this email or call us at <strong style="color:#334155;">(252) 227-0073</strong></p>' +
+
+    // Restates shipping-policy.html section 7. On the invoice this is a
+    // footnote rather than a checkbox: by this point the order already
+    // exists and the acknowledgement was captured at checkout or on the
+    // quote confirmation page.
+    '<div style="margin-top:22px;padding-top:16px;border-top:1px solid #e2e8f0;">' +
+    '<p style="font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin:0 0 5px;">Delivery Estimates</p>' +
+    '<p style="font-size:11.5px;color:#94a3b8;line-height:1.65;margin:0;">Any delivery date given is an estimate only and is not guaranteed. Delivery may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply&rsquo;s control. We will make reasonable efforts to process and ship promptly but cannot guarantee a specific delivery date. See our <a href="https://www.roomreadysupply.com/shipping-policy" style="color:#94a3b8;">shipping policy</a> for full details.</p>' +
+    '</div>' +
     '</div>' +
 
     '<div style="background:#f8fafc;border-top:1.5px solid #e2e8f0;padding:20px 40px;text-align:center;">' +
@@ -268,6 +278,16 @@ module.exports = async (req, res) => {
       .update({ status: 'accepted', confirmed_at: new Date().toISOString(), confirmed_order_id: order.id })
       .eq('id', q.id);
     if (qUpdateErr) console.error('[send-invoice/confirm] quote_requests update failed:', qUpdateErr.message);
+
+    await recordAcknowledgement(supabase, req, {
+      kind: 'delivery_estimate',
+      context: 'quote_confirm',
+      terms_text: req.body?.delivery_ack_text,
+      order_id: order.id,
+      quote_id: q.id,
+      email: q.email,
+      business_name: q.business_name,
+    });
 
     // Best-effort internal notification -- staff need to know a quote was
     // confirmed so someone actually goes and sends the payment link from

@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 const sendInvoiceHandler = require('./send-invoice.js');
 const { buildUnsubscribeUrl } = require('./product-meta.js');
+const { recordAcknowledgement } = require('./_lib/acknowledgements');
 
 // Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
 // List-Unsubscribe header (RFC 8058) plus a visible unsubscribe link in
@@ -129,6 +130,21 @@ module.exports = async (req, res) => {
   if (error) {
     console.error('[create-order] insert failed:', error.message);
     return res.status(500).json({ error: error.message });
+  }
+
+  // Audit row for the delivery-estimate box ticked at checkout. Best-effort
+  // by design -- see api/_lib/acknowledgements.js -- so a failed audit write
+  // can never lose an order that was already created above.
+  if (b.delivery_ack) {
+    await recordAcknowledgement(supabase, req, {
+      kind: 'delivery_estimate',
+      context: 'checkout',
+      terms_text: b.delivery_ack_text,
+      order_id: data.id,
+      user_id: orderData.user_id || null,
+      email: orderData.customer_email || null,
+      business_name: orderData.business_name || null,
+    });
   }
 
   // Best-effort, awaited before responding (a serverless function isn't

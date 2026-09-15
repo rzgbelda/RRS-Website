@@ -813,6 +813,9 @@
               reorder_next_date: checkout.orderType === 'reorder' ? (checkout.reorderNextDate || null) : null,
               reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
               reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
+              // Ticked at checkout; api/create-order.js writes the audit row.
+              delivery_ack: !!checkout.deliveryAck,
+              delivery_ack_text: checkout.deliveryAckText || '',
               cart_items: cartItems,
             }),
           });
@@ -1041,6 +1044,9 @@
                 reorder_next_date: checkout.orderType === 'reorder' ? (checkout.reorderNextDate || null) : null,
                 reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
                 reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
+              // Ticked at checkout; api/create-order.js writes the audit row.
+              delivery_ack: !!checkout.deliveryAck,
+              delivery_ack_text: checkout.deliveryAckText || '',
                 stripe_payment_intent_id: pi.id,
                 cart_items: cartItems,
               }),
