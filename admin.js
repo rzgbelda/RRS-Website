@@ -10212,15 +10212,18 @@ async function renderPartnerProductsTab() {
   if (!wrap) return;
   wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
 
+  // products_public (20260916f) excludes cost_per_case/landed_cost/
+  // truckload_qty/vendor_id at the view definition itself -- belt and
+  // suspenders alongside the already-explicit column list below, and
+  // keeps this tab on the same safe source the storefront now uses.
   const { data: products, error } = await window.sb
-    .from("products")
+    .from("products_public")
     .select(`
       id, name, sku, description, overview, image_url, category_name,
       price, sale_price, is_on_sale, case_qty, pack_size, unit,
       price_tier1, price_tier2, price_tier3, product_tier,
       product_family, variant_label, moq
     `)
-    .eq("is_active", true)
     .order("category_name")
     .order("name");
 

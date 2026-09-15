@@ -282,7 +282,13 @@ async function fetchCatalogProducts() {
   if (_catalogProductsPromise) return _catalogProductsPromise;
 
   _catalogProductsPromise = (async () => {
-    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products?select=*&is_active=eq.true`;
+    // products_public (20260916f) is a view excluding cost_per_case,
+    // landed_cost, truckload_qty and vendor_id -- this ran ?select=*
+    // against the real products table, which meant anyone with dev
+    // tools open could read RRS's cost and margin on every product.
+    // Same columns the storefront actually uses, none of the internal
+    // ones; is_active filtering already happens inside the view.
+    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=*`;
     const res = await fetch(url, {
       headers: {
         apikey: PRODUCTS_SUPABASE_ANON,
