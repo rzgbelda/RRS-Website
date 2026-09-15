@@ -863,8 +863,7 @@ function renderVariantCard(variants) {
         ${tierHtml}
         <h3>${v.productFamily || v.name}</h3>
         ${sizeDropdownHtml}
-        ${triggerHtml}
-        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml || triggerHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
+        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
@@ -877,6 +876,7 @@ function renderVariantCard(variants) {
           </div>
         </div>
         <div class="product-bottom">
+          ${triggerHtml}
           <div class="price-block">
             ${rangeHtml}
             <div class="price-row">

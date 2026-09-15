@@ -2743,9 +2743,13 @@ textarea:focus {
   min-height: 2em;
 }
 
+/* The buy block: options, price, then the two buttons. Pinned to the card
+   floor so these line up across a row regardless of how much copy sits
+   above, with a rule and real space separating it from the description. */
 .product-bottom {
   margin-top: auto;
-  padding-top: 12px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
 }
 
 /* Fixed height so this row occupies the same space whether its values wrap
@@ -2755,11 +2759,13 @@ textarea:focus {
 .product-meta,
 .product-details {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-start;
-  gap: 14px;
-  margin-bottom: 10px;
-  min-height: 32px;
+  gap: 4px 14px;
+  margin-bottom: 0;
+  min-height: 30px;
   align-items: flex-start;
+  align-content: flex-start;
 }
 
 .meta-item,
@@ -6927,30 +6933,34 @@ button, a, [role="button"] { touch-action: manipulation; }
    down one line relative to its neighbours, and the prices across a row no
    longer share a baseline. */
 .price-block {
-  min-height: 46px;
+  min-height: 44px;
   display: flex; flex-direction: column; justify-content: flex-end;
 }
 
-/* Sits above .price and is never rewritten by applyVariantToCard, so the
-   family's span stays visible after a specific option is chosen. */
+/* A quiet caption directly above the price it qualifies: the span the
+   family covers, then the price of the option currently chosen. Never
+   rewritten by applyVariantToCard, so it survives a selection. */
 .price-range {
   display: block;
-  margin-bottom: 2px;
-  font-size: 12px; font-weight: 600; color: #94a3b8;
+  margin-bottom: 1px;
+  font-size: 11.5px; font-weight: 600; color: #a8b2bd;
+  letter-spacing: .01em;
   font-variant-numeric: tabular-nums;
 }
 
-/* Grouped with the size dropdown directly under the title, not stranded
-   above the buttons: all the "which one do I want" controls belong
-   together, and the buy actions stay pinned to the card floor. */
+/* Sits in the buy block, immediately above the price, separated from the
+   description by the card's own bottom padding. Earlier it sat tight under
+   the description, where it read as part of the copy rather than as a
+   control. */
 .variant-trigger {
   width: 100%;
-  margin: 8px 0 0;
-  padding: 8px 12px;
+  margin: 0 0 10px;
+  padding: 9px 12px;
   background: #fff;
   border: 1.5px solid #e2e8f0; border-radius: 8px;
   color: #0d2c50; font-size: 12px; font-weight: 700;
   cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
   transition: border-color .15s, color .15s, background .15s;
 }
 .variant-trigger::after { content: " \203A"; font-weight: 800; }
