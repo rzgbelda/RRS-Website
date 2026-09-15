@@ -860,7 +860,11 @@
             <!-- Marketing opt-in -->
             <div class="uq-section-block">
                 <label class="uq-optin-label">
-                    <input type="checkbox" id="qMarketingOptIn" checked>
+                    <!-- Deliberately NOT checked by default. A pre-ticked
+                         consent box is not valid consent under GDPR and is
+                         a CAN-SPAM risk, and it inflates the list with
+                         people who never chose to be on it. -->
+                    <input type="checkbox" id="qMarketingOptIn">
                     <span>Yes, I'd like to receive exclusive deals, restocking reminders, and special pricing offers from Room Ready Supply. <span class="uq-optin-note">(You can unsubscribe at any time.)</span></span>
                 </label>
             </div>
@@ -1782,7 +1786,7 @@
         shipping_state:  document.getElementById('qShippingState').value,
         shipping_zip:    document.getElementById('qShippingZip').value.trim(),
         notes:          document.getElementById('qNotes').value.trim(),
-        marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
+        marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? false,
         items: allItems,
       }));
       window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname + '#business-pricing');
@@ -1811,7 +1815,7 @@
           shipping_state:   document.getElementById('qShippingState').value,
           shipping_zip:     document.getElementById('qShippingZip').value.trim(),
           notes:            document.getElementById('qNotes').value.trim(),
-          marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
+          marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? false,
           requested_items:  allItems,
           user_id:          session.user.id,
           // Which affiliate storefront this was requested from, so the quote

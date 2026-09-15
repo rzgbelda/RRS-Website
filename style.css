@@ -218,6 +218,26 @@ body {
   display: inline-block;
 }
 
+/* The count badge is a SIBLING of the <a href="/cart">, not a child of it,
+   and it sits at top:-8px/right:-8px over the icon's corner -- so once the
+   cart had items, clicks landing on the badge hit the badge instead of the
+   link and the cart icon appeared to do nothing. (It looked intermittent
+   because the badge is display:none while the cart is empty.) Reported as
+   "header cart icon is blocked by its own count badge and doesn't navigate
+   anywhere."
+
+   Fixed in CSS rather than by rewriting the header markup in all 25 pages
+   that repeat it: the badge stops taking pointer events so clicks fall
+   through to the link, and the link is given a real box so the whole icon
+   area -- including the corner under the badge -- is clickable. */
+.cart-container > a {
+  display: block;
+  line-height: 0;
+}
+.cart-container .cart-count {
+  pointer-events: none;
+}
+
 .flying-cart-item {
   position: fixed;
   width: 35px;

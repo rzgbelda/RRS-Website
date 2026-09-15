@@ -129,9 +129,15 @@
 
   <a href="/cart" class="back-link">&#8592; Back</a>
 
-  <h1>Submit Your Order Request</h1>
+  <!-- This page is step 1 of 2 and is followed by payment.html, which takes
+       a real card/ACH payment through Stripe. It previously read "Submit
+       Your Order Request" and promised that RRS would "review your request
+       and confirm pricing" -- which told the buyer they were enquiring, not
+       buying, then dropped them onto a payment form. Wording now matches
+       what actually happens next. -->
+  <h1>Checkout &mdash; Your Details</h1>
   <p class="checkout-intro">
-    Tell us what you need and when. We'll review your request and confirm pricing, availability, and delivery details.
+    Step 1 of 2. Confirm who this order is for and how you'd like it delivered &mdash; you'll review your total and pay on the next page.
   </p>
 
   <div class="checkout-layout">
@@ -142,14 +148,21 @@
         <h2>1. Customer details</h2>
 
         <div id="bizPickerWrap" style="display:none;margin-bottom:14px">
-          <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px">Business Name*</label>
+          <label style="display:block;font-size:13px;font-weight:700;color:#374151;margin-bottom:6px">Business Name</label>
           <select id="checkout-business-picker" onchange="onBizPickerChange()" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;background:#fff"></select>
           <p style="font-size:11.5px;color:#94a3b8;margin:5px 0 0">This is which of your businesses the order is placed under &mdash; it's how we'll label it if you call about it later.</p>
         </div>
         <div class="form-grid">
-          <label id="checkoutBusinessLabel">Business Name* <input type="text" id="checkout-business" placeholder="Enter business name"></label>
+          <!-- Optional: RRS sells to homes, short-term rentals and salons as
+               well as hotels, and a required business name turned those
+               buyers away at checkout. Orders without one are labelled by
+               contact name instead (see the submit handler). -->
+          <label id="checkoutBusinessLabel">Business Name <span style="font-weight:400;color:#94a3b8">(optional)</span> <input type="text" id="checkout-business" placeholder="Leave blank if ordering personally"></label>
           <label>Contact Name: <input type="text" id="checkout-contact" placeholder="Enter contact name"></label>
-          <label>Phone Number* <input type="text" id="checkout-phone" placeholder="(252) 227-0073"></label>
+          <!-- Placeholder is a FORMAT hint, never RRS's own number: the real
+               (252) 227-0073 here read as a prefilled value, so buyers left
+               it alone and we captured our own phone number on their order. -->
+          <label>Phone Number* <input type="text" id="checkout-phone" placeholder="(555) 123-4567" autocomplete="tel"></label>
           <label>Email Address: <input type="email" id="checkout-email" placeholder="email@business.com"></label>
         </div>
 
@@ -366,15 +379,22 @@
   <strong id="summary-subtotal">$1,049.70</strong>
 </p>
         <p><span>Tax<span id="summary-tax-rate"></span></span><strong id="summary-tax">$0.00</strong></p>
+        <!-- Freight is deliberately NOT quoted live to the customer (see the
+             hidden freightQuoteSection above -- staff price each order's
+             delivery and bill it on the invoice). Saying so explicitly beats
+             omitting the line entirely: the audit flagged "no shipping price
+             shown" and an Estimated Total that silently excluded it, which
+             reads as a final price when it isn't. -->
+        <p id="summary-shipping-row"><span>Delivery</span><strong id="summary-shipping" style="font-weight:600;color:#64748b;font-size:13px">Quoted separately</strong></p>
       </div>
 
       <div class="summary-total">
-  <span>Estimated Total</span>
+  <span>Total before delivery</span>
   <strong id="summary-total">$0.00</strong>
 </div>
 
       <p class="summary-note">
-        You'll receive final pricing, availability, and delivery details in your confirmation.
+        Items and sales tax shown above. Delivery is quoted for your address and billed on your invoice &mdash; it is not included in this total.
       </p>
 
       <!-- Restates shipping-policy.html section 7 at the moment of decision.
@@ -383,7 +403,16 @@
            to even if this copy is edited later. -->
       <label class="ack-check" for="ackDeliveryEstimate">
         <input type="checkbox" id="ackDeliveryEstimate" onchange="syncSubmitEnabled()">
-        <span id="ackDeliveryEstimateText">I acknowledge that the stated delivery date is an estimate only and may be affected by carrier delays, area conditions, weather, holidays, or other unforeseen circumstances beyond Room Ready Supply's control.</span>
+        <!-- This previously read "the stated delivery date", but no date was
+             ever stated on this page -- the buyer was asked to acknowledge
+             something they could not see. It now states the real processing
+             window RRS publishes elsewhere on the site (3-5 business days,
+             separate from transit). A specific delivery DATE is deliberately
+             not shown: transit time is not known until freight is quoted,
+             and promising a date we cannot compute would be worse than
+             showing none. The exact wording is captured with the order
+             (deliveryAckText) so the record shows what was on screen. -->
+        <span id="ackDeliveryEstimateText">I acknowledge that orders are processed within 3&ndash;5 business days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</span>
       </label>
 
       <div class="submit-order-actions">
@@ -393,7 +422,7 @@
           disabled
           onclick="saveCheckoutAndProceed()"
         >
-          Review and Submit Order Request
+          Continue to Payment
         </button>
         <span class="security-note">
           &#128274; Your information is secure and confidential.
@@ -552,7 +581,13 @@ async function saveCheckoutAndProceed() {
     alert('Please acknowledge the delivery estimate notice before submitting.');
     return;
   }
-  if (!data.business) { alert('Please enter your business name.'); return; }
+  // Business name is optional -- RRS sells to homes, rentals and salons too.
+  // A contact name is required instead so every order still has a human name
+  // attached to it for support calls and the packing slip.
+  if (!data.business && !data.contact) {
+    alert('Please enter either a business name or a contact name.');
+    return;
+  }
   if (!data.phone)    { alert('Please enter your phone number.'); return; }
   if (fulfillmentMethod === 'ship' && !data.street) { alert('Please enter your delivery address.'); return; }
 

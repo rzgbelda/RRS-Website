@@ -2015,6 +2015,30 @@ function setupAddToCartButtons() {
         items: [gaItem(product, quantity)],
       });
       flyToCart(button);
+
+      // Explicit confirmation. flyToCart's animation plus a small badge
+      // was the only feedback, which buyers missed entirely -- reported
+      // as "add a real add-to-cart confirmation (not just the small
+      // badge)". Reuses the existing toast (role="status"/aria-live, so
+      // screen readers announce it too) rather than inventing a second
+      // notification style, and names the quantity and unit so the buyer
+      // can see the case/each distinction actually landed as intended.
+      // product.unit (from data-unit), NOT priceBy -- the object built above
+      // carries `unit`; priceBy only exists on the catalog-shaped object.
+      const unitWord = (product.unit || "Case") + (quantity === 1 ? "" : "s");
+      showVpToast(`Added ${quantity} ${unitWord} of "${product.name}" to your order.`);
+
+      // Momentary state on the button itself, mirroring the Volume Price
+      // button's confirmation, for anyone whose eyes are on the button
+      // rather than the corner of the screen.
+      const originalText = button.textContent;
+      const originalBg = button.style.background;
+      button.textContent = "✓ Added to Order";
+      button.style.background = "#16a34a";
+      setTimeout(() => {
+        button.textContent = originalText;
+        button.style.background = originalBg;
+      }, 1800);
     };
   });
 }
