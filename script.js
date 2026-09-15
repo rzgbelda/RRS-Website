@@ -1643,8 +1643,14 @@ function populateProductPage(product) {
 
   setText("productName", seoTitle);
   setText("productItemNumber", product.itemNumber);
-  setText("productCaseQty", product.caseQty);
-  setText("productSize", product.size);
+
+  // Case Qty and Size are rendered by the Specifications table below; the
+  // meta line no longer repeats them.
+  const tierBadge = document.getElementById("productTierBadge");
+  if (tierBadge) {
+    tierBadge.textContent = product.productTier || "";
+    tierBadge.style.display = product.productTier ? "" : "none";
+  }
 
   setText("productDescription", product.description);
   setText("overviewDescription", product.overview || product.description);

@@ -158,10 +158,13 @@
 
         <h1 id="productName">Product Name</h1>
 
+        <!-- Case Qty and Size live in the Specifications table below, which
+             is the single source of truth for them. Repeating both here (and
+             again in the tier-card labels) meant the same two numbers
+             appeared three times above the fold. -->
         <div class="meta-line">
           <span>Item #: <strong id="productItemNumber"></strong></span>
-          <span>Case Qty: <strong id="productCaseQty"></strong></span>
-          <span>Size: <strong id="productSize"></strong></span>
+          <span class="tier-badge" id="productTierBadge" style="display:none"></span>
         </div>
 
         <div class="product-badges">
