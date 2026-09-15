@@ -7529,17 +7529,18 @@ async function renderSubDistributorsTab() {
    source of truth: sub_distributors.commission_pct is no longer consulted
    for payouts (see affiliateReferredRevenue below).
 
-   Brackets per the CEO, 2026-09-15: up to $5,000 is 10%, $5,000.01-$10,000
-   is 15%, above $10,000 is 20%. "5000.00 - 10%" and "up to 5k is 10%" put
-   the boundary itself in the lower bracket, so these are <= comparisons.
+   Brackets as confirmed 2026-09-15: up to $5,000 is 10%, above $5,000 is
+   15%. Two brackets, no 20% tier -- the CEO's original message mentioned
+   20% above $10,000, but the rate actually agreed tops out at 15%. The
+   boundary sits in the lower bracket ("$1 - $5000 - 10%", "$5001 and
+   higher will be 15%"), so this is a <= comparison.
 
    Revenue basis is the items subtotal -- NOT orders.total. Tax is money
    collected for the state and freight is a pass-through cost; neither is
    RRS margin, so neither earns commission. */
 const AFFILIATE_COMMISSION_TIERS = [
   { max: 5000,      rate: 0.10 },
-  { max: 10000,     rate: 0.15 },
-  { max: Infinity,  rate: 0.20 },
+  { max: Infinity,  rate: 0.15 },
 ];
 
 function affiliateCommissionRate(revenue) {
@@ -7731,7 +7732,7 @@ async function loadSdTable() {
       <td><strong>${esc(sd.name)}</strong><br><span style="font-size:11px;color:#8a9ab0">${esc(sd.email||'')}</span></td>
       <td>${esc(sd.contact_person||'—')}</td>
       <td><code style="background:#f0f3f9;padding:2px 7px;border-radius:5px;font-size:12px;">${esc(sd.referral_code)}</code></td>
-      <td><span title="Tiered company-wide on monthly referred sales: up to $5,000 = 10%, $5,000.01-$10,000 = 15%, above $10,000 = 20%">Tiered</span></td>
+      <td><span title="Tiered company-wide on monthly referred sales: up to $5,000 = 10%, above $5,000 = 15%">Tiered</span></td>
       <td>${custCnt}</td>
       <td>${orders}</td>
       <td>$${rev.toFixed(2)}</td>
@@ -10038,7 +10039,7 @@ async function renderPartnerTab() {
 
   // Commission brackets are monthly, so the rate has to be found per
   // month and applied to that month's referred subtotal. Summing a year
-  // of revenue and bracketing it once would hand every affiliate 20%.
+  // of revenue and bracketing it once would hand every affiliate 15%.
   const revenueByMonth = {};
   rows.forEach(r => {
     const created = (r.orders && r.orders.created_at) || r.created_at;
@@ -10136,10 +10137,10 @@ async function renderPartnerTab() {
     </div>
 
     <div class="pt-card">
-      <div class="pt-card-head"><h3>Commission by month</h3><span>10% / 15% / 20%</span></div>
+      <div class="pt-card-head"><h3>Commission by month</h3><span>10% / 15%</span></div>
       <p class="pt-link-note" style="padding:0 18px 4px">
         Your rate is set by each month's referred sales (product total, before sales tax and freight):
-        up to $5,000 earns 10%, $5,000.01&ndash;$10,000 earns 15%, above $10,000 earns 20%.
+        up to $5,000 earns 10%, and above $5,000 earns 15%.
         The rate applies to the whole month's sales, not just the amount above a threshold.
       </p>
       ${Object.keys(revenueByMonth).length ? `

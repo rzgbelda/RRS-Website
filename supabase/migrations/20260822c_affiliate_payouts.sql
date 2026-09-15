@@ -1,5 +1,9 @@
--- RRS-9: tiered affiliate commissions ($1-4500=10%, $4501-9000=15%,
--- $9001+=20% of that month's referred revenue), paid by hand via the
+-- RRS-9: tiered affiliate commissions. Rates as confirmed 2026-09-15:
+-- $1-5000 = 10%, $5001+ = 15% of that month's referred product sales
+-- (items only, before sales tax and freight). The $4500/$9000/20%
+-- brackets this originally shipped with were never the agreed rates --
+-- see AFFILIATE_COMMISSION_TIERS in admin.js, which is authoritative.
+-- Paid by hand via the
 -- CEO's own bank (no bank account info stored here -- see the ticket
 -- discussion). This table is the accrual/payout ledger: one row per
 -- affiliate per calendar month, computed live until marked paid, at
