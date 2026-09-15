@@ -233,7 +233,7 @@
             <label class="cms-label">Display Name <span class="cms-label-hint">shown instead of your email</span></label>
             <input id="myProfileName" class="a-input" placeholder="e.g. Renz Belda">
           </div>
-          <div class="cms-form-group" style="margin-bottom:0">
+          <div class="cms-form-group">
             <label class="cms-label">Email</label>
             <input id="myProfileEmail" class="a-input" disabled style="background:#f1f5f9;color:#94a3b8">
           </div>
@@ -241,6 +241,31 @@
         <div class="a-modal-footer">
           <button class="a-btn-secondary" onclick="closeModal('myProfileModal')">Cancel</button>
           <button class="a-btn-primary" id="myProfileSaveBtn" onclick="saveMyProfile()">Save</button>
+        </div>
+
+        <!-- Password change. Every login that can open My Profile (every
+             role, including affiliates -- this modal has no role gate)
+             can change their own password here. The existing Settings-tab
+             version of this form (admin.html ~1378) does the same job
+             through the same window.sb.auth.updateUser() call, but
+             Settings is staff-only (ADMIN_ONLY_TABS/is_admin()), so an
+             affiliate had no self-service path to change a password at
+             all before this. -->
+        <div style="border-top:1px solid #eef2f7;padding:18px 24px 22px">
+          <button type="button" class="a-btn-secondary" id="myProfilePwToggle" style="width:100%" onclick="toggleMyProfilePassword()">Change Password</button>
+          <form id="myProfilePwForm" style="display:none;margin-top:14px" onsubmit="return false">
+            <div id="myProfilePwMsg" class="auth-success" style="display:none;margin-bottom:12px"></div>
+            <div id="myProfilePwErr" class="a-error" style="display:none;margin-bottom:12px"></div>
+            <div class="cms-form-group">
+              <label class="cms-label">New Password</label>
+              <input type="password" id="myProfileNewPass" class="a-input" placeholder="Min. 8 characters" autocomplete="new-password">
+            </div>
+            <div class="cms-form-group" style="margin-bottom:0">
+              <label class="cms-label">Confirm New Password</label>
+              <input type="password" id="myProfileConfirmPass" class="a-input" placeholder="Re-enter new password" autocomplete="new-password">
+            </div>
+            <button type="button" class="a-btn-primary" id="myProfilePwSaveBtn" style="margin-top:14px;width:100%" onclick="saveMyProfilePassword()">Update Password</button>
+          </form>
         </div>
       </div>
     </div>

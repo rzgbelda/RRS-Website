@@ -101,7 +101,64 @@ function openMyProfileModal() {
   document.getElementById("myProfileName").value = document.getElementById("adminNameDisplay").textContent === window._adminUserEmail
     ? "" : document.getElementById("adminNameDisplay").textContent;
   document.getElementById("myProfileEmail").value = window._adminUserEmail || "";
+  resetMyProfilePasswordSection();
   openModal("myProfileModal");
+}
+
+// Collapsed by default, and reset every time the modal opens -- a
+// half-typed new password (or a just-shown success message) from the
+// last time someone opened My Profile must not linger into this one.
+function resetMyProfilePasswordSection() {
+  const form = document.getElementById("myProfilePwForm");
+  const toggle = document.getElementById("myProfilePwToggle");
+  if (form) { form.style.display = "none"; form.reset?.(); }
+  if (toggle) toggle.textContent = "Change Password";
+  document.getElementById("myProfileNewPass").value = "";
+  document.getElementById("myProfileConfirmPass").value = "";
+  document.getElementById("myProfilePwMsg").style.display = "none";
+  document.getElementById("myProfilePwErr").style.display = "none";
+}
+
+function toggleMyProfilePassword() {
+  const form = document.getElementById("myProfilePwForm");
+  const toggle = document.getElementById("myProfilePwToggle");
+  const showing = form.style.display !== "none";
+  form.style.display = showing ? "none" : "block";
+  toggle.textContent = showing ? "Change Password" : "Cancel";
+  if (showing) resetMyProfilePasswordSection();
+}
+
+// Same window.sb.auth.updateUser() call and the same 8-char/match rules
+// as the Settings-tab version of this form (setupSettings,
+// changePasswordForm) -- this just makes the same capability reachable
+// from a modal every role can open, not only staff on the Settings tab.
+// Supabase's updateUser() re-uses the caller's already-authenticated
+// session as proof of identity; it does not take or check a "current
+// password" field (the Settings form's currentPass input is likewise
+// never read by its handler -- an existing quirk, not something this
+// introduces).
+async function saveMyProfilePassword() {
+  const newPw  = document.getElementById("myProfileNewPass").value || "";
+  const confPw = document.getElementById("myProfileConfirmPass").value || "";
+  const msgEl  = document.getElementById("myProfilePwMsg");
+  const errEl  = document.getElementById("myProfilePwErr");
+  const btn    = document.getElementById("myProfilePwSaveBtn");
+  msgEl.style.display = "none";
+  errEl.style.display = "none";
+
+  if (newPw.length < 8) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = "block"; return; }
+  if (newPw !== confPw) { errEl.textContent = "Passwords do not match."; errEl.style.display = "block"; return; }
+
+  btn.disabled = true; btn.textContent = "Updating…";
+  const { error } = await window.sb.auth.updateUser({ password: newPw });
+  btn.disabled = false; btn.textContent = "Update Password";
+
+  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+
+  msgEl.textContent = "Password updated successfully!";
+  msgEl.style.display = "block";
+  document.getElementById("myProfileNewPass").value = "";
+  document.getElementById("myProfileConfirmPass").value = "";
 }
 
 async function saveMyProfile() {
