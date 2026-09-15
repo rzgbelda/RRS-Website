@@ -144,11 +144,21 @@ const MARKETING_TABS = [
 // 'owner' (see isTabAllowed below) -- 'admin' no longer means that.
 const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "manage-about"];
 
+// An affiliate login (role='sub_distributor') gets exactly one tab: their
+// own commissions/sales/referral-code view. Previously this role had no
+// entry here at all, so isTabAllowed's final fallback (deny-list against
+// ADMIN_ONLY_TABS) let it through to "dashboard", "reports", and every
+// other non-admin-only tab -- all of which show company-wide figures, not
+// the affiliate's own. Allow-listed like every other non-owner role now,
+// so a tab added later is closed to affiliates by default too.
+const AFFILIATE_TABS = ["partner"];
+
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
   if (window._adminRole === "marketing") return MARKETING_TABS.includes(tab);
   if (window._adminRole === "admin") return ADMIN_ROLE_TABS.includes(tab);
+  if (window._adminRole === "sub_distributor") return AFFILIATE_TABS.includes(tab);
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
@@ -173,6 +183,7 @@ function landingTabFor(role) {
   if (role === "developer") return "dev-tickets";
   if (role === "marketing") return "crm";
   if (role === "admin") return "users";
+  if (role === "sub_distributor") return "partner";
   return "dashboard";
 }
 
@@ -188,10 +199,16 @@ function applyRoleRestrictions(role) {
   resetRoleRestrictions(); // always reset first
   if (role === "owner") return; // full access — nothing to hide
 
-  if (role === "developer" || role === "marketing" || role === "admin") {
+  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor") {
     // Hide every nav item except this role's allow-list, and every section
-    // heading that ends up with nothing under it.
-    const allowed = role === "developer" ? DEVELOPER_TABS : role === "marketing" ? MARKETING_TABS : ADMIN_ROLE_TABS;
+    // heading that ends up with nothing under it. sub_distributor used to
+    // fall through to the plain "hide admin-only-nav" branch below, which
+    // left Dashboard, Reports and every other non-admin-only tab visible --
+    // all showing company-wide figures, not this affiliate's own.
+    const allowed = role === "developer" ? DEVELOPER_TABS
+      : role === "marketing" ? MARKETING_TABS
+      : role === "sub_distributor" ? AFFILIATE_TABS
+      : ADMIN_ROLE_TABS;
     document.querySelectorAll(".a-nav-item").forEach(el => {
       if (!allowed.includes(el.dataset.tab)) el.style.display = "none";
     });
@@ -203,14 +220,10 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : "Admin Portal");
+    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : "Admin Portal");
     return;
   }
 
-  // sub_distributor — hide admin-only nav items and sections
-  document.querySelectorAll(".admin-only-nav").forEach(el => {
-    el.style.display = "none";
-  });
   addRoleBadge("Partner Portal");
 }
 
@@ -287,7 +300,7 @@ function switchTab(tab) {
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
-      "sales-tax":"Sales Tax" }[tab] || tab;
+      "sales-tax":"Sales Tax", "partner":"My Dashboard" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -309,6 +322,7 @@ function switchTab(tab) {
   if (tab === "order-exceptions") renderExceptionsTab();
   if (tab === "blog")             renderBlogTab();
   if (tab === "sales-tax")        renderSalesTaxTab();
+  if (tab === "partner")          renderPartnerTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -9928,4 +9942,138 @@ function stExportCsv() {
   a.click();
   URL.revokeObjectURL(a.href);
   showToast(`Exported ${rows.length} order${rows.length === 1 ? "" : "s"}`);
+}
+
+/* ── Partner (affiliate self-service) ──────────────────────────
+   What a role='sub_distributor' login sees: their own referral code,
+   commission rate, total sales and commission earned, and the list of
+   orders attributed to them.
+
+   Real security boundary, not a UI hide: 20260916_affiliate_self_service_
+   RLS.sql scopes sub_distributors/order_referrals/orders to rows linked
+   through sub_distributors.user_id = auth.uid(). This code queries the
+   same way staff code does (plain select, no extra WHERE) and simply gets
+   back only what RLS allows -- there is no client-side filter standing in
+   for the real one, so a bug here cannot leak another affiliate's data.
+
+   Reuses the exact commission math already used in loadSdTable() (the
+   staff-side Affiliates table): orders = count of order_referrals rows,
+   revenue = sum of the linked orders.total, commission = sum of
+   order_referrals.commission_amount. Two different screens computing this
+   differently would be worse than one place being wrong. */
+
+async function renderPartnerTab() {
+  const wrap = document.getElementById("tab-partner");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { data: me, error: meErr } = await window.sb
+    .from("sub_distributors")
+    .select("*")
+    .maybeSingle();
+
+  if (meErr) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your account: ${escHtml(meErr.message)}</div>`;
+    return;
+  }
+  if (!me) {
+    // A real, visible-to-the-user state: RLS returned zero rows, meaning
+    // this login has no sub_distributors.user_id pointing back to it yet
+    // (the create-subdist-user link, per 20260910a). Blank screen with no
+    // explanation would look like a bug rather than "not linked up".
+    wrap.innerHTML = `
+      <div class="a-empty" style="padding:50px 20px;text-align:center">
+        <p style="font-size:14px;font-weight:700;color:#0f2b50;margin:0 0 6px">Your account isn't linked to an affiliate profile yet</p>
+        <p style="font-size:13px;color:#94a3b8;margin:0">Contact Room Ready Supply and we'll connect your login to your referral code.</p>
+      </div>`;
+    return;
+  }
+
+  const { data: referrals, error: refErr } = await window.sb
+    .from("order_referrals")
+    .select("commission_amount, created_at, orders(order_number, total, payment_status, created_at)")
+    .eq("sub_distributor_id", me.id)
+    .order("created_at", { ascending: false });
+
+  if (refErr) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your orders: ${escHtml(refErr.message)}</div>`;
+    return;
+  }
+
+  const rows = referrals || [];
+  const totalSales = rows.reduce((s, r) => s + (parseFloat(r.orders && r.orders.total) || 0), 0);
+  const totalCommission = rows.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+
+  const origin = window.location.origin.replace(/^https?:\/\//, "");
+  const rootDomain = origin.replace(/^[^.]+\./, ""); // best-effort: strip one leading label
+  const storefrontUrl = me.subdomain ? `https://${me.subdomain}.${rootDomain || "roomreadysupply.com"}` : "";
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Welcome, ${escHtml(me.name)}</h2>
+        <p class="pt-sub">Your referral activity with Room Ready Supply.</p>
+      </div>
+    </div>
+
+    <div class="pt-stats">
+      <div class="pt-stat pt-stat--accent">
+        <p class="pt-stat-label">Commission earned</p>
+        <p class="pt-stat-value">${stMoney(totalCommission)}</p>
+        <p class="pt-stat-sub">${me.commission_pct != null ? Number(me.commission_pct).toFixed(2) + "% of referred sales" : ""}</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Total sales referred</p>
+        <p class="pt-stat-value">${stMoney(totalSales)}</p>
+        <p class="pt-stat-sub">${rows.length} order${rows.length === 1 ? "" : "s"}</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Your referral code</p>
+        <p class="pt-stat-value pt-code">${escHtml(me.referral_code || "—")}</p>
+        <p class="pt-stat-sub">Customers enter this at checkout</p>
+      </div>
+    </div>
+
+    ${me.subdomain ? `
+    <div class="pt-link-card">
+      <div>
+        <p class="pt-link-label">Your storefront link</p>
+        <p class="pt-link-url">${escHtml(storefrontUrl)}</p>
+        <p class="pt-link-note">Orders placed after visiting this link are attributed to you automatically &mdash; no code needed.</p>
+      </div>
+      <button class="pt-btn-copy" onclick="ptCopyLink('${escHtml(storefrontUrl)}')">Copy Link</button>
+    </div>` : ""}
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Your referred orders</h3><span>${rows.length} total</span></div>
+      ${rows.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Date</th><th>Order</th><th>Status</th>
+          <th class="num">Order total</th><th class="num">Your commission</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            const o = r.orders || {};
+            const paid = o.payment_status === "paid";
+            return `
+            <tr>
+              <td class="pt-muted">${fmt(r.created_at || o.created_at)}</td>
+              <td class="pt-strong">${escHtml(o.order_number || "—")}</td>
+              <td>${paid ? '<span class="pt-badge-paid">Paid</span>' : `<span class="pt-badge-pending">${escHtml(o.payment_status || "pending")}</span>`}</td>
+              <td class="num">${stMoney(o.total)}</td>
+              <td class="num pt-strong">${stMoney(r.commission_amount)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No referred orders yet. Share your link or referral code to get started.</div>`}
+    </div>
+  `;
+}
+
+function ptCopyLink(url) {
+  navigator.clipboard?.writeText(url).then(
+    () => showToast("Link copied"),
+    () => showToast("Could not copy &mdash; select and copy manually.")
+  );
 }

@@ -3715,3 +3715,112 @@ select.crm-filtersel { width: auto; min-width: 150px; }
   .st-card { overflow-x: auto; }
   .st-rowcount { margin-left: 0; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   PARTNER TAB  (pt-*)
+   The affiliate's own dashboard: one look-once summary, then the
+   order list behind it. Mirrors the Sales Tax tab's visual language
+   (st-*) so the admin app reads as one system, not two.
+   ══════════════════════════════════════════════════════════ */
+
+.pt-head { margin-bottom: 22px; }
+.pt-title {
+  margin: 0 0 4px;
+  font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #0f2b50;
+}
+.pt-sub { margin: 0; font-size: 13px; color: #64748b; }
+
+.pt-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px; margin-bottom: 18px;
+}
+.pt-stat {
+  background: #fff;
+  border: 1px solid #e8edf3; border-radius: 13px;
+  padding: 16px 18px;
+}
+.pt-stat--accent { background: #0f2b50; border-color: #0f2b50; }
+.pt-stat--accent .pt-stat-label { color: rgba(255,255,255,.62); }
+.pt-stat--accent .pt-stat-value { color: #fff; }
+.pt-stat--accent .pt-stat-sub   { color: rgba(255,255,255,.55); }
+
+.pt-stat-label {
+  margin: 0 0 6px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: #94a3b8;
+}
+.pt-stat-value {
+  margin: 0;
+  font-size: 25px; font-weight: 800; letter-spacing: -.02em; color: #0f2b50;
+  font-variant-numeric: tabular-nums;
+}
+.pt-stat-code, .pt-code {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
+  letter-spacing: .02em;
+}
+.pt-stat-sub { margin: 4px 0 0; font-size: 11.5px; color: #94a3b8; line-height: 1.45; }
+
+.pt-link-card {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  background: #fff7f0; border: 1px solid #fde8d6; border-radius: 12px;
+  padding: 14px 18px; margin-bottom: 20px;
+}
+.pt-link-label { margin: 0 0 3px; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #ED7226; }
+.pt-link-url   { margin: 0; font-size: 14px; font-weight: 700; color: #0f2b50; word-break: break-all; }
+.pt-link-note  { margin: 4px 0 0; font-size: 11.5px; color: #94a3b8; }
+.pt-btn-copy {
+  flex-shrink: 0;
+  height: 36px; padding: 0 16px;
+  background: #ED7226; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 12.5px; font-weight: 700; cursor: pointer;
+}
+.pt-btn-copy:hover { background: #d4611f; }
+
+.pt-card {
+  background: #fff;
+  border: 1px solid #e8edf3; border-radius: 13px;
+  overflow: hidden;
+}
+.pt-card-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  padding: 15px 18px; border-bottom: 1px solid #eef2f7;
+}
+.pt-card-head h3 { margin: 0; font-size: 14px; font-weight: 800; color: #0f2b50; }
+.pt-card-head span { font-size: 11.5px; color: #94a3b8; }
+
+.pt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pt-table th {
+  text-align: left; padding: 10px 18px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: #94a3b8;
+  background: #fafbfd; border-bottom: 1px solid #eef2f7;
+  white-space: nowrap;
+}
+.pt-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #f4f7fa;
+  color: #334155; vertical-align: middle;
+}
+.pt-table tbody tr:last-child td { border-bottom: none; }
+.pt-table tbody tr:hover { background: #fcfdfe; }
+.pt-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.pt-strong { font-weight: 700; color: #0f2b50; }
+.pt-muted  { color: #94a3b8; }
+
+.pt-badge-paid, .pt-badge-pending {
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+.pt-badge-paid    { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+.pt-badge-pending { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
+
+.pt-empty { padding: 34px 18px; text-align: center; color: #94a3b8; font-size: 13px; }
+
+@media (max-width: 720px) {
+  .pt-table th, .pt-table td { padding-left: 12px; padding-right: 12px; }
+  .pt-card { overflow-x: auto; }
+}

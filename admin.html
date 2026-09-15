@@ -53,6 +53,14 @@
         Dashboard
       </a>
 
+      <!-- Only ever visible to role='sub_distributor' (AFFILIATE_TABS in
+           admin.js) -- not admin-only-nav, since this must stay hidden from
+           EVERY other role too, not just be shown to staff. -->
+      <a href="#" class="a-nav-item" data-tab="partner" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+        My Dashboard
+      </a>
+
       <span class="a-nav-section admin-only-nav">Catalog</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="products">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
@@ -1418,6 +1426,15 @@
     <div id="tab-sales-tax" class="a-tab" style="display:none">
       <!-- Populated dynamically by renderSalesTaxTab() in admin.js -->
     </div><!-- /sales-tax tab -->
+
+    <!-- ============ PARTNER (AFFILIATE SELF-SERVICE) TAB ============ -->
+    <div id="tab-partner" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderPartnerTab() in admin.js.
+           Visible only to role='sub_distributor' logins -- their own
+           commissions/sales/referral code, scoped by RLS
+           (20260916_affiliate_self_service_rls.sql), never other
+           affiliates' data. -->
+    </div><!-- /partner tab -->
 
     <!-- ============ DEVELOPER TICKETS TAB ============ -->
     <div id="tab-dev-tickets" class="a-tab" style="display:none">
