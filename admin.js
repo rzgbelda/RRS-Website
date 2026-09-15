@@ -1194,6 +1194,22 @@ async function openDeleteProduct(id) {
 let _csvRows    = [];
 let _csvRunning = false;
 
+/* The closed vocabulary products.product_tier accepts (20260915c). */
+const PRODUCT_TIERS = ["Economy","Premium","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free"];
+
+/* Maps a spreadsheet cell to a valid product_tier, or null.
+   Anything unrecognized becomes null rather than being passed through: the
+   column has a CHECK constraint, and a single bad cell in a 300-row file
+   would otherwise fail the whole batch upsert and import nothing. Tier is
+   optional merchandising data, so silently dropping a junk value is much
+   better than losing the import. */
+function normalizeProductTier(raw) {
+  const s = String(raw ?? "").trim();
+  if (!s) return null;
+  const norm = s.toLowerCase().replace(/[\s_-]+/g, "");
+  return PRODUCT_TIERS.find(t => t.toLowerCase().replace(/[\s_-]+/g, "") === norm) || null;
+}
+
 /* ============================================================
    CONVERTER  (xlsx / csv → mapped → download RRS CSV)
 ============================================================ */
@@ -1230,6 +1246,7 @@ const CVT_COLS = [
   { key:"moq_group_min", label:"Mix & Match Group Minimum" },
   { key:"product_family",label:"Product Family (groups sizes into one card)" },
   { key:"variant_label", label:"Variant Label (the dropdown option)" },
+  { key:"product_tier",  label:"Product Tier (Economy / Premium / Luxury — optional)" },
   { key:"images",        label:"Gallery Images (pipe-separated)" },
 ];
 
@@ -1357,6 +1374,7 @@ function cvtAutoMap(cols) {
     images:        ["images","galleryimages","additionalimages","photos","extraimages"],
     product_family:["productfamily","family","variantgroup","groupname","parentproduct"],
     variant_label: ["variantlabel","variant","option","optionlabel","sizelabel","variantname"],
+    product_tier:  ["producttier","tier","grade","quality","qualitytier","line","productline","collection"],
   };
   for (const col of cols) {
     const n = norm(col);
@@ -2033,6 +2051,7 @@ async function runCsvImport() {
     // all-or-nothing rather than half-applied.
     product_family: (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.product_family.trim() : null,
     variant_label : (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.variant_label.trim()  : null,
+    product_tier  : normalizeProductTier(r.product_tier),
     updated_at   : now,
   });
 

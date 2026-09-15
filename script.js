@@ -697,6 +697,7 @@ function renderSingleCard(product) {
         <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
+        ${product.productTier ? `<span class="tier-badge">${product.productTier}</span>` : ""}
         <h3>${product.name}</h3>
         <p class="product-description">${product.description || ""}</p>
         <div class="product-details">
@@ -743,6 +744,16 @@ function renderSingleCard(product) {
         </div>
       </div>
     </div>`;
+}
+
+// Cheapest and dearest across a family, using the same price resolution the
+// cards use (display price, falling back to tier 1).
+function variantPriceRange(variants) {
+  const prices = variants
+    .map(v => cleanPrice(v.price) || cleanPrice(v.price1) || 0)
+    .filter(n => n > 0);
+  if (!prices.length) return { min: 0, max: 0 };
+  return { min: Math.min(...prices), max: Math.max(...prices) };
 }
 
 function renderVariantCard(variants) {
@@ -792,19 +803,42 @@ function renderVariantCard(variants) {
     const label = vv.variantLabel || vv.size || "Option " + (i + 1);
     return seenLabels.get(label) === i;
   });
-  // RRS-11: this used to be a flat grid of pills -- fine for 2-3 sizes, but
-  // a product like linen sheets with 6+ size/fold combinations turned the
-  // card into a tall, uneven block next to its neighbors in the grid. A
-  // dropdown holds the exact same choice in one fixed-height row regardless
-  // of how many sizes a product has. Skipped entirely when there's nothing
-  // to choose (a single real size, only color varies).
-  const sizeDropdownHtml = dedupedVariants.length > 1 ? `
+  // RRS-11 replaced a flat grid of size pills with a dropdown, because a
+  // product with 6+ size/fold combinations turned the card into a tall,
+  // uneven block. The dropdown stays as the fast path for a handful of
+  // options; past that it becomes an unreadable scroll of long labels like
+  // `78" x 80" x 15" - Case of 12`, so those open the modal instead, which
+  // has room for a thumbnail, case quantity and price per option.
+  const VARIANT_DROPDOWN_MAX = 4;
+  const useDropdown = dedupedVariants.length > 1 && dedupedVariants.length <= VARIANT_DROPDOWN_MAX;
+
+  const sizeDropdownHtml = useDropdown ? `
     <select class="variant-select" onchange="selectVariantFromDropdown(this)">
       ${dedupedVariants.map((vv, i) => {
         const label = vv.variantLabel || vv.size || "Option " + (i + 1);
         return `<option value="${variants.indexOf(vv)}"${i === 0 ? " selected" : ""}>${label}</option>`;
       }).join("")}
     </select>` : "";
+
+  // Price span across the family. Shown only when the ends actually differ:
+  // "$10.08 - $14.30" is information, "$10.08 - $10.08" is noise.
+  const range = variantPriceRange(variants);
+  const rangeHtml = range.min !== range.max
+    ? `<span class="price-range">$${range.min.toFixed(2)} &ndash; $${range.max.toFixed(2)}</span>`
+    : "";
+
+  const optionCount = dedupedVariants.length;
+  const triggerHtml = optionCount > 1 ? `
+    <button type="button" class="variant-trigger" aria-haspopup="dialog">
+      ${optionCount} options
+    </button>` : "";
+
+  // Tier badge, only when the whole family shares one tier. A mixed family
+  // (Bath Towel spans Economy/Premium/Ringspun) would be misrepresented by
+  // any single badge, so it shows none and the modal groups by tier instead.
+  const famTiers = [...new Set(variants.map(vv => vv.productTier).filter(Boolean))];
+  const tierHtml = famTiers.length === 1
+    ? `<span class="tier-badge">${famTiers[0]}</span>` : "";
 
   // Color pills: show unique colors (using first size's color variants as reference)
   let colorPillsHtml = "";
@@ -824,6 +858,7 @@ function renderVariantCard(variants) {
         <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
+        ${tierHtml}
         <h3>${v.productFamily || v.name}</h3>
         ${sizeDropdownHtml}
         ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
@@ -839,10 +874,12 @@ function renderVariantCard(variants) {
           </div>
         </div>
         <div class="product-bottom">
-          <div>
+          ${rangeHtml}
+          <div class="price-row">
             <span class="price">$${price.toFixed(2)}</span>
             <span class="unit">/ ${v.priceBy || "Case"}</span>
           </div>
+          ${triggerHtml}
           <button
             class="add-btn"
             data-item="${v.itemNumber}"
@@ -1033,6 +1070,9 @@ function setupProductCardClicks() {
       // handler didn't know about it, so opening/choosing from the select
       // was bubbling up as a "click" and navigating to the product page.
       if (e.target.closest(".variant-select")) return;
+      // Opens the options modal instead of navigating. Must come before the
+      // navigation below, or the card swallows the click and leaves the page.
+      if (e.target.closest(".variant-trigger")) { openVariantModal(card); return; }
 
       const url = card.dataset.url;
       if (url) {
@@ -1040,6 +1080,162 @@ function setupProductCardClicks() {
       }
     };
   });
+}
+
+/* =========================
+   MODAL STACK
+========================= */
+
+// Escape used to be handled by a single document listener that closed the
+// contact modal unconditionally, whether or not it was open. With more than
+// one modal that means every open dialog closes at once, and whichever
+// closes last wins the body-scroll reset. The stack makes Escape close only
+// the topmost dialog, and only unlocks scrolling once nothing is left open.
+const _modalStack = [];
+
+function pushModal(closeFn) {
+  _modalStack.push(closeFn);
+  document.body.style.overflow = "hidden";
+}
+
+function popModal(closeFn) {
+  const i = _modalStack.lastIndexOf(closeFn);
+  if (i !== -1) _modalStack.splice(i, 1);
+  if (!_modalStack.length) document.body.style.overflow = "";
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key !== "Escape" || !_modalStack.length) return;
+  _modalStack[_modalStack.length - 1]();
+});
+
+/* =========================
+   VARIANT OPTIONS MODAL
+========================= */
+
+let _vmLastFocus = null;
+
+function vmEsc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Built once and reused, rather than one shell per card.
+function ensureVariantModal() {
+  let el = document.getElementById("variantModal");
+  if (el) return el;
+
+  el = document.createElement("div");
+  el.id = "variantModal";
+  el.className = "vm-overlay";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-labelledby", "vmTitle");
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="vm-modal">
+      <div class="vm-header">
+        <div>
+          <p class="vm-eyebrow">Choose an option</p>
+          <h2 class="vm-title" id="vmTitle"></h2>
+        </div>
+        <button type="button" class="vm-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="vm-body"></div>
+    </div>`;
+  document.body.appendChild(el);
+
+  el.querySelector(".vm-close").addEventListener("click", closeVariantModal);
+  el.addEventListener("click", e => { if (e.target === el) closeVariantModal(); });
+
+  // Focus trap. The site's other modals have none, so Tab walks out of the
+  // dialog and into the page behind it.
+  el.addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    const f = el.querySelectorAll('button:not([disabled]), [href], input, select, [tabindex]:not([tabindex="-1"])');
+    if (!f.length) return;
+    const first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+
+  return el;
+}
+
+function openVariantModal(card) {
+  let variants;
+  try { variants = JSON.parse(card.dataset.variants || "[]"); } catch { return; }
+  if (!variants.length) return;
+
+  const el = ensureVariantModal();
+  const titleEl = card.querySelector("h3");
+  el.querySelector(".vm-title").textContent = titleEl ? titleEl.textContent : "Options";
+
+  // Group by tier only when the family actually spans more than one, so a
+  // single-tier product doesn't get a pointless section heading.
+  const tiers = [...new Set(variants.map(v => v.productTier).filter(Boolean))];
+  const grouped = tiers.length > 1;
+
+  const rowFor = v => {
+    const price = cleanPrice(v.price) || cleanPrice(v.price1) || 0;
+    const bits = [];
+    if (v.caseQty) bits.push(`Case qty ${vmEsc(v.caseQty)}`);
+    if (v.size)    bits.push(`Pack ${vmEsc(v.size)}`);
+    return `
+      <button type="button" class="vm-row" data-slug="${vmEsc(v.slug)}">
+        <img class="vm-row-img" src="${vmEsc(v.image)}" alt=""
+             onerror="this.src='/assets/img/product-placeholder.svg'">
+        <span class="vm-row-main">
+          <span class="vm-row-label">${vmEsc(v.variantLabel || v.name)}</span>
+          ${bits.length ? `<span class="vm-row-meta">${bits.join(" &middot; ")}</span>` : ""}
+        </span>
+        <span class="vm-row-price">$${price.toFixed(2)}<small>/ ${vmEsc(v.priceBy || "Case")}</small></span>
+      </button>`;
+  };
+
+  let body;
+  if (grouped) {
+    const order = ["Economy", "Premium", "Suites", "Ringspun", "Luxury", "Hospitality", "Wrinkle-Free"];
+    const sorted = [...tiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    body = sorted.map(t => `
+      <div class="vm-group">
+        <p class="vm-group-label">${vmEsc(t)}</p>
+        ${variants.filter(v => v.productTier === t).map(rowFor).join("")}
+      </div>`).join("");
+    const untiered = variants.filter(v => !v.productTier);
+    if (untiered.length) body += `<div class="vm-group">${untiered.map(rowFor).join("")}</div>`;
+  } else {
+    body = variants.map(rowFor).join("");
+  }
+  el.querySelector(".vm-body").innerHTML = body;
+
+  // Selecting an option applies it to the card, exactly as the dropdown
+  // does, and keeps the dropdown in sync so the two never disagree.
+  el.querySelectorAll(".vm-row").forEach(row => {
+    row.addEventListener("click", () => {
+      const idx = variants.findIndex(v => v.slug === row.dataset.slug);
+      if (idx === -1) return;
+      applyVariantToCard(card, variants[idx]);
+      const sel = card.querySelector(".variant-select");
+      if (sel) sel.value = String(idx);
+      closeVariantModal();
+    });
+  });
+
+  _vmLastFocus = document.activeElement;
+  el.hidden = false;
+  pushModal(closeVariantModal);
+  el.querySelector(".vm-close").focus();
+}
+
+function closeVariantModal() {
+  const el = document.getElementById("variantModal");
+  if (!el || el.hidden) return;
+  el.hidden = true;
+  popModal(closeVariantModal);
+  if (_vmLastFocus && document.contains(_vmLastFocus)) _vmLastFocus.focus();
+  _vmLastFocus = null;
 }
 
 /* search is now handled by applyFilters() in the CATEGORY FILTERS section */
@@ -3206,7 +3402,7 @@ function openContactModal() {
   const m = document.getElementById("contactModal");
   if (!m) return;
   m.style.display = "flex";
-  document.body.style.overflow = "hidden";
+  pushModal(closeContactModal);
   // reset form state
   const form = document.getElementById("ciqForm");
   if (form) form.reset();
@@ -3220,18 +3416,13 @@ function openContactModal() {
 function closeContactModal() {
   const m = document.getElementById("contactModal");
   if (m) m.style.display = "none";
-  document.body.style.overflow = "";
+  popModal(closeContactModal);
 }
 
 // Close on overlay click
 document.addEventListener("click", function(e) {
   const m = document.getElementById("contactModal");
   if (m && e.target === m) closeContactModal();
-});
-
-// Close on Escape
-document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape") closeContactModal();
 });
 
 function updateFileName(input) {

@@ -6897,6 +6897,141 @@ button, a, [role="button"] { touch-action: manipulation; }
   .checkout-product h4 { font-size: 13px; }
   .checkout-product > *:not(img) { flex: 1 1 auto; min-width: 0; }
 }
+/* ── Card: tier badge, price range, options trigger ──────────── */
+
+.tier-badge {
+  align-self: flex-start;
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: #fff4ec;
+  border: 1px solid #fde8d6;
+  color: #ED7226;
+  font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+}
+
+/* Sits above .price and is never rewritten by applyVariantToCard, so the
+   family's span stays visible after a specific option is chosen. */
+.price-range {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 12px; font-weight: 600; color: #94a3b8;
+  font-variant-numeric: tabular-nums;
+}
+
+.variant-trigger {
+  width: 100%;
+  margin: 8px 0 6px;
+  padding: 8px 12px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0; border-radius: 8px;
+  color: #0d2c50; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.variant-trigger::after { content: " \203A"; font-weight: 800; }
+.variant-trigger:hover { border-color: #ED7226; color: #ED7226; background: #fffaf6; }
+.variant-trigger:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; }
+
+/* ═══════════════════════════════════════════════════════
+   VARIANT OPTIONS MODAL  (vm-*)
+   Opened from a card's "N options" button. Deliberately borrows the
+   ciq-* modal's geometry below (overlay tint, 18px radius, sticky
+   header, 34px round close) so the site has one modal language, but
+   in brand orange/navy rather than the ciq form styling.
+═══════════════════════════════════════════════════════ */
+.vm-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(13,44,80,.55);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.vm-overlay[hidden] { display: none; }
+
+.vm-modal {
+  background: #fff;
+  border-radius: 18px;
+  width: 100%; max-width: 520px;
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 72px rgba(0,0,0,.22);
+  animation: ciq-fadein .25s ease;
+}
+
+.vm-header {
+  position: sticky; top: 0; z-index: 2;
+  background: #fff;
+  border-bottom: 1px solid #eef0f4;
+  border-radius: 18px 18px 0 0;
+  padding: 20px 22px 16px;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 14px;
+}
+.vm-eyebrow {
+  margin: 0 0 3px;
+  font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+  color: #ED7226;
+}
+.vm-title { margin: 0; font-size: 17px; font-weight: 800; color: #0d2c50; line-height: 1.3; }
+
+.vm-close {
+  flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: none; background: #f5f7fa; color: #5B6C7E;
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.vm-close:hover { background: #fce4d6; color: #ED7226; }
+.vm-close:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; }
+
+.vm-body { padding: 14px 22px 22px; overflow-y: auto; }
+
+.vm-group + .vm-group { margin-top: 18px; }
+.vm-group-label {
+  margin: 0 0 8px;
+  font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
+  color: #ED7226;
+  padding-bottom: 6px; border-bottom: 1px solid #fde8d6;
+}
+
+.vm-row {
+  width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 12px;
+  margin-bottom: 8px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0; border-radius: 12px;
+  text-align: left; cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.vm-row:last-child { margin-bottom: 0; }
+.vm-row:hover { border-color: #ED7226; box-shadow: 0 6px 18px rgba(11,31,56,.08); transform: translateY(-1px); }
+.vm-row:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; }
+
+.vm-row-img {
+  flex-shrink: 0;
+  width: 46px; height: 46px;
+  object-fit: contain;
+  background: #f8fafc; border-radius: 8px;
+}
+.vm-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.vm-row-label { font-size: 13.5px; font-weight: 700; color: #0d2c50; }
+.vm-row-meta  { font-size: 11.5px; color: #94a3b8; }
+.vm-row-price {
+  flex-shrink: 0; text-align: right;
+  font-size: 15px; font-weight: 800; color: #ED7226;
+  font-variant-numeric: tabular-nums;
+}
+.vm-row-price small { display: block; font-size: 10.5px; font-weight: 600; color: #94a3b8; }
+
+@media (max-width: 600px) {
+  .vm-modal { max-height: 92vh; }
+  .vm-header { padding: 16px 16px 13px; }
+  .vm-body { padding: 12px 16px 18px; }
+  .vm-row-img { width: 38px; height: 38px; }
+}
+
 /* ═══════════════════════════════════════════════════════
    CONTACT INQUIRY MODAL  (ciq-*)
 ═══════════════════════════════════════════════════════ */
