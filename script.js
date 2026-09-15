@@ -621,28 +621,6 @@ function injectVariantCSS() {
       box-shadow: 0 2px 6px rgba(10, 50, 30, 0.22);
     }
 
-    /* -- Catalog card size dropdown (RRS-11) -- replaces what used to be a
-       row of size pills, which grew a card tall and uneven next to its
-       grid neighbors once a product had more than 3-4 sizes. One row,
-       fixed height, regardless of how many options a product has. -- */
-    .variant-select {
-      display: block;
-      width: 100%;
-      margin: 10px 0 12px;
-      padding: 7px 30px 7px 11px;
-      border: 1.5px solid #d8dce3;
-      border-radius: 7px;
-      background: #f8f9fa url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="6" viewBox="0 0 10 6" fill="none"><path d="M1 1l4 4 4-4" stroke="%23505a68" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>') no-repeat right 11px center;
-      appearance: none; -webkit-appearance: none; -moz-appearance: none;
-      font-size: 12.5px;
-      font-weight: 600;
-      color: #1e2a38;
-      cursor: pointer;
-      transition: border-color 0.18s cubic-bezier(0.2,0,0.2,1), background-color 0.18s cubic-bezier(0.2,0,0.2,1);
-    }
-    .variant-select:hover { border-color: #1a6b4a; }
-    .variant-select:focus-visible { outline: 2px solid #1a6b4a; outline-offset: 1px; }
-
     /* -- Product page pills – larger, with a header label -- */
     #product-variant-selector {
       margin: 16px 0 20px;
@@ -805,23 +783,12 @@ function renderVariantCard(variants) {
     const label = vv.variantLabel || vv.size || "Option " + (i + 1);
     return seenLabels.get(label) === i;
   });
-  // RRS-11 replaced a flat grid of size pills with a dropdown, because a
-  // product with 6+ size/fold combinations turned the card into a tall,
-  // uneven block. The dropdown stays as the fast path for a handful of
-  // options; past that it becomes an unreadable scroll of long labels like
-  // `78" x 80" x 15" - Case of 12`, so those open the modal instead, which
-  // has room for a thumbnail, case quantity and price per option.
-  const VARIANT_DROPDOWN_MAX = 4;
-  const useDropdown = dedupedVariants.length > 1 && dedupedVariants.length <= VARIANT_DROPDOWN_MAX;
-
-  const sizeDropdownHtml = useDropdown ? `
-    <select class="variant-select" onchange="selectVariantFromDropdown(this)">
-      ${dedupedVariants.map((vv, i) => {
-        const label = vv.variantLabel || vv.size || "Option " + (i + 1);
-        return `<option value="${variants.indexOf(vv)}"${i === 0 ? " selected" : ""}>${label}</option>`;
-      }).join("")}
-    </select>` : "";
-
+  // One way to choose, not two. A native <select> and an "N options" button
+  // sitting on the same card do the same job, and the select can only show a
+  // bare label -- no thumbnail, case quantity or per-option price. The modal
+  // shows all of that, so it is the single path for every family regardless
+  // of how many options it has.
+  //
   // Price span across the family. Shown only when the ends actually differ:
   // "$10.08 - $14.30" is information, "$10.08 - $10.08" is noise.
   const range = variantPriceRange(variants);
@@ -829,10 +796,17 @@ function renderVariantCard(variants) {
     ? `<span class="price-range">$${range.min.toFixed(2)} &ndash; $${range.max.toFixed(2)}</span>`
     : "";
 
+  // With the dropdown gone this button is the only place the chosen option
+  // is named, so it shows the current selection rather than just a count --
+  // otherwise the card displays a price with nothing saying which size it
+  // belongs to. The count moves to the right as a quiet hint that there is
+  // more to choose from.
   const optionCount = dedupedVariants.length;
+  const currentLabel = v.variantLabel || v.size || "Select option";
   const triggerHtml = optionCount > 1 ? `
     <button type="button" class="variant-trigger" aria-haspopup="dialog">
-      ${optionCount} options
+      <span class="vt-label" data-field="variantLabel">${currentLabel}</span>
+      <span class="vt-count">${optionCount} options</span>
     </button>` : "";
 
   // Tier badge, only when the whole family shares one tier. A mixed family
@@ -862,8 +836,7 @@ function renderVariantCard(variants) {
       <div class="product-content">
         ${tierHtml}
         <h3>${v.productFamily || v.name}</h3>
-        ${sizeDropdownHtml}
-        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
+        ${colorPillsHtml ? `<div class="variant-selector">${colorPillsHtml}</div>` : ""}
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
@@ -946,6 +919,10 @@ function applyVariantToCard(card, v) {
   const packEl = card.querySelector('[data-field="packSize"]');
   if (packEl) packEl.textContent = "Pack Size: " + (v.size || "");
 
+  // The options button names the current selection, so it has to follow it.
+  const labelEl = card.querySelector('[data-field="variantLabel"]');
+  if (labelEl) labelEl.textContent = v.variantLabel || v.size || "Select option";
+
   card.dataset.url = "/product?item=" + encodeURIComponent(v.slug);
 
   const btn = card.querySelector(".add-btn");
@@ -974,25 +951,6 @@ function applyVariantToCard(card, v) {
   }
 }
 
-function selectVariantFromDropdown(selectEl) {
-  const card = selectEl.closest(".product-card");
-  const variants = JSON.parse(card.dataset.variants);
-  let v = variants[parseInt(selectEl.value)];
-
-  // If a color is actively selected, find the matching size+color variant
-  // rather than just whatever's first for that size.
-  const activeColorPill = card.querySelector(".color-pill.active");
-  if (activeColorPill && v.colorLabel) {
-    const activeColorVariant = variants[parseInt(activeColorPill.dataset.vidx)];
-    const matched = variants.find(vv =>
-      vv.variantLabel === v.variantLabel && vv.colorLabel === activeColorVariant?.colorLabel
-    );
-    if (matched) v = matched;
-  }
-
-  applyVariantToCard(card, v);
-}
-
 // Switches color while keeping the current selected size
 function selectVariantColor(pillEl) {
   const card = pillEl.closest(".product-card");
@@ -1006,10 +964,12 @@ function selectVariantColor(pillEl) {
   });
 
   // Resolve the variant matching the currently selected size in this new
-  // color (size read from the dropdown, not an "active" pill class).
-  const sizeSelect = card.querySelector(".variant-select");
-  const activeSizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
-  const activeSize = variants[activeSizeIdx];
+  // color. The card's data-url always points at whichever variant is
+  // showing -- applyVariantToCard keeps it current -- so it survives the
+  // size dropdown's removal and works whether the size was picked from the
+  // modal or is simply the default.
+  const currentSlug = decodeURIComponent((card.dataset.url || "").split("item=")[1] || "");
+  const activeSize = variants.find(vv => vv.slug === currentSlug) || variants[0];
   const target = variants.find(vv =>
     vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === colorVariant.colorLabel
   ) || colorVariant;
@@ -1078,10 +1038,6 @@ function setupProductCardClicks() {
     card.onclick = e => {
       if (e.target.closest(".add-btn")) return;
       if (e.target.closest(".variant-pill")) return;
-      // RRS-11 introduced this dropdown; the card's own click-to-navigate
-      // handler didn't know about it, so opening/choosing from the select
-      // was bubbling up as a "click" and navigating to the product page.
-      if (e.target.closest(".variant-select")) return;
       // Opens the options modal instead of navigating. Must come before the
       // navigation below, or the card swallows the click and leaves the page.
       if (e.target.closest(".variant-trigger")) { openVariantModal(card); return; }
@@ -1229,8 +1185,6 @@ function openVariantModal(card) {
       const idx = variants.findIndex(v => v.slug === row.dataset.slug);
       if (idx === -1) return;
       applyVariantToCard(card, variants[idx]);
-      const sel = card.querySelector(".variant-select");
-      if (sel) sel.value = String(idx);
       closeVariantModal();
     });
   });
