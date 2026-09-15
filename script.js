@@ -237,6 +237,10 @@ function mapDbProductToLegacyShape(row) {
     variantLabel: row.variant_label || "",
     colorGroup: row.color_group || "",
     colorLabel: row.color_label || "",
+    // Quality line (Economy / Premium / Luxury / ...). Optional and often
+    // absent -- gloves, chemicals and paper have no tier -- so every
+    // consumer must treat "" as "don't render a badge".
+    productTier: row.product_tier || "",
 
     // Real supplier category (e.g. "Bed Sheets & Linens"). Categories used
     // to be guessed by keyword-matching product text, which badly
@@ -698,11 +702,11 @@ function renderSingleCard(product) {
         <div class="product-details">
           <div class="detail-item">
             <img src="assets/icons/box.svg" alt="">
-            <span>Case Qty: ${product.caseQty || ""}</span>
+            <span data-field="caseQty">Case Qty: ${product.caseQty || ""}</span>
           </div>
           <div class="detail-item">
             <img src="assets/icons/pack.svg" alt="">
-            <span>Pack Size: ${product.size || ""}</span>
+            <span data-field="packSize">Pack Size: ${product.size || ""}</span>
           </div>
         </div>
         <div class="product-bottom">
@@ -763,6 +767,15 @@ function renderVariantCard(variants) {
     variantLabel: vv.variantLabel || vv.size || "",
     colorGroup:   vv.colorGroup  || "",
     colorLabel:   vv.colorLabel  || "",
+    // Carried so a variant switch can update the Mix & Match badge and the
+    // add-to-cart minimums. Their absence was a real bug: applyVariantToCard
+    // rewrote data-moq/data-moq-group from fields that were never in here,
+    // so switching size silently kept the previous variant's minimum.
+    productFamily: vv.productFamily || "",
+    productTier:   vv.productTier   || "",
+    moq:           productMoq(vv),
+    moqGroup:      vv.moqGroup    || "",
+    moqGroupMin:   vv.moqGroupMin || "",
   }));
 
   const escapedJson = JSON.stringify(variantsData)
@@ -818,11 +831,11 @@ function renderVariantCard(variants) {
         <div class="product-details">
           <div class="detail-item">
             <img src="assets/icons/box.svg" alt="">
-            <span>Case Qty: ${v.caseQty || ""}</span>
+            <span data-field="caseQty">Case Qty: ${v.caseQty || ""}</span>
           </div>
           <div class="detail-item">
             <img src="assets/icons/pack.svg" alt="">
-            <span>Pack Size: ${v.size || ""}</span>
+            <span data-field="packSize">Pack Size: ${v.size || ""}</span>
           </div>
         </div>
         <div class="product-bottom">
@@ -882,9 +895,15 @@ function applyVariantToCard(card, v) {
   const descEl = card.querySelector(".product-description");
   if (descEl) descEl.textContent = v.description || "";
 
-  const spans = card.querySelectorAll(".detail-item span");
-  if (spans[0]) spans[0].textContent = "Case Qty: " + v.caseQty;
-  if (spans[1]) spans[1].textContent = "Pack Size: " + v.size;
+  // Addressed by data-field rather than by position. These used to be
+  // querySelectorAll(".detail-item span")[0] and [1], which silently wrote
+  // the wrong values the moment anything was added to or reordered within
+  // .product-details -- and breaks outright once the row moves elsewhere.
+  const caseEl = card.querySelector('[data-field="caseQty"]');
+  if (caseEl) caseEl.textContent = "Case Qty: " + (v.caseQty || "");
+
+  const packEl = card.querySelector('[data-field="packSize"]');
+  if (packEl) packEl.textContent = "Pack Size: " + (v.size || "");
 
   card.dataset.url = "/product?item=" + encodeURIComponent(v.slug);
 
@@ -898,6 +917,12 @@ function applyVariantToCard(card, v) {
     btn.dataset.price2      = cleanPrice(v.price2);
     btn.dataset.price3      = cleanPrice(v.price3);
     btn.dataset.image       = v.image;
+    // Minimums travel with the variant. Previously these were left at the
+    // first variant's values, so switching size could let a customer order
+    // below the selected SKU's real minimum.
+    if (v.moq != null)        btn.dataset.moq         = v.moq;
+    btn.dataset.moqGroup    = v.moqGroup    || "";
+    btn.dataset.moqGroupMin = v.moqGroupMin || "";
   }
 
   const qBtn = card.querySelector(".quote-add-btn");
@@ -939,12 +964,8 @@ function selectVariantColor(pillEl) {
     p.classList.toggle("active", p === pillEl);
   });
 
-  // All variants of the same color share the same image – just swap it
-  const img = card.querySelector(".product-image img");
-  if (img) img.src = colorVariant.image;
-
-  // Update the product link to go to the color variant of the currently
-  // selected size (read from the dropdown now, not an "active" pill class).
+  // Resolve the variant matching the currently selected size in this new
+  // color (size read from the dropdown, not an "active" pill class).
   const sizeSelect = card.querySelector(".variant-select");
   const activeSizeIdx = sizeSelect ? parseInt(sizeSelect.value) : 0;
   const activeSize = variants[activeSizeIdx];
@@ -952,11 +973,12 @@ function selectVariantColor(pillEl) {
     vv.variantLabel === activeSize?.variantLabel && vv.colorLabel === colorVariant.colorLabel
   ) || colorVariant;
 
-  card.dataset.url = "/product?item=" + encodeURIComponent(target.slug);
-  const btn = card.querySelector(".add-btn");
-  if (btn) { btn.dataset.item = target.itemNumber; btn.dataset.name = target.name; btn.dataset.image = target.image; }
-  const qBtn = card.querySelector(".quote-add-btn");
-  if (qBtn) { qBtn.dataset.item = target.itemNumber; qBtn.dataset.name = target.name; qBtn.dataset.image = target.image; }
+  // Route through the single mutation point instead of hand-patching a few
+  // datasets. The old version updated only the image, URL and two buttons,
+  // so picking a different color left the PREVIOUS color's price,
+  // description and case quantity on the card -- visibly wrong whenever
+  // colors were not priced identically.
+  applyVariantToCard(card, target);
 }
 
 function renderProducts(products) {
