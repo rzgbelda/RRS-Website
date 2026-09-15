@@ -1228,6 +1228,8 @@ const CVT_COLS = [
   { key:"stock_status",  label:"Stock Status" },
   { key:"moq_group",     label:"Mix & Match Group" },
   { key:"moq_group_min", label:"Mix & Match Group Minimum" },
+  { key:"product_family",label:"Product Family (groups sizes into one card)" },
+  { key:"variant_label", label:"Variant Label (the dropdown option)" },
   { key:"images",        label:"Gallery Images (pipe-separated)" },
 ];
 
@@ -1353,6 +1355,8 @@ function cvtAutoMap(cols) {
     moq_group:     ["moqgroup","mixmatchgroup","mixandmatchgroup","moqtag"],
     moq_group_min: ["moqgroupmin","moqminimum","mixmatchminimum","moqgroupminimum","combinedminimum"],
     images:        ["images","galleryimages","additionalimages","photos","extraimages"],
+    product_family:["productfamily","family","variantgroup","groupname","parentproduct"],
+    variant_label: ["variantlabel","variant","option","optionlabel","sizelabel","variantname"],
   };
   for (const col of cols) {
     const n = norm(col);
@@ -1919,6 +1923,14 @@ async function runCsvImport() {
     // with no minimum (or vice versa) can't be enforced, so it doesn't count.
     moq_group     : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? r.moq_group.trim() : null,
     moq_group_min : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? parseInt(r.moq_group_min) : null,
+    // Size/variant grouping. Rows sharing a product_family collapse into one
+    // storefront card with a size dropdown (renderVariantCard in script.js),
+    // and variant_label is what that dropdown shows for each row. Both are
+    // required for grouping to happen -- a family with no label would render
+    // a dropdown of blank options -- so, like moq_group above, it's
+    // all-or-nothing rather than half-applied.
+    product_family: (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.product_family.trim() : null,
+    variant_label : (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.variant_label.trim()  : null,
     updated_at   : now,
   });
 
