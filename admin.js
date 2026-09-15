@@ -121,7 +121,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -286,7 +286,8 @@ function switchTab(tab) {
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
-      "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog" }[tab] || tab;
+      "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
+      "sales-tax":"Sales Tax" }[tab] || tab;
 
   if (tab === "dashboard")        renderDashboardTab();
   if (tab === "products")         renderProductsTable();
@@ -307,6 +308,7 @@ function switchTab(tab) {
   if (tab === "vendors")          renderVendorsTab();
   if (tab === "order-exceptions") renderExceptionsTab();
   if (tab === "blog")             renderBlogTab();
+  if (tab === "sales-tax")        renderSalesTaxTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -9581,4 +9583,259 @@ async function saveQuoteStatus() {
 
   document.getElementById("quoteDetailModal").style.display = "none";
   renderQuoteRequestsTable();
+}
+
+/* ── Sales Tax ──────────────────────────────────────────────────
+   What we actually collected and therefore owe, broken down by state.
+
+   Only PAID orders count. Tax becomes a liability when money changes
+   hands, not when an order is created -- counting a pending_invoice or
+   failed order would overstate what is owed to a state, which is the
+   expensive direction to be wrong in.
+
+   Read-only on purpose. This reports what the orders table already
+   recorded; it is not a place to adjust figures after the fact, which
+   would leave the report disagreeing with the payments behind it. */
+
+const SALES_TAX_PAID_STATUSES = ["paid"];
+
+function stSafeJson(s) { try { return JSON.parse(s); } catch { return null; } }
+
+// shipping_address is jsonb, but older rows were written as a JSON string.
+function stOrderState(o) {
+  const a = o.shipping_address;
+  if (!a) return "";
+  const raw = typeof a === "string" ? stSafeJson(a) : a;
+  return String((raw && raw.state) || "").trim().toUpperCase();
+}
+
+function stMoney(n) {
+  return "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Start of the current quarter -- the period a sales tax return covers.
+function stQuarterStart(d = new Date()) {
+  return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
+}
+
+// Formats a Date as YYYY-MM-DD in LOCAL time. toISOString() would convert to
+// UTC first, which east of Greenwich rolls back to the previous day: at
+// UTC+8, local midnight on Jul 1 is 16:00 Jun 30 UTC, so the quarter filter
+// would silently default to a day earlier and pull in the prior quarter.
+function stLocalDate(d) {
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+}
+
+let _stOrders = [];
+
+async function renderSalesTaxTab() {
+  const wrap = document.getElementById("tab-sales-tax");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { data, error } = await window.sb
+    .from("orders")
+    .select("order_number, customer_name, business_name, total, subtotal, tax_amount, tax_rate, shipping_address, payment_status, created_at")
+    .in("payment_status", SALES_TAX_PAID_STATUSES)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load orders: ${escHtml(error.message)}</div>`;
+    return;
+  }
+
+  _stOrders = data || [];
+  stRender();
+}
+
+function stFilteredRows() {
+  const from = document.getElementById("stFrom")?.value || "";
+  const to   = document.getElementById("stTo")?.value   || "";
+  const stateFilter = document.getElementById("stState")?.value || "";
+
+  const fromDate = from ? new Date(from + "T00:00:00") : stQuarterStart();
+  const toDate   = to   ? new Date(to   + "T23:59:59") : null;
+
+  return _stOrders.filter(o => {
+    const d = new Date(o.created_at);
+    if (fromDate && d < fromDate) return false;
+    if (toDate   && d > toDate)   return false;
+    if (stateFilter && stOrderState(o) !== stateFilter) return false;
+    return true;
+  });
+}
+
+function stRender() {
+  const wrap = document.getElementById("tab-sales-tax");
+  if (!wrap) return;
+
+  const from = document.getElementById("stFrom")?.value || "";
+  const to   = document.getElementById("stTo")?.value   || "";
+  const stateFilter = document.getElementById("stState")?.value || "";
+
+  const rows = stFilteredRows();
+  const taxed = rows.filter(o => Number(o.tax_amount) > 0);
+  const totalTax   = rows.reduce((s, o) => s + (Number(o.tax_amount) || 0), 0);
+  const totalSales = rows.reduce((s, o) => s + (Number(o.total) || 0), 0);
+  const taxable    = totalSales - totalTax;
+
+  // Grouped by state, since that is the unit a return is filed in.
+  const byState = {};
+  for (const o of rows) {
+    const st = stOrderState(o) || "(no state)";
+    if (!byState[st]) byState[st] = { state: st, orders: 0, sales: 0, tax: 0, rate: 0 };
+    byState[st].orders += 1;
+    byState[st].sales  += Number(o.total) || 0;
+    byState[st].tax    += Number(o.tax_amount) || 0;
+    if (Number(o.tax_rate) > 0) byState[st].rate = Number(o.tax_rate);
+  }
+  const states = Object.values(byState).sort((a, b) => b.tax - a.tax);
+
+  // A paid order shipped to a state but carrying no tax is either a real
+  // exemption or a rate that failed to apply. The second kind is tax owed
+  // that was never collected, so it is worth surfacing rather than hiding
+  // inside a total.
+  const untaxed = rows.filter(o => !(Number(o.tax_amount) > 0) && stOrderState(o));
+
+  const allStates = [...new Set(_stOrders.map(stOrderState).filter(Boolean))].sort();
+  const isoQS = stLocalDate(stQuarterStart());
+
+  wrap.innerHTML = `
+    <div class="a-page-head">
+      <div>
+        <h2 class="a-page-title">Sales Tax Collected</h2>
+        <p class="a-page-sub">Paid orders only &mdash; tax becomes a liability when payment clears, not when an order is placed. Defaults to the current quarter.</p>
+      </div>
+      <button class="a-btn-secondary" onclick="stExportCsv()">Export CSV</button>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px">
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">From</label>
+        <input type="date" id="stFrom" class="a-input" style="height:36px" value="${escHtml(from || isoQS)}" onchange="stRender()">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">To</label>
+        <input type="date" id="stTo" class="a-input" style="height:36px" value="${escHtml(to)}" onchange="stRender()">
+      </div>
+      <div>
+        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">State</label>
+        <select id="stState" class="a-select" style="height:36px;min-width:130px" onchange="stRender()">
+          <option value="">All states</option>
+          ${allStates.map(s => `<option value="${escHtml(s)}"${s === stateFilter ? " selected" : ""}>${escHtml(s)}</option>`).join("")}
+        </select>
+      </div>
+      <button class="a-btn-secondary" style="height:36px" onclick="stResetFilters()">Reset</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px">
+      ${stStat("Tax collected", stMoney(totalTax), "Owed for this period", true)}
+      ${stStat("Taxable sales", stMoney(taxable), "Order totals excluding tax")}
+      ${stStat("Gross sales", stMoney(totalSales), "Including tax charged")}
+      ${stStat("Paid orders", String(rows.length), `${taxed.length} carried tax`)}
+    </div>
+
+    <h3 style="font-size:14px;font-weight:800;color:#0f2b50;margin:0 0 10px">By state</h3>
+    ${states.length ? `
+    <table class="a-table" style="margin-bottom:26px">
+      <thead><tr>
+        <th>State</th><th>Orders</th><th>Rate</th>
+        <th style="text-align:right">Taxable sales</th>
+        <th style="text-align:right">Tax collected</th>
+      </tr></thead>
+      <tbody>
+        ${states.map(s => `
+          <tr>
+            <td><strong>${escHtml(s.state)}</strong></td>
+            <td>${s.orders}</td>
+            <td>${s.rate ? (s.rate * 100).toFixed(2) + "%" : "&mdash;"}</td>
+            <td style="text-align:right">${stMoney(s.sales - s.tax)}</td>
+            <td style="text-align:right;font-weight:800;color:#0f2b50">${stMoney(s.tax)}</td>
+          </tr>`).join("")}
+      </tbody>
+      <tfoot><tr style="border-top:2px solid #e2e8f0">
+        <td colspan="4" style="text-align:right;font-weight:700">Total</td>
+        <td style="text-align:right;font-weight:900;color:#0f2b50">${stMoney(totalTax)}</td>
+      </tr></tfoot>
+    </table>` : `<div class="a-empty" style="padding:30px;margin-bottom:26px">No paid orders in this period.</div>`}
+
+    ${untaxed.length ? `
+    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:26px">
+      <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#92400e">${untaxed.length} paid order${untaxed.length === 1 ? "" : "s"} shipped to a state but carried no tax</p>
+      <p style="margin:0;font-size:12.5px;color:#92400e;line-height:1.6">Either a legitimate exemption, or a rate that did not apply when the order was placed &mdash; the second kind is tax owed but never collected. Worth checking: ${untaxed.slice(0, 6).map(o => escHtml(o.order_number)).join(", ")}${untaxed.length > 6 ? ` and ${untaxed.length - 6} more` : ""}.</p>
+    </div>` : ""}
+
+    <h3 style="font-size:14px;font-weight:800;color:#0f2b50;margin:0 0 10px">Orders</h3>
+    ${rows.length ? `
+    <table class="a-table">
+      <thead><tr>
+        <th>Date</th><th>Order</th><th>Customer</th><th>State</th>
+        <th style="text-align:right">Total</th><th style="text-align:right">Tax</th>
+      </tr></thead>
+      <tbody>
+        ${rows.map(o => `
+          <tr>
+            <td>${fmt(o.created_at)}</td>
+            <td><strong>${escHtml(o.order_number || "—")}</strong></td>
+            <td>${escHtml(o.business_name || o.customer_name || "—")}</td>
+            <td>${escHtml(stOrderState(o) || "—")}</td>
+            <td style="text-align:right">${stMoney(o.total)}</td>
+            <td style="text-align:right;${Number(o.tax_amount) > 0 ? "font-weight:700;color:#0f2b50" : "color:#94a3b8"}">${Number(o.tax_amount) > 0 ? stMoney(o.tax_amount) : "—"}</td>
+          </tr>`).join("")}
+      </tbody>
+    </table>` : ""}
+  `;
+}
+
+function stStat(label, value, sub, accent) {
+  return `
+    <div style="background:#fff;border:1px solid ${accent ? "#fde8d6" : "#e8edf3"};border-radius:12px;padding:15px 17px">
+      <p style="margin:0 0 5px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:${accent ? "#ED7226" : "#94a3b8"}">${label}</p>
+      <p style="margin:0;font-size:23px;font-weight:900;color:#0f2b50;font-variant-numeric:tabular-nums">${value}</p>
+      <p style="margin:3px 0 0;font-size:11.5px;color:#94a3b8">${sub}</p>
+    </div>`;
+}
+
+function stResetFilters() {
+  const f = document.getElementById("stFrom");
+  const t = document.getElementById("stTo");
+  const s = document.getElementById("stState");
+  if (f) f.value = stLocalDate(stQuarterStart());
+  if (t) t.value = "";
+  if (s) s.value = "";
+  stRender();
+}
+
+// One row per order, matching what is on screen -- a filing needs the
+// detail behind the total, not just the total.
+function stExportCsv() {
+  const rows = stFilteredRows();
+  if (!rows.length) { showToast("Nothing to export for this period."); return; }
+
+  const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const lines = [["Date", "Order", "Customer", "State", "Rate", "Total", "Taxable", "Tax"].map(cell).join(",")];
+  for (const o of rows) {
+    const tax = Number(o.tax_amount) || 0;
+    lines.push([
+      new Date(o.created_at).toISOString().slice(0, 10),
+      o.order_number || "",
+      o.business_name || o.customer_name || "",
+      stOrderState(o),
+      Number(o.tax_rate) ? (Number(o.tax_rate) * 100).toFixed(2) + "%" : "",
+      (Number(o.total) || 0).toFixed(2),
+      ((Number(o.total) || 0) - tax).toFixed(2),
+      tax.toFixed(2),
+    ].map(cell).join(","));
+  }
+
+  const from = document.getElementById("stFrom")?.value || stLocalDate(stQuarterStart());
+  const to   = document.getElementById("stTo")?.value   || "today";
+  const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `sales-tax_${from}_to_${to}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast(`Exported ${rows.length} order${rows.length === 1 ? "" : "s"}`);
 }
