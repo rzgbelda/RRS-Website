@@ -2583,7 +2583,11 @@ textarea:focus {
 .vp-toast--warn { background: #92400e; }
 .vp-toast--visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-.catalog-products {
+/* .cat-grid is the category pages' grid; it renders the same .product-card
+   markup as the catalog, so it shares these rules rather than carrying a
+   near-duplicate copy in each of the 9 pages' inline <style>. */
+.catalog-products,
+.cat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 28px;
@@ -2744,12 +2748,18 @@ textarea:focus {
   padding-top: 12px;
 }
 
+/* Fixed height so this row occupies the same space whether its values wrap
+   to two lines ("Case Qty: 1000") or one. Left-aligned with a gap rather
+   than space-between: pushing two short items to opposite card edges is what
+   made the row read as two disconnected fragments. */
 .product-meta,
 .product-details {
   display: flex;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: flex-start;
+  gap: 14px;
   margin-bottom: 10px;
+  min-height: 32px;
+  align-items: flex-start;
 }
 
 .meta-item,
@@ -6909,6 +6919,16 @@ button, a, [role="button"] { touch-action: manipulation; }
   border: 1px solid #fde8d6;
   color: #ED7226;
   font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase;
+  line-height: 1.6;
+}
+
+/* Reserves the range line's height on EVERY card, whether or not that card
+   has a range. Without it, a card showing "$14.95 - $17.55" pushes its price
+   down one line relative to its neighbours, and the prices across a row no
+   longer share a baseline. */
+.price-block {
+  min-height: 46px;
+  display: flex; flex-direction: column; justify-content: flex-end;
 }
 
 /* Sits above .price and is never rewritten by applyVariantToCard, so the
@@ -6920,9 +6940,12 @@ button, a, [role="button"] { touch-action: manipulation; }
   font-variant-numeric: tabular-nums;
 }
 
+/* Grouped with the size dropdown directly under the title, not stranded
+   above the buttons: all the "which one do I want" controls belong
+   together, and the buy actions stay pinned to the card floor. */
 .variant-trigger {
   width: 100%;
-  margin: 8px 0 6px;
+  margin: 8px 0 0;
   padding: 8px 12px;
   background: #fff;
   border: 1.5px solid #e2e8f0; border-radius: 8px;

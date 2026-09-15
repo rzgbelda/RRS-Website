@@ -711,9 +711,11 @@ function renderSingleCard(product) {
           </div>
         </div>
         <div class="product-bottom">
-          <div>
-            <span class="price">$${price.toFixed(2)}</span>
-            <span class="unit">/ ${product.priceBy || "Case"}</span>
+          <div class="price-block">
+            <div class="price-row">
+              <span class="price">$${price.toFixed(2)}</span>
+              <span class="unit">/ ${product.priceBy || "Case"}</span>
+            </div>
           </div>
           <button
             class="add-btn"
@@ -861,7 +863,8 @@ function renderVariantCard(variants) {
         ${tierHtml}
         <h3>${v.productFamily || v.name}</h3>
         ${sizeDropdownHtml}
-        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
+        ${triggerHtml}
+        ${colorPillsHtml ? `<div class="variant-selector" style="margin-top:${sizeDropdownHtml || triggerHtml ? "8px" : "0"};">${colorPillsHtml}</div>` : ""}
         <p class="product-description">${v.description || ""}</p>
         <div class="product-details">
           <div class="detail-item">
@@ -874,12 +877,13 @@ function renderVariantCard(variants) {
           </div>
         </div>
         <div class="product-bottom">
-          ${rangeHtml}
-          <div class="price-row">
-            <span class="price">$${price.toFixed(2)}</span>
-            <span class="unit">/ ${v.priceBy || "Case"}</span>
+          <div class="price-block">
+            ${rangeHtml}
+            <div class="price-row">
+              <span class="price">$${price.toFixed(2)}</span>
+              <span class="unit">/ ${v.priceBy || "Case"}</span>
+            </div>
           </div>
-          ${triggerHtml}
           <button
             class="add-btn"
             data-item="${v.itemNumber}"
@@ -1018,8 +1022,12 @@ function selectVariantColor(pillEl) {
   applyVariantToCard(card, target);
 }
 
-function renderProducts(products) {
-  const grid = document.getElementById("products-grid");
+// Renders grouped, variant-aware cards into any grid element. Extracted from
+// renderProducts so the 9 category pages can share it: each used to carry its
+// own ~40-line renderer emitting a plain link card with no grouping, so the
+// same product appeared once per size there -- the redundancy was worse on
+// those pages than on the catalog.
+function renderProductGrid(products, grid) {
   if (!grid) return;
 
   grid.innerHTML = "";
@@ -1059,6 +1067,10 @@ function renderProducts(products) {
   setupProductCardClicks();
   setupAddToCartButtons();
   setupQuoteButtons();
+}
+
+function renderProducts(products) {
+  renderProductGrid(products, document.getElementById("products-grid"));
 }
 
 function setupProductCardClicks() {

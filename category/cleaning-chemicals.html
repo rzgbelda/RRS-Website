@@ -109,14 +109,6 @@
     .cat-count { font-size:13.5px; color:#ED7226; font-weight:700; }
     .cat-intro { padding:34px 0 8px; }
     .cat-intro p { font-size:15px; line-height:1.75; color:#334155; max-width:76ch; margin:0 0 16px; }
-    .cat-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:18px; padding:22px 0 40px; }
-    .cat-card { border:1.5px solid #e2e8f0; border-radius:14px; background:#fff; padding:16px; text-decoration:none; color:inherit; display:flex; flex-direction:column; transition:border-color .15s, box-shadow .15s, transform .15s; }
-    .cat-card:hover { border-color:#ED7226; box-shadow:0 8px 24px rgba(11,31,56,.09); transform:translateY(-2px); }
-    .cat-card img { width:100%; height:140px; object-fit:contain; margin-bottom:12px; }
-    .cat-card h3 { font-size:13.5px; font-weight:700; color:#0B1F38; line-height:1.4; margin:0 0 8px; }
-    .cat-card .meta { font-size:11.5px; color:#94a3b8; margin-bottom:10px; }
-    .cat-card .price { font-size:17px; font-weight:800; color:#ED7226; margin-top:auto; }
-    .cat-card .price span { font-size:11px; font-weight:600; color:#94a3b8; }
     .cat-cta { background:#f6f9fc; border:1.5px solid #e2e8f0; border-radius:16px; padding:26px 28px; margin:8px 0 44px; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; }
     .cat-cta h2 { font-size:18px; font-weight:800; color:#0B1F38; margin:0 0 6px; }
     .cat-cta p { font-size:14px; color:#5B6C7E; margin:0; }
@@ -295,11 +287,6 @@
       var grid = document.getElementById('catGrid');
       var countEl = document.getElementById('catCount');
 
-      function money(v) {
-        var n = typeof cleanPrice === 'function' ? cleanPrice(v) : parseFloat(v) || 0;
-        return '$' + n.toFixed(2);
-      }
-
       fetchCatalogProducts().then(function (products) {
         var items = products.filter(function (p) {
           return typeof categorySlug === 'function' && categorySlug(p.category) === SLUG;
@@ -310,18 +297,16 @@
           return;
         }
 
-        countEl.textContent = items.length + (items.length === 1 ? ' product' : ' products') + ' available';
+        // Shares the catalog's renderer, so sizes of one product collapse
+        // into a single card with an options modal instead of appearing as
+        // a separate card each. Cards are also buyable here now (add to
+        // order / volume price), which the old link-only card was not.
+        renderProductGrid(items, grid);
 
-        grid.innerHTML = items.map(function (p) {
-          var slug = p.slug || p.itemNumber;
-          var price = p.price1 || p.price;
-          return '<a class="cat-card" href="/product?item=' + encodeURIComponent(slug) + '">'
-            + '<img src="' + (p.image || '/assets/img/product-placeholder.svg') + '" alt="' + (p.name || '').replace(/"/g, '&quot;') + '" loading="lazy" onerror="this.src=\'/assets/img/product-placeholder.svg\'">'
-            + '<h3>' + (p.name || 'Product') + '</h3>'
-            + (p.caseQty ? '<div class="meta">Case qty: ' + p.caseQty + '</div>' : '')
-            + (price ? '<div class="price">' + money(price) + ' <span>/ ' + (p.priceBy || 'case') + '</span></div>' : '')
-            + '</a>';
-        }).join('');
+        // Count what the shopper sees -- cards, not SKUs -- so it agrees
+        // with the grid after grouping.
+        var cards = grid.querySelectorAll('.product-card').length;
+        countEl.textContent = cards + (cards === 1 ? ' product' : ' products') + ' available';
       }).catch(function () {
         grid.innerHTML = '<div class="cat-loading">Could not load products. <a href="/catalog">Browse the full catalog</a>.</div>';
       });
