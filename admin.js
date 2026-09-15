@@ -9586,16 +9586,28 @@ async function saveQuoteStatus() {
 }
 
 /* ── Sales Tax ──────────────────────────────────────────────────
-   What we actually collected and therefore owe, broken down by state.
+   What we owe each state, and how much of it we actually collected.
 
    Only PAID orders count. Tax becomes a liability when money changes
-   hands, not when an order is created -- counting a pending_invoice or
-   failed order would overstate what is owed to a state, which is the
-   expensive direction to be wrong in.
+   hands, not when an order is placed -- counting pending_invoice or
+   failed orders would overstate what is owed, the expensive direction
+   to be wrong in.
 
-   Read-only on purpose. This reports what the orders table already
-   recorded; it is not a place to adjust figures after the fact, which
-   would leave the report disagreeing with the payments behind it. */
+   Two kinds of tax, kept apart on purpose:
+
+     COLLECTED  tax_amount recorded on the order. The customer paid it;
+                we are holding it and remit it.
+
+     UNCOLLECTED  a paid order shipped to a taxable state with no tax on
+                it. The rate is applied to the order total (the total was
+                the pre-tax price -- the customer was simply never charged
+                tax), so this is owed out of pocket rather than out of
+                money already received. Merging it into one "tax" number
+                would hide a real cost, so it is always shown separately.
+
+   Read-only: it reports what the orders table recorded plus what the
+   state rate table implies. Editing figures here would let the report
+   disagree with the payments behind it. */
 
 const SALES_TAX_PAID_STATUSES = ["paid"];
 
@@ -9609,6 +9621,28 @@ function stOrderState(o) {
   return String((raw && raw.state) || "").trim().toUpperCase();
 }
 
+// Rate for an order: what was recorded, else the state's published rate.
+// Falls back to the shared table in tax-rates.js rather than a second copy.
+function stRateFor(o) {
+  const recorded = Number(o.tax_rate) || 0;
+  if (recorded > 0) return recorded;
+  const st = stOrderState(o);
+  return st && typeof getTaxRate === "function" ? getTaxRate(st) : 0;
+}
+
+// Splits an order into what was collected vs. what is owed but was not.
+function stTaxFor(o) {
+  const collected = Number(o.tax_amount) || 0;
+  if (collected > 0) return { collected, uncollected: 0, taxable: (Number(o.total) || 0) - collected };
+
+  // Never charged: the total was the pre-tax price, so tax is on top of it.
+  const rate = stRateFor(o);
+  const taxable = Number(o.total) || 0;
+  return { collected: 0, uncollected: round2(taxable * rate), taxable };
+}
+
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
 function stMoney(n) {
   return "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -9618,10 +9652,10 @@ function stQuarterStart(d = new Date()) {
   return new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1);
 }
 
-// Formats a Date as YYYY-MM-DD in LOCAL time. toISOString() would convert to
-// UTC first, which east of Greenwich rolls back to the previous day: at
-// UTC+8, local midnight on Jul 1 is 16:00 Jun 30 UTC, so the quarter filter
-// would silently default to a day earlier and pull in the prior quarter.
+// Formats a Date as YYYY-MM-DD in LOCAL time. toISOString() converts to UTC
+// first, which east of Greenwich rolls local midnight back a day: at UTC+8,
+// local midnight Jul 1 is 16:00 Jun 30 UTC, so the default filter would
+// silently start in the prior quarter.
 function stLocalDate(d) {
   const p = n => String(n).padStart(2, "0");
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
@@ -9675,126 +9709,161 @@ function stRender() {
   const stateFilter = document.getElementById("stState")?.value || "";
 
   const rows = stFilteredRows();
-  const taxed = rows.filter(o => Number(o.tax_amount) > 0);
-  const totalTax   = rows.reduce((s, o) => s + (Number(o.tax_amount) || 0), 0);
-  const totalSales = rows.reduce((s, o) => s + (Number(o.total) || 0), 0);
-  const taxable    = totalSales - totalTax;
 
-  // Grouped by state, since that is the unit a return is filed in.
+  let collected = 0, uncollected = 0, gross = 0, taxableTotal = 0;
   const byState = {};
+  const gaps = [];
+
   for (const o of rows) {
-    const st = stOrderState(o) || "(no state)";
-    if (!byState[st]) byState[st] = { state: st, orders: 0, sales: 0, tax: 0, rate: 0 };
-    byState[st].orders += 1;
-    byState[st].sales  += Number(o.total) || 0;
-    byState[st].tax    += Number(o.tax_amount) || 0;
-    if (Number(o.tax_rate) > 0) byState[st].rate = Number(o.tax_rate);
+    const t = stTaxFor(o);
+    const st = stOrderState(o) || "—";
+    collected += t.collected;
+    uncollected += t.uncollected;
+    gross += Number(o.total) || 0;
+    taxableTotal += t.taxable;
+
+    if (!byState[st]) byState[st] = { state: st, orders: 0, taxable: 0, collected: 0, uncollected: 0, rate: 0 };
+    const b = byState[st];
+    b.orders += 1;
+    b.taxable += t.taxable;
+    b.collected += t.collected;
+    b.uncollected += t.uncollected;
+    b.rate = stRateFor(o) || b.rate;
+
+    if (t.uncollected > 0) gaps.push({ order: o, tax: t.uncollected });
   }
-  const states = Object.values(byState).sort((a, b) => b.tax - a.tax);
 
-  // A paid order shipped to a state but carrying no tax is either a real
-  // exemption or a rate that failed to apply. The second kind is tax owed
-  // that was never collected, so it is worth surfacing rather than hiding
-  // inside a total.
-  const untaxed = rows.filter(o => !(Number(o.tax_amount) > 0) && stOrderState(o));
-
+  const states = Object.values(byState).sort((a, b) => (b.collected + b.uncollected) - (a.collected + a.uncollected));
+  const owed = round2(collected + uncollected);
   const allStates = [...new Set(_stOrders.map(stOrderState).filter(Boolean))].sort();
-  const isoQS = stLocalDate(stQuarterStart());
 
   wrap.innerHTML = `
-    <div class="a-page-head">
+    <div class="st-head">
       <div>
-        <h2 class="a-page-title">Sales Tax Collected</h2>
-        <p class="a-page-sub">Paid orders only &mdash; tax becomes a liability when payment clears, not when an order is placed. Defaults to the current quarter.</p>
+        <h2 class="st-title">Sales Tax</h2>
+        <p class="st-sub">Paid orders only. Tax is a liability once payment clears &mdash; pending and failed orders are excluded.</p>
       </div>
-      <button class="a-btn-secondary" onclick="stExportCsv()">Export CSV</button>
+      <button class="st-btn-primary" onclick="stExportCsv()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export CSV
+      </button>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:18px">
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">From</label>
-        <input type="date" id="stFrom" class="a-input" style="height:36px" value="${escHtml(from || isoQS)}" onchange="stRender()">
+    <div class="st-filters">
+      <div class="st-field">
+        <label for="stFrom">From</label>
+        <input type="date" id="stFrom" value="${escHtml(from || stLocalDate(stQuarterStart()))}" onchange="stRender()">
       </div>
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">To</label>
-        <input type="date" id="stTo" class="a-input" style="height:36px" value="${escHtml(to)}" onchange="stRender()">
+      <div class="st-field">
+        <label for="stTo">To</label>
+        <input type="date" id="stTo" value="${escHtml(to)}" onchange="stRender()">
       </div>
-      <div>
-        <label style="display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:4px">State</label>
-        <select id="stState" class="a-select" style="height:36px;min-width:130px" onchange="stRender()">
+      <div class="st-field">
+        <label for="stState">State</label>
+        <select id="stState" onchange="stRender()">
           <option value="">All states</option>
           ${allStates.map(s => `<option value="${escHtml(s)}"${s === stateFilter ? " selected" : ""}>${escHtml(s)}</option>`).join("")}
         </select>
       </div>
-      <button class="a-btn-secondary" style="height:36px" onclick="stResetFilters()">Reset</button>
+      <button class="st-btn-ghost" onclick="stResetFilters()">Reset</button>
+      <span class="st-rowcount">${rows.length} paid order${rows.length === 1 ? "" : "s"}</span>
     </div>
 
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px">
-      ${stStat("Tax collected", stMoney(totalTax), "Owed for this period", true)}
-      ${stStat("Taxable sales", stMoney(taxable), "Order totals excluding tax")}
-      ${stStat("Gross sales", stMoney(totalSales), "Including tax charged")}
-      ${stStat("Paid orders", String(rows.length), `${taxed.length} carried tax`)}
+    <div class="st-stats">
+      <div class="st-stat st-stat--total">
+        <p class="st-stat-label">Total owed</p>
+        <p class="st-stat-value">${stMoney(owed)}</p>
+        <p class="st-stat-sub">Across ${states.length} state${states.length === 1 ? "" : "s"}</p>
+      </div>
+      <div class="st-stat">
+        <p class="st-stat-label">Collected</p>
+        <p class="st-stat-value">${stMoney(collected)}</p>
+        <p class="st-stat-sub">Charged to customers &mdash; held, not ours</p>
+      </div>
+      <div class="st-stat ${uncollected > 0 ? "st-stat--warn" : ""}">
+        <p class="st-stat-label">Not collected</p>
+        <p class="st-stat-value">${stMoney(uncollected)}</p>
+        <p class="st-stat-sub">${uncollected > 0 ? "Owed, paid out of pocket" : "Nothing missed"}</p>
+      </div>
+      <div class="st-stat">
+        <p class="st-stat-label">Taxable sales</p>
+        <p class="st-stat-value">${stMoney(taxableTotal)}</p>
+        <p class="st-stat-sub">Gross ${stMoney(gross)}</p>
+      </div>
     </div>
 
-    <h3 style="font-size:14px;font-weight:800;color:#0f2b50;margin:0 0 10px">By state</h3>
-    ${states.length ? `
-    <table class="a-table" style="margin-bottom:26px">
-      <thead><tr>
-        <th>State</th><th>Orders</th><th>Rate</th>
-        <th style="text-align:right">Taxable sales</th>
-        <th style="text-align:right">Tax collected</th>
-      </tr></thead>
-      <tbody>
-        ${states.map(s => `
-          <tr>
-            <td><strong>${escHtml(s.state)}</strong></td>
-            <td>${s.orders}</td>
-            <td>${s.rate ? (s.rate * 100).toFixed(2) + "%" : "&mdash;"}</td>
-            <td style="text-align:right">${stMoney(s.sales - s.tax)}</td>
-            <td style="text-align:right;font-weight:800;color:#0f2b50">${stMoney(s.tax)}</td>
-          </tr>`).join("")}
-      </tbody>
-      <tfoot><tr style="border-top:2px solid #e2e8f0">
-        <td colspan="4" style="text-align:right;font-weight:700">Total</td>
-        <td style="text-align:right;font-weight:900;color:#0f2b50">${stMoney(totalTax)}</td>
-      </tr></tfoot>
-    </table>` : `<div class="a-empty" style="padding:30px;margin-bottom:26px">No paid orders in this period.</div>`}
-
-    ${untaxed.length ? `
-    <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:10px;padding:14px 16px;margin-bottom:26px">
-      <p style="margin:0 0 4px;font-size:13px;font-weight:800;color:#92400e">${untaxed.length} paid order${untaxed.length === 1 ? "" : "s"} shipped to a state but carried no tax</p>
-      <p style="margin:0;font-size:12.5px;color:#92400e;line-height:1.6">Either a legitimate exemption, or a rate that did not apply when the order was placed &mdash; the second kind is tax owed but never collected. Worth checking: ${untaxed.slice(0, 6).map(o => escHtml(o.order_number)).join(", ")}${untaxed.length > 6 ? ` and ${untaxed.length - 6} more` : ""}.</p>
+    ${gaps.length ? `
+    <div class="st-alert">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div>
+        <p class="st-alert-title">${stMoney(uncollected)} of tax was never charged to the customer</p>
+        <p class="st-alert-body">${gaps.length} paid order${gaps.length === 1 ? "" : "s"} shipped to a taxable state without tax applied. The state is still owed it, so it comes out of margin. ${gaps.slice(0, 4).map(g => `<strong>${escHtml(g.order.order_number)}</strong>`).join(", ")}${gaps.length > 4 ? ` and ${gaps.length - 4} more` : ""}.</p>
+      </div>
     </div>` : ""}
 
-    <h3 style="font-size:14px;font-weight:800;color:#0f2b50;margin:0 0 10px">Orders</h3>
-    ${rows.length ? `
-    <table class="a-table">
-      <thead><tr>
-        <th>Date</th><th>Order</th><th>Customer</th><th>State</th>
-        <th style="text-align:right">Total</th><th style="text-align:right">Tax</th>
-      </tr></thead>
-      <tbody>
-        ${rows.map(o => `
-          <tr>
-            <td>${fmt(o.created_at)}</td>
-            <td><strong>${escHtml(o.order_number || "—")}</strong></td>
-            <td>${escHtml(o.business_name || o.customer_name || "—")}</td>
-            <td>${escHtml(stOrderState(o) || "—")}</td>
-            <td style="text-align:right">${stMoney(o.total)}</td>
-            <td style="text-align:right;${Number(o.tax_amount) > 0 ? "font-weight:700;color:#0f2b50" : "color:#94a3b8"}">${Number(o.tax_amount) > 0 ? stMoney(o.tax_amount) : "—"}</td>
-          </tr>`).join("")}
-      </tbody>
-    </table>` : ""}
-  `;
-}
+    <div class="st-card">
+      <div class="st-card-head"><h3>By state</h3><span>Rates from the site's tax table</span></div>
+      ${states.length ? `
+      <table class="st-table">
+        <thead><tr>
+          <th>State</th><th class="num">Orders</th><th class="num">Rate</th>
+          <th class="num">Taxable sales</th><th class="num">Collected</th>
+          <th class="num">Not collected</th><th class="num">Owed</th>
+        </tr></thead>
+        <tbody>
+          ${states.map(s => `
+            <tr>
+              <td><span class="st-state">${escHtml(s.state)}</span></td>
+              <td class="num">${s.orders}</td>
+              <td class="num">${s.rate ? (s.rate * 100).toFixed(2) + "%" : "&mdash;"}</td>
+              <td class="num">${stMoney(s.taxable)}</td>
+              <td class="num">${stMoney(s.collected)}</td>
+              <td class="num ${s.uncollected > 0 ? "st-warn-cell" : "st-muted"}">${s.uncollected > 0 ? stMoney(s.uncollected) : "&mdash;"}</td>
+              <td class="num st-strong">${stMoney(s.collected + s.uncollected)}</td>
+            </tr>`).join("")}
+        </tbody>
+        <tfoot><tr>
+          <td colspan="4" class="num">Total</td>
+          <td class="num">${stMoney(collected)}</td>
+          <td class="num ${uncollected > 0 ? "st-warn-cell" : "st-muted"}">${uncollected > 0 ? stMoney(uncollected) : "&mdash;"}</td>
+          <td class="num st-strong">${stMoney(owed)}</td>
+        </tr></tfoot>
+      </table>` : `<div class="st-empty">No paid orders in this period.</div>`}
+    </div>
 
-function stStat(label, value, sub, accent) {
-  return `
-    <div style="background:#fff;border:1px solid ${accent ? "#fde8d6" : "#e8edf3"};border-radius:12px;padding:15px 17px">
-      <p style="margin:0 0 5px;font-size:10.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:${accent ? "#ED7226" : "#94a3b8"}">${label}</p>
-      <p style="margin:0;font-size:23px;font-weight:900;color:#0f2b50;font-variant-numeric:tabular-nums">${value}</p>
-      <p style="margin:3px 0 0;font-size:11.5px;color:#94a3b8">${sub}</p>
-    </div>`;
+    ${rows.length ? `
+    <div class="st-card">
+      <div class="st-card-head"><h3>Orders</h3><span>${rows.length} in this period</span></div>
+      <table class="st-table">
+        <thead><tr>
+          <th>Date</th><th>Order</th><th>Customer</th><th>State</th>
+          <th class="num">Total</th><th class="num">Rate</th><th class="num">Tax</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(o => {
+            const t = stTaxFor(o);
+            const rate = stRateFor(o);
+            return `
+            <tr>
+              <td class="st-muted">${fmt(o.created_at)}</td>
+              <td class="st-strong">${escHtml(o.order_number || "—")}</td>
+              <td>${escHtml(o.business_name || o.customer_name || "—")}</td>
+              <td><span class="st-state">${escHtml(stOrderState(o) || "—")}</span></td>
+              <td class="num">${stMoney(o.total)}</td>
+              <td class="num st-muted">${rate ? (rate * 100).toFixed(2) + "%" : "&mdash;"}</td>
+              <td class="num">${
+                t.collected > 0
+                  ? `<span class="st-strong">${stMoney(t.collected)}</span>`
+                  : t.uncollected > 0
+                    ? `<span class="st-pill-warn">${stMoney(t.uncollected)} not charged</span>`
+                    : `<span class="st-muted">&mdash;</span>`
+              }</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>` : ""}
+  `;
 }
 
 function stResetFilters() {
@@ -9808,29 +9877,33 @@ function stResetFilters() {
 }
 
 // One row per order, matching what is on screen -- a filing needs the
-// detail behind the total, not just the total.
+// detail behind the total, and the collected/not-collected split has to
+// survive the export or the spreadsheet overstates what was received.
 function stExportCsv() {
   const rows = stFilteredRows();
   if (!rows.length) { showToast("Nothing to export for this period."); return; }
 
   const cell = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
-  const lines = [["Date", "Order", "Customer", "State", "Rate", "Total", "Taxable", "Tax"].map(cell).join(",")];
+  const lines = [["Date", "Order", "Customer", "State", "Rate", "Order total", "Taxable", "Tax collected", "Tax not collected", "Tax owed"].map(cell).join(",")];
   for (const o of rows) {
-    const tax = Number(o.tax_amount) || 0;
+    const t = stTaxFor(o);
+    const rate = stRateFor(o);
     lines.push([
       new Date(o.created_at).toISOString().slice(0, 10),
       o.order_number || "",
       o.business_name || o.customer_name || "",
       stOrderState(o),
-      Number(o.tax_rate) ? (Number(o.tax_rate) * 100).toFixed(2) + "%" : "",
+      rate ? (rate * 100).toFixed(2) + "%" : "",
       (Number(o.total) || 0).toFixed(2),
-      ((Number(o.total) || 0) - tax).toFixed(2),
-      tax.toFixed(2),
+      t.taxable.toFixed(2),
+      t.collected.toFixed(2),
+      t.uncollected.toFixed(2),
+      (t.collected + t.uncollected).toFixed(2),
     ].map(cell).join(","));
   }
 
   const from = document.getElementById("stFrom")?.value || stLocalDate(stQuarterStart());
-  const to   = document.getElementById("stTo")?.value   || "today";
+  const to   = document.getElementById("stTo")?.value   || stLocalDate(new Date());
   const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);

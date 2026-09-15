@@ -3545,3 +3545,173 @@ select.crm-filtersel { width: auto; min-width: 150px; }
 .crm-import-more { font-size: 12px; color: var(--crm-ink-faint); margin: 8px 0 0; }
 .crm-import-skipped { font-size: 12px; color: #b45309; margin: 8px 0 0; }
 .crm-import-summary { font-size: 12.5px; font-weight: 700; color: var(--crm-ink); margin-top: 10px; }
+
+/* ══════════════════════════════════════════════════════════
+   SALES TAX TAB  (st-*)
+   A liability report, so it is built to be scanned: the number
+   owed dominates, the collected/not-collected split is legible
+   at a glance, and every money column is tabular so figures
+   line up down the page.
+   ══════════════════════════════════════════════════════════ */
+
+.st-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.st-title {
+  margin: 0 0 4px;
+  font-size: 22px; font-weight: 800; letter-spacing: -.02em; color: #0f2b50;
+}
+.st-sub { margin: 0; font-size: 13px; color: #64748b; max-width: 62ch; line-height: 1.55; }
+
+.st-btn-primary {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 16px;
+  background: #0f2b50; color: #fff;
+  border: none; border-radius: 9px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+  transition: background .15s;
+}
+.st-btn-primary:hover { background: #17406f; }
+.st-btn-primary:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; }
+
+.st-btn-ghost {
+  height: 36px; padding: 0 14px;
+  background: #fff; color: #475569;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.st-btn-ghost:hover { border-color: #cbd5e1; color: #0f2b50; }
+
+/* ── filters ─────────────────────────────────────────── */
+.st-filters {
+  display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  padding: 14px 16px;
+  background: #fff;
+  border: 1px solid #e8edf3; border-radius: 12px;
+  margin-bottom: 20px;
+}
+.st-field { display: flex; flex-direction: column; gap: 5px; }
+.st-field label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .06em;
+  text-transform: uppercase; color: #94a3b8;
+}
+.st-field input,
+.st-field select {
+  height: 36px; padding: 0 10px;
+  border: 1px solid #e2e8f0; border-radius: 8px;
+  background: #fff; color: #0f2b50;
+  font-size: 13px; font-family: inherit;
+}
+.st-field select { min-width: 132px; padding-right: 6px; }
+.st-field input:focus,
+.st-field select:focus { outline: none; border-color: #ED7226; box-shadow: 0 0 0 3px rgba(237,114,38,.12); }
+.st-rowcount { margin-left: auto; font-size: 12.5px; color: #94a3b8; padding-bottom: 9px; }
+
+/* ── stat tiles ──────────────────────────────────────── */
+.st-stats {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.st-stat {
+  background: #fff;
+  border: 1px solid #e8edf3; border-radius: 13px;
+  padding: 16px 18px;
+}
+/* The one figure the page exists to answer, so it carries the only
+   filled tile on the page rather than competing with three others. */
+.st-stat--total { background: #0f2b50; border-color: #0f2b50; }
+.st-stat--total .st-stat-label { color: rgba(255,255,255,.62); }
+.st-stat--total .st-stat-value { color: #fff; }
+.st-stat--total .st-stat-sub   { color: rgba(255,255,255,.55); }
+
+.st-stat--warn { border-color: #fed7aa; background: #fffbf6; }
+.st-stat--warn .st-stat-value { color: #b45309; }
+
+.st-stat-label {
+  margin: 0 0 6px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .07em;
+  text-transform: uppercase; color: #94a3b8;
+}
+.st-stat-value {
+  margin: 0;
+  font-size: 25px; font-weight: 800; letter-spacing: -.02em; color: #0f2b50;
+  font-variant-numeric: tabular-nums;
+}
+.st-stat-sub { margin: 4px 0 0; font-size: 11.5px; color: #94a3b8; line-height: 1.45; }
+
+/* ── alert ───────────────────────────────────────────── */
+.st-alert {
+  display: flex; gap: 12px; align-items: flex-start;
+  background: #fffbf6; border: 1px solid #fed7aa;
+  border-radius: 12px; padding: 14px 16px; margin-bottom: 20px;
+  color: #b45309;
+}
+.st-alert svg { flex-shrink: 0; margin-top: 1px; }
+.st-alert-title { margin: 0 0 3px; font-size: 13.5px; font-weight: 800; }
+.st-alert-body  { margin: 0; font-size: 12.5px; line-height: 1.6; color: #a16207; }
+.st-alert-body strong { color: #92400e; }
+
+/* ── cards + tables ──────────────────────────────────── */
+.st-card {
+  background: #fff;
+  border: 1px solid #e8edf3; border-radius: 13px;
+  overflow: hidden; margin-bottom: 20px;
+}
+.st-card-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  gap: 14px; flex-wrap: wrap;
+  padding: 15px 18px; border-bottom: 1px solid #eef2f7;
+}
+.st-card-head h3 { margin: 0; font-size: 14px; font-weight: 800; color: #0f2b50; }
+.st-card-head span { font-size: 11.5px; color: #94a3b8; }
+
+.st-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.st-table th {
+  text-align: left; padding: 10px 18px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: #94a3b8;
+  background: #fafbfd; border-bottom: 1px solid #eef2f7;
+  white-space: nowrap;
+}
+.st-table td {
+  padding: 12px 18px;
+  border-bottom: 1px solid #f4f7fa;
+  color: #334155; vertical-align: middle;
+}
+.st-table tbody tr:last-child td { border-bottom: none; }
+.st-table tbody tr:hover { background: #fcfdfe; }
+.st-table .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.st-table tfoot td {
+  padding: 13px 18px;
+  background: #fafbfd; border-top: 2px solid #e8edf3;
+  font-weight: 700; color: #0f2b50;
+}
+
+.st-strong { font-weight: 700; color: #0f2b50; }
+.st-muted  { color: #94a3b8; }
+.st-warn-cell { color: #b45309; font-weight: 700; }
+
+.st-state {
+  display: inline-block; min-width: 30px;
+  padding: 2px 7px; border-radius: 5px;
+  background: #f1f5f9; color: #475569;
+  font-size: 11.5px; font-weight: 700; text-align: center;
+}
+
+.st-pill-warn {
+  display: inline-block;
+  padding: 3px 9px; border-radius: 20px;
+  background: #fff7ed; border: 1px solid #fed7aa;
+  color: #b45309; font-size: 11px; font-weight: 700; white-space: nowrap;
+}
+
+.st-empty { padding: 34px 18px; text-align: center; color: #94a3b8; font-size: 13px; }
+
+@media (max-width: 720px) {
+  .st-table th, .st-table td { padding-left: 12px; padding-right: 12px; }
+  .st-card { overflow-x: auto; }
+  .st-rowcount { margin-left: 0; }
+}
