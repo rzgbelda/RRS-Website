@@ -1,0 +1,64 @@
+-- Fixes "infinite recursion detected in policy for relation orders" on
+-- the affiliate self-service dashboard (My Dashboard), confirmed live via
+-- pg_policies.
+--
+-- Root cause: a policy predating this repo's migrations that no DROP
+-- statement here ever targeted, because no migration file knew its exact
+-- name. "Users can read own order referrals" on order_referrals reads
+-- FROM orders; "affiliate_read_referred_orders" on orders (20260916_
+-- affiliate_self_service_rls.sql) reads FROM order_referrals. Neither
+-- policy is wrong in isolation, but together they form a cycle:
+--
+--   read orders
+--     -> evaluate affiliate_read_referred_orders
+--          -> subquery hits order_referrals
+--               -> evaluate ALL policies on order_referrals (RLS
+--                  policies for the same command are OR'd, so every one
+--                  runs, not just the one that happens to match)
+--                    -> "Users can read own order referrals" subqueries
+--                       orders again
+--                         -> back to the top, infinitely
+--
+-- This is why it only broke NOW: the orders-side policy is new
+-- (20260916), and it's the second half of the cycle -- the
+-- order_referrals-side policy has apparently been sitting there since
+-- before this migration history starts, doing nothing risky on its own
+-- until something on the other table closed the loop.
+--
+-- Fix: drop the legacy policy. It is fully superseded by
+-- affiliate_read_own_referrals (20260916_affiliate_self_service_rls.sql),
+-- which scopes order_referrals through sub_distributors.user_id instead
+-- of through orders.user_id -- the correct linkage for an affiliate login
+-- (which has no orders.user_id of its own; the customer placing the
+-- order does). The legacy policy's own condition could never actually
+-- grant an affiliate anything real: an affiliate's auth.uid() does not
+-- equal orders.user_id for a referred order (the customer's uid does),
+-- so it was dead weight even before it became a recursion hazard.
+drop policy if exists "Users can read own order referrals" on public.order_referrals;
+
+-- Verify (as a real affiliate login, not the SQL editor's superuser):
+--   select id, order_number, total from public.orders;
+--   -- expect: only orders referred through this affiliate's
+--   -- sub_distributor row, no error.
+--
+--   select * from pg_policies where tablename = 'order_referrals';
+--   -- expect: the legacy policy is gone; affiliate_read_own_referrals,
+--   -- marketing_manage_order_referrals, "Admins manage order referrals",
+--   -- and "Users can insert order referrals" remain.
+--
+-- NOT addressed here (separate, lower-urgency cleanup -- these are
+-- stale/duplicate policies confirmed live via the same pg_policies query
+-- but none of them cause recursion, so fixing the outage came first):
+--   - orders carries FIVE overlapping SELECT/ALL policies from what look
+--     like at least three different eras (raw profiles.role checks,
+--     auth.uid() = user_id checks under two different names, is_admin()).
+--     Harmless (RLS policies are permissive/OR'd, so redundant ones just
+--     waste a bit of planning time) but confusing to read.
+--   - order_items has the same duplication (own_order_items vs
+--     own_order_items_read; anyone_can_insert_order_items vs
+--     insert_order_items).
+--   - "Users can insert order referrals" on order_referrals has
+--     with_check: true -- unrestricted. Anyone authenticated (or even
+--     unauthenticated, if this role applies to anon too) can currently
+--     insert an order_referrals row naming ANY sub_distributor_id,
+--     which fabricates a commission claim. Worth its own migration.
