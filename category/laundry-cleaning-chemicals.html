@@ -288,6 +288,13 @@
         // into a single card with an options modal instead of appearing as
         // a separate card each. Cards are also buyable here now (add to
         // order / volume price), which the old link-only card was not.
+        //
+        // Sorted by family/tier/name (script.js's compareCatalogFamily)
+        // before rendering -- this page is already scoped to one category,
+        // so there's nothing left to group by above family. Without this,
+        // related families (e.g. every 600 Wrinkle-Free sheet type) landed
+        // wherever the unordered fetch happened to put them.
+        items.sort(compareCatalogFamily);
         renderProductGrid(items, grid);
 
         // Count what the shopper sees -- cards, not SKUs -- so it agrees

@@ -103,7 +103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     .then(products => {
       allProducts = products.filter(isSellable);
 
-      const prioritized = allProducts.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
+      const prioritized = sortCatalogDefault(allProducts);
       renderProducts(prioritized);
       loadProductPage();
       loadFeaturedProducts();
@@ -1229,6 +1229,51 @@ function getProductPriority(p) {
   return PRIORITY_KEYWORDS.some(kw => hay.includes(kw)) ? 0 : 1;
 }
 
+/* Default (unfiltered, unsearched) catalog order. Previously just
+   getProductPriority -- pin paper towels/tissue first, everything else
+   left in whatever order the database happened to return, which was
+   never a real sort (no ORDER BY on the fetch) and put unrelated
+   products between the sizes of the same sheet, e.g. a Bleach Cleaner
+   card between two 600 Wrinkle-Free Flat Sheet cards. Same problem
+   renderProductGrid's family-grouping already solves WITHIN a family --
+   this solves it BETWEEN families, so related families sit next to each
+   other instead of the grid falling back to database order at that level.
+
+   category -> family -> tier -> name, all columns the products table
+   already carries (mapDbProductToLegacyShape) -- no schema change, and
+   it stays correct automatically as products are added, unlike a
+   hand-maintained display_order a human has to remember to set.
+   A product with no family falls back to its own name as the family
+   key, so a solo product still sorts predictably instead of every
+   family-less product colliding at the same "" key. */
+// Family -> tier -> name, the part of the hierarchy shared by both the
+// unfiltered default view (which also sorts by category first) and a
+// single-category filtered view (where every product already shares one
+// category, so there's nothing left to sort by at that level).
+function compareCatalogFamily(a, b) {
+  const famA = a.productFamily || a.name || '';
+  const famB = b.productFamily || b.name || '';
+  const fam = famA.localeCompare(famB);
+  if (fam !== 0) return fam;
+
+  const tier = (a.productTier || '').localeCompare(b.productTier || '');
+  if (tier !== 0) return tier;
+
+  return (a.name || '').localeCompare(b.name || '');
+}
+
+function sortCatalogDefault(products) {
+  return products.slice().sort((a, b) => {
+    const pri = getProductPriority(a) - getProductPriority(b);
+    if (pri !== 0) return pri;
+
+    const cat = (a.category || '').localeCompare(b.category || '');
+    if (cat !== 0) return cat;
+
+    return compareCatalogFamily(a, b);
+  });
+}
+
 /**
  * Turn a supplier category name into the URL/filter slug used by the
  * catalog checkboxes and the category landing pages.
@@ -1297,8 +1342,22 @@ function applyFilters() {
   if (sortAZ) {
     filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
   } else if (catFilters.length === 0 && !keyword) {
-    // Default view: pin paper towels, kitchen towels, and facial tissues first
-    filtered = filtered.slice().sort((a, b) => getProductPriority(a) - getProductPriority(b));
+    // Default view: pin paper towels/tissues first, then category ->
+    // family -> tier -> name so related products (e.g. every 600
+    // Wrinkle-Free sheet family) sit together instead of database order.
+    filtered = sortCatalogDefault(filtered);
+  } else if (catFilters.length > 0) {
+    // One or more categories checked (these are checkboxes -- more than
+    // one can be active at once). Still worth grouping by family/tier
+    // within each category, and by category first when more than one is
+    // checked, so this has the same "no unrelated product between two
+    // sizes of the same sheet" fix as the default view, at whatever
+    // scope the customer is currently browsing.
+    filtered = filtered.slice().sort((a, b) => {
+      const cat = (a.category || '').localeCompare(b.category || '');
+      if (cat !== 0) return cat;
+      return compareCatalogFamily(a, b);
+    });
   }
 
   renderProducts(filtered);
