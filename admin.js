@@ -9991,7 +9991,7 @@ async function renderPartnerTab() {
 
   const { data: referrals, error: refErr } = await window.sb
     .from("order_referrals")
-    .select("commission_amount, created_at, orders(order_number, total, payment_status, created_at)")
+    .select("commission_amount, created_at, orders(order_number, total, tax_amount, payment_status, created_at)")
     .eq("sub_distributor_id", me.id)
     .order("created_at", { ascending: false });
 
@@ -10003,6 +10003,21 @@ async function renderPartnerTab() {
   const rows = referrals || [];
   const totalSales = rows.reduce((s, r) => s + (parseFloat(r.orders && r.orders.total) || 0), 0);
   const totalCommission = rows.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+  // Tax on their referred orders, for their own bookkeeping. Only paid
+  // orders: tax is a liability once money clears, the same rule the staff
+  // Sales Tax tab uses -- two screens must not disagree on this number.
+  const totalTax = rows.reduce((s, r) => {
+    const o = r.orders || {};
+    return o.payment_status === "paid" ? s + (parseFloat(o.tax_amount) || 0) : s;
+  }, 0);
+
+  // Their quotes. RLS (20260916b) returns only rows carrying their
+  // sub_distributor_id, so this needs no client-side filter.
+  const { data: quoteRows } = await window.sb
+    .from("quote_requests")
+    .select("id, business_name, contact_name, status, grand_total, created_at")
+    .order("created_at", { ascending: false });
+  const quotes = quoteRows || [];
 
   const origin = window.location.origin.replace(/^https?:\/\//, "");
   const rootDomain = origin.replace(/^[^.]+\./, ""); // best-effort: strip one leading label
@@ -10028,6 +10043,11 @@ async function renderPartnerTab() {
         <p class="pt-stat-sub">${rows.length} order${rows.length === 1 ? "" : "s"}</p>
       </div>
       <div class="pt-stat">
+        <p class="pt-stat-label">Sales tax collected</p>
+        <p class="pt-stat-value">${stMoney(totalTax)}</p>
+        <p class="pt-stat-sub">On paid orders &mdash; remitted by Room Ready Supply</p>
+      </div>
+      <div class="pt-stat">
         <p class="pt-stat-label">Your referral code</p>
         <p class="pt-stat-value pt-code">${escHtml(me.referral_code || "—")}</p>
         <p class="pt-stat-sub">Customers enter this at checkout</p>
@@ -10043,6 +10063,26 @@ async function renderPartnerTab() {
       </div>
       <button class="pt-btn-copy" onclick="ptCopyLink('${escHtml(storefrontUrl)}')">Copy Link</button>
     </div>` : ""}
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Your quote requests</h3><span>${quotes.length} total</span></div>
+      ${quotes.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Date</th><th>Business</th><th>Contact</th><th>Status</th><th class="num">Quoted total</th>
+        </tr></thead>
+        <tbody>
+          ${quotes.map(q => `
+            <tr>
+              <td class="pt-muted">${fmt(q.created_at)}</td>
+              <td class="pt-strong">${escHtml(q.business_name || "—")}</td>
+              <td>${escHtml(q.contact_name || "—")}</td>
+              <td>${ptQuoteBadge(q.status)}</td>
+              <td class="num">${Number(q.grand_total) > 0 ? stMoney(q.grand_total) : '<span class="pt-muted">&mdash;</span>'}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No quote requests yet. Customers who request volume pricing from your storefront link will appear here.</div>`}
+    </div>
 
     <div class="pt-card">
       <div class="pt-card-head"><h3>Your referred orders</h3><span>${rows.length} total</span></div>
@@ -10069,6 +10109,17 @@ async function renderPartnerTab() {
       </table>` : `<div class="pt-empty">No referred orders yet. Share your link or referral code to get started.</div>`}
     </div>
   `;
+}
+
+// Quote status as the affiliate should read it. Deliberately plain words
+// rather than the raw DB status -- "pending"/"quoted"/"accepted" are our
+// internal pipeline names, not something a partner should have to decode.
+function ptQuoteBadge(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "accepted")  return '<span class="pt-badge-paid">Accepted</span>';
+  if (s === "quoted")    return '<span class="pt-badge-quoted">Quote sent</span>';
+  if (s === "declined" || s === "lost") return '<span class="pt-badge-muted">Closed</span>';
+  return '<span class="pt-badge-pending">Awaiting pricing</span>';
 }
 
 function ptCopyLink(url) {

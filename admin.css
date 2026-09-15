@@ -3811,11 +3811,13 @@ select.crm-filtersel { width: auto; min-width: 150px; }
 .pt-strong { font-weight: 700; color: #0f2b50; }
 .pt-muted  { color: #94a3b8; }
 
-.pt-badge-paid, .pt-badge-pending {
+.pt-badge-paid, .pt-badge-pending, .pt-badge-quoted, .pt-badge-muted {
   display: inline-block; padding: 3px 9px; border-radius: 20px;
   font-size: 11px; font-weight: 700; white-space: nowrap;
 }
 .pt-badge-paid    { background: #f0fdf4; border: 1px solid #bbf7d0; color: #16a34a; }
+.pt-badge-quoted  { background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; }
+.pt-badge-muted   { background: #f8fafc; border: 1px solid #e2e8f0; color: #94a3b8; }
 .pt-badge-pending { background: #fffbeb; border: 1px solid #fde68a; color: #b45309; }
 
 .pt-empty { padding: 34px 18px; text-align: center; color: #94a3b8; font-size: 13px; }

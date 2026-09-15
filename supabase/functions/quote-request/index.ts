@@ -31,14 +31,41 @@ serve(async (req) => {
       shipping_city,
       shipping_state,
       shipping_zip,
+      affiliate_subdomain,
     } = body;
 
     // ── 1. Save to Supabase ──────────────────────────────────────────────────
     const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE);
+
+    // Attribute the quote to the affiliate whose storefront the customer was
+    // on. The client sends only the subdomain it is being served from; the
+    // affiliate id is looked up HERE, never accepted from the request body.
+    // This client is service-role and bypasses RLS, so a caller who could
+    // name an arbitrary sub_distributor_id would be able to credit any
+    // affiliate for a lead that isn't theirs.
+    //
+    // Best-effort: a quote is worth more than its attribution, so a failed
+    // or unmatched lookup records the quote unattributed rather than
+    // rejecting the customer's request.
+    let sub_distributor_id: string | null = null;
+    const sub = String(affiliate_subdomain || "").trim().toLowerCase();
+    if (sub) {
+      const { data: aff, error: affErr } = await sb
+        .from("sub_distributors")
+        .select("id")
+        .ilike("subdomain", sub)
+        .eq("status", "active")
+        .maybeSingle();
+      if (affErr) console.error("[quote-request] affiliate lookup failed:", affErr.message);
+      else if (aff) sub_distributor_id = aff.id;
+      else console.log("[quote-request] no active affiliate for subdomain:", sub);
+    }
+
     const { data: row, error: dbErr } = await sb
       .from("quote_requests")
       .insert({
         user_id:          user_id          || null,
+        sub_distributor_id,
         business_name,
         customer_type:    customer_type    || null,
         contact_name:     contact_name     || null,

@@ -1814,6 +1814,11 @@
           marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? true,
           requested_items:  allItems,
           user_id:          session.user.id,
+          // Which affiliate storefront this was requested from, so the quote
+          // is attributed the same way an order placed here would be. The
+          // function resolves this to an affiliate id server-side -- sending
+          // the id from here would let a caller credit any affiliate.
+          affiliate_subdomain: (typeof getAffiliateSubdomain === 'function' ? getAffiliateSubdomain() : null),
           file_url,
           file_name,
         }),
