@@ -7525,18 +7525,42 @@ async function renderSubDistributorsTab() {
    Tiered on whichever bracket that month's TOTAL referred revenue falls
    into (not a marginal/bracket-by-slice calculation like a tax table) --
    e.g. $6,000 referred in a month pays 15% on the full $6,000, not 10% on
-   the first $4,500 and 15% on the rest. Company-wide, not configurable
-   per affiliate here -- if a negotiated flat rate is ever needed instead,
-   that's what sub_distributors.commission_pct already exists for. */
+   the first $5,000 and 15% on the rest. Company-wide, and now the single
+   source of truth: sub_distributors.commission_pct is no longer consulted
+   for payouts (see affiliateReferredRevenue below).
+
+   Brackets per the CEO, 2026-09-15: up to $5,000 is 10%, $5,000.01-$10,000
+   is 15%, above $10,000 is 20%. "5000.00 - 10%" and "up to 5k is 10%" put
+   the boundary itself in the lower bracket, so these are <= comparisons.
+
+   Revenue basis is the items subtotal -- NOT orders.total. Tax is money
+   collected for the state and freight is a pass-through cost; neither is
+   RRS margin, so neither earns commission. */
 const AFFILIATE_COMMISSION_TIERS = [
-  { max: 4500,      rate: 0.10 },
-  { max: 9000,      rate: 0.15 },
+  { max: 5000,      rate: 0.10 },
+  { max: 10000,     rate: 0.15 },
   { max: Infinity,  rate: 0.20 },
 ];
 
 function affiliateCommissionRate(revenue) {
   const tier = AFFILIATE_COMMISSION_TIERS.find(t => revenue <= t.max) || AFFILIATE_COMMISSION_TIERS[AFFILIATE_COMMISSION_TIERS.length - 1];
   return tier.rate;
+}
+
+/* Commissionable value of one referred order: items only.
+
+   orders.subtotal is items-only by the convention established across the
+   composer, send-quote and invoice paths. Older orders pre-date the
+   column and carry only `total`; for those, back out tax and freight
+   rather than paying commission on them. */
+function affiliateOrderRevenue(o) {
+  if (!o) return 0;
+  const sub = parseFloat(o.subtotal);
+  if (Number.isFinite(sub) && sub > 0) return sub;
+  const total   = parseFloat(o.total) || 0;
+  const tax     = parseFloat(o.tax_amount) || 0;
+  const freight = parseFloat(o.freight_fee) || 0;
+  return Math.max(0, total - tax - freight);
 }
 
 async function renderAffiliatePayouts() {
@@ -7555,7 +7579,7 @@ async function renderAffiliatePayouts() {
 
   const [{ data: sds }, { data: referrals }, { data: payouts }] = await Promise.all([
     window.sb.from('sub_distributors').select('id,name,status').order('name'),
-    window.sb.from('order_referrals').select('sub_distributor_id,orders(total,created_at)'),
+    window.sb.from('order_referrals').select('sub_distributor_id,orders(total,subtotal,tax_amount,freight_fee,created_at)'),
     window.sb.from('affiliate_payouts').select('*').eq('period_month', periodStart),
   ]);
 
@@ -7568,7 +7592,7 @@ async function renderAffiliatePayouts() {
   (referrals || []).forEach(r => {
     const created = r.orders?.created_at;
     if (!created || created < periodStart || created >= periodEnd.toISOString()) return;
-    revenueByAffiliate[r.sub_distributor_id] = (revenueByAffiliate[r.sub_distributor_id] || 0) + (parseFloat(r.orders?.total) || 0);
+    revenueByAffiliate[r.sub_distributor_id] = (revenueByAffiliate[r.sub_distributor_id] || 0) + affiliateOrderRevenue(r.orders);
   });
 
   const payoutByAffiliate = {};
@@ -7609,13 +7633,13 @@ async function markAffiliatePayoutPaid(subDistributorId, name, monthStr) {
 
   const { data: referrals } = await window.sb
     .from('order_referrals')
-    .select('orders(total,created_at)')
+    .select('orders(total,subtotal,tax_amount,freight_fee,created_at)')
     .eq('sub_distributor_id', subDistributorId);
 
   const revenue = (referrals || []).reduce((s, r) => {
     const created = r.orders?.created_at;
     if (!created || created < periodStart || created >= periodEnd.toISOString()) return s;
-    return s + (parseFloat(r.orders?.total) || 0);
+    return s + affiliateOrderRevenue(r.orders);
   }, 0);
   const rate = affiliateCommissionRate(revenue);
   const commission = revenue * rate;
@@ -7645,13 +7669,16 @@ async function loadSdStats() {
     const [totalRes, activeRes, referralsRes] = await Promise.all([
       window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }),
       window.sb.from('sub_distributors').select('*', { count: 'exact', head: true }).eq('status', 'active'),
-      window.sb.from('order_referrals').select('commission_amount'),
+      window.sb.from('order_referrals').select('orders(total,subtotal,tax_amount,freight_fee)'),
     ]);
 
     const total    = totalRes.count   || 0;
     const active   = activeRes.count  || 0;
     const referrals = referralsRes.data || [];
-    const revenue   = referrals.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+    // The tile is labelled "Referred Revenue", but this summed
+    // commission_amount -- showing commission under a revenue heading.
+    // Same commissionable basis as everywhere else: items, no tax/freight.
+    const revenue   = referrals.reduce((s, r) => s + affiliateOrderRevenue(r.orders), 0);
 
     setText('sd-stat-total',   total);
     setText('sd-stat-active',  active);
@@ -7681,7 +7708,7 @@ async function loadSdTable() {
   const ids = sds.map(s => s.id);
   const [{ data: links }, { data: referrals }] = await Promise.all([
     window.sb.from('customer_sub_distributor_links').select('sub_distributor_id').in('sub_distributor_id', ids),
-    window.sb.from('order_referrals').select('sub_distributor_id,commission_amount,orders(total)').in('sub_distributor_id', ids),
+    window.sb.from('order_referrals').select('sub_distributor_id,commission_amount,orders(total,subtotal,tax_amount,freight_fee)').in('sub_distributor_id', ids),
   ]);
 
   const customerCount = {};
@@ -7690,7 +7717,7 @@ async function loadSdTable() {
   const revenueMap = {};
   (referrals || []).forEach(r => {
     orderCount[r.sub_distributor_id] = (orderCount[r.sub_distributor_id] || 0) + 1;
-    revenueMap[r.sub_distributor_id] = (revenueMap[r.sub_distributor_id] || 0) + (parseFloat(r.orders && r.orders.total) || 0);
+    revenueMap[r.sub_distributor_id] = (revenueMap[r.sub_distributor_id] || 0) + affiliateOrderRevenue(r.orders);
   });
 
   tbody.innerHTML = sds.map(sd => {
@@ -7704,7 +7731,7 @@ async function loadSdTable() {
       <td><strong>${esc(sd.name)}</strong><br><span style="font-size:11px;color:#8a9ab0">${esc(sd.email||'')}</span></td>
       <td>${esc(sd.contact_person||'—')}</td>
       <td><code style="background:#f0f3f9;padding:2px 7px;border-radius:5px;font-size:12px;">${esc(sd.referral_code)}</code></td>
-      <td>${sd.commission_pct}%</td>
+      <td><span title="Tiered company-wide on monthly referred sales: up to $5,000 = 10%, $5,000.01-$10,000 = 15%, above $10,000 = 20%">Tiered</span></td>
       <td>${custCnt}</td>
       <td>${orders}</td>
       <td>$${rev.toFixed(2)}</td>
@@ -7801,7 +7828,7 @@ function openSdModal(sd) {
   document.getElementById('sdPhone').value    = sd ? (sd.phone || '') : '';
   document.getElementById('sdCode').value     = sd ? (sd.referral_code || '') : '';
   document.getElementById('sdSubdomain').value = sd ? (sd.subdomain || '') : '';
-  document.getElementById('sdCommission').value = sd ? (sd.commission_pct || '0') : '0';
+  // Commission is tiered company-wide now; the field is a disabled label.
   document.getElementById('sdStatus').value   = sd ? (sd.status || 'active') : 'active';
   document.getElementById('sdNotes').value    = sd ? (sd.notes || '') : '';
   document.getElementById('sdModalError').style.display = 'none';
@@ -7857,7 +7884,6 @@ async function saveSdDistributor() {
   var name       = document.getElementById('sdName').value.trim();
   var code       = document.getElementById('sdCode').value.trim().toUpperCase();
   var subdomain  = document.getElementById('sdSubdomain').value.trim().toLowerCase();
-  var commission = parseFloat(document.getElementById('sdCommission').value) || 0;
   var errEl      = document.getElementById('sdModalError');
 
   function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
@@ -7879,7 +7905,11 @@ async function saveSdDistributor() {
     // (only NULLs are exempt from a unique constraint), so a second
     // affiliate left blank would collide with the first. Null instead.
     subdomain:      subdomain || null,
-    commission_pct: commission,
+    // commission_pct is deliberately NOT written: commission is tiered
+    // company-wide on monthly referred sales (AFFILIATE_COMMISSION_TIERS),
+    // so there is no per-affiliate rate to save. The column keeps its
+    // existing value for historical reference. On insert it falls back to
+    // the schema default of 0.
     status:         document.getElementById('sdStatus').value,
     notes:          document.getElementById('sdNotes').value.trim(),
   };
@@ -9956,11 +9986,14 @@ function stExportCsv() {
    back only what RLS allows -- there is no client-side filter standing in
    for the real one, so a bug here cannot leak another affiliate's data.
 
-   Reuses the exact commission math already used in loadSdTable() (the
-   staff-side Affiliates table): orders = count of order_referrals rows,
-   revenue = sum of the linked orders.total, commission = sum of
-   order_referrals.commission_amount. Two different screens computing this
-   differently would be worse than one place being wrong. */
+   Commission is computed from AFFILIATE_COMMISSION_TIERS on this month's
+   referred subtotal -- deliberately NOT a sum of the stored per-order
+   order_referrals.commission_amount. Those amounts are written at checkout
+   from the old flat sub_distributors.commission_pct and are per-order, so
+   they can neither see the monthly bracket nor reflect the tier the
+   affiliate actually earned. The payout tab (renderAffiliatePayouts) uses
+   the same function on the same basis, so what a partner sees here is what
+   they are paid. */
 
 async function renderPartnerTab() {
   const wrap = document.getElementById("tab-partner");
@@ -9991,7 +10024,7 @@ async function renderPartnerTab() {
 
   const { data: referrals, error: refErr } = await window.sb
     .from("order_referrals")
-    .select("commission_amount, created_at, orders(order_number, total, tax_amount, payment_status, created_at)")
+    .select("commission_amount, created_at, orders(order_number, total, subtotal, tax_amount, freight_fee, payment_status, created_at)")
     .eq("sub_distributor_id", me.id)
     .order("created_at", { ascending: false });
 
@@ -10001,8 +10034,26 @@ async function renderPartnerTab() {
   }
 
   const rows = referrals || [];
-  const totalSales = rows.reduce((s, r) => s + (parseFloat(r.orders && r.orders.total) || 0), 0);
-  const totalCommission = rows.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+  const totalSales = rows.reduce((s, r) => s + affiliateOrderRevenue(r.orders), 0);
+
+  // Commission brackets are monthly, so the rate has to be found per
+  // month and applied to that month's referred subtotal. Summing a year
+  // of revenue and bracketing it once would hand every affiliate 20%.
+  const revenueByMonth = {};
+  rows.forEach(r => {
+    const created = (r.orders && r.orders.created_at) || r.created_at;
+    if (!created) return;
+    const key = String(created).slice(0, 7); // YYYY-MM
+    revenueByMonth[key] = (revenueByMonth[key] || 0) + affiliateOrderRevenue(r.orders);
+  });
+  const totalCommission = Object.values(revenueByMonth)
+    .reduce((s, rev) => s + rev * affiliateCommissionRate(rev), 0);
+
+  // This month's standing, so a partner can see the bracket they're in
+  // and what the next one is worth.
+  const thisMonthKey = stLocalDate(new Date()).slice(0, 7);
+  const thisMonthRevenue = revenueByMonth[thisMonthKey] || 0;
+  const thisMonthRate = affiliateCommissionRate(thisMonthRevenue);
   // Tax on their referred orders, for their own bookkeeping. Only paid
   // orders: tax is a liability once money clears, the same rule the staff
   // Sales Tax tab uses -- two screens must not disagree on this number.
@@ -10035,7 +10086,7 @@ async function renderPartnerTab() {
       <div class="pt-stat pt-stat--accent">
         <p class="pt-stat-label">Commission earned</p>
         <p class="pt-stat-value">${stMoney(totalCommission)}</p>
-        <p class="pt-stat-sub">${me.commission_pct != null ? Number(me.commission_pct).toFixed(2) + "% of referred sales" : ""}</p>
+        <p class="pt-stat-sub">${(thisMonthRate * 100).toFixed(0)}% this month &middot; tiered on monthly volume</p>
       </div>
       <div class="pt-stat">
         <p class="pt-stat-label">Total sales referred</p>
@@ -10085,12 +10136,40 @@ async function renderPartnerTab() {
     </div>
 
     <div class="pt-card">
+      <div class="pt-card-head"><h3>Commission by month</h3><span>10% / 15% / 20%</span></div>
+      <p class="pt-link-note" style="padding:0 18px 4px">
+        Your rate is set by each month's referred sales (product total, before sales tax and freight):
+        up to $5,000 earns 10%, $5,000.01&ndash;$10,000 earns 15%, above $10,000 earns 20%.
+        The rate applies to the whole month's sales, not just the amount above a threshold.
+      </p>
+      ${Object.keys(revenueByMonth).length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Month</th><th class="num">Referred sales</th><th class="num">Rate</th><th class="num">Commission</th>
+        </tr></thead>
+        <tbody>
+          ${Object.keys(revenueByMonth).sort().reverse().map(k => {
+            const rev  = revenueByMonth[k];
+            const rate = affiliateCommissionRate(rev);
+            return `
+            <tr>
+              <td class="pt-strong">${fmt(k + "-01")}</td>
+              <td class="num">${stMoney(rev)}</td>
+              <td class="num">${(rate * 100).toFixed(0)}%</td>
+              <td class="num pt-strong">${stMoney(rev * rate)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No referred sales yet.</div>`}
+    </div>
+
+    <div class="pt-card">
       <div class="pt-card-head"><h3>Your referred orders</h3><span>${rows.length} total</span></div>
       ${rows.length ? `
       <table class="pt-table">
         <thead><tr>
           <th>Date</th><th>Order</th><th>Status</th>
-          <th class="num">Order total</th><th class="num">Your commission</th>
+          <th class="num">Order total</th><th class="num">Commissionable</th>
         </tr></thead>
         <tbody>
           ${rows.map(r => {
@@ -10102,7 +10181,7 @@ async function renderPartnerTab() {
               <td class="pt-strong">${escHtml(o.order_number || "—")}</td>
               <td>${paid ? '<span class="pt-badge-paid">Paid</span>' : `<span class="pt-badge-pending">${escHtml(o.payment_status || "pending")}</span>`}</td>
               <td class="num">${stMoney(o.total)}</td>
-              <td class="num pt-strong">${stMoney(r.commission_amount)}</td>
+              <td class="num pt-strong">${stMoney(affiliateOrderRevenue(o))}</td>
             </tr>`;
           }).join("")}
         </tbody>

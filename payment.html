@@ -848,13 +848,20 @@
             var sdRes = await window.sb.rpc('lookup_referral_code', { p_code: checkout.referral });
             var sdRow = Array.isArray(sdRes.data) ? sdRes.data[0] : sdRes.data;
             if (sdRow) {
-              var commAmt = ((window._orderTotal || 0) * (sdRow.commission_pct || 0) / 100);
+              // Commission is tiered on the affiliate's TOTAL referred sales
+              // for the calendar month (10/15/20%), so it cannot be known
+              // for a single order at the moment that order is placed -- a
+              // later order in the same month can move the whole month into
+              // a higher bracket. The Affiliates > Payouts tab computes and
+              // locks it in at month end; these two columns stay 0 rather
+              // than carrying a number that would contradict it. They are
+              // NOT NULL, hence 0 rather than omitted.
               await window.sb.from('order_referrals').insert({
                 order_id: orderInsert.data.id,
                 referral_code: checkout.referral.toUpperCase(),
                 sub_distributor_id: sdRow.id,
-                commission_pct: sdRow.commission_pct,
-                commission_amount: commAmt,
+                commission_pct: 0,
+                commission_amount: 0,
                 source: 'checkout',
               });
             }
@@ -1189,13 +1196,15 @@
                 var sdRes = await window.sb.rpc('lookup_referral_code', { p_code: checkout.referral });
                 var sdRow = Array.isArray(sdRes.data) ? sdRes.data[0] : sdRes.data;
                 if (sdRow) {
-                  var commissionAmt = ((window._orderTotal || 0) * (sdRow.commission_pct || 0) / 100);
+                  // Tiered monthly commission -- not knowable per order at
+                  // checkout. See the matching note on the other referral
+                  // insert above; the Payouts tab is the source of truth.
                   await window.sb.from('order_referrals').insert({
                     order_id: orderInsert.data.id,
                     referral_code: checkout.referral.toUpperCase(),
                     sub_distributor_id: sdRow.id,
-                    commission_pct: sdRow.commission_pct,
-                    commission_amount: commissionAmt,
+                    commission_pct: 0,
+                    commission_amount: 0,
                     source: 'checkout',
                   });
                 }
