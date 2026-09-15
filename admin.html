@@ -2828,9 +2828,25 @@
         </div>
         <div class="a-form-col-2">
           <div class="a-field">
+            <!-- 20260911_sub_distributors_subdomain.sql: this is what a
+                 visitor to <this>.roomreadysupply.com resolves to via
+                 lookup_referral_code_by_subdomain(), which auto-fills and
+                 locks this affiliate's referral code at checkout/signup.
+                 Independent of the DNS record -- Vercel's wildcard already
+                 routes every *.roomreadysupply.com label to the site, so
+                 nothing needs to be added in Vercel per affiliate. -->
+            <label>Subdomain</label>
+            <div style="display:flex;align-items:center;gap:0;border:1px solid #d0d7e0;border-radius:8px;overflow:hidden">
+              <input type="text" id="sdSubdomain" placeholder="trustmarkcleaners" style="flex:1;border:none;border-radius:0;text-transform:lowercase" oninput="this.value=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')">
+              <span style="padding:9px 12px;background:#f8f9fb;color:#8a94a6;font-size:12.5px;white-space:nowrap;border-left:1px solid #d0d7e0">.roomreadysupply.com</span>
+            </div>
+          </div>
+          <div class="a-field">
             <label>Status</label>
             <select id="sdStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
           </div>
+        </div>
+        <div class="a-form-col-2">
           <div class="a-field"><label>Notes</label><input type="text" id="sdNotes" placeholder="Optional notes"></div>
         </div>
       </div>

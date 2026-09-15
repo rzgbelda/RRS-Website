@@ -7786,6 +7786,7 @@ function openSdModal(sd) {
   document.getElementById('sdEmail').value    = sd ? (sd.email || '') : '';
   document.getElementById('sdPhone').value    = sd ? (sd.phone || '') : '';
   document.getElementById('sdCode').value     = sd ? (sd.referral_code || '') : '';
+  document.getElementById('sdSubdomain').value = sd ? (sd.subdomain || '') : '';
   document.getElementById('sdCommission').value = sd ? (sd.commission_pct || '0') : '0';
   document.getElementById('sdStatus').value   = sd ? (sd.status || 'active') : 'active';
   document.getElementById('sdNotes').value    = sd ? (sd.notes || '') : '';
@@ -7841,12 +7842,18 @@ async function saveSdDistributor() {
   var id         = document.getElementById('sdEditId').value;
   var name       = document.getElementById('sdName').value.trim();
   var code       = document.getElementById('sdCode').value.trim().toUpperCase();
+  var subdomain  = document.getElementById('sdSubdomain').value.trim().toLowerCase();
   var commission = parseFloat(document.getElementById('sdCommission').value) || 0;
   var errEl      = document.getElementById('sdModalError');
 
   function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
   if (!name) return showErr('Name is required.');
   if (!code) return showErr('Referral code is required.');
+  // Matches the unique index (20260911_sub_distributors_subdomain.sql) so a
+  // typo surfaces here instead of as an opaque 23505 from the insert.
+  if (subdomain && !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomain)) {
+    return showErr('Subdomain can only contain lowercase letters, numbers, and hyphens (not at the start or end).');
+  }
 
   var payload = {
     name: name,
@@ -7854,6 +7861,10 @@ async function saveSdDistributor() {
     email:          document.getElementById('sdEmail').value.trim(),
     phone:          document.getElementById('sdPhone').value.trim(),
     referral_code:  code,
+    // Empty string would still be a value the unique index dedupes on
+    // (only NULLs are exempt from a unique constraint), so a second
+    // affiliate left blank would collide with the first. Null instead.
+    subdomain:      subdomain || null,
     commission_pct: commission,
     status:         document.getElementById('sdStatus').value,
     notes:          document.getElementById('sdNotes').value.trim(),
@@ -7865,7 +7876,13 @@ async function saveSdDistributor() {
   } else {
     result = await window.sb.from('sub_distributors').insert(payload);
   }
-  if (result.error) return showErr(result.error.code === '23505' ? 'Referral code already exists.' : result.error.message);
+  if (result.error) {
+    if (result.error.code === '23505') {
+      var msg = /subdomain/i.test(result.error.message || '') ? 'That subdomain is already in use by another affiliate.' : 'Referral code already exists.';
+      return showErr(msg);
+    }
+    return showErr(result.error.message);
+  }
 
   closeSdModal();
   showToast(id ? 'Sub-distributor updated.' : 'Sub-distributor added.');
