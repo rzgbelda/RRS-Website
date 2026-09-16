@@ -361,7 +361,12 @@ function renderQuotePanel(quotes, state) {
 
   if (state === 'waiting') {
     panel.innerHTML = `<p class="fq-hint">Enter your ZIP code above to see live freight rates.</p>`;
-    if (shippingEl) shippingEl.textContent = 'TBD';
+    // The customer-facing summary line says how delivery is priced, not
+    // "TBD" -- the freight panel this script drives is hidden from
+    // customers (staff quote each order and bill it on the invoice), so
+    // a bare "TBD" left the buyer with no idea what happens next. The
+    // staff-facing panel above still shows the real quoting state.
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     _selectedQuote = null;
     return;
   }
