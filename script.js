@@ -84,8 +84,91 @@ async function loadSiteHeader() {
   }
 }
 
+/* ── Affiliate identification + liability disclaimer ──────────────
+   Required by the CEO (2026-09-16): an affiliate's storefront runs on
+   *.roomreadysupply.com carrying RRS branding, so a customer could
+   reasonably believe the affiliate IS Room Ready Supply. Every affiliate
+   subdomain must therefore state, across the whole site, that the
+   affiliate is an affiliate/partner of RRS, that RRS is only their
+   SUPPLIER, and that RRS is not responsible for the affiliate's actions.
+
+   Injected from JS rather than added to the page markup because the site
+   has two different chrome patterns -- 26 pages with the header copied
+   inline, 9 newer ones using /partials/site-header -- so a markup edit
+   would mean touching every file and would silently miss any page added
+   later. A legal disclaimer that is missing from one page is worse than
+   useless, so this runs from script.js, which every page already loads.
+
+   Does nothing on roomreadysupply.com and www: getAffiliateSubdomain()
+   returns null there, so the main site is untouched. Affiliates have no
+   logo of their own, so their company NAME is the identifier -- which
+   lookup_affiliate_by_subdomain() already returns (20260911), so no
+   schema or RPC change is needed. */
+const RRS_AFFILIATE_DISCLAIMER =
+  "Room Ready Supply is the product supplier for this independent affiliate and is " +
+  "not responsible for its business practices, services, or conduct. Orders placed " +
+  "here form an agreement with the affiliate named above, not with Room Ready Supply.";
+
+async function renderAffiliateDisclaimer() {
+  // Cheap synchronous check first -- on the main site this exits before
+  // any network call, so the overwhelming majority of page loads pay
+  // nothing for this feature.
+  if (!getAffiliateSubdomain()) return;
+
+  const affiliate = await resolveAffiliateSubdomain();
+  // An unrecognized or inactive subdomain resolves to null. Deliberately
+  // render nothing rather than a disclaimer naming nobody -- an unnamed
+  // "this affiliate" notice would confuse a visitor on a stray subdomain
+  // without protecting anyone.
+  if (!affiliate || !affiliate.name) return;
+
+  const name = affiliate.name;
+
+  // 1. Identification, above the RRS logo -- "on top of the room ready
+  //    supply logo" per the CEO. Inserted before the top bar (or the
+  //    header, on pages that have no top bar) so it reads before any
+  //    RRS branding does.
+  if (!document.getElementById("affiliateIdBar")) {
+    const bar = document.createElement("div");
+    bar.id = "affiliateIdBar";
+    bar.className = "affiliate-id-bar";
+    bar.innerHTML =
+      `<strong></strong><span> &mdash; an independent affiliate of Room Ready Supply</span>`;
+    // textContent, not innerHTML, for the name: it is operator-entered
+    // data from the admin panel, and an apostrophe or "&" in a company
+    // name must render as itself, never as markup.
+    bar.querySelector("strong").textContent = name;
+
+    const anchor = document.querySelector(".top-bar") || document.querySelector("header.navbar");
+    if (anchor && anchor.parentNode) {
+      anchor.parentNode.insertBefore(bar, anchor);
+    } else {
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  }
+
+  // 2. Liability disclaimer, persistent at the end of every page. Site
+  //    footers are inconsistent across this codebase (index.html has no
+  //    site <footer> at all), so this appends its own element rather
+  //    than trying to find one to attach to.
+  if (!document.getElementById("affiliateDisclaimer")) {
+    const note = document.createElement("div");
+    note.id = "affiliateDisclaimer";
+    note.className = "affiliate-disclaimer";
+    note.setAttribute("role", "contentinfo");
+    const strong = document.createElement("strong");
+    strong.textContent = name + " is an independent affiliate of Room Ready Supply.";
+    const text = document.createElement("span");
+    text.textContent = " " + RRS_AFFILIATE_DISCLAIMER;
+    note.appendChild(strong);
+    note.appendChild(text);
+    document.body.appendChild(note);
+  }
+}
+
 document.addEventListener("DOMContentLoaded", async () => {
   await loadSiteHeader();
+  renderAffiliateDisclaimer();
   setupMobileNav();
   updateCartBadge();
   updateQuoteBadge();

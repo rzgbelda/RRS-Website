@@ -12,6 +12,51 @@ body {
   background-color: #ffffff;
 }
 
+/* ── Affiliate identification + disclaimer ────────────────────────
+   Only ever rendered on an affiliate's own subdomain (script.js's
+   renderAffiliateDisclaimer). Required by the CEO so a visitor cannot
+   mistake an affiliate's storefront for Room Ready Supply itself, and
+   so RRS's role as supplier-only is stated across the whole site.
+
+   Deliberately not dismissible and not position:fixed -- a legal notice
+   that a visitor can close, or that covers content, invites exactly the
+   argument it exists to prevent. */
+.affiliate-id-bar {
+  width: 100%;
+  background: #0d2c50;
+  color: #ffffff;
+  padding: 7px 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+  letter-spacing: .01em;
+}
+.affiliate-id-bar strong { font-weight: 800; }
+.affiliate-id-bar span { opacity: .88; }
+
+.affiliate-disclaimer {
+  width: 100%;
+  box-sizing: border-box;
+  background: #f4f6f9;
+  border-top: 1px solid #dbe2ea;
+  color: #4a5568;
+  padding: 16px clamp(14px, 4vw, 28px);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: center;
+}
+.affiliate-disclaimer strong { color: #0d2c50; font-weight: 700; }
+
+@media print {
+  /* Must survive printing -- a printed order page is exactly where the
+     supplier/affiliate distinction gets argued about later. */
+  .affiliate-id-bar, .affiliate-disclaimer {
+    background: #fff !important;
+    color: #000 !important;
+    border-top: 1px solid #000;
+  }
+}
+
 .top-bar {
   width: 100%;
   height: 23px;
