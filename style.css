@@ -9089,8 +9089,11 @@ input.qty-input:focus {
   border-radius: 10px;
   background: #fff4ec;
   color: #ED7226;
-  display: grid;
-  place-items: center;
+  /* Flex rather than grid, so centring survives a stray `display` rule
+     landing on this span from a broader selector. */
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
 }
 .hc-trust-ico svg { width: 19px; height: 19px; }
 .hc-trust-item strong {
@@ -9100,7 +9103,12 @@ input.qty-input:focus {
   color: #0b2d52;
   line-height: 1.3;
 }
-.hc-trust-item span {
+/* Scoped to the text span deliberately: a bare `.hc-trust-item span` also
+   matched .hc-trust-ico (itself a span) and, being later in the file with
+   equal specificity, overrode its display:grid with display:block -- which
+   dropped every icon into the top-left corner of its tinted square instead
+   of centring it. */
+.hc-trust-item > div > span {
   display: block;
   font-size: 12px;
   color: #6b7f94;
@@ -9259,13 +9267,25 @@ input.qty-input:focus {
   overflow: hidden;
   box-sizing: border-box;
 }
+/* The catalog mixes aspect ratios: Cloudinary assets are padded squares
+   (1.00), while supplier photos arrive portrait (0.78) or landscape
+   (1.23). With plain `contain` each kept its own shape, so a landscape
+   sheet filled 94% of the width but only 76% of the height while a
+   portrait towel did the opposite -- no two products looked the same
+   size. Giving the image the full square and using `cover` makes every
+   product occupy an identical area. object-position favours the centre,
+   where product photography puts the subject. */
 .hc-card-img img {
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  mix-blend-mode: multiply;
+  width: 100%;
+  height: 100%;
+  /* hcSquareImage() asks each CDN for a square crop, so cover has nothing
+     to cut off for the normal case; it is here to absorb any image that
+     arrives non-square anyway (a CDN that ignores the crop, or a future
+     source this function does not know about) rather than let that one
+     product render a different size from the rest of the grid. */
+  object-fit: cover;
+  object-position: center;
+  border-radius: 6px;
 }
 .hc-badge {
   position: absolute;

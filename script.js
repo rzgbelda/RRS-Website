@@ -4229,6 +4229,33 @@ document.addEventListener('DOMContentLoaded', function() {
    change flows through with no edit here.
 ========================= */
 
+/**
+ * Normalise a product image to a square crop.
+ *
+ * The catalog draws from two CDNs with different native shapes -- padded
+ * squares from Cloudinary, portrait or landscape photos from the supplier's
+ * Shopify CDN -- which made products render at visibly different sizes in a
+ * grid. Both CDNs can crop server-side, so ask each for a square and let the
+ * card display it as-is.
+ */
+function hcSquareImage(url, size) {
+  if (!url) return url;
+  const px = size || 480;
+
+  // Cloudinary: swap the stored white-pad transform for a filled crop.
+  if (/res\.cloudinary\.com/.test(url)) {
+    return url.replace(/c_pad,w_\d+,h_\d+,b_white/, `c_fill,g_auto,w_${px},h_${px}`);
+  }
+
+  // Shopify CDN (innstyle): the _WxH token in the filename sets the render
+  // size; _crop_center squares off a non-square original.
+  if (/cdn\/shop\//.test(url)) {
+    return url.replace(/_(\d+)x(\d+)(?=\.[a-z]+)/i, `_${px}x${px}_crop_center`);
+  }
+
+  return url;
+}
+
 function hcProductCard(product, badge) {
   // price1 is the per-case price the cart actually charges (getTierPrice),
   // so it is what the card must show -- the base `price` column is a
@@ -4255,8 +4282,8 @@ function hcProductCard(product, badge) {
     <div class="hc-card" data-url="${url}">
       <div class="hc-card-img">
         ${badgeHtml}
-        <img src="${product.image}" alt="${product.name}" loading="lazy"
-             onerror="this.src='/assets/img/product-placeholder.svg'">
+        <img src="${hcSquareImage(product.image)}" alt="${product.name}" loading="lazy"
+             onerror="this.onerror=null;this.src='${product.image}'">
       </div>
       <div class="hc-card-body">
         <h3>${product.name}</h3>
@@ -4378,14 +4405,8 @@ function fillCategoryTiles() {
 
     const img = tile.querySelector('.hc-cat-img img');
     if (img) {
-      // Cloudinary assets are stored padded onto an 800x800 white square
-      // (c_pad,w_800,h_800,b_white). The tile fills its frame, so ask
-      // Cloudinary for a filled 240px crop instead: without this the
-      // padding is what gets cropped and the product sits tiny in frame.
-      img.src = preferred.image.replace(
-        /c_pad,w_\d+,h_\d+,b_white/,
-        'c_fill,g_auto,w_240,h_240'
-      );
+      // Same square-crop normalisation the product cards use, at tile size.
+      img.src = hcSquareImage(preferred.image, 240);
       img.alt = (preferred.category || slug) + ' products';
       img.onerror = function () { this.src = '/assets/img/product-placeholder.svg'; };
     }
