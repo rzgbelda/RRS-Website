@@ -889,6 +889,14 @@
           <option value="failed">Failed</option>
           <option value="refunded">Refunded</option>
         </select>
+        <!-- Deleting an order now soft-deletes it (see
+             supabase/migrations/20260918_orders_soft_delete.sql) rather than
+             removing the row outright, so this is where a deleted order can
+             be found and brought back. Owner-only, same as the delete
+             itself -- shown/hidden in showDeletedOrdersBtnIfOwner(). -->
+        <button id="showDeletedOrdersBtn" class="a-btn-outline" style="width:auto;display:none" onclick="openDeletedOrdersModal()">
+          &#128465; Deleted Orders
+        </button>
       </div>
 
       <div class="a-card">
@@ -2760,7 +2768,9 @@
     </div>
     <div class="a-modal-body">
       <p style="font-size:14px;color:#334155;line-height:1.6;margin:0 0 16px;">
-        This permanently deletes order <strong id="deleteOrderNumberLabel"></strong> and all of its line items. This cannot be undone.
+        This removes order <strong id="deleteOrderNumberLabel"></strong> from the Orders list. It moves to
+        <strong>Deleted Orders</strong> and can be restored from there at any time -- it is not permanently
+        deleted unless you empty it from that list.
       </p>
       <p style="font-size:13px;color:#64748b;margin:0 0 8px;">Type the order number to confirm:</p>
       <input type="text" id="deleteOrderConfirmInput" class="a-input" placeholder="Order number" oninput="onDeleteOrderConfirmInput(this.value)" style="width:100%;font-family:monospace;">
@@ -2768,6 +2778,46 @@
     <div class="a-modal-footer">
       <button class="a-btn-outline" style="width:auto" onclick="closeDeleteOrderModal()">Cancel</button>
       <button class="a-btn-primary" id="deleteOrderConfirmBtn" disabled style="width:auto;background:#dc2626;" onclick="confirmDeleteOrder()">Delete Order</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETED ORDERS (TRASH) MODAL -->
+<!-- Lists soft-deleted orders (deleted_at is not null) with Restore and
+     Delete Forever. Owner-only: the button that opens this is hidden for
+     anyone else, and restore_order()/purge_deleted_order() re-check
+     is_owner() server-side regardless of what the UI shows. -->
+<div id="deletedOrdersModal" class="a-modal-overlay" style="display:none">
+  <div class="a-modal a-modal-lg">
+    <div class="a-modal-header">
+      <h3>Deleted Orders</h3>
+      <button class="a-modal-close" onclick="closeModal('deletedOrdersModal')">&#x2715;</button>
+    </div>
+    <div class="a-modal-body">
+      <p style="font-size:13px;color:#64748b;margin:0 0 14px;line-height:1.5;">
+        Orders deleted from the Orders tab land here first. Restore brings one back exactly as it was;
+        Delete Forever removes it for good and cannot be undone.
+      </p>
+      <div class="a-table-wrap">
+        <table class="a-table">
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Business</th>
+              <th>Total</th>
+              <th>Deleted</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="deletedOrdersTableBody">
+            <tr><td colspan="6" class="a-empty">Loading&hellip;</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="a-modal-footer">
+      <button class="a-btn-outline" style="width:auto" onclick="closeModal('deletedOrdersModal')">Close</button>
     </div>
   </div>
 </div>

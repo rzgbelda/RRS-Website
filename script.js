@@ -3447,6 +3447,7 @@ async function setupProfilePage() {
           .from("orders")
           .select("id, order_number, created_at, total, status, subtotal")
           .or(`user_id.eq.${session.user.id},customer_email.eq.${session.user.email}`)
+          .is("deleted_at", null)
           .order("created_at", { ascending: false });
 
         if (error) throw error;

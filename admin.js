@@ -254,6 +254,10 @@ function resetRoleRestrictions() {
 
 function applyRoleRestrictions(role) {
   resetRoleRestrictions(); // always reset first
+  // Deleted Orders is owner-only (see the soft-delete migration), and this
+  // runs on both session-restore and fresh login, so it is the one place
+  // that reliably sees every role change rather than one path only.
+  showDeletedOrdersBtnIfOwner();
   if (role === "owner") return; // full access — nothing to hide
 
   if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor") {
@@ -406,12 +410,12 @@ async function renderDashboardTab() {
     { data: allOrderTotals },
   ] = await Promise.all([
     window.sb.from("products").select("*",        { count:"exact", head:true }).eq("is_active", true),
-    window.sb.from("orders").select("*",          { count:"exact", head:true }),
-    window.sb.from("orders").select("*",          { count:"exact", head:true }).eq("status", "pending"),
+    window.sb.from("orders").select("*",          { count:"exact", head:true }).is("deleted_at", null),
+    window.sb.from("orders").select("*",          { count:"exact", head:true }).eq("status", "pending").is("deleted_at", null),
     window.sb.from("profiles").select("*",        { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("inventory").select("*, products(name, category_name)").in("status",["out_of_stock","low_stock"]),
-    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").order("created_at",{ascending:false}).limit(6),
-    window.sb.from("orders").select("total, status").neq("status", "cancelled"),
+    window.sb.from("orders").select("order_number, customer_name, business_name, total, status, created_at").is("deleted_at", null).order("created_at",{ascending:false}).limit(6),
+    window.sb.from("orders").select("total, status").neq("status", "cancelled").is("deleted_at", null),
   ]);
 
   const revenue = (allOrderTotals || []).reduce((sum, o) => sum + Number(o.total || 0), 0);
@@ -469,7 +473,7 @@ async function loadTrendChart(mode, btnEl) {
   let labels = [], revenueData = [], ordersData = [];
 
   // Fetch all orders with created_at, total, and status
-  const { data: orders } = await window.sb.from("orders").select("created_at, total, status");
+  const { data: orders } = await window.sb.from("orders").select("created_at, total, status").is("deleted_at", null);
   const rows = orders || [];
   let cancelledData = [];
 
@@ -2391,7 +2395,7 @@ async function renderOrdersTable(filter) {
   const tbody = document.getElementById("ordersTableBody");
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="9" class="a-empty">Loading…</td></tr>`;
-  let q = window.sb.from("orders").select("*").order("created_at", { ascending: false });
+  let q = window.sb.from("orders").select("*").is("deleted_at", null).order("created_at", { ascending: false });
   if (filter) q = q.or(`order_number.ilike.%${filter}%,customer_name.ilike.%${filter}%,business_name.ilike.%${filter}%`);
   const statusFilter = document.getElementById("orderStatusFilter")?.value;
   if (statusFilter) q = q.eq("status", statusFilter);
@@ -2440,14 +2444,16 @@ async function updateOrderStatus(orderId, status) {
   showToast("Order status updated.");
 }
 
-// Deleting an order is permanent -- it's a financial/audit record, and
-// unlike a status change there's no undo. A plain confirm() is too easy
-// to click through on muscle memory, so this requires typing the exact
-// order number before the Delete button in the modal itself enables --
-// same friction level as GitHub's "type the repo name to delete it"
-// pattern. order_items and any order-linked rows with
-// `on delete cascade` (see supabase/schema.sql) clean up automatically;
-// nothing else needs to be deleted separately.
+// Deleting an order used to be a real DELETE with no way back -- an order
+// got permanently lost that way (see
+// supabase/migrations/20260918_orders_soft_delete.sql for the incident
+// this was written in response to). It now soft-deletes: the row and its
+// order_items stay on disk, hidden from every listing, and can be
+// restored from the Deleted Orders view. A plain confirm() is still too
+// easy to click through on muscle memory even though it is recoverable
+// now, so this keeps requiring the exact order number to be typed before
+// the Delete button enables -- same friction level as GitHub's "type the
+// repo name to delete it" pattern.
 let _deleteOrderId = null;
 let _deleteOrderNumber = null;
 
@@ -2480,7 +2486,10 @@ async function confirmDeleteOrder() {
   const btn = document.getElementById("deleteOrderConfirmBtn");
   if (btn) { btn.disabled = true; btn.textContent = "Deleting…"; }
 
-  const { error } = await window.sb.from("orders").delete().eq("id", _deleteOrderId);
+  // soft_delete_order() re-checks is_owner() itself (see the migration),
+  // so a non-owner gets a clear "Only an owner can delete an order."
+  // error from Postgres rather than a silent RLS no-op.
+  const { error } = await window.sb.rpc("soft_delete_order", { p_order_id: _deleteOrderId });
 
   if (error) {
     showToast("Couldn't delete order: " + friendlyDbError(error));
@@ -2488,10 +2497,78 @@ async function confirmDeleteOrder() {
     return;
   }
 
-  showToast(`Order ${_deleteOrderNumber} deleted.`);
+  showToast(`Order ${_deleteOrderNumber} moved to Deleted Orders.`);
   closeDeleteOrderModal();
   if (btn) btn.textContent = "Delete Order";
   renderOrdersTable(document.getElementById("orderSearch")?.value.trim() || "");
+}
+
+/* ── Deleted Orders (trash) ───────────────────────────────────── */
+
+function showDeletedOrdersBtnIfOwner() {
+  const btn = document.getElementById("showDeletedOrdersBtn");
+  if (btn) btn.style.display = window._adminRole === "owner" ? "" : "none";
+}
+
+async function openDeletedOrdersModal() {
+  const modal = document.getElementById("deletedOrdersModal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  await renderDeletedOrdersTable();
+}
+
+async function renderDeletedOrdersTable() {
+  const tbody = document.getElementById("deletedOrdersTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Loading…</td></tr>`;
+
+  const { data: orders, error } = await window.sb
+    .from("orders")
+    .select("*")
+    .not("deleted_at", "is", null)
+    .order("deleted_at", { ascending: false });
+
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Couldn't load deleted orders: ${escHtml(friendlyDbError(error))}</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = (orders || []).map(o => `
+    <tr>
+      <td><strong>${escHtml(o.order_number)}</strong></td>
+      <td>${escHtml(o.customer_name || "—")}</td>
+      <td>${escHtml(o.business_name || "—")}</td>
+      <td>$${o.total ? Number(o.total).toFixed(2) : "0.00"}</td>
+      <td>${fmt(o.deleted_at)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="a-btn-sm" style="background:#dcfce7;color:#15803d;" onclick="restoreDeletedOrder('${o.id}')">Restore</button>
+        <button class="a-btn-sm" style="background:#fee2e2;color:#dc2626;" onclick="purgeDeletedOrder('${o.id}', '${escHtml(o.order_number).replace(/'/g, "\\'")}')" title="Permanently delete">Delete Forever</button>
+      </td>
+    </tr>`).join("") || `<tr><td colspan="6" class="a-empty">No deleted orders.</td></tr>`;
+}
+
+async function restoreDeletedOrder(orderId) {
+  const { error } = await window.sb.rpc("restore_order", { p_order_id: orderId });
+  if (error) {
+    showToast("Couldn't restore order: " + friendlyDbError(error));
+    return;
+  }
+  showToast("Order restored.");
+  await renderDeletedOrdersTable();
+  // The Orders tab may be showing behind this modal; refresh it too so the
+  // restored order reappears without needing a second manual refresh.
+  renderOrdersTable(document.getElementById("orderSearch")?.value.trim() || "");
+}
+
+async function purgeDeletedOrder(orderId, orderNumber) {
+  if (!confirm(`Permanently delete order ${orderNumber}? This cannot be undone -- there is no further recovery after this.`)) return;
+  const { error } = await window.sb.rpc("purge_deleted_order", { p_order_id: orderId });
+  if (error) {
+    showToast("Couldn't permanently delete order: " + friendlyDbError(error));
+    return;
+  }
+  showToast(`Order ${orderNumber} permanently deleted.`);
+  await renderDeletedOrdersTable();
 }
 
 // Orders created from an invoice or payment-terms agreement (see
@@ -5790,7 +5867,7 @@ async function renderReportsTab() {
     { data: emailEvents },
     { data: leadDates },
   ] = await Promise.all([
-    window.sb.from("orders").select("status, total, created_at"),
+    window.sb.from("orders").select("status, total, created_at").is("deleted_at", null),
     window.sb.from("profiles").select("*", { count:"exact", head:true }).eq("role","customer"),
     window.sb.from("products").select("*", { count:"exact", head:true }).eq("is_active", true),
     window.sb.from("campaigns").select("id, name, emails_sent").gt("emails_sent", 0),
@@ -8151,7 +8228,7 @@ async function loadNotifications() {
 
   const [ordersRes, quotesRes, ticketsRes] = await Promise.all([
     isDev ? Promise.resolve({ data: [] })
-          : window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
+          : window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).is("deleted_at", null).order("created_at", { ascending: false }).limit(10),
     isDev ? Promise.resolve({ data: [] })
           : window.sb.from("quote_requests").select("id,created_at,status,business_name,contact_name").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
     window.sb.from("dev_tickets")
@@ -8266,7 +8343,7 @@ async function updateNotifBadgeFromStorage() {
   const isDev = window._adminRole === "developer";
 
   const [o, q, t] = await Promise.all([
-    isDev ? Promise.resolve({ data: [] }) : window.sb.from("orders").select("id,created_at").gte("created_at", since),
+    isDev ? Promise.resolve({ data: [] }) : window.sb.from("orders").select("id,created_at").gte("created_at", since).is("deleted_at", null),
     isDev ? Promise.resolve({ data: [] }) : window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
     window.sb.from("dev_tickets").select("id,updated_at,assignee_id").gte("updated_at", since),
   ]);
@@ -9798,6 +9875,7 @@ async function renderSalesTaxTab() {
     .from("orders")
     .select("order_number, customer_name, business_name, total, subtotal, tax_amount, tax_rate, shipping_address, payment_status, created_at")
     .in("payment_status", SALES_TAX_PAID_STATUSES)
+    .is("deleted_at", null)
     .order("created_at", { ascending: false });
 
   if (error) {

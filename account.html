@@ -788,7 +788,8 @@
         const [{ count: orders }, { count: quotes }, { count: addresses }] = await Promise.all([
           window.sb.from("orders").select("id", { count: "exact", head: true })
             .or(`user_id.eq.${window._acctUserId},customer_email.eq.${window._acctEmail}`)
-            .ilike("business_name", b.business_name),
+            .ilike("business_name", b.business_name)
+            .is("deleted_at", null),
           window.sb.from("quote_requests").select("id", { count: "exact", head: true })
             .or(`user_id.eq.${window._acctUserId},email.eq.${window._acctEmail}`)
             .ilike("business_name", b.business_name),
@@ -913,6 +914,7 @@
         .from("orders")
         .select("*, order_items(*)")
         .or(`user_id.eq.${userId},customer_email.eq.${userEmail}`)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
       orders = filterRowsByActiveBiz(orders || []);
       if (error || !orders?.length) {
