@@ -88,19 +88,17 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260917k" />
+  <link rel="stylesheet" href="style.css?v=20260918a" />
 </head>
 
 <body>
 
-  <!-- Free-shipping announcement. First thing on the page because it is the
-       strongest reason to buy today, and it is true at checkout: the order
-       total is final, with no freight added to the invoice afterward. -->
-  <div class="an-ship">
-    <span class="an-pill">Free Shipping</span>
-    <span>Shipping is <strong>free on every order</strong> &mdash; no minimum, no promo code.</span>
-    <a href="/catalog" class="an-hide-sm">Shop the catalog &rarr;</a>
-  </div>
+  <!-- Free-shipping announcement bar removed 2026-09-18 while the offer is
+       reworked internally -- it isn't true at checkout right now (freight
+       is quoted per order again), so nothing on the page should promise it.
+       See warp-freight.js / checkout.html / cart.html for the matching
+       reverts. Styles (.an-ship etc.) are left in style.css in case the
+       offer comes back. -->
 
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
@@ -151,7 +149,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260917k" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918a" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -198,10 +196,6 @@
         </a>
       </div>
 
-      <p class="hero-ship-line" style="margin:16px 0 0;display:flex;align-items:center;gap:7px;font-size:13.5px;font-weight:700;color:#15803d;">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
-        Free shipping on every order &mdash; no minimum
-      </p>
     </section>
 
     <section class="hero-image">
@@ -212,13 +206,18 @@
   <section class="hc-trust">
     <div class="hc-trust-grid">
 
+      <!-- Free-shipping tile paused along with the rest of that offer while
+           it's being reworked internally (see the Sep 18 revert) -- swapped
+           for a claim that's already true and stated elsewhere on this page
+           (the 500+ businesses stat below), rather than leave a 3-item grid
+           where CSS expects 4. -->
       <div class="hc-trust-item">
         <span class="hc-trust-ico">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 3h15v13H1zM16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         </span>
         <div>
-          <strong>Free Shipping</strong>
-          <span>Every order, no minimum</span>
+          <strong>500+ Businesses</strong>
+          <span>Trust RRS East Coast-wide</span>
         </div>
       </div>
 
@@ -261,7 +260,7 @@
       <div class="hc-head">
         <span class="hc-eyebrow">Best Value This Week</span>
         <h2>Stock up and save</h2>
-        <p>Our lowest per-case pricing on the supplies that move fastest &mdash; every one ships free.</p>
+        <p>Our lowest per-case pricing on the supplies that move fastest.</p>
       </div>
 
       <div class="hc-prod-grid" id="hcDealsGrid" aria-busy="true">
@@ -993,7 +992,7 @@
         See Best Deals
       </a>
     </div>
-    <p class="hc-final-note">Free shipping on every order &mdash; no minimum. Questions? Call (252) 227-0073.</p>
+    <p class="hc-final-note">Questions? Call (252) 227-0073.</p>
   </div>
 </section>
 
@@ -1042,7 +1041,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260917k"></script>
+<script src="script.js?v=20260918a"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">

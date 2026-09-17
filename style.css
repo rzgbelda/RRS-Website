@@ -9430,6 +9430,11 @@ input.qty-input:focus {
   align-items: center;
   justify-content: center;
   gap: 7px;
+  /* .hc-ship-note used to sit between the price and this button and
+     supplied the gap between them (margin: 6px 0 11px). Removed 2026-09-18
+     along with the free-shipping offer it advertised, so the button
+     supplies its own top margin now instead of sitting flush under price. */
+  margin-top: 12px;
   transition: background .15s ease, transform .12s ease, box-shadow .15s ease;
   box-shadow: 0 2px 8px rgba(237,114,38,.28);
 }

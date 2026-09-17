@@ -305,12 +305,42 @@ async function triggerQuote(zip) {
     return;
   }
 
-  // Shipping is free on every order, with no minimum -- Room Ready Supply
-  // absorbs the carrier cost. This returns before any carrier is called, so
-  // no rate can ever reach the customer-facing summary line. Staff still
-  // quote real freight in the admin Orders tab for margin tracking; that is
-  // a cost record, not something the buyer is charged.
-  renderQuotePanel(null, 'free-shipping');
+  // Free shipping for orders $1,500+
+  const subtotal = getCartSubtotal();
+  if (subtotal >= 1500) {
+    renderQuotePanel(null, 'free-shipping');
+    return;
+  }
+
+  // Determine weight to choose parcel vs LTL
+  const freightItems = buildFreightItems(cartItems);
+  const totalWeight = freightItems.reduce((s, i) => s + (i.weight_lbs * (i.quantity || 1)), 0);
+
+  if (totalWeight < LTL_MIN_WEIGHT_LBS) {
+    // Parcel route — need city + state for Shippo to return rates
+    const city  = document.getElementById('checkout-city')?.value.trim()  || '';
+    const state = document.getElementById('checkout-state')?.value        || '';
+    if (!state) {
+      const panel = document.getElementById('freight-quote-panel');
+      if (panel) panel.innerHTML = `<p class="fq-hint" style="color:#b45309;">&#9432; Please select your state to see live shipping rates.</p>`;
+      return;
+    }
+    renderQuotePanel(null, 'loading');
+    const parcelRates = await fetchParcelQuotes(zip, city, state, cartItems);
+    if (parcelRates) {
+      renderQuotePanel(parcelRates, 'results');
+    } else {
+      // Shippo returned no rates after retries — show fallback banner
+      renderQuotePanel(null, 'parcel');
+    }
+    return;
+  }
+
+  // LTL route (Warp)
+  const quotes = await fetchFreightQuotes(zip, cartItems);
+  if (quotes === 'parcel') { renderQuotePanel(null, 'parcel'); return; }
+  if (quotes === 'review') { renderQuotePanel(null, 'review'); return; }
+  renderQuotePanel(quotes, quotes ? 'results' : 'error');
 }
 
 function getCartItemsForFreight() {
@@ -336,7 +366,7 @@ function renderQuotePanel(quotes, state) {
     // customers (staff quote each order and bill it on the invoice), so
     // a bare "TBD" left the buyer with no idea what happens next. The
     // staff-facing panel above still shows the real quoting state.
-    if (shippingEl) shippingEl.textContent = 'FREE';
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     _selectedQuote = null;
     return;
   }
@@ -365,10 +395,10 @@ function renderQuotePanel(quotes, state) {
         <span style="font-size:18px;">🎉</span>
         <div>
           <strong style="color:#15803d;font-size:14px;">Free Shipping</strong>
-          <p style="color:#166534;font-size:12px;margin:2px 0 0;">Shipping is free on every order &mdash; no minimum.</p>
+          <p style="color:#166534;font-size:12px;margin:2px 0 0;">Your order qualifies for free shipping!</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'FREE';
+    if (shippingEl) shippingEl.textContent = 'Free';
     return;
   }
 
@@ -383,7 +413,7 @@ function renderQuotePanel(quotes, state) {
           <p style="color:#1d4ed8;font-size:12px;margin:2px 0 0;">Your order is under 150 lbs — shipping will be quoted as parcel (UPS/FedEx). Final cost confirmed in your order.</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'FREE';
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -398,7 +428,7 @@ function renderQuotePanel(quotes, state) {
           <p style="color:#92400e;font-size:12px;margin:2px 0 0;">The estimated freight cost seems unusually high. Our team will confirm the correct shipping cost in your order confirmation.</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'FREE';
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -408,7 +438,7 @@ function renderQuotePanel(quotes, state) {
         <strong>Unable to retrieve rates for this ZIP.</strong>
         <span>Our team will include shipping in your quote confirmation.</span>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'FREE';
+    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -458,16 +488,10 @@ function selectFreightQuote(jsonStr) {
 function updateShippingSummary(quote) {
   const shippingEl = document.getElementById('summary-shipping');
   const totalEl    = document.getElementById('summary-total');
-  if (!shippingEl) return;
+  if (!quote || !shippingEl) return;
 
-  // Shipping is free on every order. Whatever a carrier quoted, the customer
-  // is never charged for it, so this line is pinned to FREE and contributes
-  // $0 to the total below -- no caller can put a shipping charge in front of
-  // the buyer.
-  const price = 0;
-  shippingEl.textContent = 'FREE';
-  shippingEl.style.color = '#15803d';
-  shippingEl.style.fontWeight = '700';
+  const price = quote.total_charge || quote.price || 0;
+  shippingEl.textContent = `$${Number(price).toFixed(2)}`;
 
   // Recalculate total (subtotal + shipping + tax by shipping state)
   const subtotalEl = document.getElementById('summary-subtotal');

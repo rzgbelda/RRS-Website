@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260917k" />
+  <link rel="stylesheet" href="style.css?v=20260918a" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260917k" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918a" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -379,20 +379,22 @@
   <strong id="summary-subtotal">$1,049.70</strong>
 </p>
         <p><span>Tax<span id="summary-tax-rate"></span></span><strong id="summary-tax">$0.00</strong></p>
-        <!-- Shipping is free on every order and Room Ready Supply absorbs the
-             carrier cost, so this is a real, final number -- no freight is
-             added later on the invoice. This resolves the audit finding about
-             a total that silently excluded delivery: nothing is excluded. -->
-        <p id="summary-shipping-row"><span>Shipping</span><strong id="summary-shipping" style="font-weight:700;color:#15803d;font-size:13px">FREE</strong></p>
+        <!-- Free shipping is paused while it's being reworked internally
+             (see the Sep 18 revert) -- freight is quoted per order again and
+             billed on the invoice, same as before that offer. Saying so
+             explicitly beats omitting the line entirely: the Sept 15 audit
+             flagged "no shipping price shown" and an Estimated Total that
+             silently excluded it, which reads as a final price when it isn't. -->
+        <p id="summary-shipping-row"><span>Delivery</span><strong id="summary-shipping" style="font-weight:600;color:#64748b;font-size:13px">Quoted separately</strong></p>
       </div>
 
       <div class="summary-total">
-  <span>Total</span>
+  <span>Total before delivery</span>
   <strong id="summary-total">$0.00</strong>
 </div>
 
       <p class="summary-note">
-        Items and sales tax shown above, with free shipping on every order. This is your final total &mdash; no delivery or freight charges are added to your invoice.
+        Items and sales tax shown above. Delivery is quoted for your address and billed on your invoice &mdash; it is not included in this total.
       </p>
 
       <!-- Restates shipping-policy.html section 7 at the moment of decision.
@@ -434,7 +436,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20260917k"></script>
+<script src="script.js?v=20260918a"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js?v=16"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>

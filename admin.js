@@ -2825,12 +2825,8 @@ async function saveFreightFee(orderId) {
     return;
   }
 
-  // Shipping is free on every order, so freight_fee is an internal cost
-  // record for margin reporting -- it is NOT billed. The order total must
-  // therefore stay untouched. Any freight a previous save folded into the
-  // total is backed out here so the customer is not charged for it.
   const currentFee = Number(o.freight_fee || 0);
-  const newTotal = Math.max(0, Number(o.total || 0) - currentFee);
+  const newTotal = Math.max(0, Number(o.total || 0) - currentFee + newFee);
 
   const { error } = await window.sb.from("orders")
     .update({ freight_fee: newFee, total: newTotal, updated_at: new Date().toISOString() })
@@ -2847,7 +2843,7 @@ async function saveFreightFee(orderId) {
     return;
   }
 
-  showToast(`Freight cost recorded: $${newFee.toFixed(2)} — internal only, not billed to the customer.`);
+  showToast(`Freight fee set to $${newFee.toFixed(2)} — will show on the invoice.`);
   openOrderModal(orderId);
   renderOrdersTable();
 }
@@ -3215,10 +3211,10 @@ async function openOrderModal(id) {
         </div>
         <div style="margin-top:14px;padding-top:14px;border-top:1px dashed #bbf7d0;">
           <span style="font-size:11px;font-weight:700;color:#166534;text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:6px;">
-            Freight Cost &mdash; Internal Only (Not Billed)
+            Freight Fee &mdash; Billed on Invoice
           </span>
           <p style="font-size:11.5px;color:#166534;margin:0 0 8px;">
-            Shipping is free on every order, so this is never charged to the customer. Record the real carrier cost here (from the Warp quote above or the actual invoice) so the Orders tab reflects true margin.
+            Not shown live to the customer anymore &mdash; review the Warp quote above, then set what actually goes on their invoice (a Warp quote, a flat rate, or $0 if freight's already baked in).
           </p>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <label style="font-size:12px;font-weight:700;color:#166534;white-space:nowrap;">Freight $</label>
@@ -3230,7 +3226,7 @@ async function openOrderModal(id) {
               style="background:#0b2d52;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;">
               Save Freight Fee
             </button>
-            ${Number(o.freight_fee) > 0 ? `<span style="font-size:11.5px;color:#15803d;font-weight:700;">✓ $${Number(o.freight_fee).toFixed(2)} recorded as internal cost — not billed</span>` : ""}
+            ${Number(o.freight_fee) > 0 ? `<span style="font-size:11.5px;color:#15803d;font-weight:700;">✓ $${Number(o.freight_fee).toFixed(2)} will show on the next invoice</span>` : ""}
           </div>
         </div>
       </div>`;
@@ -3350,7 +3346,7 @@ async function openOrderModal(id) {
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Type</span><br>${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
       <div><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Date</span><br>${fmt(o.created_at)}</div>
       ${freightQuote ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Quote</span><br>${escHtml(freightQuote.carrier_name || "—")} — $${Number(freightQuote.total_charge || 0).toFixed(2)}${freightQuote.transit_days ? ` (${freightQuote.transit_days} days)` : ""} <span style="color:#94a3b8">(customer never sees this)</span></div>` : ""}
-      ${Number(o.freight_fee) > 0 ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Cost (internal)</span><br><strong style="color:#15803d">$${Number(o.freight_fee).toFixed(2)}</strong> — carrier cost absorbed by RRS; the customer ships free</div>` : ""}
+      ${Number(o.freight_fee) > 0 ? `<div style="grid-column:span 2"><span style="color:#64748b;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em">Freight Fee (billed)</span><br><strong style="color:#15803d">$${Number(o.freight_fee).toFixed(2)}</strong> — appears on the invoice sent to the customer</div>` : ""}
     </div>
     <hr style="margin:16px 0;border:none;border-top:1px solid #f0f4fa">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
