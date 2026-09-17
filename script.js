@@ -190,6 +190,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       renderProducts(prioritized);
       loadProductPage();
       loadFeaturedProducts();
+      renderHomeProducts();
 
       setupProductQuantity();
       setupAddToCartButtons();
@@ -4217,3 +4218,123 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 })();
+
+
+/* =========================
+   HOMEPAGE PRODUCT SHOWCASE
+   Fills the two homepage grids (#hcDealsGrid, #hcBestsellersGrid) that
+   replaced the old single random #featured-products slider. Cards read
+   their price from the catalog at render time, so a supplier price
+   change flows through with no edit here.
+========================= */
+
+function hcProductCard(product, badge) {
+  // price1 is the per-case price the cart actually charges (getTierPrice),
+  // so it is what the card must show -- the base `price` column is a
+  // per-DOZEN figure on linen products and would understate them badly.
+  const price = cleanPrice(product.price1) || cleanPrice(product.price);
+  const unit  = product.priceBy || "Case";
+  const url   = `/product?item=${encodeURIComponent(product.slug)}`;
+
+  const badgeHtml = badge
+    ? `<span class="hc-badge${badge === "FREE SHIPPING" ? " hc-badge--ship" : ""}">${badge}</span>`
+    : "";
+
+  const meta = [
+    product.caseQty ? `Case of ${product.caseQty}` : "",
+    product.size || "",
+  ].filter(Boolean).join(" &middot; ");
+
+  return `
+    <div class="hc-card" data-url="${url}">
+      <div class="hc-card-img">
+        ${badgeHtml}
+        <img src="${product.image}" alt="${product.name}" loading="lazy"
+             onerror="this.src='/assets/img/product-placeholder.svg'">
+      </div>
+      <div class="hc-card-body">
+        <h3>${product.name}</h3>
+        ${meta ? `<p class="hc-card-meta">${meta}</p>` : ""}
+
+        <div class="hc-price-row">
+          <span class="hc-price">$${price.toFixed(2)}</span>
+          <span class="hc-price-unit">/ ${unit}</span>
+        </div>
+
+        <p class="hc-ship-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 13l4 4L19 7"/></svg>
+          Ships free
+        </p>
+
+        <button class="add-btn hc-add"
+          data-item="${product.itemNumber}"
+          data-name="${product.name}"
+          data-description="${product.description || ""}"
+          data-price="${cleanPrice(product.price1) || price}"
+          data-price1="${cleanPrice(product.price1)}"
+          data-price2="${cleanPrice(product.price2)}"
+          data-price3="${cleanPrice(product.price3)}"
+          data-unit="${product.priceBy || ''}"
+          data-moq="${productMoq(product)}"
+          data-moq-group="${product.moqGroup || ''}"
+          data-moq-group-min="${product.moqGroupMin || ''}"
+          data-image="${product.image}">
+          <img src="assets/img/Cart.png" alt="">
+          ADD TO CART
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function renderHomeProducts() {
+  const dealsEl = document.getElementById("hcDealsGrid");
+  const bestEl  = document.getElementById("hcBestsellersGrid");
+  if (!dealsEl && !bestEl) return;
+
+  const sellable = allProducts.filter(p =>
+    p.name && p.image && (cleanPrice(p.price1) || cleanPrice(p.price)) > 0
+  );
+  if (!sellable.length) return;
+
+  const priceOf = p => cleanPrice(p.price1) || cleanPrice(p.price);
+
+  if (dealsEl) {
+    // "Best value" = genuinely the lowest per-case entry points, so the
+    // section's claim is checkable rather than decorative.
+    const deals = sellable.slice().sort((a, b) => priceOf(a) - priceOf(b)).slice(0, 8);
+    dealsEl.innerHTML = deals.map(p => hcProductCard(p, "BEST VALUE")).join("");
+    dealsEl.setAttribute("aria-busy", "false");
+  }
+
+  if (bestEl) {
+    // Spread across categories so the grid reads as a range of what RRS
+    // stocks, not eight variants of the same towel. Falls back to simple
+    // order if category data is missing.
+    const byCat = new Map();
+    sortCatalogDefault(sellable).forEach(p => {
+      const key = p.category || "other";
+      if (!byCat.has(key)) byCat.set(key, []);
+      byCat.get(key).push(p);
+    });
+
+    const picks = [];
+    let round = 0;
+    while (picks.length < 8 && round < 8) {
+      for (const list of byCat.values()) {
+        if (list[round]) picks.push(list[round]);
+        if (picks.length >= 8) break;
+      }
+      round++;
+    }
+    const chosen = picks.length ? picks.slice(0, 8) : sellable.slice(0, 8);
+
+    bestEl.innerHTML = chosen.map(p => hcProductCard(p, "")).join("");
+    bestEl.setAttribute("aria-busy", "false");
+  }
+
+  // Reuse the catalog's own handlers so these cards add to cart and
+  // navigate exactly like every other product card on the site.
+  setupProductCardClicks();
+  setupAddToCartButtons();
+}

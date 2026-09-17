@@ -54,6 +54,16 @@
   ],
   "redirects": [
     {
+      "source": "/volume-pricing",
+      "destination": "/quote",
+      "permanent": true
+    },
+    {
+      "source": "/request-quote",
+      "destination": "/quote",
+      "permanent": true
+    },
+    {
       "source": "/product-template",
       "destination": "/catalog",
       "permanent": false
