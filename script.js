@@ -191,6 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       loadProductPage();
       loadFeaturedProducts();
       renderHomeProducts();
+      fillCategoryTiles();
 
       setupProductQuantity();
       setupAddToCartButtons();
@@ -4240,9 +4241,14 @@ function hcProductCard(product, badge) {
     ? `<span class="hc-badge${badge === "FREE SHIPPING" ? " hc-badge--ship" : ""}">${badge}</span>`
     : "";
 
+  // Only say something that adds information. "Case of 1" next to a "/ Each"
+  // price is noise, and pack size is often just "1", which produced meta
+  // lines reading "Case of 1 &middot; 1" on every individually-sold item.
+  const caseQty = parseInt(product.caseQty, 10);
+  const size    = String(product.size || "").trim();
   const meta = [
-    product.caseQty ? `Case of ${product.caseQty}` : "",
-    product.size || "",
+    caseQty > 1 ? `Case of ${caseQty}` : "",
+    size && size !== "1" ? size : "",
   ].filter(Boolean).join(" &middot; ");
 
   return `
@@ -4337,4 +4343,59 @@ function renderHomeProducts() {
   // navigate exactly like every other product card on the site.
   setupProductCardClicks();
   setupAddToCartButtons();
+}
+
+
+/**
+ * Give each homepage category tile a real product photo and a live item
+ * count, taken from the catalog rather than hardcoded, so the tiles keep
+ * matching what the category pages actually contain.
+ */
+function fillCategoryTiles() {
+  const tiles = document.querySelectorAll('.hc-cat[data-cat]');
+  if (!tiles.length || !allProducts.length) return;
+
+  // Group once: slug -> products that the matching /category page shows.
+  const bySlug = new Map();
+  allProducts.forEach(p => {
+    if (!p.category) return;
+    const slug = categorySlug(p.category);
+    if (!bySlug.has(slug)) bySlug.set(slug, []);
+    bySlug.get(slug).push(p);
+  });
+
+  tiles.forEach(tile => {
+    const slug = tile.dataset.cat;
+    const list = bySlug.get(slug);
+    if (!list || !list.length) return;
+
+    // Prefer a product whose image is a Cloudinary asset: those are
+    // padded onto a white square, so they sit in the tile frame cleanly.
+    // Anything else (e.g. a supplier's own crop) is a fallback.
+    const withImg = list.filter(p => p.image);
+    if (!withImg.length) return;
+    const preferred = withImg.find(p => /res\.cloudinary\.com/.test(p.image)) || withImg[0];
+
+    const img = tile.querySelector('.hc-cat-img img');
+    if (img) {
+      // Cloudinary assets are stored padded onto an 800x800 white square
+      // (c_pad,w_800,h_800,b_white). The tile fills its frame, so ask
+      // Cloudinary for a filled 240px crop instead: without this the
+      // padding is what gets cropped and the product sits tiny in frame.
+      img.src = preferred.image.replace(
+        /c_pad,w_\d+,h_\d+,b_white/,
+        'c_fill,g_auto,w_240,h_240'
+      );
+      img.alt = (preferred.category || slug) + ' products';
+      img.onerror = function () { this.src = '/assets/img/product-placeholder.svg'; };
+    }
+
+    const h3 = tile.querySelector('h3');
+    if (h3 && !tile.querySelector('.hc-cat-count')) {
+      const count = document.createElement('span');
+      count.className = 'hc-cat-count';
+      count.textContent = withImg.length + (withImg.length === 1 ? ' product' : ' products');
+      h3.insertAdjacentElement('afterend', count);
+    }
+  });
 }

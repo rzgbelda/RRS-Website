@@ -9126,13 +9126,16 @@ input.qty-input:focus {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
+/* Tiles show a real product shot rather than a line icon: a photo of the
+   actual goods sells the category better than an abstract glyph, and the
+   image is pulled from the live catalog (see fillCategoryTiles) so it
+   cannot drift out of date as products change. */
 .hc-cat {
   position: relative;
   display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  min-height: 132px;
-  padding: 16px;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px 12px 12px;
   border-radius: 13px;
   border: 1.5px solid #e4e9f0;
   background: #fff;
@@ -9145,32 +9148,65 @@ input.qty-input:focus {
   box-shadow: 0 12px 30px rgba(11,45,82,.13);
   border-color: #ED7226;
 }
-.hc-cat-ico {
-  width: 40px; height: 40px;
+.hc-cat-img {
+  flex: 0 0 84px;
+  width: 84px;
+  height: 84px;
   border-radius: 10px;
-  background: #f2f6fb;
-  color: #0b2d52;
-  display: grid;
-  place-items: center;
-  margin-bottom: auto;
+  background: #f4f7fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 7px;
+  box-sizing: border-box;
 }
-.hc-cat-ico svg { width: 21px; height: 21px; }
+/* The catalog mixes two kinds of shot: Cloudinary assets padded onto a
+   white square, and supplier photos cropped to the frame. Filling the
+   frame makes both read the same way in a row of tiles -- a padded asset
+   would otherwise float small in the middle while a photo bled to the
+   edges. No mix-blend-mode here for the same reason: it erases the white
+   pad on one kind and does nothing to the other. */
+.hc-cat-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 7px;
+  transition: transform .25s ease;
+}
+.hc-cat:hover .hc-cat-img img { transform: scale(1.06); }
+/* Until the catalog loads there is no src, so the empty frame just reads
+   as a tinted placeholder rather than a broken-image icon. */
+.hc-cat-img img:not([src]) { opacity: 0; }
+.hc-cat-body { min-width: 0; }
 .hc-cat h3 {
   font-size: 14.5px;
   font-weight: 800;
   color: #0b2d52;
-  margin: 14px 0 3px;
+  margin: 0 0 4px;
   line-height: 1.28;
 }
-.hc-cat span {
+.hc-cat-go {
   font-size: 12.5px;
   font-weight: 700;
   color: #ED7226;
 }
+.hc-cat-count {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8193a6;
+  margin-bottom: 4px;
+}
+@media (max-width: 860px) {
+  .hc-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
 @media (max-width: 480px) {
-  .hc-cat-grid { grid-template-columns: repeat(2, 1fr); gap: 11px; }
-  .hc-cat { min-height: 112px; padding: 13px; }
-  .hc-cat h3 { font-size: 13px; }
+  .hc-cat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 11px; }
+  .hc-cat { padding: 10px; gap: 10px; }
+  .hc-cat-img { flex-basis: 62px; width: 62px; height: 62px; }
+  .hc-cat h3 { font-size: 12.5px; }
+  .hc-cat-go, .hc-cat-count { font-size: 11px; }
 }
 
 /* ── Product rail / grid ────────────────────────────────────────── */
@@ -9211,12 +9247,23 @@ input.qty-input:focus {
   position: relative;
   aspect-ratio: 1 / 1;
   background: #f7f9fc;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: 12px;
+  /* Portrait product shots (e.g. 415x532) were rendering taller than this
+     box and spilling over the title below it: a grid item's height:100%
+     does not clamp an image with a taller intrinsic ratio. Flex centring
+     plus max-* bounds keeps every image inside its frame, and the hidden
+     overflow is the backstop. */
+  overflow: hidden;
+  box-sizing: border-box;
 }
 .hc-card-img img {
-  width: 100%; height: 100%;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   mix-blend-mode: multiply;
 }
