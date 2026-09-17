@@ -1,5 +1,13 @@
 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <path d="M4 5H6L8 15H18L20 8H8" stroke="#0B2344" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-  <circle cx="9" cy="19" r="1.5" fill="#0B2344"></circle>
-  <circle cx="17" cy="19" r="1.5" fill="#0B2344"></circle>
+  <!-- The artwork sat low in its own 24x24 canvas: its rendered ink centred
+       near y=12.5 rather than 12, which read as off-centre inside the round
+       header button even though the image box is centred to the pixel. The
+       group is nudged up by 0.25 so the ink sits on the canvas centre.
+       Measured from rasterised pixel bounds, not getBBox(), because the
+       round stroke caps extend past the path geometry. -->
+  <g transform="translate(0 -0.25)">
+    <path d="M4 5H6L8 15H18L20 8H8" stroke="#0B2344" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+    <circle cx="9" cy="19" r="1.5" fill="#0B2344"></circle>
+    <circle cx="17" cy="19" r="1.5" fill="#0B2344"></circle>
+  </g>
 </svg>
