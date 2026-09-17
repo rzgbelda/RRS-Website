@@ -105,12 +105,11 @@ function renderPending(data) {
   }).join('');
 
   const deliveryFee = Number(data.in_house_delivery_fee) || 0;
-  const freightFee = Number(data.freight_fee) || 0;
+  // Shipping is free on every order, so the customer is never shown a freight
+  // charge here -- freight_fee stays on the record as an internal cost only.
   const feeRow = deliveryFee > 0
     ? '<tr><td>In-House Delivery</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(deliveryFee) + '</td></tr>'
-    : freightFee > 0
-      ? '<tr><td>Freight / Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(freightFee) + '</td></tr>'
-      : '';
+    : '<tr><td>Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num" style="color:#15803d;font-weight:700;">FREE</td></tr>';
 
   card.innerHTML =
     '<div class="qc-meta">' +

@@ -63,15 +63,16 @@ function invoiceEmailHtml(o) {
         '</tr>'
       : ''
   ) + (
-    Number(o.freight_fee) > 0
-      ? '<tr>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Freight / Shipping' +
-          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Carrier freight for this order</span></td>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
-        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.freight_fee).toFixed(2) + '</td>' +
-        '</tr>'
-      : ''
+    // Shipping is free on every order, so the invoice states that outright
+    // rather than omitting the line -- the Sept 15 audit flagged a silent
+    // delivery line as a conversion blocker, and "FREE" is the offer.
+    '<tr>' +
+    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
+      '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Free shipping on every order</span></td>' +
+    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#15803d;font-weight:700;text-align:right;">FREE</td>' +
+    '</tr>'
   );
 
   const taxAmount = Number(o.tax_amount) || 0;
@@ -514,7 +515,14 @@ module.exports = async (req, res) => {
     // freight only ever applies to 'ship' orders in practice (staff have
     // no reason to set it on a pickup/in-house order), but there's no
     // correctness reason to hide a nonzero value if one's there.
-    freightFee  = hasFreightColumn ? Math.max(0, parseFloat(o.freight_fee) || 0) : 0;
+    // Freight is never billed to the customer: shipping is free on every
+    // order (see shipping-policy.html). Staff still record the carrier
+    // cost in freight_fee so the Orders tab shows the real margin, but it
+    // is read here only to keep the tax derivation below honest on older
+    // orders that were invoiced with freight before the change -- it is
+    // never added to what the customer pays.
+    const recordedFreight = hasFreightColumn ? Math.max(0, parseFloat(o.freight_fee) || 0) : 0;
+    freightFee  = 0;
     itemsTotal  = items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
     total       = Math.max(0, parseFloat(o.total) || 0);
     if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
@@ -530,7 +538,10 @@ module.exports = async (req, res) => {
       // left of the real stored total once items, delivery, and freight
       // are accounted for, so the Stripe line items and email still add
       // up to the order's actual total exactly either way.
-      taxAmount = Math.max(0, total - itemsTotal - deliveryFee - freightFee);
+      // recordedFreight, not freightFee: the stored total for a legacy
+      // order may still include carrier freight, and tax is whatever is
+      // left after everything that total was built from.
+      taxAmount = Math.max(0, total - itemsTotal - deliveryFee - recordedFreight);
       tax_rate  = 0;
     }
 

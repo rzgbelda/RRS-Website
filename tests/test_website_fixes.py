@@ -234,15 +234,22 @@ def run_tests(page: Page, suite: Suite) -> None:
             "() => { const e = document.querySelector('.summary-total span');"
             " return e ? e.textContent.trim() : 'NOT FOUND'; }"
         )
-        ok = "before delivery" in label.lower()
+        # Shipping is now free on every order, so the total is genuinely the
+        # final price. The audit's concern was a total that silently excluded
+        # a charge the buyer would still owe -- with nothing excluded, the
+        # label must no longer hedge.
+        lowered = label.lower()
+        ok = lowered == "total" or (
+            "total" in lowered and "before" not in lowered
+        )
         return ok, f'Total labelled "{label}"', (
-            "Audit item 2: 'Estimated Total' silently excluded delivery, "
-            "reading as a final price when it was not."
+            "Audit item 2: the total must not hedge when nothing is excluded "
+            "from it -- shipping is free, so this is the final price."
         )
 
     check(suite, "TC-06", "2",
-          "Total is labelled as excluding delivery",
-          'Reads "Total before delivery"', tc06)
+          "Total is labelled as the final price",
+          'Reads "Total" (nothing excluded)', tc06)
 
     # -- TC-07 ---------------------------------------------------------------
     def tc07():
@@ -251,14 +258,18 @@ def run_tests(page: Page, suite: Suite) -> None:
             "() => { const e = document.getElementById('summary-shipping');"
             " return e ? e.textContent.trim() : 'NOT FOUND'; }"
         )
-        ok = ship.lower() not in ("tbd", "not found", "")
-        return ok, f'Delivery line reads "{ship}"', (
-            "Must tell the buyer how delivery is priced. 'TBD' is not an answer."
+        # Free shipping on every order: this line must say so plainly, and
+        # must never show a dollar amount -- a charge here would contradict
+        # the offer made on the homepage, the cart and the shipping policy.
+        ok = ship.strip().lower() == "free"
+        return ok, f'Shipping line reads "{ship}"', (
+            "Shipping is free on every order, so this line must read FREE "
+            "and never a price or a hedge like 'TBD'/'Quoted separately'."
         )
 
     check(suite, "TC-07", "2, 5",
-          "Delivery line explains how shipping is priced",
-          'States "Quoted separately" (not "TBD")', tc07)
+          "Shipping line states the free-shipping offer",
+          'Reads "FREE"', tc07)
 
     # -- TC-08 : live sales tax ----------------------------------------------
     def tc08():
