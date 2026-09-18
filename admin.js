@@ -622,7 +622,11 @@ async function renderProductsTable(filter) {
   const category = document.getElementById("productCategoryFilter")?.value || "";
   let q = window.sb.from("products").select("*, inventory(stock_qty, status)").order("name");
   if (!showHidden) q = q.eq("is_active", true);
-  if (filter) q = q.ilike("name", `%${filter}%`);
+  // Also matches SKU, not just name -- a distributor/vendor change means
+  // staff need to find every product by SKU prefix (e.g. "RDU-") to bulk-
+  // hide a discontinued supplier's line, and that prefix never appears in
+  // the product name, so a name-only search silently found nothing for it.
+  if (filter) q = q.or(`name.ilike.%${filter}%,sku.ilike.%${filter}%`);
   if (category) q = q.eq("category_name", category);
   const { data: products } = await q;
 
