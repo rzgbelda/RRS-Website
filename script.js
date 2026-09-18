@@ -495,13 +495,24 @@ function updateMoqGroupBar(cart) {
   }
 
   bar.innerHTML = groups.map(g => {
-    const met = g.min > 0 && g.have >= g.min;
-    const pct = g.min > 0 ? Math.min(100, Math.round((g.have / g.min) * 100)) : 100;
+    // metExactly, not "have >= min": the group must land on a whole
+    // multiple (36, 72, 108...), so 40/36 is still short -- of 32, to
+    // reach 72 -- not "met". Progress within the current multiple, so the
+    // bar fills 0->100% between each target rather than jumping straight
+    // to 100% and staying there for every quantity past the first 36.
+    const met = g.metExactly;
+    const prevTarget = g.nextTarget - g.min;
+    const pct = g.min > 0
+      ? Math.min(100, Math.round(((g.have - prevTarget) / g.min) * 100))
+      : 100;
+    const label = met
+      ? `${g.have} units — multiple of ${g.min} met`
+      : `${g.have} / ${g.nextTarget} units`;
     return `
       <div class="moq-group-bar-row${met ? " met" : ""}">
         <div class="moq-group-bar-label">
           <strong>${g.group}</strong> Mix &amp; Match
-          <span>${g.have} / ${g.min} units${met ? " — minimum met" : ""}</span>
+          <span>${label}</span>
         </div>
         <div class="moq-group-bar-track"><div class="moq-group-bar-fill" style="width:${pct}%"></div></div>
       </div>`;
@@ -590,7 +601,10 @@ function enforceCartMinimums(cart) {
           : `${below.length} items need adjusting:<br>` + below.map(i => `&bull; ${describe(i)}`).join("<br>"));
       }
       groupShortfalls.forEach(g => {
-        lines.push(`<strong>${g.group}</strong> Mix &amp; Match minimum not met: need ${g.min} combined units, cart has ${g.have}. Add ${g.min - g.have} more from this group to continue.`);
+        const msg = g.have < g.min
+          ? `<strong>${g.group}</strong> Mix &amp; Match minimum not met: need ${g.min} combined units, cart has ${g.have}. Add ${g.needed} more from this group to continue.`
+          : `<strong>${g.group}</strong> Mix &amp; Match must be ordered in multiples of ${g.min}: cart has ${g.have} combined units. Add ${g.needed} more (to reach ${g.nextTarget}) or remove some to continue.`;
+        lines.push(msg);
       });
       warn.innerHTML = lines.join("<br>");
     }
@@ -613,6 +627,16 @@ function enforceCartMinimums(cart) {
 // there, regardless of how many distinct SKUs from that group are present --
 // this is the whole point of the feature: 19 different 5-gallon chemical
 // SKUs sharing one 36-unit minimum instead of each needing its own.
+//
+// The group must land on a whole MULTIPLE of its minimum, not just meet or
+// exceed it once -- 36 units clears it, 40 does not (it is short 32 more
+// to reach 72), same as a single dozen-sold product already has to be a
+// whole multiple of its own case size (isSoldByDozen()/productMoq() below,
+// checked in enforceCartMinimums()). A combined pool that stopped
+// enforcing multiples the moment it crossed the minimum once would let a
+// group satisfy 36 and then take any number after that with no rule at
+// all, which is not what "fulfills 36, additional requires another 36"
+// means.
 function cartMoqGroupTotals(cart) {
   const totals = {};
   (cart || []).forEach(i => {
@@ -625,11 +649,17 @@ function cartMoqGroupTotals(cart) {
     // disagree, use the largest so the requirement is never under-enforced.
     totals[key].min = Math.max(totals[key].min, Number(i.moqGroupMin) || 0);
   });
-  return Object.values(totals);
+  return Object.values(totals).map(g => {
+    if (g.min <= 0) return { ...g, nextTarget: 0, needed: 0, metExactly: true };
+    // 0 have -> next target is the minimum itself, not 0.
+    const nextTarget = g.have === 0 ? g.min : Math.ceil(g.have / g.min) * g.min;
+    const metExactly = g.have > 0 && g.have % g.min === 0;
+    return { ...g, nextTarget, needed: metExactly ? 0 : nextTarget - g.have, metExactly };
+  });
 }
 
 function cartMoqGroupShortfalls(cart) {
-  return cartMoqGroupTotals(cart).filter(g => g.min > 0 && g.have < g.min);
+  return cartMoqGroupTotals(cart).filter(g => g.min > 0 && !g.metExactly);
 }
 
 // The automatic tiers stop here. 1-5 / 6-29 / 30-49 cases are priced by
@@ -4512,6 +4542,53 @@ function miniCartSetQty(itemNumber, delta) {
   if (typeof renderCartPage === "function") renderCartPage();
 }
 
+/**
+ * Typed quantity, for ordering 36 of something without clicking + thirty-six
+ * times. Validated on commit (blur/Enter) rather than per keystroke: a
+ * dozen-sold product with a 50-dozen minimum would otherwise snap to 50 the
+ * instant "5" was typed, fighting someone on their way to 500.
+ *
+ * A line whose product is sold in whole cases/dozens still has to land on a
+ * multiple of that -- same rule enforceCartMinimums() blocks checkout over,
+ * applied here so the cart never holds a quantity checkout would reject.
+ * Typing 0 (or clearing the box) removes the line, matching what stepping
+ * down past 1 already does.
+ */
+function miniCartTypeQty(itemNumber, rawValue, commit) {
+  if (!commit) return; // oninput does nothing; the commit happens on change/Enter
+
+  const cart = getCart();
+  const item = cart.find(i => String(i.itemNumber) === String(itemNumber));
+  if (!item) return;
+
+  const typed = parseInt(String(rawValue).replace(/[^0-9]/g, ""), 10);
+
+  // Cleared or zero: treat as "remove this line", same as stepping to 0.
+  if (!Number.isFinite(typed) || typed <= 0) {
+    saveCart(cart.filter(i => String(i.itemNumber) !== String(itemNumber)));
+    updateCartBadge();
+    if (typeof renderCartPage === "function") renderCartPage();
+    return;
+  }
+
+  // Dozen-sold lines must be a whole multiple of their minimum; everything
+  // else (case- and each-sold) steps by 1 and needs no rounding.
+  const step = isSoldByDozen(item) ? (productMoq(item) || 1) : 1;
+  const snapped = step > 1 ? Math.max(step, Math.round(typed / step) * step) : typed;
+
+  saveCart(cart.map(i =>
+    String(i.itemNumber) === String(itemNumber) ? { ...i, quantity: snapped } : i
+  ));
+  updateCartBadge();
+  if (typeof renderCartPage === "function") renderCartPage();
+
+  // Only say something when the number actually changed under them --
+  // silently rewriting what someone typed reads as the box being broken.
+  if (snapped !== typed && typeof showVpToast === "function") {
+    showVpToast(`Sold in multiples of ${step} — quantity set to ${snapped}.`, "warn");
+  }
+}
+
 function updateMiniCart() {
   if (miniCartSuppressed()) {
     const existing = document.getElementById("miniCart");
@@ -4575,7 +4652,19 @@ function updateMiniCart() {
         <div class="mc-qty">
           <button type="button" aria-label="Decrease quantity"
             onclick="miniCartSetQty('${String(i.itemNumber).replace(/'/g, "\\'")}', -1)">&minus;</button>
-          <span>${qty}</span>
+          <!-- Typed directly so ordering 36 doesn't mean clicking + 36
+               times. inputmode=numeric brings up the number pad on a
+               phone without type=number's spinner arrows, which would
+               crowd a 44px-wide box. Committed on change (blur) and on
+               Enter; see miniCartTypeQty() for why not on every keystroke.
+               Re-rendering on commit replaces this input, so the value
+               shown always comes back from the cart, never from what was
+               typed. -->
+          <input type="text" inputmode="numeric" pattern="[0-9]*"
+            class="mc-qty-input" value="${qty}" aria-label="Quantity"
+            onchange="miniCartTypeQty('${String(i.itemNumber).replace(/'/g, "\\'")}', this.value, true)"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();this.blur();}"
+            onclick="this.select()">
           <button type="button" aria-label="Increase quantity"
             onclick="miniCartSetQty('${String(i.itemNumber).replace(/'/g, "\\'")}', 1)">+</button>
         </div>

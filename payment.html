@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260919d" />
+  <link rel="stylesheet" href="style.css?v=20260919e" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260919d" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260919e" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -296,7 +296,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260919d"></script>
+  <script src="script.js?v=20260919e"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -735,8 +735,12 @@
       if (typeof cartMoqGroupShortfalls === 'function') {
         var moqShortfalls = cartMoqGroupShortfalls(cartItems);
         if (moqShortfalls.length) {
+          // Groups must be a whole multiple of their minimum, not just at
+          // or above it -- see cartMoqGroupTotals() in script.js.
           errEl.textContent = moqShortfalls.map(function (g) {
-            return g.group + ' MOQ not met: Required ' + g.min + ' combined units, cart has ' + g.have + '.';
+            return g.have < g.min
+              ? g.group + ' MOQ not met: Required ' + g.min + ' combined units, cart has ' + g.have + '.'
+              : g.group + ' must be ordered in multiples of ' + g.min + ': cart has ' + g.have + ' combined units.';
           }).join(' ');
           errEl.style.display = 'block';
           return;

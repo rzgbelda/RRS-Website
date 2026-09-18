@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260919d" />
+  <link rel="stylesheet" href="style.css?v=20260919e" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260919d" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260919e" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -436,7 +436,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20260919d"></script>
+<script src="script.js?v=20260919e"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js?v=16"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
@@ -599,8 +599,13 @@ async function saveCheckoutAndProceed() {
   if (typeof cartMoqGroupShortfalls === 'function') {
     const shortfalls = cartMoqGroupShortfalls(getCart());
     if (shortfalls.length) {
-      alert(shortfalls.map(g =>
-        `${g.group} MOQ not met: Required ${g.min} combined units, cart has ${g.have}. Add ${g.min - g.have} more from this group before checking out.`
+      // Mix & Match groups must land on a whole multiple of their minimum
+      // (36, 72, 108...), not just clear it once -- g.needed/g.nextTarget
+      // account for that; g.min - g.have alone would go negative once a
+      // group is over the minimum but between multiples.
+      alert(shortfalls.map(g => g.have < g.min
+        ? `${g.group} MOQ not met: Required ${g.min} combined units, cart has ${g.have}. Add ${g.needed} more from this group before checking out.`
+        : `${g.group} must be ordered in multiples of ${g.min}: cart has ${g.have} combined units. Add ${g.needed} more (to reach ${g.nextTarget}) or remove some before checking out.`
       ).join('\n'));
       return;
     }

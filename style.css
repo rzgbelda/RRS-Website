@@ -9714,13 +9714,32 @@ input.qty-input:focus {
   padding: 0;
 }
 .mc-qty button:hover { border-color: #ED7226; color: #ED7226; }
-.mc-qty span {
-  min-width: 22px;
+/* Editable rather than a read-only span, so a quantity like 36 can be
+   typed instead of stepped to. Sized to fit three digits; wider than the
+   old span to leave room for a caret and a 3-digit order. */
+.mc-qty-input {
+  width: 42px;
+  padding: 3px 2px;
   text-align: center;
+  font-family: inherit;
   font-size: 12.5px;
   font-weight: 800;
   color: #1a2e44;
+  border: 1.5px solid #d9e2ec;
+  border-radius: 6px;
+  background: #fff;
+  -moz-appearance: textfield;
 }
+.mc-qty-input:focus {
+  outline: none;
+  border-color: #ED7226;
+  box-shadow: 0 0 0 2px rgba(237,114,38,.18);
+}
+/* Belt and braces: type=text is used above precisely to avoid these, but
+   a browser or extension that promotes the field to numeric would
+   otherwise put spinners inside a 42px box. */
+.mc-qty-input::-webkit-outer-spin-button,
+.mc-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 .mc-tier {
   margin: 0;
