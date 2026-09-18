@@ -8956,7 +8956,20 @@ async function openQuoteComposer() {
   const d = new Date(); d.setDate(d.getDate() + 10);
   document.getElementById("quoteValidUntil").value = d.toISOString().slice(0, 10);
   document.getElementById("quoteMessage").value = `Dear ${r.contact_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
-  document.getElementById("quoteNet30").checked = false;
+  // Net 30 is owner-only (send-quote's edge function drops it silently for
+  // anyone else, and the database trigger trg_net30_owner_only rejects a
+  // direct write). Disabling the checkbox here for other roles matches
+  // that instead of letting them tick it and have nothing happen.
+  const net30Checkbox = document.getElementById("quoteNet30");
+  const net30Label = net30Checkbox?.closest("label");
+  const isOwner = window._adminRole === "owner";
+  net30Checkbox.checked = false;
+  net30Checkbox.disabled = !isOwner;
+  if (net30Label) {
+    net30Label.style.opacity = isOwner ? "" : ".5";
+    net30Label.style.cursor = isOwner ? "pointer" : "not-allowed";
+    net30Label.title = isOwner ? "" : "Only an owner account can grant Net 30 terms.";
+  }
   document.getElementById("quoteInHouse").checked = false;
   document.getElementById("quoteInHouseFee").value = "0.00";
   document.getElementById("quoteShippingState").value = r.shipping_state || "";

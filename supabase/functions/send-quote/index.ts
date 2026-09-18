@@ -265,8 +265,20 @@ serve(async (req) => {
     if (!staff.ok) return staff.response;
 
     const body = await req.json();
-    const { quote_request_id, items, message, preview_only, net_30_terms,
+    const { quote_request_id, items, message, preview_only,
             fulfillment_method, in_house_delivery_fee, freight_fee, shipping_state } = body;
+
+    // Net 30 is owner-only (CEO's instruction). requireStaff() above only
+    // confirms the caller is SOME staff member -- owner, admin or
+    // marketing all pass it -- so this is a second, narrower check purely
+    // for this one field. A non-owner sending net_30_terms:true from the
+    // admin composer has it silently dropped rather than the whole send
+    // failing, since a marketing user sending an ordinary quote (no Net
+    // 30 intended) should never be blocked by a stale checkbox value.
+    // trg_net30_owner_only in the database is the real backstop -- this
+    // is just what keeps an honest mistake from reaching that point at
+    // all and erroring out the send.
+    const net_30_terms = !!body.net_30_terms && staff.role === "owner";
     const deliveryFee = Math.max(0, Number(in_house_delivery_fee) || 0);
     // Not gated on fulfillment_method the way deliveryFee is -- freight
     // only ever gets set on a 'ship' quote in practice (staff have no

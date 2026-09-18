@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260918f" />
+  <link rel="stylesheet" href="style.css?v=20260919a" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260918f" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260919a" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -186,44 +186,15 @@
             </div>
           </div>
 
-          <label class="payment-option">
-            <input type="radio" name="paymentMethod" value="invoice">
-            <div class="payment-icon">&#128196;</div>
-            <div class="payment-option-content">
-              <!-- No "Recommended" tag: this is not the path most customers
-                   should take, and badging it as recommended pushed ordinary
-                   buyers toward a method they are not eligible for. Both this
-                   and Purchase Order below are limited to accounts RRS has
-                   approved in advance (government agencies and similar), and
-                   the copy now says so plainly instead of implying anyone can
-                   pick it. -->
-              <h3>Invoice Me</h3>
-              <p>Pay after approval. Available only to business accounts approved by Room Ready Supply in advance.</p>
-            </div>
-          </label>
-
-          <label class="payment-option">
-            <input type="radio" name="paymentMethod" value="po">
-
-            <div class='payment-icon'>&#129534;</div>
-
-            <div class="payment-option-content">
-              <h3>Purchase Order</h3>
-              <p>Pay using a purchase order from your organization. Available only to approved accounts &mdash; typically government agencies and institutions.</p>
-
-              <div class="card-fields two">
-                <div>
-                  <label>PO Number</label>
-                  <input type="text" placeholder="Enter PO number">
-                </div>
-
-                <div>
-                  <label>Upload PO</label>
-                  <input type="file">
-                </div>
-              </div>
-            </div>
-          </label>
+          <!-- Invoice Me / Purchase Order removed from checkout entirely
+               (2026-09-19): they let any customer, unvetted, place a real
+               order on Net 30 terms with no money collected up front. The
+               "approved accounts only" copy that was here a commit ago was
+               a label, not an enforcement mechanism -- nothing actually
+               checked who was picking it. Net 30 is now only ever granted
+               by an owner directly in admin (see
+               supabase/migrations/20260919_net30_owner_only.sql), working
+               a specific customer's quote -- never self-service. -->
 
           <p class='secure-note'>&#128274; Your payment information is secure and encrypted.</p>
 
@@ -325,7 +296,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260918f"></script>
+  <script src="script.js?v=20260919a"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
