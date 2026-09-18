@@ -566,6 +566,13 @@ body.admin-body {
 .a-btn-outline.a-btn-danger { color: var(--danger); border-color: #fca5a5; }
 .a-btn-outline.a-btn-danger:hover { background: #fef2f2; border-color: var(--danger); }
 
+/* .a-btn-outline's base display:block stacks an inline SVG above its text
+   instead of beside it. showDeletedOrdersBtnIfOwner() (admin.js) toggles
+   this button's visibility with style.display = "" | "none" -- the ""
+   falls through to whatever CSS says, so this has to be a class, not an
+   inline style, or every re-show would silently drop back to block. */
+.a-btn-icon { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
 .a-action-btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   height: 32px; padding: 0 12px; border-radius: var(--radius-xs);
