@@ -1992,15 +1992,22 @@ async function runCsvImport() {
   const csvDupCount = _csvRows.length - deduped.length;
 
   /* ── For no-SKU rows: skip products that already exist in DB by name ── */
-  const noSkuRows = deduped.filter(r => !r.sku);
   let existingNames = new Set();
-  if (noSkuRows.length) {
+  // Fetched unconditionally (used to be gated on whether the CSV had any
+  // no-SKU rows): a SKU-bearing row can still collide on
+  // slug with an existing product, and the disambiguation pass just below
+  // needs the full set of slugs already in use either way.
+  const existingSlugs = new Set();
+  {
     // .limit() explicit and generous: Supabase/PostgREST default-caps an
     // unbounded select() at 1000 rows, which would silently stop detecting
     // duplicates past the first 1000 products as the catalog grows.
     const { data: existingProds } = await window.sb
-      .from("products").select("name").limit(50000);
-    if (existingProds) existingProds.forEach(p => existingNames.add(normName(p.name)));
+      .from("products").select("name, slug").limit(50000);
+    if (existingProds) existingProds.forEach(p => {
+      existingNames.add(normName(p.name));
+      if (p.slug) existingSlugs.add(p.slug);
+    });
   }
   const preValidationRows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
   const dbDupCount = deduped.length - preValidationRows.length;
@@ -2060,6 +2067,41 @@ async function runCsvImport() {
   });
   const skippedTotal = csvDupCount + dbDupCount + missingPriceCount + invalidValueCount;
 
+  /* ── Assign a unique slug to every row before any insert happens ──
+     products.slug has a unique DB constraint, and the whole import used
+     to compute it as slugify(name) alone with no collision check. Rows
+     are batched 100-at-a-time into a single insert() call (see BATCH
+     below), so ONE slug collision inside a batch -- e.g. two genuinely
+     identical product names that are really different sizes/colors,
+     distinguished only by product_family/variant_label, which this
+     catalog uses on purpose (renderVariantCard in script.js) -- made
+     Postgres reject the entire batch of up to 100 rows, not just the
+     colliding one. That is exactly the "and 99 more" error this fixes:
+     the site's own products.csv has 10 such name collisions today
+     (matching Empress glove variants, NOVA towel roll sizes, etc.), so
+     this was not a rare edge case.
+
+     Prefer itemNumber/SKU for the base slug when present -- same
+     precedence script.js's own client-side slug fallback already uses
+     (see the `slug: (itemNumber || name)...` line there) -- since a SKU
+     is inherently unique and sidesteps the whole problem for any row
+     that has one. Whatever the base slug turns out to be, if it's
+     already taken (by an earlier row in this same import, or by a
+     product already in the database), append -2, -3, ... until it isn't. */
+  const slugBase = r => ((r.sku || r.name || "").toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) || "product";
+  const usedSlugs = new Set(existingSlugs);
+  rows.forEach(r => {
+    let candidate = slugBase(r);
+    let n = 2;
+    while (usedSlugs.has(candidate)) {
+      candidate = `${slugBase(r)}-${n}`;
+      n++;
+    }
+    usedSlugs.add(candidate);
+    r._resolvedSlug = candidate;
+  });
+
   if (skippedTotal) {
     const dupCount = csvDupCount + dbDupCount;
     const skipDesc = [
@@ -2087,7 +2129,10 @@ async function runCsvImport() {
   const buildPayload = (r, now) => ({
     name         : r.name,
     sku          : r.sku  || null,
-    slug         : r.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+    // Pre-computed above, unique across this whole import AND against
+    // every slug already in the database -- see the slug-assignment pass
+    // right before the batching loop.
+    slug         : r._resolvedSlug,
     description  : r.description  || null,
     // A separate field from description, deliberately -- the product
     // page's Overview tab falls back to description when this is blank
