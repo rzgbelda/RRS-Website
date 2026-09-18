@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260918b" />
+  <link rel="stylesheet" href="style.css?v=20260918f" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -104,7 +104,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260918b" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918f" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -167,10 +167,15 @@
           <span class="tier-badge" id="productTierBadge" style="display:none"></span>
         </div>
 
+        <!-- "Business accounts welcome" was removed: it read as an offer of
+             trade credit / Net 30, which is not something we offer on the
+             storefront, so it set up an expectation checkout could not meet.
+             Replaced with the volume threshold, which is the thing a buyer
+             on this page actually wants to know. -->
         <div class="product-badges">
-          <span class="pb-item">Sold by the case</span>
+          <span class="pb-item" id="productSoldByBadge">Sold by the case</span>
           <span class="pb-item">Volume pricing</span>
-          <span class="pb-item">Business accounts welcome</span>
+          <span class="pb-item">50+ cases? Extra discount</span>
         </div>
 
         <p class="product-desc" id="productDescription">
@@ -213,7 +218,10 @@
 
   <img src="assets/icons/box3.svg" alt="" loading="lazy">
 
-  <h4 id="tier3Label">30+ Cases</h4>
+  <!-- 30-49, not "30+": 50 cases and up is where the additional
+       negotiated discount starts, so an open-ended "30+" here would
+       imply this is the best rate available when it is not. -->
+  <h4 id="tier3Label">30&ndash;49 Cases</h4>
 
   <span id="tier3Price">$--.--</span>
 
@@ -273,9 +281,9 @@
         </div>
 
         <ul class="product-assurance">
-          <li>Case and pallet quantities &mdash; pricing drops as volume grows</li>
+          <li>Volume pricing applies automatically &mdash; the price drops as your case count grows</li>
           <li>Serving 500+ hospitality and facility businesses</li>
-          <li>Need a bigger volume? <a href="/quote">Request a quote</a> &mdash; most within one business day</li>
+          <li>Ordering 50 cases or more? <a href="/quote">Contact us</a> for additional volume pricing</li>
         </ul>
 
       </aside>
@@ -340,7 +348,7 @@
 
   </section>
 
-  <script src="script.js?v=20260918b"></script>
+  <script src="script.js?v=20260918f"></script>
 
 </body>
 <!-- -- Floating Catalog QR Widget ----------------------------- -->

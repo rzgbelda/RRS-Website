@@ -457,6 +457,9 @@ function saveCart(cart) {
 function updateCartBadge() {
   const cart = getCart();
   updateMoqGroupBar(cart);
+  // Kept above the early return below: pages without a #cart-count badge
+  // still need the panel to refresh.
+  if (typeof updateMiniCart === "function") updateMiniCart();
 
   const cartCount = document.getElementById("cart-count");
   if (!cartCount) return;
@@ -629,6 +632,24 @@ function cartMoqGroupShortfalls(cart) {
   return cartMoqGroupTotals(cart).filter(g => g.min > 0 && g.have < g.min);
 }
 
+// The automatic tiers stop here. 1-5 / 6-29 / 30-49 cases are priced by
+// the table below with no human involved; at 50+ the customer still gets
+// the tier-3 price automatically, but there is a further discount that
+// sales negotiates per account rather than the site applying it. So this
+// is the point where the UI starts telling them to get in touch -- it is
+// NOT another price band, and getTierPrice() deliberately does not branch
+// on it. See bulkVolumeNote() for the message.
+const BULK_VOLUME_MIN_CASES = 50;
+
+// True when a line qualifies for the negotiated 50+ discount. Dozen-sold
+// products are excluded for the same reason they skip the case tiers
+// below: their quantity counts dozens, not cases, so 50 of them is not
+// the 50-case order this threshold is about.
+function qualifiesForBulkVolume(item) {
+  if (!item || isSoldByDozen(item)) return false;
+  return (Number(item.quantity) || 0) >= BULK_VOLUME_MIN_CASES;
+}
+
 function getTierPrice(item) {
   const qty = Number(item.quantity) || 1;
 
@@ -647,6 +668,10 @@ function getTierPrice(item) {
     return tier1 || base || 0;
   }
 
+  // Tier 3 is "30-49 cases" in the copy, but there is deliberately no
+  // upper bound here: a 50+ order still pays this price automatically.
+  // The difference at 50+ is an additional negotiated discount applied by
+  // sales, not a different rate the cart can compute on its own.
   if (qty >= 30) {
     return tier3 || tier2 || tier1 || base || 0;
   }
@@ -1808,6 +1833,12 @@ function populateProductPage(product) {
 
   const t1 = cleanPrice(product.price1), t2 = cleanPrice(product.price2), t3 = cleanPrice(product.price3);
   const tierCardsEl = document.querySelector(".pricing-tier-cards");
+
+  // The badge is hardcoded "Sold by the case" in the markup, but a good
+  // number of the linens are sold by the dozen -- those pages contradicted
+  // their own tier cards, which correctly said "12 Dozen". Reported as
+  // "some linens say cases when it should say dozens".
+  setText("productSoldByBadge", isSoldByDozen(product) ? "Sold by the dozen" : "Sold by the case");
 
   if (isSoldByDozen(product)) {
     // Sold by the dozen: one flat rate, no volume discount. The three
@@ -4415,4 +4446,169 @@ function fillCategoryTiles() {
       h3.insertAdjacentElement('afterend', count);
     }
   });
+}
+
+/* =========================
+   PERSISTENT MINI-CART
+   A docked panel that shows what's in the cart while the customer is
+   still shopping, so the order stays visible as they build it instead of
+   living behind the header icon. Built lazily on first use and rendered
+   from the same localStorage cart every other surface reads, so it cannot
+   drift out of sync with the badge or the cart page.
+
+   Deliberately hidden on /cart, /checkout and /payment: those pages ARE
+   the cart, and a floating duplicate of it would just cover their own
+   controls.
+========================= */
+
+const MINICART_COLLAPSE_KEY = "rrs_minicart_collapsed";
+
+function miniCartSuppressed() {
+  const p = (location.pathname || "").toLowerCase().replace(/\.html$/, "");
+  return p.endsWith("/cart") || p.endsWith("/checkout") || p.endsWith("/payment");
+}
+
+// Collapsed unless the customer has explicitly opened it. Expanded by
+// default, the panel is tall enough to sit on top of the product page's
+// buy box (measured overlapping Add to Cart at 1440px), which would put a
+// convenience feature in front of the button the page exists for. The
+// collapsed header still shows item count and running total, so the order
+// stays visible while they shop -- one click opens the full list, and that
+// choice is remembered across pages.
+function miniCartCollapsed() {
+  try {
+    const v = localStorage.getItem(MINICART_COLLAPSE_KEY);
+    return v === null ? true : v === "1";
+  } catch { return true; }
+}
+
+function toggleMiniCart() {
+  const panel = document.getElementById("miniCart");
+  if (!panel) return;
+  const collapsed = !panel.classList.contains("mc-collapsed");
+  panel.classList.toggle("mc-collapsed", collapsed);
+  try { localStorage.setItem(MINICART_COLLAPSE_KEY, collapsed ? "1" : "0"); } catch {}
+}
+
+// Quantity stepper inside the panel. Removing the last unit removes the
+// line, matching how the cart page behaves.
+function miniCartSetQty(itemNumber, delta) {
+  const cart = getCart();
+  const item = cart.find(i => String(i.itemNumber) === String(itemNumber));
+  if (!item) return;
+
+  const step = isSoldByDozen(item) ? (productMoq(item) || 1) : 1;
+  const next = (Number(item.quantity) || 0) + (delta * step);
+
+  const remaining = next > 0
+    ? cart.map(i => (String(i.itemNumber) === String(itemNumber) ? { ...i, quantity: next } : i))
+    : cart.filter(i => String(i.itemNumber) !== String(itemNumber));
+
+  saveCart(remaining);
+  updateCartBadge();
+  // The cart page renders its own list from the same storage, so keep it
+  // in step when the panel is open on top of it (it is suppressed there,
+  // but a future page may render both).
+  if (typeof renderCartPage === "function") renderCartPage();
+}
+
+function updateMiniCart() {
+  if (miniCartSuppressed()) {
+    const existing = document.getElementById("miniCart");
+    if (existing) existing.style.display = "none";
+    return;
+  }
+
+  const cart = getCart();
+  let panel = document.getElementById("miniCart");
+
+  // Nothing in the cart: no panel at all, rather than an empty box
+  // following the customer around the site.
+  if (!cart.length) {
+    if (panel) panel.style.display = "none";
+    return;
+  }
+
+  if (!panel) {
+    panel = document.createElement("aside");
+    panel.id = "miniCart";
+    panel.className = "mini-cart";
+    panel.setAttribute("aria-label", "Your order so far");
+    if (miniCartCollapsed()) panel.classList.add("mc-collapsed");
+    document.body.appendChild(panel);
+  }
+
+  const units = cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
+  const subtotal = cart.reduce((s, i) => s + getTierPrice(i) * (Number(i.quantity) || 0), 0);
+
+  // Case count drives the volume messaging, so dozen-sold lines are left
+  // out of it -- their quantity counts dozens, and mixing the two would
+  // push a customer over "50 cases" who has not ordered 50 cases.
+  const caseUnits = cart.reduce(
+    (n, i) => n + (isSoldByDozen(i) ? 0 : (Number(i.quantity) || 0)), 0);
+
+  let tierNote = "";
+  if (caseUnits >= BULK_VOLUME_MIN_CASES) {
+    tierNote = `<a class="mc-tier mc-tier-bulk" href="/quote">
+        <strong>${caseUnits} cases &mdash; you qualify for extra pricing</strong>
+        <span>Send us your list for even better pricing &rsaquo;</span>
+      </a>`;
+  } else if (caseUnits > 0) {
+    const toNext = caseUnits < 6 ? 6 - caseUnits : (caseUnits < 30 ? 30 - caseUnits : BULK_VOLUME_MIN_CASES - caseUnits);
+    const nextLabel = caseUnits < 6 ? "6+ case pricing" : (caseUnits < 30 ? "30+ case pricing" : "extra 50+ case pricing");
+    tierNote = `<p class="mc-tier">
+        Add <strong>${toNext} more case${toNext === 1 ? "" : "s"}</strong> to reach ${nextLabel}.
+      </p>`;
+  }
+
+  const rows = cart.map(i => {
+    const qty = Number(i.quantity) || 0;
+    const unit = isSoldByDozen(i) ? "dz" : "cs";
+    return `
+      <li class="mc-row">
+        <img src="${i.image || "/assets/img/product-placeholder.svg"}" alt=""
+             onerror="this.onerror=null;this.src='/assets/img/product-placeholder.svg'">
+        <div class="mc-row-main">
+          <p class="mc-row-name">${escapeMiniCart(i.name || "Product")}</p>
+          <p class="mc-row-price">$${getTierPrice(i).toFixed(2)} <span>/ ${unit}</span></p>
+        </div>
+        <div class="mc-qty">
+          <button type="button" aria-label="Decrease quantity"
+            onclick="miniCartSetQty('${String(i.itemNumber).replace(/'/g, "\\'")}', -1)">&minus;</button>
+          <span>${qty}</span>
+          <button type="button" aria-label="Increase quantity"
+            onclick="miniCartSetQty('${String(i.itemNumber).replace(/'/g, "\\'")}', 1)">+</button>
+        </div>
+      </li>`;
+  }).join("");
+
+  panel.innerHTML = `
+    <button type="button" class="mc-head" onclick="toggleMiniCart()"
+            aria-expanded="${panel.classList.contains("mc-collapsed") ? "false" : "true"}">
+      <span class="mc-head-title">Your order
+        <span class="mc-head-count">${units}</span>
+      </span>
+      <span class="mc-head-total">$${subtotal.toFixed(2)}</span>
+      <svg class="mc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+           aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="mc-body">
+      <ul class="mc-list">${rows}</ul>
+      ${tierNote}
+      <div class="mc-actions">
+        <a class="mc-view" href="/cart">View cart</a>
+        <a class="mc-checkout" href="/checkout">Checkout</a>
+      </div>
+    </div>`;
+
+  panel.style.display = "";
+}
+
+// Local escaper: script.js has no shared one, and product names carry
+// quotes and ampersands that would otherwise break out of the markup.
+function escapeMiniCart(str) {
+  return String(str ?? "")
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }

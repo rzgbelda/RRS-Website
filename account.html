@@ -17,7 +17,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Account &mdash; Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="style.css?v=20260918b" />
+  <link rel="stylesheet" href="style.css?v=20260918f" />
   <style>
     /* ── Page shell ── */
     .acc-page { background:#f4f6fb; min-height:100vh; }
@@ -255,7 +255,7 @@
         </div>
       </div>
       <div class="cart-container">
-        <a href="/cart"><img src="assets/icons/hl3.svg?v=20260918b" alt="Cart"></a>
+        <a href="/cart"><img src="assets/icons/hl3.svg?v=20260918f" alt="Cart"></a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
       <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
@@ -535,7 +535,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260918b"></script>
+  <script src="script.js?v=20260918f"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       if (typeof window.sb === "undefined") {
@@ -1151,9 +1151,9 @@
           <div style="text-align:center;padding:60px 24px;background:#fff;border-radius:12px;border:1px solid #e2e8f0">
             <div style="font-size:40px;margin-bottom:16px">&#128203;</div>
             <p style="font-weight:700;color:#0B1F38;font-size:16px;margin-bottom:8px">No quotation requests yet${bizName ? ` for ${escapeHtml(bizName)}` : ""}</p>
-            <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Request custom pricing and your quotations will appear here.</p>
-            <a href="/#uq-form" style="display:inline-block;background:#ED7226;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700">
-              Request a Custom Quote
+            <p style="font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.6">Volume pricing applies automatically in the cart. Requests for 50+ case orders will appear here.</p>
+            <a href="/quote" style="display:inline-block;background:#ED7226;color:#fff;text-decoration:none;padding:10px 22px;border-radius:8px;font-size:13px;font-weight:700">
+              See Volume Pricing
             </a>
           </div>`;
         return;

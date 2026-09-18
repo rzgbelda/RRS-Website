@@ -4438,7 +4438,12 @@ span.flatpickr-weekday {
 .product-assurance {
   list-style: none;
   margin: 16px 0 0;
-  padding: 16px 0 0;
+  /* .buy-box itself has no padding -- each child supplies its own -- and
+     this list is the last child, so with no bottom padding its final line
+     sat flush against the card's bottom edge. 24px sides match
+     .pricing-box / .qty-section / .delivery-info above, so the checkmarks
+     line up with the rest of the card's content instead of hanging left. */
+  padding: 18px 24px 22px;
   border-top: 1px solid #e2e8f0;
 }
 
@@ -9588,4 +9593,177 @@ input.qty-input:focus {
 @media (max-width: 520px) {
   .hc-btn { width: 100%; }
   .hc-final-btns { flex-direction: column; }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PERSISTENT MINI-CART
+   Docked bottom-right so the order stays visible while the customer
+   keeps shopping. Sits left of the catalog QR widget (z-index 9998)
+   and above the Mix & Match bar, and is suppressed entirely on
+   /cart, /checkout and /payment (see miniCartSuppressed()).
+   ══════════════════════════════════════════════════════════════════ */
+.mini-cart {
+  position: fixed;
+  right: 92px;          /* clears the 54px QR button + its 24px gutter */
+  bottom: 24px;
+  z-index: 9997;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: 1.5px solid #e4e9f0;
+  border-radius: 14px;
+  box-shadow: 0 14px 44px rgba(11, 45, 82, .18);
+  overflow: hidden;
+  font-family: 'Inter', sans-serif;
+}
+
+.mc-head {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  background: #0b2d52;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  text-align: left;
+}
+.mc-head-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+.mc-head-count {
+  background: #ED7226;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  min-width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+}
+.mc-head-total {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 800;
+}
+.mc-chevron { flex: 0 0 16px; transition: transform .2s ease; }
+.mini-cart.mc-collapsed .mc-chevron { transform: rotate(180deg); }
+.mini-cart.mc-collapsed .mc-body { display: none; }
+
+.mc-body { max-height: min(52vh, 420px); overflow-y: auto; }
+
+.mc-list { list-style: none; margin: 0; padding: 0; }
+.mc-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.mc-row img {
+  width: 42px; height: 42px;
+  flex: 0 0 42px;
+  object-fit: contain;
+  background: #f7f9fc;
+  border-radius: 7px;
+  padding: 3px;
+  box-sizing: border-box;
+}
+.mc-row-main { min-width: 0; flex: 1; }
+.mc-row-name {
+  margin: 0 0 2px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1a2e44;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.mc-row-price { margin: 0; font-size: 12.5px; font-weight: 800; color: #0b2d52; }
+.mc-row-price span { font-weight: 600; color: #8193a6; font-size: 11px; }
+
+.mc-qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.mc-qty button {
+  width: 24px; height: 24px;
+  border: 1.5px solid #d9e2ec;
+  background: #fff;
+  border-radius: 6px;
+  color: #0b2d52;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+.mc-qty button:hover { border-color: #ED7226; color: #ED7226; }
+.mc-qty span {
+  min-width: 22px;
+  text-align: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #1a2e44;
+}
+
+.mc-tier {
+  margin: 0;
+  padding: 9px 12px;
+  background: #fff7f0;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 11.5px;
+  color: #7c3f12;
+  line-height: 1.45;
+}
+.mc-tier strong { color: #b4530f; }
+/* The 50+ variant is a link to /quote, so it needs the anchor reset. */
+a.mc-tier-bulk {
+  display: block;
+  text-decoration: none;
+  background: #f0fdf4;
+  color: #166534;
+}
+a.mc-tier-bulk strong { display: block; color: #15803d; font-size: 12px; }
+a.mc-tier-bulk span { color: #166534; }
+a.mc-tier-bulk:hover { background: #dcfce7; }
+
+.mc-actions { display: flex; gap: 8px; padding: 11px 12px 12px; }
+.mc-actions a {
+  flex: 1;
+  text-align: center;
+  padding: 9px 10px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.mc-view { background: #fff; color: #0b2d52; border: 1.5px solid #c9d5e3; }
+.mc-view:hover { border-color: #0b2d52; }
+.mc-checkout { background: #ED7226; color: #fff; border: 1.5px solid #ED7226; }
+.mc-checkout:hover { background: #d95f17; }
+
+@media (max-width: 560px) {
+  /* Full-width strip along the bottom on phones: a 320px floating card
+     covers too much of a small screen while scrolling the catalog. */
+  .mini-cart {
+    right: 12px; left: 12px; bottom: 12px;
+    width: auto; max-width: none;
+  }
+  .mc-body { max-height: 46vh; }
 }

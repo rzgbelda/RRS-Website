@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260918b" />
+  <link rel="stylesheet" href="style.css?v=20260918f" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260918b" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918f" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -190,8 +190,15 @@
             <input type="radio" name="paymentMethod" value="invoice">
             <div class="payment-icon">&#128196;</div>
             <div class="payment-option-content">
-              <h3>Invoice Me <span>Recommended</span></h3>
-              <p>Pay after approval. Available for approved business accounts.</p>
+              <!-- No "Recommended" tag: this is not the path most customers
+                   should take, and badging it as recommended pushed ordinary
+                   buyers toward a method they are not eligible for. Both this
+                   and Purchase Order below are limited to accounts RRS has
+                   approved in advance (government agencies and similar), and
+                   the copy now says so plainly instead of implying anyone can
+                   pick it. -->
+              <h3>Invoice Me</h3>
+              <p>Pay after approval. Available only to business accounts approved by Room Ready Supply in advance.</p>
             </div>
           </label>
 
@@ -202,7 +209,7 @@
 
             <div class="payment-option-content">
               <h3>Purchase Order</h3>
-              <p>Pay using a purchase order from your organization.</p>
+              <p>Pay using a purchase order from your organization. Available only to approved accounts &mdash; typically government agencies and institutions.</p>
 
               <div class="card-fields two">
                 <div>
@@ -318,7 +325,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260918b"></script>
+  <script src="script.js?v=20260918f"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">

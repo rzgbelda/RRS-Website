@@ -14,17 +14,17 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="google-site-verification" content="AXPrsnw1E_hnTWco7kxGaF36gdqOJVkJ5nAtzYcaadM" />
-  <title>Request a Custom Quote | Room Ready Supply</title>
-  <meta name="description" content="Request custom volume pricing on hospitality and facility supplies. Upload a competitor quote or product list and our team replies within one business day. Free shipping on every order." />
+  <title>Volume Pricing | Room Ready Supply</title>
+  <meta name="description" content="Volume pricing on hospitality and facility supplies applies automatically as your case count grows — 1-5, 6-29 and 30-49 case tiers, no request needed. Ordering 50+ cases? Send us your list for additional pricing." />
   <link rel="canonical" href="https://www.roomreadysupply.com/quote" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Room Ready Supply" />
-  <meta property="og:title" content="Request a Custom Quote | Room Ready Supply" />
+  <meta property="og:title" content="Volume Pricing | Room Ready Supply" />
   <meta property="og:description" content="Bulk hospitality and facility supplies for hotels, motels, short-term rentals, restaurants, and campgrounds across the East Coast. Fast shipping, competitive pricing." />
   <meta property="og:image" content="https://www.roomreadysupply.com/assets/img/banner1.jpg" />
   <meta property="og:url" content="https://www.roomreadysupply.com/quote" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Request a Custom Quote | Room Ready Supply" />
+  <meta name="twitter:title" content="Volume Pricing | Room Ready Supply" />
   <meta name="twitter:description" content="Bulk hospitality and facility supplies for hotels, motels, short-term rentals, restaurants, and campgrounds across the East Coast." />
   <meta name="twitter:image" content="https://www.roomreadysupply.com/assets/img/banner1.jpg" />
   <script type="application/ld+json">
@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260918b" />
+  <link rel="stylesheet" href="style.css?v=20260918f" />
 </head>
 
 <body>
@@ -142,7 +142,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260918b" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918f" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -178,17 +178,23 @@
     </div>
     <div class="qhero-inner">
         <div class="qhero-left qhero-fade-in">
+            <!-- Volume pricing is automatic in the cart (1-5 / 6-29 / 30-49
+                 cases), so this page leads with that rather than asking for
+                 a quote request: most buyers never need to fill anything in.
+                 The form below is for the 50+ case orders that carry an
+                 additional negotiated discount, and for lists we need to
+                 price by hand. -->
             <span class="qhero-eyebrow">VOLUME PRICING MADE SIMPLE</span>
-            <h2 class="qhero-heading">Request a <span class="qhero-accent">Custom Quote</span></h2>
-            <p class="qhero-body">Browse our catalog and add the products you need. If you cannot find what you are looking for, add the details in the notes or upload a recent quote or product list. Send your request and we'll take it from here.</p>
+            <h2 class="qhero-heading"><span class="qhero-accent">Volume Pricing</span></h2>
+            <p class="qhero-body">Our volume pricing is automatic. Add your products to the cart and the price drops as your case count grows &mdash; no request, no back-and-forth. Ordering <strong>50 cases or more</strong>? Send us the list below and we'll come back with additional pricing on top of that.</p>
             <div class="qhero-ctas">
-                <a href="#uq-form" class="qhero-btn-primary" onclick="event.preventDefault();document.getElementById('uq-form').scrollIntoView({behavior:'smooth'})">
-                    Start My Quote
+                <a href="/catalog" class="qhero-btn-primary">
+                    Shop the Catalog
                     <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </a>
-                <a href="#uq-upload" class="qhero-btn-secondary" onclick="event.preventDefault();document.getElementById('uq-upload').scrollIntoView({behavior:'smooth'})">
+                <a href="#uq-form" class="qhero-btn-secondary" onclick="event.preventDefault();document.getElementById('uq-form').scrollIntoView({behavior:'smooth'})">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    Upload a Quote
+                    Ordering 50+ Cases
                 </a>
             </div>
         </div>
@@ -288,8 +294,8 @@
                 <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
             </div>
             <div>
-                <div class="qfeat-title">Best Volume Pricing</div>
-                <div class="qfeat-sub">Competitive pricing for your business</div>
+                <div class="qfeat-title">Automatic Tiers</div>
+                <div class="qfeat-sub">1&ndash;5, 6&ndash;29 and 30&ndash;49 cases &mdash; applied in the cart</div>
             </div>
         </div>
         <div class="qfeat-sep" aria-hidden="true"></div>
@@ -299,7 +305,7 @@
             </div>
             <div>
                 <div class="qfeat-title">Fast &amp; Easy</div>
-                <div class="qfeat-sub">Get your custom quote within 1 business day</div>
+                <div class="qfeat-sub">We reply to 50+ case requests within 1 business day</div>
             </div>
         </div>
     </div>
@@ -411,7 +417,7 @@
                     <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                     Add another product
                 </button>
-                <p id="vqItemsError" class="uq-items-error">&#9888; Please add at least one product before requesting a quote.</p>
+                <p id="vqItemsError" class="uq-items-error">&#9888; Please add at least one product before sending your request.</p>
             </div>
 
             <div class="uq-divider"></div>
@@ -487,7 +493,7 @@
             <!-- Submit -->
             <div class="uq-submit-block">
                 <button type="submit" class="uq-submit-btn" id="quoteSubmitBtn">
-                    Request My Custom Quote
+                    Send My Volume Pricing Request
                     <svg class="uq-submit-arrow" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
                 <p class="uq-response-note">Typically responded within 1 business day</p>
@@ -549,7 +555,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260918b"></script>
+<script src="script.js?v=20260918f"></script>
 
 <script>
 (function() {
@@ -985,7 +991,7 @@
       msgEl.style.border = '1px solid #fca5a5';
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Request My Custom Quote <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      submitBtn.innerHTML = 'Send My Volume Pricing Request <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
     }
   });
 

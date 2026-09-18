@@ -320,7 +320,7 @@ ${cat.intro.map(p => `      <p>${esc(p)}</p>`).join('\n')}
         <h2>Need pricing for a whole property?</h2>
         <p>Send us your list and we will quote it at your case volume, usually the same day.</p>
       </div>
-      <a href="/#business-pricing">Request Volume Pricing</a>
+      <a href="/quote">Volume Pricing</a>
     </section>
 
 ${cat.faq && cat.faq.length ? `    <section class="cat-faq">
