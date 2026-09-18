@@ -7,6 +7,12 @@ try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
 
 const BRAND = { navy: '#0B1F38', orange: '#ED7226' };
 
+// Merchandise subtotal at or above which shipping is free. Must match
+// FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js (the checkout gate) and
+// FREE_SHIPPING_MIN in script.js (the mini-cart nudge) -- this is server
+// code and cannot import either, so the three are changed together.
+const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+
 let _resend = null;
 function getResend() {
   if (_resend) return _resend;
@@ -63,16 +69,28 @@ function invoiceEmailHtml(o) {
         '</tr>'
       : ''
   ) + (
-    // Shipping is free on every order, so the invoice states that outright
-    // rather than omitting the line -- the Sept 15 audit flagged a silent
-    // delivery line as a conversion blocker, and "FREE" is the offer.
-    '<tr>' +
-    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
-      '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Free shipping on every order</span></td>' +
-    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
-    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
-    '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#15803d;font-weight:700;text-align:right;">FREE</td>' +
-    '</tr>'
+    // Shipping is free at or above FREE_SHIPPING_MIN_SUBTOTAL ($3,000
+    // merchandise subtotal) -- NOT on every order, as this line used to
+    // claim unconditionally. An invoice for a $400 order printing "FREE"
+    // while staff separately billed freight would contradict itself. The
+    // line is still always shown rather than omitted below the threshold:
+    // the Sept 15 audit flagged a silent delivery line as a conversion
+    // blocker, so it says how shipping is priced either way.
+    Number(o.subtotal) >= FREE_SHIPPING_MIN_SUBTOTAL
+      ? '<tr>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Free shipping on orders $3,000+</span></td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#15803d;font-weight:700;text-align:right;">FREE</td>' +
+        '</tr>'
+      : '<tr>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Quoted for your address &mdash; free on orders $3,000+</span></td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;font-weight:600;text-align:right;">Quoted separately</td>' +
+        '</tr>'
   );
 
   const taxAmount = Number(o.tax_amount) || 0;

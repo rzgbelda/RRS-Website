@@ -1,5 +1,10 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
+// Merchandise subtotal at or above which shipping is free. Must match
+// FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js / api/send-invoice.js
+// and FREE_SHIPPING_MIN in script.js -- changed together, no shared import.
+const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+
 /**
  * Generates a branded quotation PDF and returns it as a real file download.
  *
@@ -293,6 +298,11 @@ async function buildQuotePdf(q) {
   // delivery portion of the total is, matching the emailed quote and the
   // customer-facing quote page.
   const deliveryFee = Math.max(0, Number(q.in_house_delivery_fee) || 0);
+  // Merchandise-only total, captured before the in-house delivery fee is
+  // folded into `subtotal` below -- the free-shipping threshold is measured
+  // on merchandise, so a delivery fee must not help a quote reach it.
+  const itemsSubtotal = subtotal;
+
   if (!hidePricing && deliveryFee > 0) {
     if (ensure(24)) drawTableHead();
     if (items.length % 2 === 1) {
@@ -309,11 +319,15 @@ async function buildQuotePdf(q) {
     subtotal += deliveryFee;
   }
 
-  // Shipping row: always FREE. Carrier freight is a cost Room Ready Supply
-  // absorbs, never a line the customer is charged, so this row states the
-  // offer rather than a dollar amount. freight_fee stays on the record for
-  // staff margin reporting in the admin Orders tab.
+  // Shipping row. Free at or above FREE_SHIPPING_MIN_SUBTOTAL ($3,000
+  // merchandise subtotal) -- this row used to print FREE unconditionally,
+  // which contradicted a smaller quote whose freight is still quoted and
+  // billed. `subtotal` at this point is merchandise plus any in-house
+  // delivery fee added just above; the threshold is measured on
+  // merchandise alone, so itemsSubtotal is captured before that addition.
+  // freight_fee stays on the record for staff margin reporting either way.
   const freightFee = 0;
+  const qualifiesFreeShip = itemsSubtotal >= FREE_SHIPPING_MIN_SUBTOTAL;
   if (!hidePricing) {
     if (ensure(24)) drawTableHead();
     if ((items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 1) {
@@ -322,10 +336,11 @@ async function buildQuotePdf(q) {
     const nameY = y - 12.5;
     page.drawText(fitText('Shipping', COL_QTY - MARGIN - 74, reg, 8.5),
       { x: MARGIN + 10, y: nameY, size: 8.5, font: reg, color: rgb(0.12, 0.18, 0.25) });
-    const fs = 'FREE';
+    const fs = qualifiesFreeShip ? 'FREE' : 'Quoted separately';
+    const fsColor = qualifiesFreeShip ? rgb(0.082, 0.502, 0.239) : GRAY;
     page.drawText('—', { x: rightOf('—', COL_QTY, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
     page.drawText('—', { x: rightOf('—', COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
-    page.drawText(fs, { x: rightOf(fs, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: rgb(0.082, 0.502, 0.239) });
+    page.drawText(fs, { x: rightOf(fs, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: fsColor });
     y -= 18;
     subtotal += freightFee;
   }
@@ -371,7 +386,9 @@ async function buildQuotePdf(q) {
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
     deliveryFee > 0
       ? 'Delivery is by Room Ready Supply and is included in the total above.'
-      : 'Shipping is free on every order — no freight charges are added to this quote.',
+      : qualifiesFreeShip
+        ? 'Shipping is free on this quote — orders of $3,000 or more ship free.'
+        : 'Shipping is quoted separately for your address. Orders of $3,000 or more ship free.',
     'Minimum order quantities may apply.',
   ];
   ensure(20 + terms.length * 11 + 10);

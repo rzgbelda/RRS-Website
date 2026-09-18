@@ -364,7 +364,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     // the fallback sums line items only, so it has to add both back in.
     const deliveryFee = Number(q.in_house_delivery_fee) || 0;
     const taxAmount = Number(q.tax_amount) || 0;
-    const subtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0) + deliveryFee;
+    const itemsSubtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
+    const subtotal = itemsSubtotal + deliveryFee;
+    // Free shipping threshold is measured on merchandise only, so an
+    // in-house delivery fee must not help a quote reach it. Must match
+    // FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js / api/quote-pdf.js.
+    const qualifiesFreeShip = itemsSubtotal >= 3000;
     const total   = q.grand_total != null ? q.grand_total : subtotal + taxAmount;
 
     const defaultMsg = `Dear ${q.contact_name || q.business_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
@@ -500,7 +505,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           ${q.net_30_terms ? `<li>Payment terms: Net 30 days upon credit approval.</li>` : ""}
           ${deliveryFee > 0
             ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
-            : `<li>Shipping is free on every order &mdash; no freight charges are added to this quote.</li>`}
+            : qualifiesFreeShip
+              ? `<li>Shipping is free on this quote &mdash; orders of $3,000 or more ship free.</li>`
+              : `<li>Shipping is quoted separately for your address. Orders of $3,000 or more ship free.</li>`}
           <li>Minimum order quantities may apply.</li>
         </ul>
       </div>

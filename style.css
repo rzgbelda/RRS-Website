@@ -9762,6 +9762,13 @@ a.mc-tier-bulk strong { display: block; color: #15803d; font-size: 12px; }
 a.mc-tier-bulk span { color: #166534; }
 a.mc-tier-bulk:hover { background: #dcfce7; }
 
+/* Free-shipping threshold met: green, matching the 50+ bulk note above,
+   so "unlocked" reads as an achievement rather than another to-do. The
+   not-yet-met state uses the plain .mc-tier amber, same as the volume
+   tier nudge, because both are "add more to get something". */
+.mc-tier-ship { background: #f0fdf4; color: #166534; }
+.mc-tier-ship strong { color: #15803d; }
+
 .mc-actions { display: flex; gap: 8px; padding: 11px 12px 12px; }
 .mc-actions a {
   flex: 1;

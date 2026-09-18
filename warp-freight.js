@@ -99,6 +99,16 @@ const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LT
 const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
 const SUPABASE_ANON_KEY   = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
+// Cart subtotal at or above which shipping is free. The single source of
+// truth for the figure: triggerQuote() gates on it, and the customer-facing
+// strings below format it rather than hardcoding "$3,000" separately, so
+// the threshold and what the site promises can never drift apart.
+// script.js has its own copy for the mini-cart (grep FREE_SHIPPING_MIN) --
+// the two files never load together on every page, so it cannot be shared
+// by reference; they must be changed together.
+const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+const FREE_SHIPPING_MIN_LABEL = '$' + FREE_SHIPPING_MIN_SUBTOTAL.toLocaleString('en-US');
+
 // Fetch live parcel rates from Shippo (via Edge Function) for orders < 150 lbs
 // Retries up to MAX_RETRIES times on failure to handle cold-start timeouts
 const PARCEL_FETCH_TIMEOUT_MS = 20000; // 20s — covers edge function cold start
@@ -305,9 +315,13 @@ async function triggerQuote(zip) {
     return;
   }
 
-  // Free shipping for orders $1,500+
+  // Free shipping at or above FREE_SHIPPING_MIN_SUBTOTAL. Declared once at
+  // the top of this file and read from there by every message that quotes
+  // the figure, because this threshold has already moved twice ($1,500 ->
+  // no minimum -> $3,000) and each move previously meant hunting the
+  // number down in copy scattered across the site.
   const subtotal = getCartSubtotal();
-  if (subtotal >= 1500) {
+  if (subtotal >= FREE_SHIPPING_MIN_SUBTOTAL) {
     renderQuotePanel(null, 'free-shipping');
     return;
   }
@@ -395,7 +409,7 @@ function renderQuotePanel(quotes, state) {
         <span style="font-size:18px;">🎉</span>
         <div>
           <strong style="color:#15803d;font-size:14px;">Free Shipping</strong>
-          <p style="color:#166534;font-size:12px;margin:2px 0 0;">Your order qualifies for free shipping!</p>
+          <p style="color:#166534;font-size:12px;margin:2px 0 0;">Your order is over ${FREE_SHIPPING_MIN_LABEL} &mdash; shipping is on us.</p>
         </div>
       </div>`;
     if (shippingEl) shippingEl.textContent = 'Free';

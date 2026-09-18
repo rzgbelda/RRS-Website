@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260919e" />
+  <link rel="stylesheet" href="style.css?v=20260919f" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -69,7 +69,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260919e" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260919f" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -393,8 +393,14 @@
   <strong id="summary-total">$0.00</strong>
 </div>
 
+      <!-- States the threshold rather than telling every customer delivery
+           is billed: warp-freight.js sets the Delivery line above to "Free"
+           once the subtotal reaches FREE_SHIPPING_MIN_SUBTOTAL ($3,000), so
+           unconditional "billed on your invoice" copy contradicted the
+           offer for exactly the largest orders. -->
       <p class="summary-note">
-        Items and sales tax shown above. Delivery is quoted for your address and billed on your invoice &mdash; it is not included in this total.
+        Items and sales tax shown above. <strong>Shipping is free on orders of $3,000 or more.</strong>
+        Below that, delivery is quoted for your address and billed on your invoice &mdash; it is not included in this total.
       </p>
 
       <!-- Restates shipping-policy.html section 7 at the moment of decision.
@@ -436,7 +442,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20260919e"></script>
+<script src="script.js?v=20260919f"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js?v=16"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>

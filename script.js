@@ -4624,6 +4624,23 @@ function updateMiniCart() {
   const caseUnits = cart.reduce(
     (n, i) => n + (isSoldByDozen(i) ? 0 : (Number(i.quantity) || 0)), 0);
 
+  // Free-shipping progress, keyed on the dollar subtotal rather than the
+  // case count the tier note below uses -- the two thresholds are
+  // unrelated (one is $3,000 of merchandise, the other is 50 cases), so a
+  // cart can easily sit on one side of one and the other side of the
+  // other. Must stay in step with FREE_SHIPPING_MIN_SUBTOTAL in
+  // warp-freight.js, which is what actually zeroes the freight quote;
+  // the two files do not both load on every page, so the value cannot be
+  // shared by reference.
+  const FREE_SHIPPING_MIN = 3000;
+  const freeShipNote = subtotal >= FREE_SHIPPING_MIN
+    ? `<p class="mc-tier mc-tier-ship">
+         <strong>Free shipping unlocked</strong>
+       </p>`
+    : `<p class="mc-tier">
+         Add <strong>$${(FREE_SHIPPING_MIN - subtotal).toFixed(2)}</strong> more for free shipping.
+       </p>`;
+
   let tierNote = "";
   if (caseUnits >= BULK_VOLUME_MIN_CASES) {
     tierNote = `<a class="mc-tier mc-tier-bulk" href="/quote">
@@ -4684,6 +4701,7 @@ function updateMiniCart() {
     </button>
     <div class="mc-body">
       <ul class="mc-list">${rows}</ul>
+      ${freeShipNote}
       ${tierNote}
       <div class="mc-actions">
         <a class="mc-view" href="/cart">View cart</a>
