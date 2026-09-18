@@ -8952,8 +8952,15 @@ input.qty-input:focus {
 .uq-trust-note    { font-size: 12.5px; color: #b0bac7; margin: 4px 0 0; }
 
 /* Scroll reveal */
-.uq-reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
-.uq-reveal.uq-revealed { opacity: 1; transform: translateY(0); }
+/* Scroll-reveal for the quote form's sections. The hidden state is applied
+   by JS (see the `uq-js` class set on <html> by the inline script) rather
+   than living here unconditionally: these blocks ARE the form -- customer
+   details, products, upload, notes -- so if the script that reveals them
+   never runs, an unconditional `opacity: 0` would leave the page looking
+   empty and the form unusable, with no way for the visitor to recover.
+   Without JS they simply render visible, no animation. */
+.uq-js .uq-reveal { opacity: 0; transform: translateY(18px); transition: opacity .5s ease, transform .5s ease; }
+.uq-js .uq-reveal.uq-revealed { opacity: 1; transform: translateY(0); }
 
 /* ─── Responsive ────────────────────────────────────────────── */
 @media (max-width: 1200px) {
@@ -9005,7 +9012,10 @@ input.qty-input:focus {
   .aiv-scene { height: 300px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .uq-reveal { opacity: 1; transform: none; transition: none; }
+  /* Wins over the .uq-js rule above on specificity (two classes vs one),
+     so reduced-motion visitors get the sections immediately and unanimated
+     whether or not the observer ran. */
+  .uq-js .uq-reveal { opacity: 1; transform: none; transition: none; }
   .vq-item-row { animation: none; }
   .uq-ai-result { animation: none; }
 }

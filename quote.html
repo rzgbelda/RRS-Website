@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260918a" />
+  <link rel="stylesheet" href="style.css?v=20260918b" />
 </head>
 
 <body>
@@ -142,7 +142,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260918a" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260918b" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -162,7 +162,13 @@
     <a href="/cart">My Cart</a>
   </nav>
 
-  <main class="hero">
+  <!-- Plain <main>, deliberately NOT class="hero": that class is the
+       homepage's split hero and is `display:grid; grid-template-columns:
+       62% 38%`. It came along when this page was split out of index.html,
+       which put the quote hero in one grid column and the whole form in
+       the other, with a tall empty gap beside each. The sections here are
+       full-width and stack. -->
+  <main class="quote-page">
 <!-- -- Quote Hero ----------------------------------------------- -->
 <section class="qhero" id="business-pricing">
     <div class="qhero-bg-shapes" aria-hidden="true">
@@ -492,6 +498,8 @@
     </div>
 </section>
 
+  </main>
+
 <!-- Areas We Serve / Who We Supply -------------------------------
      The regional and segment landing pages were orphaned: Google
      discovers pages by following links, and /hotel-supplies-north-carolina
@@ -541,13 +549,20 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260918a"></script>
+<script src="script.js?v=20260918b"></script>
 
 <script>
 (function() {
   // Scroll-reveal for .uq-reveal elements -- same behaviour the homepage
   // gave these sections before the quote form moved to its own page.
+  //
+  // The hidden-until-revealed CSS is gated behind this `uq-js` class, which
+  // is only set once we know the observer will actually run. These blocks
+  // are the form itself, so if the CSS hid them unconditionally and this
+  // script failed (or IntersectionObserver is missing), the visitor would
+  // be left staring at an empty page with no way to fill anything in.
   if (!window.IntersectionObserver) return;
+  document.documentElement.classList.add('uq-js');
   const obs = new IntersectionObserver((entries) => {
     entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('uq-revealed'); obs.unobserve(e.target); } });
   }, { threshold: 0.12 });
