@@ -2795,8 +2795,9 @@
     </div>
     <div class="a-modal-body">
       <p style="font-size:13px;color:#64748b;margin:0 0 14px;line-height:1.5;">
-        Orders deleted from the Orders tab land here first. Restore brings one back exactly as it was;
-        Delete Forever removes it for good and cannot be undone.
+        Orders deleted from the Orders tab land here first. Restore brings one back exactly as it was.
+        Anything left here is <strong>permanently purged 3 days after it was deleted</strong> &mdash; Delete Forever
+        does the same thing immediately, on purpose, and neither can be undone.
       </p>
       <div class="a-table-wrap">
         <table class="a-table">
@@ -2807,11 +2808,12 @@
               <th>Business</th>
               <th>Total</th>
               <th>Deleted</th>
+              <th>Auto-Purge In</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody id="deletedOrdersTableBody">
-            <tr><td colspan="6" class="a-empty">Loading&hellip;</td></tr>
+            <tr><td colspan="7" class="a-empty">Loading&hellip;</td></tr>
           </tbody>
         </table>
       </div>

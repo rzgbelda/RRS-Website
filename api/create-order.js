@@ -70,7 +70,8 @@ module.exports = async (req, res) => {
     await runDueReorders(supabase, fakeRes);
     const automationResult = await runDueAutomations(supabase);
     const scheduledResult = await runDueScheduledSends(supabase);
-    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult });
+    const purgedResult = await runDueOrderPurge(supabase);
+    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult, purged_orders: purgedResult });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -531,6 +532,32 @@ async function runDueScheduledSends(supabase) {
   }
 
   return { sent, failed };
+}
+
+/*
+ * Empties the Deleted Orders trash: permanently removes any order that
+ * has been soft-deleted for 3+ days. Calls
+ * public.purge_expired_deleted_orders() (20260919b_orders_auto_purge.sql)
+ * rather than the owner-triggered purge_deleted_order(id) RPC an admin
+ * uses from the Deleted Orders tab -- that one checks is_owner(), which
+ * needs a real logged-in user and would reject every call this cron
+ * makes with the service-role key. The 3-day cutoff on already-deleted
+ * rows is the safety check here instead: nothing this function touches
+ * was live data a moment ago, and nothing it purges was deleted less
+ * than 3 days ago, whoever the caller is.
+ */
+async function runDueOrderPurge(supabase) {
+  const { data, error } = await supabase.rpc('purge_expired_deleted_orders');
+  if (error) {
+    console.error('[create-order] order purge sweep failed:', error.message);
+    return { purged: 0, error: error.message };
+  }
+  const purged = data || [];
+  if (purged.length) {
+    console.log('[create-order] permanently purged', purged.length, 'order(s):',
+      purged.map(p => p.purged_order_number).join(', '));
+  }
+  return { purged: purged.length };
 }
 
 /**

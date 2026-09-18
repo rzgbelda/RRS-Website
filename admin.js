@@ -2532,10 +2532,35 @@ async function openDeletedOrdersModal() {
   await renderDeletedOrdersTable();
 }
 
+// 3 days, matching purge_expired_deleted_orders()' `now() - interval '3
+// days'` cutoff (20260919b_orders_auto_purge.sql) -- kept in sync by
+// hand since the two live in different systems (this is a display-only
+// estimate; the database's own interval is the real deadline).
+const ORDER_TRASH_RETENTION_MS = 3 * 24 * 60 * 60 * 1000;
+
+function deletedOrderCountdownLabel(deletedAtIso) {
+  const deletedAt = new Date(deletedAtIso).getTime();
+  if (isNaN(deletedAt)) return "—";
+  const remainingMs = deletedAt + ORDER_TRASH_RETENTION_MS - Date.now();
+  if (remainingMs <= 0) return `<span style="color:#dc2626;font-weight:700;">Due any time</span>`;
+
+  const hours = Math.floor(remainingMs / (60 * 60 * 1000));
+  const days  = Math.floor(hours / 24);
+  const remHours = hours % 24;
+
+  const text = days >= 1
+    ? `${days}d ${remHours}h left`
+    : `${hours}h left`;
+  // Red once under 24h so a soon-to-purge row is visually distinct
+  // without staff having to read the exact number.
+  const color = hours < 24 ? "#dc2626" : "#64748b";
+  return `<span style="color:${color};font-weight:${hours < 24 ? 700 : 600};">${text}</span>`;
+}
+
 async function renderDeletedOrdersTable() {
   const tbody = document.getElementById("deletedOrdersTableBody");
   if (!tbody) return;
-  tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Loading…</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Loading…</td></tr>`;
 
   const { data: orders, error } = await window.sb
     .from("orders")
@@ -2544,7 +2569,7 @@ async function renderDeletedOrdersTable() {
     .order("deleted_at", { ascending: false });
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Couldn't load deleted orders: ${escHtml(friendlyDbError(error))}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Couldn't load deleted orders: ${escHtml(friendlyDbError(error))}</td></tr>`;
     return;
   }
 
@@ -2555,11 +2580,12 @@ async function renderDeletedOrdersTable() {
       <td>${escHtml(o.business_name || "—")}</td>
       <td>$${o.total ? Number(o.total).toFixed(2) : "0.00"}</td>
       <td>${fmt(o.deleted_at)}</td>
+      <td>${deletedOrderCountdownLabel(o.deleted_at)}</td>
       <td style="display:flex;gap:6px;flex-wrap:wrap;">
         <button class="a-btn-sm" style="background:#dcfce7;color:#15803d;" onclick="restoreDeletedOrder('${o.id}')">Restore</button>
         <button class="a-btn-sm" style="background:#fee2e2;color:#dc2626;" onclick="purgeDeletedOrder('${o.id}', '${escHtml(o.order_number).replace(/'/g, "\\'")}')" title="Permanently delete">Delete Forever</button>
       </td>
-    </tr>`).join("") || `<tr><td colspan="6" class="a-empty">No deleted orders.</td></tr>`;
+    </tr>`).join("") || `<tr><td colspan="7" class="a-empty">No deleted orders.</td></tr>`;
 }
 
 async function restoreDeletedOrder(orderId) {
