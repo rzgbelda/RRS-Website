@@ -258,7 +258,22 @@ function applyRoleRestrictions(role) {
   // runs on both session-restore and fresh login, so it is the one place
   // that reliably sees every role change rather than one path only.
   showDeletedOrdersBtnIfOwner();
-  if (role === "owner") return; // full access — nothing to hide
+  if (role === "owner") {
+    // "Full access, nothing to hide" is true for every real admin
+    // capability, but My Dashboard / partner-products are an affiliate's
+    // OWN view of their referral code and commissions -- keyed to a
+    // sub_distributors row, not a company-wide report. An owner account
+    // has no such row, so clicking in here throws "multiple (or no) rows
+    // returned" (renderPartnerTab()'s .maybeSingle() failing) instead of
+    // showing anything useful. resetRoleRestrictions() just above forces
+    // every .a-nav-item's display back to "" -- undoing the partner tabs'
+    // own display:none in admin.html -- and every other role re-hides
+    // what it should not see in the branch below; owner returned before
+    // reaching it, so these two stayed visible from that reset.
+    document.querySelectorAll('.a-nav-item[data-tab="partner"], .a-nav-item[data-tab="partner-products"]')
+      .forEach(el => { el.style.display = "none"; });
+    return;
+  }
 
   if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor") {
     // Hide every nav item except this role's allow-list, and every section
@@ -10158,7 +10173,31 @@ async function renderPartnerTab() {
     .maybeSingle();
 
   if (meErr) {
-    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your account: ${escHtml(meErr.message)}</div>`;
+    // "multiple (or no) rows returned" is what .maybeSingle() throws when
+    // RLS hands back more than one sub_distributors row for this login --
+    // it should never happen (one affiliate = one row), but has been seen
+    // on an owner/staff account that still has an old affiliate row from
+    // before a role change. That is a real data problem worth reporting,
+    // but the raw Postgres message means nothing to a non-technical
+    // reader, and an owner landing here at all (full nav access means the
+    // Partner tab is still clickable, even though owner never lands here
+    // automatically -- see landingTabFor()) is not the same situation as
+    // an affiliate whose own dashboard is broken. Route each to a message
+    // that actually explains what's going on.
+    if (window._adminRole !== "sub_distributor") {
+      wrap.innerHTML = `
+        <div class="a-empty" style="padding:50px 20px;text-align:center">
+          <p style="font-size:14px;font-weight:700;color:#0f2b50;margin:0 0 6px">This tab is for affiliate accounts</p>
+          <p style="font-size:13px;color:#94a3b8;margin:0 0 10px">Your account is not a partner/affiliate login, so there's nothing to show here.</p>
+          <p style="font-size:12px;color:#cbd5e1;margin:0">(Technical: ${escHtml(meErr.message)})</p>
+        </div>`;
+    } else {
+      wrap.innerHTML = `
+        <div class="a-empty" style="padding:50px 20px;text-align:center">
+          <p style="font-size:14px;font-weight:700;color:#0f2b50;margin:0 0 6px">Your affiliate profile couldn't be loaded</p>
+          <p style="font-size:13px;color:#94a3b8;margin:0">Your login is linked to more than one affiliate record, which shouldn't happen. Contact Room Ready Supply so we can fix the duplicate.</p>
+        </div>`;
+    }
     return;
   }
   if (!me) {
