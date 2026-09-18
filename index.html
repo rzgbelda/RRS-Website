@@ -88,17 +88,22 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260919f" />
+  <link rel="stylesheet" href="style.css?v=20260919g" />
 </head>
 
 <body>
 
-  <!-- Free-shipping announcement bar removed 2026-09-18 while the offer is
-       reworked internally -- it isn't true at checkout right now (freight
-       is quoted per order again), so nothing on the page should promise it.
-       See warp-freight.js / checkout.html / cart.html for the matching
-       reverts. Styles (.an-ship etc.) are left in style.css in case the
-       offer comes back. -->
+  <!-- Free-shipping announcement bar. Restored 2026-09-19 now that the
+       offer is back and real at checkout ($3,000+ merchandise subtotal --
+       see FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js). Must always
+       state the threshold, never claim "every order" or "no minimum" --
+       that was true of an earlier version of this offer and is not true
+       now; the whole site was swept for that exact mismatch once already. -->
+  <div class="an-ship">
+    <span class="an-pill">Free Shipping</span>
+    <span>Orders of <strong>$3,000 or more</strong> ship free &mdash; no promo code needed.</span>
+    <a href="/catalog" class="an-hide-sm">Shop the catalog &rarr;</a>
+  </div>
 
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
@@ -149,7 +154,7 @@
 
       <div class="cart-container">
         <a href="/cart">
-          <img src="assets/icons/hl3.svg?v=20260919f" alt="Cart">
+          <img src="assets/icons/hl3.svg?v=20260919g" alt="Cart">
         </a>
         <span id="cart-count" class="cart-count">0</span>
       </div>
@@ -978,10 +983,10 @@
      bar has scrolled well out of sight. -->
 <section class="hc-final">
   <div class="hc-final-inner">
-    <h2>Your next restock ships <span>free</span></h2>
+    <h2>Orders $3,000+ ship <span>free</span></h2>
     <p>
       Paper, chemicals, linens, amenities and PPE for hotels, rentals, campgrounds and cleaning companies &mdash;
-      priced for businesses, in stock now, and delivered with no shipping charge on any order.
+      priced for businesses, in stock now, and free shipping on orders of $3,000 or more.
     </p>
     <div class="hc-final-btns">
       <a href="/catalog" class="hc-btn hc-btn--buy">
@@ -1041,7 +1046,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260919f"></script>
+<script src="script.js?v=20260919g"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">
