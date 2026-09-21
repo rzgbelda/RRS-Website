@@ -4451,22 +4451,30 @@ function fillCategoryTiles() {
   tiles.forEach(tile => {
     const slug = tile.dataset.cat;
     const list = bySlug.get(slug);
-    if (!list || !list.length) return;
+
+    // Hide the tile outright when its category currently has zero
+    // products, instead of leaving an empty/placeholder card. This was
+    // previously misdiagnosed as a missing-photo problem (a prior fix
+    // here made the tile fall back to a placeholder icon), but checking
+    // the live catalog directly shows these four categories have NO
+    // products at all right now -- 0 rows for "Bed Sheets & Linens",
+    // "Guest Amenities", "Gloves & PPE", and "Pillows & Mattress
+    // Protectors" as of 2026-09-21. That's a real, if hopefully
+    // temporary, inventory gap (see the RDU vendor removal a few days
+    // earlier), not a photo gap or a slug-matching bug -- categorySlug()
+    // and these tiles' data-cat values already agree, there's just
+    // nothing to show. Re-add the tile automatically once products exist
+    // in that category again; nothing else needs to change for that.
+    if (!list || !list.length) {
+      tile.style.display = 'none';
+      return;
+    }
+    tile.style.display = '';
 
     // Prefer a product whose image is a Cloudinary asset: those are
     // padded onto a white square, so they sit in the tile frame cleanly.
     // Anything else (e.g. a supplier's own crop) is a fallback.
     const withImg = list.filter(p => p.image);
-
-    // A category can be entirely real (list.length > 0) but have no
-    // product with a photo uploaded yet -- some Bed Sheets & Linens,
-    // Guest Amenities, Gloves & PPE, and Pillows & Protectors rows have
-    // no image_url set in Supabase. Previously this `return`ed here and
-    // left the tile's placeholder <img> with no src at all, which read
-    // as a broken/loading image forever rather than a deliberate
-    // placeholder. Falling through to the placeholder icon at least
-    // looks intentional; the real fix is uploading photos for those
-    // products in Admin -> Products.
     const img = tile.querySelector('.hc-cat-img img');
     if (img) {
       if (withImg.length) {
@@ -4475,6 +4483,9 @@ function fillCategoryTiles() {
         img.src = hcSquareImage(preferred.image, 240);
         img.alt = (preferred.category || slug) + ' products';
       } else {
+        // Category is real and has stock, just no photo uploaded yet for
+        // any product in it -- show the same placeholder used everywhere
+        // else a product has no photo, rather than a blank tile.
         img.src = '/assets/img/product-placeholder.svg';
         img.alt = (list[0].category || slug) + ' products';
       }
@@ -4486,9 +4497,8 @@ function fillCategoryTiles() {
       const count = document.createElement('span');
       count.className = 'hc-cat-count';
       // Total products in the category, not just the ones with a photo --
-      // the old count (withImg.length) understated real inventory for any
-      // category missing photos, which is the opposite of reassuring on a
-      // page meant to show what's in stock.
+      // counting only photographed products would understate real
+      // inventory for any category missing photos.
       count.textContent = list.length + (list.length === 1 ? ' product' : ' products');
       h3.insertAdjacentElement('afterend', count);
     }
