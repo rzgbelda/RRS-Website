@@ -1,9 +1,13 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 
-// Merchandise subtotal at or above which shipping is free. Must match
-// FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js / api/send-invoice.js
-// and FREE_SHIPPING_MIN in script.js -- changed together, no shared import.
-const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+// Free shipping is OFF site-wide as of 2026-09-22 (see
+// FREE_SHIPPING_ENABLED in warp-freight.js). Disabled here the same way
+// as api/send-invoice.js: an unreachable threshold, so qualifiesFreeShip
+// below is always false and every quote PDF prints the real "quoted
+// separately" shipping row. Restore the dollar figure here, in
+// send-invoice.js, and flip the flag in warp-freight.js + script.js
+// together if the offer ever comes back.
+const FREE_SHIPPING_MIN_SUBTOTAL = Infinity;
 
 /**
  * Generates a branded quotation PDF and returns it as a real file download.
@@ -387,8 +391,8 @@ async function buildQuotePdf(q) {
     deliveryFee > 0
       ? 'Delivery is by Room Ready Supply and is included in the total above.'
       : qualifiesFreeShip
-        ? 'Shipping is free on this quote — orders of $3,000 or more ship free.'
-        : 'Shipping is quoted separately for your address. Orders of $3,000 or more ship free.',
+        ? 'Shipping is free on this quote.'
+        : 'Shipping is quoted separately for your address and billed on the invoice.',
     'Minimum order quantities may apply.',
   ];
   ensure(20 + terms.length * 11 + 10);

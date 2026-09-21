@@ -88,17 +88,16 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922a" />
+  <link rel="stylesheet" href="style.css?v=20260922b" />
 </head>
 
 <body>
 
   <!-- No top promo banner, per the 2026-09-21 homepage rework (RRS-29):
        "NO top promo banner — remove it entirely with no replacement."
-       The $3,000 free-shipping threshold is still real at checkout (see
-       FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js) and still stated in
-       the closing CTA band lower on this page -- only this top banner
-       instance was removed. -->
+       Free shipping itself was then switched off site-wide on 2026-09-22
+       (see FREE_SHIPPING_ENABLED in warp-freight.js), so there is no
+       threshold left to advertise here or anywhere else. -->
 
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
@@ -1067,7 +1066,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260922a"></script>
+<script src="script.js?v=20260922b"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">

@@ -1892,6 +1892,71 @@ function populateProductPage(product) {
   const pricingBoxP = document.querySelector(".pricing-box p");
   if (pricingBoxP) pricingBoxP.textContent = `Per ${product.priceBy || "Case"}`;
 
+  // "At a Glance" -- fills the space this column used to leave empty under
+  // the tier cards, using only this product's own catalog data. Each block
+  // hides itself when its data is missing, so a sparsely-filled product
+  // never shows an empty heading.
+  const features = [product.feature1, product.feature2, product.feature3, product.feature4]
+    .map(f => String(f || "").trim()).filter(Boolean);
+  const featBlock = document.getElementById("ppFeaturesBlock");
+  const featList  = document.getElementById("ppFeatureList");
+  if (featBlock && featList) {
+    if (features.length) {
+      featList.innerHTML = features.map(f =>
+        `<li>${escapeMiniCart(f)}</li>`).join("");
+      featBlock.style.display = "";
+    } else {
+      featBlock.style.display = "none";
+    }
+  }
+
+  // Quick specs. Deliberately the few numbers a buyer compares between
+  // two similar SKUs -- how many per case, what it weighs, how big the
+  // carton is -- not a duplicate of the full Specifications table below.
+  const soldBy = isSoldByDozen(product) ? "Dozen" : (product.priceBy || "Case");
+  const dims = [product.length, product.width, product.height].filter(Boolean);
+
+  // "1" is meaningful for weight/dimensions but noise for "Pack size: 1",
+  // so only the count-ish rows drop it -- handled explicitly rather than
+  // with a blanket filter that would hide a real 1 lb weight.
+  const cleanedSpecs = [
+    [`Units per ${soldBy}`, String(product.caseQty || "").trim()],
+    ["Pack size", String(product.size || "").trim()],
+    ["Sold by", soldBy],
+    ["Weight", product.weight ? `${product.weight} lbs` : ""],
+    ["Carton size", dims.length === 3 ? `${dims.join('" × ')}"` : ""],
+  ].filter(([label, v]) => {
+    if (!v) return false;
+    if ((label.startsWith("Units per") || label === "Pack size") && v === "1") return false;
+    return true;
+  });
+
+  // "Sold by" is derived from a default ("Case") rather than read from the
+  // record, so on a product with no real specs at all it would be the only
+  // row -- a panel containing one line of nothing. Drop it unless at least
+  // one genuine spec sits alongside it.
+  const hasRealSpec = cleanedSpecs.some(([label]) => label !== "Sold by");
+  const finalSpecs = hasRealSpec ? cleanedSpecs : [];
+
+  const qsBlock = document.getElementById("ppQuickSpecsBlock");
+  const qsList  = document.getElementById("ppQuickSpecs");
+  if (qsBlock && qsList) {
+    if (finalSpecs.length) {
+      qsList.innerHTML = finalSpecs.map(([k, v]) =>
+        `<div><dt>${escapeMiniCart(k)}</dt><dd>${escapeMiniCart(v)}</dd></div>`).join("");
+      qsBlock.style.display = "";
+    } else {
+      qsBlock.style.display = "none";
+    }
+  }
+
+  const glance = document.getElementById("ppAtAGlance");
+  if (glance) {
+    const anyShown = (featBlock && featBlock.style.display !== "none") ||
+                     (qsBlock && qsBlock.style.display !== "none");
+    glance.style.display = anyShown ? "" : "none";
+  }
+
   setText("specName", product.name);
   setText("specItemNumber", product.itemNumber);
   setText("specCaseQty", product.caseQty);
@@ -4818,22 +4883,21 @@ function updateMiniCart() {
     (best, i) => ((Number(i.quantity) || 0) > (Number(best && best.quantity) || 0) ? i : best), null);
   const topLineQty = Number(topLine && topLine.quantity) || 0;
 
-  // Free-shipping progress, keyed on the dollar subtotal rather than the
-  // case count the tier note below uses -- the two thresholds are
-  // unrelated (one is $3,000 of merchandise, the other is 50 cases), so a
-  // cart can easily sit on one side of one and the other side of the
-  // other. Must stay in step with FREE_SHIPPING_MIN_SUBTOTAL in
-  // warp-freight.js, which is what actually zeroes the freight quote;
-  // the two files do not both load on every page, so the value cannot be
-  // shared by reference.
+  // Free shipping is off site-wide (2026-09-22). Must stay in step with
+  // FREE_SHIPPING_ENABLED in warp-freight.js, which is what actually
+  // gates the freight quote; the two files do not both load on every
+  // page, so the flag cannot be shared by reference. While false the
+  // mini-cart says nothing about shipping at all -- a progress bar
+  // toward an offer that no longer exists is worse than silence.
+  const FREE_SHIPPING_ENABLED = false;
   const FREE_SHIPPING_MIN = 3000;
-  const freeShipNote = subtotal >= FREE_SHIPPING_MIN
+  const freeShipNote = !FREE_SHIPPING_ENABLED ? "" : (subtotal >= FREE_SHIPPING_MIN
     ? `<p class="mc-tier mc-tier-ship">
          <strong>Free shipping unlocked</strong>
        </p>`
     : `<p class="mc-tier">
          Add <strong>$${(FREE_SHIPPING_MIN - subtotal).toFixed(2)}</strong> more for free shipping.
-       </p>`;
+       </p>`);
 
   // Named after the specific product it's talking about, so "add 4 more"
   // is an instruction the customer can actually act on and that actually

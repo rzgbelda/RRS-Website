@@ -366,10 +366,13 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
     const taxAmount = Number(q.tax_amount) || 0;
     const itemsSubtotal = items.reduce((s, i) => s + (i.quantity * i.unit_price), 0);
     const subtotal = itemsSubtotal + deliveryFee;
-    // Free shipping threshold is measured on merchandise only, so an
-    // in-house delivery fee must not help a quote reach it. Must match
-    // FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js / api/quote-pdf.js.
-    const qualifiesFreeShip = itemsSubtotal >= 3000;
+    // Free shipping is OFF site-wide as of 2026-09-22 (see
+    // FREE_SHIPPING_ENABLED in warp-freight.js). Always false here, so
+    // every quote shows a real "Quoted separately" shipping row rather
+    // than promising FREE. Restore the merchandise-subtotal threshold
+    // here if the offer comes back -- it is measured on merchandise
+    // only, so an in-house delivery fee must not help reach it.
+    const qualifiesFreeShip = false;
     const total   = q.grand_total != null ? q.grand_total : subtotal + taxAmount;
 
     const defaultMsg = `Dear ${q.contact_name || q.business_name},\n\nThank you for your interest in Room Ready Supply. Please find your custom volume pricing quote below. We look forward to serving your hospitality needs.\n\nFeel free to contact us with any questions.`;
@@ -506,8 +509,8 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;backgrou
           ${deliveryFee > 0
             ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
             : qualifiesFreeShip
-              ? `<li>Shipping is free on this quote &mdash; orders of $3,000 or more ship free.</li>`
-              : `<li>Shipping is quoted separately for your address. Orders of $3,000 or more ship free.</li>`}
+              ? `<li>Shipping is free on this quote.</li>`
+              : `<li>Shipping is quoted separately for your address and billed on the invoice.</li>`}
           <li>Minimum order quantities may apply.</li>
         </ul>
       </div>

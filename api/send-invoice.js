@@ -7,11 +7,17 @@ try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
 
 const BRAND = { navy: '#0B1F38', orange: '#ED7226' };
 
-// Merchandise subtotal at or above which shipping is free. Must match
-// FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js (the checkout gate) and
-// FREE_SHIPPING_MIN in script.js (the mini-cart nudge) -- this is server
-// code and cannot import either, so the three are changed together.
-const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+// Free shipping is OFF site-wide as of 2026-09-22 (see
+// FREE_SHIPPING_ENABLED in warp-freight.js, the checkout gate). This is
+// server code and cannot import that flag, so the offer is disabled here
+// by making the threshold unreachable: no order subtotal is Infinity, so
+// the "FREE" branch below never fires and every invoice prints the real
+// "quoted separately" shipping line instead.
+//
+// To turn the offer back on: set this to the dollar threshold again AND
+// flip FREE_SHIPPING_ENABLED in warp-freight.js and script.js. All three
+// must agree or an invoice will contradict what checkout promised.
+const FREE_SHIPPING_MIN_SUBTOTAL = Infinity;
 
 let _resend = null;
 function getResend() {
@@ -86,7 +92,7 @@ function invoiceEmailHtml(o) {
         '</tr>'
       : '<tr>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
-          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Quoted for your address &mdash; free on orders $3,000+</span></td>' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Quoted for your address &mdash; billed separately</span></td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;font-weight:600;text-align:right;">Quoted separately</td>' +

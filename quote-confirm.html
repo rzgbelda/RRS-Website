@@ -105,12 +105,13 @@ function renderPending(data) {
   }).join('');
 
   const deliveryFee = Number(data.in_house_delivery_fee) || 0;
-  // Shipping is free at $3,000+ merchandise subtotal, not on every order --
-  // this row claimed FREE unconditionally, which contradicted itself on a
-  // smaller quote whose freight staff still bill. Must stay in step with
-  // FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js / api/send-invoice.js.
-  // freight_fee stays on the record as an internal cost either way.
-  const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
+  // Free shipping is OFF site-wide as of 2026-09-22 (see
+  // FREE_SHIPPING_ENABLED in warp-freight.js). Disabled here with an
+  // unreachable threshold, the same way as api/send-invoice.js and
+  // api/quote-pdf.js, so the FREE row below never renders and every
+  // quote shows "Quoted separately". freight_fee stays on the record as
+  // an internal cost either way.
+  const FREE_SHIPPING_MIN_SUBTOTAL = Infinity;
   const qualifiesFreeShip = Number(data.subtotal) >= FREE_SHIPPING_MIN_SUBTOTAL;
   const feeRow = deliveryFee > 0
     ? '<tr><td>In-House Delivery</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(deliveryFee) + '</td></tr>'

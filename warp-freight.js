@@ -99,13 +99,21 @@ const LTL_MIN_WEIGHT_LBS = 150; // below this, use parcel (Shippo) instead of LT
 const QUOTE_SANITY_RATIO  = 3;   // flag if shipping > 3× order subtotal
 const SUPABASE_ANON_KEY   = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-// Cart subtotal at or above which shipping is free. The single source of
-// truth for the figure: triggerQuote() gates on it, and the customer-facing
-// strings below format it rather than hardcoding "$3,000" separately, so
-// the threshold and what the site promises can never drift apart.
-// script.js has its own copy for the mini-cart (grep FREE_SHIPPING_MIN) --
-// the two files never load together on every page, so it cannot be shared
-// by reference; they must be changed together.
+// Free shipping: OFF as of 2026-09-22, by request, across the whole site.
+//
+// This offer has now toggled three times ($1,500 -> off -> $3,000 -> off),
+// and each time it came back the copy had to be hunted down again across
+// a dozen files. So it is a single switch rather than deleted code: set
+// FREE_SHIPPING_ENABLED back to true (and restore the threshold) and the
+// gate, the panel, the cart/checkout notes and the invoice line all come
+// back together, already consistent.
+//
+// While false, NOTHING on the site may promise free shipping at any
+// threshold -- every order gets a real freight quote. script.js keeps its
+// own copy of this flag for the mini-cart (grep FREE_SHIPPING_ENABLED);
+// the two files do not both load on every page, so it cannot be shared by
+// reference and they must be changed together.
+const FREE_SHIPPING_ENABLED = false;
 const FREE_SHIPPING_MIN_SUBTOTAL = 3000;
 const FREE_SHIPPING_MIN_LABEL = '$' + FREE_SHIPPING_MIN_SUBTOTAL.toLocaleString('en-US');
 
@@ -315,13 +323,12 @@ async function triggerQuote(zip) {
     return;
   }
 
-  // Free shipping at or above FREE_SHIPPING_MIN_SUBTOTAL. Declared once at
-  // the top of this file and read from there by every message that quotes
-  // the figure, because this threshold has already moved twice ($1,500 ->
-  // no minimum -> $3,000) and each move previously meant hunting the
-  // number down in copy scattered across the site.
+  // Free shipping is off (see FREE_SHIPPING_ENABLED at the top of this
+  // file), so every order goes on to a real freight quote regardless of
+  // subtotal. Guarded rather than deleted so turning the offer back on is
+  // one flag, not a re-implementation.
   const subtotal = getCartSubtotal();
-  if (subtotal >= FREE_SHIPPING_MIN_SUBTOTAL) {
+  if (FREE_SHIPPING_ENABLED && subtotal >= FREE_SHIPPING_MIN_SUBTOTAL) {
     renderQuotePanel(null, 'free-shipping');
     return;
   }

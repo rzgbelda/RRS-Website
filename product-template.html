@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922a" />
+  <link rel="stylesheet" href="style.css?v=20260922b" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -234,9 +234,31 @@
 </div>
 
 </div>
-      </div>
 
-      
+        <!-- Fills the gap this column used to leave under the tier cards
+             (the buy box on the right is much taller, and .product-layout
+             is align-items:start). Everything here is this product's own
+             data, already in the catalog and 99-100% populated across it:
+             feature1-4, case/pack counts, weight and carton dimensions.
+             It also does real work for the near-identical SKUs -- eleven
+             disinfecting-wipe listings differ only deep inside a
+             90-character name, and this surfaces the difference as
+             structured attributes instead. Each block hides itself when
+             its data is missing (see populateProductPage). -->
+        <div class="pp-at-a-glance" id="ppAtAGlance" style="display:none">
+
+          <div class="pp-glance-block" id="ppFeaturesBlock" style="display:none">
+            <h3>Key Features</h3>
+            <ul class="pp-feature-list" id="ppFeatureList"></ul>
+          </div>
+
+          <div class="pp-glance-block" id="ppQuickSpecsBlock" style="display:none">
+            <h3>At a Glance</h3>
+            <dl class="pp-quick-specs" id="ppQuickSpecs"></dl>
+          </div>
+
+        </div>
+      </div>
 
       <aside class="buy-box">
 
@@ -397,7 +419,7 @@
 
   </section>
 
-  <script src="script.js?v=20260922a"></script>
+  <script src="script.js?v=20260922b"></script>
 
 </body>
 <!-- -- Floating Catalog QR Widget ----------------------------- -->

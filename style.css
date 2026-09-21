@@ -4821,6 +4821,9 @@ span.flatpickr-weekday {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin-top: 14px;
+  /* stretch (the grid default) makes both cards the height of the taller
+     one, which is what lets .pp-mode-price bottom-align across them. */
+  align-items: stretch;
 }
 .pp-mode {
   position: relative;
@@ -4843,8 +4846,26 @@ span.flatpickr-weekday {
   background: #fffaf6;
   box-shadow: 0 0 0 3px rgba(237,114,38,.13);
 }
-.pp-mode-title { font-size: 12.5px; font-weight: 700; color: #0B1F38; line-height: 1.3; }
-.pp-mode-price { font-size: 16px; font-weight: 800; color: #0B1F38; }
+/* Fixed two-line title box with the price pinned below it. "One-Time
+   Purchase" wraps to two lines while "Reorder & Save" fits on one, which
+   pushed the two prices to different heights and made the pair look
+   misaligned. Reserving the same title height in both cards lines the
+   prices up whatever the label length. */
+.pp-mode-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #0B1F38;
+  line-height: 1.3;
+  min-height: 2.6em;      /* exactly two lines at this line-height */
+  display: flex;
+  align-items: flex-start;
+}
+.pp-mode-price {
+  font-size: 16px;
+  font-weight: 800;
+  color: #0B1F38;
+  margin-top: auto;       /* bottom-anchored, so both cards agree */
+}
 .pp-mode--save.is-active .pp-mode-price { color: #ED7226; }
 .pp-mode-flag {
   position: absolute;
@@ -4880,6 +4901,75 @@ span.flatpickr-weekday {
   color: #0B1F38;
 }
 .pp-freq-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.5; color: #8494a8; }
+
+/* ── "At a Glance": features + quick specs ─────────────────────────
+   Sits under the tier cards in the middle column, which previously ran
+   out of content well before the taller buy box beside it and left a
+   large void. Product-specific data only. */
+.pp-at-a-glance {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-top: 26px;
+}
+.pp-glance-block {
+  background: #fff;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.pp-glance-block h3 {
+  margin: 0 0 12px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #8494a8;
+}
+.pp-feature-list { margin: 0; padding: 0; list-style: none; }
+.pp-feature-list li {
+  position: relative;
+  padding-left: 22px;
+  margin-bottom: 9px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #334155;
+}
+.pp-feature-list li:last-child { margin-bottom: 0; }
+/* Orange check, drawn in CSS so it needs no icon file and never 404s. */
+.pp-feature-list li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 5px;
+  width: 5px;
+  height: 9px;
+  border: solid #ED7226;
+  border-width: 0 2.2px 2.2px 0;
+  transform: rotate(45deg);
+}
+.pp-quick-specs { margin: 0; }
+.pp-quick-specs > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+.pp-quick-specs > div:last-child { border-bottom: none; }
+.pp-quick-specs dt { font-size: 13px; color: #5B6C7E; margin: 0; }
+.pp-quick-specs dd {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0B1F38;
+  text-align: right;
+}
+
+@media (max-width: 900px) {
+  .pp-at-a-glance { grid-template-columns: 1fr; }
+}
 
 /* Heading above the tier cards. Volume tiers are per item, and saying so
    once here is clearer than repeating it on all three cards. */
