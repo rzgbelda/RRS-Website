@@ -4656,6 +4656,18 @@ span.flatpickr-weekday {
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(13,44,80,.12);
   overflow: hidden;
+  /* Sticks in view as the (shorter) middle column scrolls past, instead
+     of sitting fixed-height next to it and leaving a void below once the
+     middle column runs out of content. This is the actual fix for the
+     dead-space complaint -- padding the middle column with duplicate
+     content (a prior attempt) was treating the symptom; the buy box being
+     taller than its neighbor was never the real problem. top offset
+     clears the sticky-ish site header. */
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
 .pricing-box,
@@ -4901,75 +4913,6 @@ span.flatpickr-weekday {
   color: #0B1F38;
 }
 .pp-freq-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.5; color: #8494a8; }
-
-/* ── "At a Glance": features + quick specs ─────────────────────────
-   Sits under the tier cards in the middle column, which previously ran
-   out of content well before the taller buy box beside it and left a
-   large void. Product-specific data only. */
-.pp-at-a-glance {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-top: 26px;
-}
-.pp-glance-block {
-  background: #fff;
-  border: 1.5px solid #e4e9f2;
-  border-radius: 14px;
-  padding: 18px 20px;
-}
-.pp-glance-block h3 {
-  margin: 0 0 12px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: #8494a8;
-}
-.pp-feature-list { margin: 0; padding: 0; list-style: none; }
-.pp-feature-list li {
-  position: relative;
-  padding-left: 22px;
-  margin-bottom: 9px;
-  font-size: 13.5px;
-  line-height: 1.5;
-  color: #334155;
-}
-.pp-feature-list li:last-child { margin-bottom: 0; }
-/* Orange check, drawn in CSS so it needs no icon file and never 404s. */
-.pp-feature-list li::before {
-  content: "";
-  position: absolute;
-  left: 3px;
-  top: 5px;
-  width: 5px;
-  height: 9px;
-  border: solid #ED7226;
-  border-width: 0 2.2px 2.2px 0;
-  transform: rotate(45deg);
-}
-.pp-quick-specs { margin: 0; }
-.pp-quick-specs > div {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
-.pp-quick-specs > div:last-child { border-bottom: none; }
-.pp-quick-specs dt { font-size: 13px; color: #5B6C7E; margin: 0; }
-.pp-quick-specs dd {
-  margin: 0;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #0B1F38;
-  text-align: right;
-}
-
-@media (max-width: 900px) {
-  .pp-at-a-glance { grid-template-columns: 1fr; }
-}
 
 /* Heading above the tier cards. Volume tiers are per item, and saying so
    once here is clearer than repeating it on all three cards. */
@@ -7220,7 +7163,15 @@ button, a, [role="button"] { touch-action: manipulation; }
 /* ── Product detail: collapse 3-col at narrow ── */
 @media (max-width: 960px) {
   .product-layout { grid-template-columns: 1fr; }
-  .buy-box { max-width: min(480px, 100%); }
+  .buy-box {
+    max-width: min(480px, 100%);
+    /* Sticky only makes sense beside a taller neighbor in the 3-column
+       layout; stacked full-width on mobile it would pin the buy box
+       mid-scroll instead, which is worse, not better. */
+    position: static;
+    max-height: none;
+    overflow-y: visible;
+  }
   .details-grid { grid-template-columns: 1fr; }
 }
 
