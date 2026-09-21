@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922m" />
+  <link rel="stylesheet" href="style.css?v=20260922n" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -215,9 +215,11 @@
             <span class="pp-mode-dot" aria-hidden="true"></span>
             <span class="pp-mode-body">
               <span class="pp-mode-title">Reorder &amp; Save</span>
-              <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+              <span class="pp-mode-price-group">
+                <span class="pp-mode-flag">Save 5%</span>
+                <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+              </span>
             </span>
-            <span class="pp-mode-flag">Save 5%</span>
           </button>
         </div>
 
