@@ -4408,6 +4408,12 @@ span.flatpickr-weekday {
 }
 .product-gallery { grid-column: 1; grid-row: 1; }
 .pp-purchase-panel { grid-column: 1; grid-row: 2; }
+/* Sits beside .pp-purchase-panel -- same row, next column over -- rather
+   than full-width, far below the fold where it used to be. Column 2 is
+   minmax(0, 1fr): whatever width is left between the fixed-width gallery
+   (440px) and buy box (330px) columns, so its own padding is tightened
+   below (see .pp-faq-card) rather than assuming a generous fixed width. */
+.pp-faq-card { grid-column: 2; grid-row: 2; }
 .product-info { grid-column: 2; grid-row: 1 / span 2; }
 .buy-box { grid-column: 3; grid-row: 1 / span 2; }
 
@@ -5149,25 +5155,47 @@ span.flatpickr-weekday {
 /* ── Product FAQ ── sits below .details-grid as its own full-width card,
    not squeezed into one of its three columns -- two questions read
    better as a short list than crammed beside Overview/Specs/Features. */
-.pp-faq-card { margin-top: 22px; }
+/* Grid placement lives with .product-layout's other placement rules
+   near the top of this file (grid-column: 2, grid-row: 2, beside
+   .pp-purchase-panel) -- only card-internal spacing here, tightened for
+   this column's real available width (whatever's left between the
+   440px gallery and 330px buy-box columns, easily under 400px on a
+   1440px viewport) rather than the wider "full page width" padding this
+   card used when it sat below .details-grid at the page's full width. */
+.pp-faq-card {
+  padding: 18px 20px 20px;
+  align-self: start;
+}
 .pp-faq-item {
   border: 1.5px solid #e2e8f0;
   border-radius: 12px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
 }
 .pp-faq-item:last-child { margin-bottom: 0; }
 .pp-faq-item h4 {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 700;
+  line-height: 1.4;
   color: #0B1F38;
 }
 .pp-faq-item p {
   margin: 0;
-  font-size: 13.5px;
-  line-height: 1.65;
+  font-size: 13px;
+  line-height: 1.6;
   color: #5B6C7E;
+}
+/* This card's tabs header keeps the same left/right inset as its own
+   padding (18/20px) rather than .detail-card's wider 22px default --
+   .detail-card is a shared base class (Overview/Specs/Key Features use
+   it too, all at the page's full available width), and this instance
+   overrides its padding for the narrower column, so .tabs' own -22px/
+   22px negative-margin reset (sized for the base class) would otherwise
+   pull it past this card's actual edges. */
+.pp-faq-card .tabs {
+  margin: -18px -20px 18px;
+  padding: 0 20px;
 }
 
 .specs-card button {
@@ -7314,20 +7342,34 @@ button, a, [role="button"] { touch-action: manipulation; }
   .product-layout { grid-template-columns: 1fr; }
   /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
      grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
-     col 1 row 2, product-info col 2, buy-box col 3) would otherwise try
-     to place things in columns/rows that no longer exist. Reset every
-     explicit placement back to plain document-order stacking, which is
-     what a single column should do -- gallery, then the purchase panel
-     right under it (same visual relationship as desktop, achieved here
-     by normal flow instead of grid placement), then product info, then
-     the buy box. */
+     col 1 row 2, pp-faq-card col 2 row 2, product-info col 2, buy-box
+     col 3) would otherwise try to place things in columns/rows that no
+     longer exist. Reset every explicit placement back to plain
+     document-order stacking, which is what a single column should do --
+     gallery, then the purchase panel right under it, then the FAQ card
+     (same visual relationship each has on desktop, achieved here by
+     normal flow instead of grid placement), then product info, then the
+     buy box. */
   .product-gallery,
   .pp-purchase-panel,
+  .pp-faq-card,
   .product-info,
   .buy-box {
     grid-column: 1;
     grid-row: auto;
   }
+  /* On mobile only, read order beats source order: FAQ sits right after
+     the purchase panel in the HTML (so desktop's row-2 grid placement
+     beside it makes sense there), but a first-time visitor scrolling a
+     stacked page should see the product name/description/tier cards
+     (.product-info) before two FAQ answers about it. `order` reshuffles
+     the visual sequence without touching the HTML or desktop's grid-
+     column/grid-row placement above. */
+  .product-gallery  { order: 1; }
+  .product-info     { order: 2; }
+  .pp-purchase-panel{ order: 3; }
+  .pp-faq-card       { order: 4; }
+  .buy-box           { order: 5; }
   .buy-box {
     max-width: min(480px, 100%);
     /* Sticky only makes sense beside a taller neighbor in the 3-column

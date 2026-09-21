@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922h" />
+  <link rel="stylesheet" href="style.css?v=20260922i" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -238,6 +238,37 @@
 
       </div>
 
+      <!-- Two FAQs, generated from this product's own real data (case/dozen
+           quantity, weight, dimensions, MOQ) rather than written per-SKU by
+           hand for 110+ products or filled with invented specifics. The
+           two questions were chosen from what buyers in this exact
+           industry (bulk/wholesale janitorial, paper, and chemical supply)
+           actually ask most, per a web search done for this feature:
+           - "how many come in a case / what's the minimum order" -- case
+             quantities and bulk sizing are the #1 question in every wholesale
+             gloves/paper-towel buying guide checked (gloves.com, buygloves.com,
+             Schneider Direct).
+           - "how is this shipped / how much does it weigh" -- carton weight
+             and dimensions are what a facilities buyer needs to plan
+             freight/loading dock/storage before ordering, and this site's
+             own shipping-policy.html already treats that as a first-class
+             question (parcel vs. LTL freight is decided by weight).
+           A third common one -- chemical dilution ratios -- was
+           deliberately NOT added: this site's product data has no
+           per-SKU dilution ratio field, and inventing one for a specific
+           SKU would be a fabricated safety-relevant number, not a
+           reasonable default.
+           Placed here (own grid item, positioned via grid-column/grid-row
+           in style.css, same pattern as .pp-purchase-panel) so it sits
+           beside the purchase panel -- same row, column 2 -- rather than
+           appearing full-width far below the fold where it used to be. -->
+      <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
+        <div class="tabs">
+          <h3>Common Questions</h3>
+        </div>
+        <div id="ppFaqList"></div>
+      </section>
+
       <div class="product-info">
         <p class="brand">Room Ready Supply</p>
 
@@ -434,36 +465,9 @@
 
     </div>
 
-    <!-- Two FAQs, generated from this product's own real data (case/dozen
-         quantity, weight, dimensions, MOQ) rather than written per-SKU by
-         hand for 110+ products or filled with invented specifics. The
-         two questions were chosen from what buyers in this exact
-         industry (bulk/wholesale janitorial, paper, and chemical supply)
-         actually ask most, per a web search done for this feature:
-         - "how many come in a case / what's the minimum order" -- case
-           quantities and bulk sizing are the #1 question in every wholesale
-           gloves/paper-towel buying guide checked (gloves.com, buygloves.com,
-           Schneider Direct).
-         - "how is this shipped / how much does it weigh" -- carton weight
-           and dimensions are what a facilities buyer needs to plan
-           freight/loading dock/storage before ordering, and this site's
-           own shipping-policy.html already treats that as a first-class
-           question (parcel vs. LTL freight is decided by weight).
-         A third common one -- chemical dilution ratios -- was
-         deliberately NOT added: this site's product data has no
-         per-SKU dilution ratio field, and inventing one for a specific
-         SKU would be a fabricated safety-relevant number, not a
-         reasonable default. -->
-    <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
-      <div class="tabs">
-        <h3>Common Questions</h3>
-      </div>
-      <div id="ppFaqList"></div>
-    </section>
-
   </section>
 
-  <script src="script.js?v=20260922e"></script>
+  <script src="script.js?v=20260922f"></script>
 
 </body>
 <!-- -- Floating Catalog QR Widget ----------------------------- -->
