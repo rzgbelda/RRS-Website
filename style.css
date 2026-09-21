@@ -4944,7 +4944,7 @@ span.flatpickr-weekday {
   border: 1.5px solid #e4e9f2;
   border-radius: 10px;
 }
-.pp-lt-label { font-size: 12px; font-weight: 700; color: #5B6C7E; letter-spacing: .02em; }
+.pp-lt-label { font-size: 15px; font-weight: 800; color: #0B1F38; letter-spacing: .02em; }
 .pp-lt-rate  { font-size: 12px; color: #8494a8; margin-left: auto; }
 .pp-lt-total { font-size: 20px; font-weight: 800; color: #0B1F38; width: 100%; text-align: right; }
 
@@ -5021,6 +5021,8 @@ span.flatpickr-weekday {
 }
 .pp-mode--save.is-active .pp-mode-price { color: #ED7226; }
 .pp-mode-flag {
+  position: relative;
+  overflow: hidden;
   flex-shrink: 0;
   background: #15803d;
   color: #fff;
@@ -5030,6 +5032,28 @@ span.flatpickr-weekday {
   text-transform: uppercase;
   padding: 3px 7px;
   border-radius: 5px;
+}
+/* Shine sweep across the badge surface -- a solid-color pill, unlike
+   .rrs-shine on the brandmark text, so background-clip:text doesn't
+   apply here. Same mechanism as .vq-catalog-btn::after elsewhere in
+   this file: a translucent diagonal band swept via transform, clipped
+   to the badge by overflow:hidden on the parent, rather than a second
+   from-scratch technique for what is visually the same idea. */
+.pp-mode-flag::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.65) 50%, transparent 70%);
+  transform: translateX(-100%);
+  animation: pp-flag-shine 2.6s ease-in-out infinite;
+  animation-delay: .6s;
+}
+@keyframes pp-flag-shine {
+  0%, 55% { transform: translateX(-100%); }
+  100%    { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pp-mode-flag::after { animation: none; display: none; }
 }
 
 .pp-freq {
