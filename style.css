@@ -5164,7 +5164,19 @@ span.flatpickr-weekday {
    card used when it sat below .details-grid at the page's full width. */
 .pp-faq-card {
   padding: 18px 20px 20px;
-  align-self: start;
+  /* Stretches to match row 2's real height instead of sitting at its own
+     shorter natural height -- .product-layout sets align-items:start
+     for the grid as a whole (needed so .product-gallery/.pp-purchase-
+     panel don't stretch to match the much taller .product-info/.buy-box
+     spanning both rows), but that same rule left THIS card, which is
+     genuinely shorter than its row-2 neighbor .pp-purchase-panel, sitting
+     at its own height with visible empty space below it inside the grid
+     cell -- exactly what the screenshot showed. align-self:stretch
+     overrides the grid default for just this one item so its border/
+     background fills the row, while gallery and purchase-panel above
+     keep their own natural heights via the grid's default. */
+  align-self: stretch;
+  box-sizing: border-box;
 }
 .pp-faq-item {
   border: 1.5px solid #e2e8f0;
