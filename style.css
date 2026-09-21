@@ -4865,17 +4865,21 @@ span.flatpickr-weekday {
   gap: 8px;
   margin-bottom: 16px;
 }
-/* Real logo (assets/brand/Reorder Logo.png), not the generic reorder-
-   arrows glyph the placeholder used. Sized up from the placeholder's
-   26px so the badge's ring text stays legible rather than shrinking to
-   an illegible dot -- served pre-resized to 88px/176px (~10KB/~34KB;
+/* Real logo (assets/brand/Reorder Logo.png -- a cart + refresh-arrow
+   mark). Sized at 56px (was 40px): at 40px the "RR" lettering inside
+   the cart was too small to read, reported directly against a
+   screenshot. Still well inside the 176px 2x source's real resolution
+   (an 88px display size would still be crisp), so this isn't stretching
+   a blurry image -- confirmed by rendering a true-size preview of the
+   image at 56px before committing, same check used when the logo file
+   itself was replaced. Served pre-resized to 88px/176px (~10KB/~34KB;
    the 1254px source is 1.08MB, too heavy to ship on every product page
    load) with a 2x srcset for retina. No background circle: the source
-   image already has its own white background and ring artwork, so a
-   colored circle behind it would show through as an odd border. */
+   image already has its own white background, so a colored circle
+   behind it would show through as an odd border. */
 .rrs-brandmark-icon {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   flex-shrink: 0;
   object-fit: contain;
 }
