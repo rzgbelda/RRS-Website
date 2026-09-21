@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const requireStaff = require('./_lib/require-staff');
+const rateLimit = require('./_lib/rate-limit');
 
 /**
  * Creates a quote_requests row for a customer the admin is entering by hand
@@ -26,6 +27,11 @@ module.exports = async (req, res) => {
   // into quote_requests.
   const staff = await requireStaff(req, res);
   if (!staff) return;
+
+  // Authenticated, but a throttle still matters: this sends mail /
+  // writes with the service role, so one compromised or careless
+  // staff session should not be able to burn the whole quota.
+  if (!rateLimit(req, res, { bucket: 'quote', limit: 30, windowMs: 60000 })) return;
 
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,

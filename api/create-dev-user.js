@@ -12,6 +12,7 @@
 // request body.
 
 const { createClient } = require('@supabase/supabase-js');
+const rateLimit = require('./_lib/rate-limit');
 
 // 'owner' = full, unrestricted access (was 'admin' before the CEO/Owner vs
 // Admin role split). 'admin' = the narrower Users/Dev-Tickets/Hero/About
@@ -49,6 +50,11 @@ module.exports = async (req, res) => {
     if (!ACCOUNT_MANAGER_ROLES.includes(callerProfile?.role)) {
       return res.status(403).json({ error: 'Only Owner or Admin accounts can manage staff/users.' });
     }
+
+    // Creates and deletes real auth users. Throttled even though it is
+    // owner/admin-only, so a stolen admin session cannot mass-create or
+    // mass-delete accounts in a loop.
+    if (!rateLimit(req, res, { bucket: 'staffmgmt', limit: 20, windowMs: 60000 })) return;
 
     // --- Delete a user entirely ------------------------------------------
     // profiles.id references auth.users(id) on delete cascade, so deleting

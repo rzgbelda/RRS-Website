@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 const requireStaff = require('./_lib/require-staff');
+const rateLimit = require('./_lib/rate-limit');
 
 let _resend = null;
 function getResend() {
@@ -84,6 +85,11 @@ module.exports = async (req, res) => {
   // a fast way to get the domain's sending reputation burned.
   const staff = await requireStaff(req, res);
   if (!staff) return;
+
+  // Authenticated, but a throttle still matters: this sends mail /
+  // writes with the service role, so one compromised or careless
+  // staff session should not be able to burn the whole quota.
+  if (!rateLimit(req, res, { bucket: 'terms-send', limit: 20, windowMs: 60000 })) return;
 
   const { contact_name, business_name, email, total, quote_request_id, order_id, preview_only } = req.body || {};
   if (!contact_name || !business_name || !email) {

@@ -10,6 +10,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 const requireStaff = require('./_lib/require-staff');
+const rateLimit = require('./_lib/rate-limit');
 
 let _resend = null;
 function getResend() {
@@ -92,6 +93,11 @@ module.exports = async (req, res) => {
   // endpoints.
   const staff = await requireStaff(req, res);
   if (!staff) return;
+
+  // Authenticated, but a throttle still matters: this sends mail /
+  // writes with the service role, so one compromised or careless
+  // staff session should not be able to burn the whole quota.
+  if (!rateLimit(req, res, { bucket: 'ticket', limit: 30, windowMs: 60000 })) return;
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});

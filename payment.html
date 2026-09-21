@@ -571,7 +571,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: Math.round(total * 100),
+          // No `amount`: the server prices the cart itself from the
+          // products table. See api/create-payment-intent.js.
+          items: cartLineItems(),
+          state: checkout.state || '',
           method: 'ach',
           metadata: {
             order_number: window._orderNumber || ('RRS-' + Date.now()),
@@ -580,6 +583,7 @@
         }),
       }).then(function (res) { return res.json(); }).then(function (data) {
         if (data.error) throw new Error(data.error);
+        applyServerTotals(data);
         achClientSecret = data.clientSecret;
         achElements = stripe.elements({ clientSecret: achClientSecret });
         achPaymentElement = achElements.create('payment');
@@ -640,10 +644,35 @@
       }
     }
 
+    // What the cart wants to buy, stripped to the two fields the server
+    // needs. Prices are deliberately NOT sent -- the server reads them
+    // from the products table so the browser cannot name its own price.
+    function cartLineItems() {
+      var cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      return cart.map(function (i) {
+        return { sku: i.itemNumber || '', quantity: parseInt(i.quantity) || 1 };
+      }).filter(function (i) { return i.sku; });
+    }
+
+    // The server is the authority on the total, so if its figure differs
+    // from the one this page calculated, show the server's -- the
+    // customer should never see one number and be charged another.
+    function applyServerTotals(data) {
+      if (!data || typeof data.total !== 'number') return;
+      window._orderSubtotal = data.subtotal;
+      window._orderTax = data.tax;
+      window._orderTotal = data.total;
+      var sub = document.getElementById('payment-subtotal');
+      var tax = document.getElementById('payment-tax');
+      var tot = document.getElementById('payment-total');
+      if (sub) sub.textContent = '$' + Number(data.subtotal).toFixed(2);
+      if (tax) tax.textContent = '$' + Number(data.tax).toFixed(2);
+      if (tot) tot.textContent = '$' + Number(data.total).toFixed(2);
+    }
+
     function initPaymentIntent() {
       var total = window._orderTotal || 0;
       if (total < 0.50) return;
-      var amountCents = Math.round(total * 100);
       var checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
       var orderNumber = 'RRS-' + Date.now();
       window._orderNumber = orderNumber;
@@ -652,7 +681,10 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          amount: amountCents,
+          // No `amount`: the server prices the cart itself from the
+          // products table. See api/create-payment-intent.js.
+          items: cartLineItems(),
+          state: checkout.state || '',
           metadata: {
             order_number: orderNumber,
             customer_name: checkout.contact || '',
@@ -672,12 +704,14 @@
             notes: checkout.notes || '',
             order_type: checkout.orderType || 'one_time',
             fulfillment_method: checkout.fulfillmentMethod || 'ship',
-            referral_code: checkout.referral || '',
-            tax_amount: String(Math.round((window._orderTax || 0) * 100))
+            referral_code: checkout.referral || ''
+            // tax_amount is stamped server-side now, from the same pass
+            // that sets the charge amount -- see create-payment-intent.js.
           }
         })
       }).then(function(res) { return res.json(); }).then(function(data) {
         if (data.error) throw new Error(data.error);
+        applyServerTotals(data);
         clientSecret = data.clientSecret;
         paymentIntentId = data.paymentIntentId;
       }).catch(function(err) {

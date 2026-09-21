@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
+const rateLimit = require('./_lib/rate-limit');
 
 let _resend = null;
 function getResend() {
@@ -19,6 +20,11 @@ function getResend() {
  * api/create-order.js.
  */
 module.exports = async (req, res) => {
+  // Public and token-addressed: both branches look an agreement up by a
+  // token from the query/body, so without a throttle the token space is
+  // brute-forceable and each attempt is a free function invocation.
+  if (!rateLimit(req, res, { bucket: 'terms', limit: 20, windowMs: 60000 })) return;
+
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY

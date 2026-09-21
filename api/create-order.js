@@ -3,6 +3,7 @@ const { Resend } = require('resend');
 const sendInvoiceHandler = require('./send-invoice.js');
 const { buildUnsubscribeUrl } = require('./product-meta.js');
 const { recordAcknowledgement } = require('./_lib/acknowledgements');
+const rateLimit = require('./_lib/rate-limit');
 
 // Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
 // List-Unsubscribe header (RFC 8058) plus a visible unsubscribe link in
@@ -75,6 +76,13 @@ module.exports = async (req, res) => {
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+
+  // Unauthenticated by necessity (guests check out), and every call does a
+  // service-role insert and can send mail, so it is throttled per IP. The
+  // GET cron path above is deliberately above this line -- it is already
+  // gated on CRON_SECRET and runs once a day from Vercel, not from a
+  // browser, so an IP counter would only risk breaking the sweep.
+  if (!rateLimit(req, res, { bucket: 'order', limit: 15, windowMs: 60000 })) return;
 
   const b = req.body || {};
 

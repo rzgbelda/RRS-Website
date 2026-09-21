@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const requireStaff = require('./_lib/require-staff');
+const rateLimit = require('./_lib/rate-limit');
 
 let Stripe;
 try { Stripe = require('stripe'); } catch (e) { Stripe = null; }
@@ -26,6 +27,11 @@ module.exports = async (req, res) => {
   // open, order ids could be enumerated to harvest payment proof.
   const staff = await requireStaff(req, res);
   if (!staff) return;
+
+  // Authenticated, but a throttle still matters: this sends mail /
+  // writes with the service role, so one compromised or careless
+  // staff session should not be able to burn the whole quota.
+  if (!rateLimit(req, res, { bucket: 'proof', limit: 20, windowMs: 60000 })) return;
 
   const { order_id } = req.body || {};
   if (!order_id) return res.status(400).json({ error: 'order_id is required' });
