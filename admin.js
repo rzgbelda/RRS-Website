@@ -642,6 +642,7 @@ async function renderProductsTable(filter) {
       <td>
         <strong>${escHtml(p.name)}</strong>
         ${p.is_active ? "" : `<span class="a-badge a-badge-gray" style="margin-left:7px" title="Not visible to customers">Hidden</span>`}
+        ${p.is_fast_ship ? `<span class="a-badge a-badge-orange" style="margin-left:7px" title="Shows a fast/free-delivery badge on this product's catalog card (RRS-31)">Fast Ship</span>` : ""}
         ${p.sku ? `<br><small style="color:#aaa">SKU: ${escHtml(p.sku)}</small>` : ""}
       </td>
       <td>${escHtml(p.category_name || "—")}</td>
@@ -1110,6 +1111,7 @@ async function openEditProduct(id) {
   setVal("prodTruckloadQty", p.truckload_qty   || "");
   setChk("prodIsOnSale",   !!p.is_on_sale);
   setChk("prodFeatured",   !!p.is_featured);
+  setChk("prodFastShip",   !!p.is_fast_ship);
   setChk("prodActive",     !!p.is_active);
 
   // A product with a price but no tiers was saved as flat-price -- reopen
@@ -1251,6 +1253,7 @@ async function saveProduct() {
     landed_cost   : parseFloat(document.getElementById("prodLandedCost")?.value)  || null,
     truckload_qty : parseInt(document.getElementById("prodTruckloadQty")?.value)   || null,
     is_featured   : document.getElementById("prodFeatured")?.checked || false,
+    is_fast_ship  : document.getElementById("prodFastShip")?.checked || false,
     is_active     : document.getElementById("prodActive")?.checked ?? true,
     updated_at    : new Date().toISOString(),
   };

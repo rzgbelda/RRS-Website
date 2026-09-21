@@ -2612,6 +2612,14 @@
                 <input type="checkbox" id="prodFeatured" />
                 Featured on Homepage
               </label>
+              <!-- RRS-31: manual per-product flag, not inferred from stock
+                   or category -- check this once a real carrier/vendor
+                   confirmation exists for this specific product. Shows a
+                   badge on its catalog card. -->
+              <label class="a-checkbox-label">
+                <input type="checkbox" id="prodFastShip" />
+                Fast / Free Delivery Badge
+              </label>
             </div>
           </div>
         </div>
@@ -3031,7 +3039,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=91"></script>
+<script src="admin.js?v=92"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

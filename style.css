@@ -2815,6 +2815,30 @@ textarea:focus {
   box-shadow: 0 2px 8px rgba(13,44,80,.3);
 }
 
+/* RRS-31: manually flagged per product in Admin -> Products
+   (products.is_fast_ship) -- never inferred from stock or category.
+   Top-right so it never overlaps .moq-group-badge (top-left); a product
+   could carry both. */
+.fast-ship-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ED7226;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(237,114,38,.35);
+}
+.fast-ship-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+
 /* Live progress toward any Mix & Match group's combined minimum, injected
    by updateMoqGroupBar() (script.js) the moment the cart holds a grouped
    item, on any page -- catalog, product, cart, checkout alike. */

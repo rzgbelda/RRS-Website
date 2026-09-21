@@ -346,6 +346,10 @@ function mapDbProductToLegacyShape(row) {
     // every other optional string field on this object already does.
     moqGroup: row.moq_group || "",
     moqGroupMin: row.moq_group_min != null ? Number(row.moq_group_min) : 0,
+    // Manually set by staff in Admin -> Products (RRS-31). Not inferred
+    // from stock/category -- see the migration comment on
+    // products.is_fast_ship for why this has to stay a human decision.
+    isFastShip: !!row.is_fast_ship,
     weight: row.weight != null ? String(row.weight) : "",
     length: row.length != null ? String(row.length) : "",
     width: row.width != null ? String(row.width) : "",
@@ -818,6 +822,7 @@ function renderSingleCard(product) {
     <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
         ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
+        ${product.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
@@ -913,6 +918,11 @@ function renderVariantCard(variants) {
     moq:           productMoq(vv),
     moqGroup:      vv.moqGroup    || "",
     moqGroupMin:   vv.moqGroupMin || "",
+    // RRS-31: carried per-variant, same as everything else here -- a
+    // family can mix flagged and unflagged SKUs (e.g. one size confirmed
+    // fast-ship, another not yet), so this must follow the selected
+    // variant rather than be read once from variants[0].
+    isFastShip:    !!vv.isFastShip,
   }));
 
   const escapedJson = JSON.stringify(variantsData)
@@ -977,6 +987,7 @@ function renderVariantCard(variants) {
          data-url="/product?item=${encodeURIComponent(v.slug)}"
          data-variants="${escapedJson}">
       <div class="product-image">
+        ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
@@ -1051,6 +1062,20 @@ function applyVariantToCard(card, v) {
 
   const img = card.querySelector(".product-image img");
   if (img) img.src = v.image;
+
+  // RRS-31: follows the selected variant, since a family can mix flagged
+  // and unflagged SKUs. Toggled rather than left from initial render, or
+  // switching to/from a flagged variant would show a stale badge state.
+  const imageWrap = card.querySelector(".product-image");
+  if (imageWrap) {
+    let badge = imageWrap.querySelector(".fast-ship-badge");
+    if (v.isFastShip && !badge) {
+      imageWrap.insertAdjacentHTML("afterbegin",
+        `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>`);
+    } else if (!v.isFastShip && badge) {
+      badge.remove();
+    }
+  }
 
   const descEl = card.querySelector(".product-description");
   if (descEl) descEl.textContent = v.description || "";
