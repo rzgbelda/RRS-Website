@@ -2604,23 +2604,36 @@
             <label>Upload Image <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(optional, overrides URL)</span></label>
             <input type="file" id="prodImageFile" accept="image/*" style="font-size:13px;padding:6px 0;" />
           </div>
-          <div class="a-field" style="display:flex;flex-direction:column;gap:8px;">
+          <div class="a-field">
             <label>Preview <span style="font-size:11px;color:var(--text-muted);font-weight:400;">(main/cover image)</span></label>
-            <div style="display:flex;align-items:center;gap:14px;">
-              <img id="prodImagePreview" src="assets/img/product-placeholder.svg" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;" onerror="this.src='assets/img/product-placeholder.svg'" alt="Preview" loading="lazy">
-              <label class="a-checkbox-label">
-                <input type="checkbox" id="prodFeatured" />
-                Featured on Homepage
-              </label>
-              <!-- RRS-31: manual per-product flag, not inferred from stock
-                   or category -- check this once a real carrier/vendor
-                   confirmation exists for this specific product. Shows a
-                   badge on its catalog card. -->
-              <label class="a-checkbox-label">
-                <input type="checkbox" id="prodFastShip" />
-                Fast / Free Delivery Badge
-              </label>
-            </div>
+            <img id="prodImagePreview" src="assets/img/product-placeholder.svg" style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1.5px solid var(--border);flex-shrink:0;display:block;" onerror="this.src='assets/img/product-placeholder.svg'" alt="Preview" loading="lazy">
+          </div>
+        </div>
+
+        <!-- Own row, same styled-checkbox pattern as Active/Visible above --
+             previously crammed into the image Preview cell next to a 72px
+             thumbnail with no group label, which read as decoration rather
+             than two real per-product settings and made Fast/Free Delivery
+             easy to miss entirely (reported as "missing" when it was really
+             just buried). -->
+        <div class="a-form-col-2">
+          <div class="a-field a-field-checkbox">
+            <label>Homepage</label>
+            <label class="a-checkbox-label">
+              <input type="checkbox" id="prodFeatured" />
+              Featured on Homepage
+            </label>
+          </div>
+          <!-- RRS-31: manual per-product flag, not inferred from stock or
+               category -- check this once a real carrier/vendor
+               confirmation exists for this specific product. Shows a
+               badge on its catalog card. -->
+          <div class="a-field a-field-checkbox">
+            <label>Delivery</label>
+            <label class="a-checkbox-label">
+              <input type="checkbox" id="prodFastShip" />
+              Fast / Free Delivery Badge
+            </label>
           </div>
         </div>
 
