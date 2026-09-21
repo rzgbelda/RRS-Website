@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260921b" />
+  <link rel="stylesheet" href="style.css?v=20260922a" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -187,6 +187,11 @@
           <span>Buying guide: <span class="product-guide-title"></span></span>
         </a>
 
+        <!-- Tiers are per item, not per cart: 30 cases OF THIS PRODUCT
+             earns the best rate, and a mixed cart totalling 30 cases does
+             not. The heading says so once, above the cards, so each card
+             doesn't have to repeat it. -->
+        <p class="tier-cards-head">Price per case &mdash; drops as you order more <strong>of this item</strong></p>
         <div class="pricing-tier-cards">
 
   <div class="tier-card">
@@ -252,17 +257,55 @@
             <button id="plusQty">+</button>
           </div>
           <p id="moqNote" style="display:none;margin-top:8px;font-size:13px;font-weight:700;color:#ED7226"></p>
-          <div style="display:none">
+
+          <!-- Live line total for the quantity actually chosen. The tier
+               cards above show the rate at each break; this shows what
+               THIS order costs, which is the number a buyer is actually
+               deciding on. Updated by updateProductPagePrice(). -->
+          <div class="pp-linetotal" id="ppLineTotal" style="display:none">
+            <span class="pp-lt-label">Your price</span>
+            <span class="pp-lt-rate" id="ppLineRate"></span>
+            <strong class="pp-lt-total" id="ppLineTotalValue"></strong>
+          </div>
+
+          <!-- Purchase mode. Replaces two disconnected buttons ("Add to
+               Cart" / "Add to Reorder Program") that gave no hint the
+               second one was cheaper. Choosing a mode first, then one
+               Add button, mirrors how buyers actually decide and makes
+               the 5% reorder saving visible before the click. -->
+          <div class="pp-modes" role="radiogroup" aria-label="Purchase type">
+            <button type="button" class="pp-mode is-active" id="ppModeOnce"
+                    role="radio" aria-checked="true" data-mode="once">
+              <span class="pp-mode-title">One-Time Purchase</span>
+              <span class="pp-mode-price" id="ppModeOncePrice">&mdash;</span>
+            </button>
+            <button type="button" class="pp-mode pp-mode--save" id="ppModeReorder"
+                    role="radio" aria-checked="false" data-mode="reorder">
+              <span class="pp-mode-flag">Save 5%</span>
+              <span class="pp-mode-title">Reorder &amp; Save</span>
+              <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+            </button>
+          </div>
+
+          <!-- Only meaningful once Reorder is chosen, so it stays hidden
+               until then rather than asking for a frequency the customer
+               may not need. -->
+          <div class="pp-freq" id="ppFreq" style="display:none">
+            <label for="ppFreqSelect">Deliver every</label>
+            <select id="ppFreqSelect">
+              <option value="Weekly">Week</option>
+              <option value="Every 2 Weeks">2 weeks</option>
+              <option value="Monthly" selected>Month</option>
+              <option value="Every 2 Months">2 months</option>
+              <option value="Every 3 Months">3 months</option>
+            </select>
+            <p class="pp-freq-note">Approve every order before it ships. Cancel or change anytime.</p>
           </div>
 
           <button class="add-btn" id="productAddToCart">
   <img width="48" height="48" src="assets/img/Cart.png" alt="">
-  ADD TO CART
+  <span id="ppAddLabel">ADD TO CART</span>
 </button>
-
-          <button class="reorder-program-btn">
-            Add to Reorder Program
-          </button>
         </div>
 
         <div class="delivery-info">
@@ -281,9 +324,15 @@
         </div>
 
         <ul class="product-assurance">
-          <li>Volume pricing applies automatically &mdash; the price drops as your case count grows</li>
-          <li>Serving 500+ hospitality and facility businesses</li>
-          <li>Ordering 50 cases or more? <a href="/quote">Contact us</a> for additional volume pricing</li>
+          <!-- "as your case count grows" was ambiguous in a way that cost
+               trust: volume tiers are PER ITEM (30 cases of this product),
+               not per cart, so a mixed cart reaching 30 cases total gets
+               no discount. Said plainly here. The "500+ businesses" line
+               that used to sit in this list was removed -- same fabricated
+               figure already deleted from the homepage. -->
+          <li>Volume pricing applies automatically &mdash; the price drops as you order more <strong>of this item</strong></li>
+          <li>Reorder &amp; Save takes <strong>5% off</strong> your whole order, on top of volume pricing</li>
+          <li>Ordering 50 or more of this item? <a href="/quote">Contact us</a> for additional volume pricing</li>
         </ul>
 
       </aside>
@@ -348,7 +397,7 @@
 
   </section>
 
-  <script src="script.js?v=20260921d"></script>
+  <script src="script.js?v=20260922a"></script>
 
 </body>
 <!-- -- Floating Catalog QR Widget ----------------------------- -->

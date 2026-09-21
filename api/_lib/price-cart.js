@@ -65,6 +65,16 @@ async function priceCart(items, state) {
     return { ok: false, error: 'Too many line items.' };
   }
 
+  // Whether this order is on the Reorder Program, decided HERE from the
+  // schedule on each line rather than from any client-sent discount flag
+  // or amount -- same reason the totals are recomputed at all. A line is
+  // recurring when it carries a real frequency; "Once" (or nothing) is a
+  // one-time buy. Mirrors isReorderLine() in script.js.
+  const hasReorder = items.some(raw => {
+    const r = String(raw && raw.reorder || '').trim().toLowerCase();
+    return !!r && r !== 'once';
+  });
+
   // Collapse duplicate SKUs before pricing: two lines of 3 must be priced
   // as one line of 6 (and get the 6-29 tier), which is also how the cart
   // itself stores them.
@@ -118,10 +128,35 @@ async function priceCart(items, state) {
   // Rounded to cents at each step the same way the browser summary does,
   // so the figure the customer saw and the figure charged agree.
   subtotal = Math.round(subtotal * 100) / 100;
-  const tax = Math.round(subtotal * getTaxRate(state) * 100) / 100;
-  const total = Math.round((subtotal + tax) * 100) / 100;
 
-  return { ok: true, amountCents: Math.round(total * 100), subtotal, tax, total, lines };
+  // Reorder Program: 5% off the merchandise subtotal, stacking on top of
+  // the per-item volume tiers already applied above. Must stay in step
+  // with REORDER_DISCOUNT_RATE in script.js -- that file is a plain
+  // browser script with no exports, so the rate cannot be shared by
+  // reference, and if the two disagree the customer is shown one number
+  // and charged another.
+  const REORDER_DISCOUNT_RATE = 0.05;
+  const discount = hasReorder
+    ? Math.round(subtotal * REORDER_DISCOUNT_RATE * 100) / 100
+    : 0;
+  const discountedSubtotal = Math.round((subtotal - discount) * 100) / 100;
+
+  // Tax follows the discounted subtotal -- taxing the pre-discount figure
+  // would charge sales tax on money the customer never paid.
+  const tax = Math.round(discountedSubtotal * getTaxRate(state) * 100) / 100;
+  const total = Math.round((discountedSubtotal + tax) * 100) / 100;
+
+  return {
+    ok: true,
+    amountCents: Math.round(total * 100),
+    subtotal,
+    discount,
+    hasReorder,
+    discountedSubtotal,
+    tax,
+    total,
+    lines,
+  };
 }
 
 module.exports = priceCart;

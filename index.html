@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260921b" />
+  <link rel="stylesheet" href="style.css?v=20260922a" />
 </head>
 
 <body>
@@ -609,7 +609,11 @@
     <div>
       <span class="hc-eyebrow">Volume Pricing</span>
       <h2>The more you order, the less you pay.</h2>
-      <p>Volume pricing is automatic &mdash; no quotes, no waiting. 6+ cases drops the price, 30+ cases drops it more, and 50+ cases unlocks our best price. It applies right in your cart.</p>
+      <!-- "It applies right in your cart" read as cart-wide, but the tiers
+           are PER ITEM -- a mixed cart reaching 30 cases total gets no
+           discount, which is exactly the surprise this page shouldn't
+           create. Says "of the same item" now. -->
+      <p>Volume pricing is automatic &mdash; no quotes, no waiting. Order 6+ cases of the same item and the price drops, 30+ drops it more, and 50+ unlocks our best price. It applies automatically in your cart.</p>
     </div>
     <a href="/catalog" class="hc-btn hc-btn--ghost">
       Buy Now
@@ -1063,7 +1067,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260921d"></script>
+<script src="script.js?v=20260922a"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">

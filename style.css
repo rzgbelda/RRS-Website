@@ -4794,6 +4794,112 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
+/* ── Product page buy box: line total + purchase modes ──────────────
+   The tier cards above the buy box show the RATE at each break; these
+   show what the chosen quantity actually costs, and what the same order
+   would cost on the Reorder Program. Two prices side by side is the
+   whole point -- the 5% saving has to be visible before the click, not
+   hidden behind a second button. */
+.pp-linetotal {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  padding: 11px 13px;
+  background: #f6f9fc;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 10px;
+}
+.pp-lt-label { font-size: 12px; font-weight: 700; color: #5B6C7E; letter-spacing: .02em; }
+.pp-lt-rate  { font-size: 12px; color: #8494a8; margin-left: auto; }
+.pp-lt-total { font-size: 20px; font-weight: 800; color: #0B1F38; width: 100%; text-align: right; }
+
+.pp-modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+.pp-mode {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 12px 13px;
+  background: #fff;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.pp-mode:hover { border-color: #c9d4e4; }
+.pp-mode.is-active {
+  border-color: #ED7226;
+  background: #fffaf6;
+  box-shadow: 0 0 0 3px rgba(237,114,38,.13);
+}
+.pp-mode-title { font-size: 12.5px; font-weight: 700; color: #0B1F38; line-height: 1.3; }
+.pp-mode-price { font-size: 16px; font-weight: 800; color: #0B1F38; }
+.pp-mode--save.is-active .pp-mode-price { color: #ED7226; }
+.pp-mode-flag {
+  position: absolute;
+  top: -9px;
+  right: 10px;
+  background: #15803d;
+  color: #fff;
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 5px;
+}
+
+.pp-freq {
+  margin-top: 12px;
+  padding: 12px 13px;
+  background: #f6f9fc;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 10px;
+}
+.pp-freq label { display: block; font-size: 12px; font-weight: 700; color: #5B6C7E; margin-bottom: 6px; }
+.pp-freq select {
+  width: 100%;
+  height: 40px;
+  padding: 0 11px;
+  border: 1.5px solid #d7dfea;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: #0B1F38;
+}
+.pp-freq-note { margin: 8px 0 0; font-size: 11.5px; line-height: 1.5; color: #8494a8; }
+
+/* Heading above the tier cards. Volume tiers are per item, and saying so
+   once here is clearer than repeating it on all three cards. */
+.tier-cards-head {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #5B6C7E;
+}
+.tier-cards-head strong { color: #0B1F38; font-weight: 800; }
+
+/* Cart summary discount row. Green so a saving reads as a saving, and
+   matched to the existing .summary-row rhythm. */
+.cart-discount-row { color: #15803d; }
+.cart-discount-row strong { color: #15803d; }
+
+@media (max-width: 480px) {
+  .pp-modes { grid-template-columns: 1fr; }
+}
+
 .delivery-info div {
   margin-bottom: 22px;
 }

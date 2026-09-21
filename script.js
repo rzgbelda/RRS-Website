@@ -675,6 +675,39 @@ function cartMoqGroupShortfalls(cart) {
 // on it. See bulkVolumeNote() for the message.
 const BULK_VOLUME_MIN_CASES = 50;
 
+// Reorder Program discount: 5% off the whole order when the customer sets
+// up a recurring schedule. Stacks on top of the per-item volume tiers --
+// tiers set the per-case rate, this comes off the resulting subtotal.
+//
+// Duplicated (not shared by import -- this file is a plain browser script)
+// in api/_lib/price-cart.js, which is what actually charges the card. If
+// the rate changes it MUST change in both, or the customer is shown one
+// number and charged another.
+const REORDER_DISCOUNT_RATE = 0.05;
+const REORDER_DISCOUNT_LABEL = "5%";
+
+// A cart line counts toward the reorder discount when it carries a real
+// recurring schedule. "Once" (and an absent value) is a one-time buy.
+function isReorderLine(item) {
+  const r = String(item && item.reorder || "").trim().toLowerCase();
+  return !!r && r !== "once";
+}
+
+// True when ANY line in the cart is on a reorder schedule. The discount is
+// described to customers as "5% off your order", so it applies to the
+// whole subtotal rather than only the recurring lines -- matching the copy
+// on the product page and in the cart.
+function cartHasReorder(cart) {
+  return (cart || []).some(isReorderLine);
+}
+
+// The discount in dollars for a given subtotal, rounded to cents so every
+// surface that displays it agrees to the penny.
+function reorderDiscountAmount(subtotal, cart) {
+  if (!cartHasReorder(cart)) return 0;
+  return Math.round(Number(subtotal) * REORDER_DISCOUNT_RATE * 100) / 100;
+}
+
 // True when a line qualifies for the negotiated 50+ discount. Dozen-sold
 // products are excluded for the same reason they skip the case tiers
 // below: their quantity counts dozens, not cases, so 50 of them is not
@@ -2160,6 +2193,13 @@ function setupAddToCartButtons() {
         quantity: quantity
       };
 
+      // Reorder schedule, when the product page's Reorder mode is chosen.
+      // Only the product page offers it (a catalog tile has no frequency
+      // picker), so anywhere else this is absent and the line is one-time.
+      if (button.dataset.purchaseMode === "reorder") {
+        product.reorder = document.getElementById("ppFreqSelect")?.value || "Monthly";
+      }
+
       if (!product.name) return;
 
       let cart = getCart();
@@ -2174,6 +2214,9 @@ function setupAddToCartButtons() {
         existingProduct.price1 = product.price1;
         existingProduct.price2 = product.price2;
         existingProduct.price3 = product.price3;
+        // Choosing Reorder on a product already in the cart upgrades that
+        // line rather than silently leaving it one-time.
+        if (product.reorder) existingProduct.reorder = product.reorder;
       } else {
         cart.push(product);
       }
@@ -2413,36 +2456,17 @@ function setupProductQuantity() {
   if (qtyValue.dataset.wired === "1") return;
   qtyValue.dataset.wired = "1";
 
-  // Wire up "Add to Reorder Program" button on product page
-  const reorderBtn = document.querySelector(".reorder-program-btn");
-  if (reorderBtn) {
-    reorderBtn.onclick = e => {
+  // The separate "Add to Reorder Program" button is gone -- reorder is now
+  // a mode chosen above the single Add button (see setPurchaseMode), so
+  // the saving is visible before the click instead of hidden behind a
+  // second button that gave no hint it was cheaper. This listener stays
+  // only to catch any cached markup still rendering the old button.
+  const legacyReorderBtn = document.querySelector(".reorder-program-btn");
+  if (legacyReorderBtn) {
+    legacyReorderBtn.onclick = e => {
       e.preventDefault();
-      const qty = Math.max(1, parseInt(qtyValue.value) || 1);
-      const product = {
-        itemNumber: addBtn.dataset.item || "",
-        name:        addBtn.dataset.name || "",
-        description: addBtn.dataset.description || "",
-        price:       cleanPrice(addBtn.dataset.price),
-        price1:      cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
-        price2:      cleanPrice(addBtn.dataset.price2) || cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
-        price3:      cleanPrice(addBtn.dataset.price3) || cleanPrice(addBtn.dataset.price2) || cleanPrice(addBtn.dataset.price1) || cleanPrice(addBtn.dataset.price),
-        image:       addBtn.dataset.image || "",
-        quantity:    qty,
-        reorder:     "Monthly",
-      };
-      if (!product.name) return;
-      let cart = getCart();
-      const existing = cart.find(i => i.itemNumber === product.itemNumber);
-      if (existing) {
-        existing.quantity += qty;
-        existing.reorder = existing.reorder || "Monthly";
-      } else {
-        cart.push(product);
-      }
-      saveCart(cart);
-      updateCartBadge();
-      window.location.href = "/cart";
+      setPurchaseMode("reorder");
+      addBtn.click();
     };
   }
 
@@ -2466,8 +2490,60 @@ function setupProductQuantity() {
     // Stays a per-unit rate: the figure is labelled "Per Case" / "Per
     // Dozen" beneath it, so multiplying by quantity here would contradict
     // its own caption.
-    productPriceEl.textContent = `$${getTierPrice(item).toFixed(2)}`;
+    const rate = getTierPrice(item);
+    productPriceEl.textContent = `$${rate.toFixed(2)}`;
+
+    // Line total for the chosen quantity, plus both purchase-mode prices.
+    // The tier cards show the rate at each break; these show what this
+    // specific order costs, which is what the buyer is deciding on.
+    const lineTotal = rate * qty;
+    const unitLabel = (addBtn.dataset.unit || "Case");
+    const ltWrap  = document.getElementById("ppLineTotal");
+    const ltRate  = document.getElementById("ppLineRate");
+    const ltValue = document.getElementById("ppLineTotalValue");
+    if (ltWrap && ltValue) {
+      if (rate > 0) {
+        if (ltRate) ltRate.textContent = `${qty} × $${rate.toFixed(2)}/${unitLabel.toLowerCase()}`;
+        ltValue.textContent = `$${lineTotal.toFixed(2)}`;
+        ltWrap.style.display = "";
+      } else {
+        ltWrap.style.display = "none";
+      }
+    }
+
+    const oncePriceEl    = document.getElementById("ppModeOncePrice");
+    const reorderPriceEl = document.getElementById("ppModeReorderPrice");
+    if (oncePriceEl)    oncePriceEl.textContent = rate > 0 ? `$${lineTotal.toFixed(2)}` : "—";
+    if (reorderPriceEl) {
+      reorderPriceEl.textContent = rate > 0
+        ? `$${(lineTotal * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)}`
+        : "—";
+    }
   }
+
+  // Purchase mode: one-time vs reorder. Kept on the button element itself
+  // so the add-to-cart handler below reads it without another global.
+  const modeOnce    = document.getElementById("ppModeOnce");
+  const modeReorder = document.getElementById("ppModeReorder");
+  const freqWrap    = document.getElementById("ppFreq");
+  const addLabel    = document.getElementById("ppAddLabel");
+
+  function setPurchaseMode(mode) {
+    const reorder = mode === "reorder";
+    addBtn.dataset.purchaseMode = reorder ? "reorder" : "once";
+    [modeOnce, modeReorder].forEach(b => {
+      if (!b) return;
+      const active = b.dataset.mode === mode;
+      b.classList.toggle("is-active", active);
+      b.setAttribute("aria-checked", active ? "true" : "false");
+    });
+    if (freqWrap) freqWrap.style.display = reorder ? "" : "none";
+    if (addLabel) addLabel.textContent = reorder ? "START REORDER — SAVE 5%" : "ADD TO CART";
+  }
+
+  if (modeOnce)    modeOnce.onclick    = () => setPurchaseMode("once");
+  if (modeReorder) modeReorder.onclick = () => setPurchaseMode("reorder");
+  setPurchaseMode("once");
 
   plusQty.onclick = () => {
     qtyValue.value = getQty() + stepSize();
@@ -2588,7 +2664,29 @@ function loadCartPage() {
   enforceCartMinimums(cart);
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  estimatedTotalEl.textContent = `$${subtotal.toFixed(2)}`;
+
+  // Reorder Program discount. Shown as its own row so the saving is
+  // visible rather than buried in a total that silently differs from the
+  // subtotal. Injected next to the existing summary rows rather than
+  // hardcoded into cart.html, because it only exists for some carts.
+  const discount = reorderDiscountAmount(subtotal, cart);
+  let discountRow = document.getElementById("cartReorderDiscountRow");
+  if (discount > 0) {
+    if (!discountRow) {
+      discountRow = document.createElement("div");
+      discountRow.id = "cartReorderDiscountRow";
+      discountRow.className = "summary-row cart-discount-row";
+      estimatedTotalEl.closest(".summary-row, .summary-total")?.before(discountRow);
+    }
+    discountRow.innerHTML =
+      `<span>Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})</span>` +
+      `<strong>&minus;$${discount.toFixed(2)}</strong>`;
+    discountRow.style.display = "";
+  } else if (discountRow) {
+    discountRow.style.display = "none";
+  }
+
+  estimatedTotalEl.textContent = `$${(subtotal - discount).toFixed(2)}`;
 
   setupCartButtons();
   setupReorderDropdowns();
@@ -2855,17 +2953,48 @@ function loadCheckoutProducts() {
     }).join("");
   }
 
+  // Reorder Program discount. Honours the page-level "One-time purchase"
+  // toggle: picking that forces every line to Once, so the discount has
+  // to disappear with it rather than reading stale per-line schedules.
+  const effectiveCart = checkoutOrderType === "one-time"
+    ? cart.map(i => ({ ...i, reorder: "Once" }))
+    : cart;
+  const discount = reorderDiscountAmount(subtotal, effectiveCart);
+  const discountedSubtotal = Math.round((subtotal - discount) * 100) / 100;
+
+  // Tax follows the discounted subtotal, matching api/_lib/price-cart.js --
+  // taxing the pre-discount figure would charge tax on money never paid.
   const checkoutState = document.getElementById('checkout-state')?.value || '';
   const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
-  const tax = subtotal * taxRate;
+  const tax = discountedSubtotal * taxRate;
   const taxEl = document.getElementById('summary-tax');
   if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
   const taxRateEl = document.getElementById('summary-tax-rate');
   if (taxRateEl) taxRateEl.textContent = checkoutState ? ` (${checkoutState} · ${(taxRate * 100).toFixed(2)}%)` : '';
 
+  // Injected next to the existing subtotal row rather than hardcoded in
+  // checkout.html, since it only exists for reorder carts.
+  let coDiscountRow = document.getElementById("checkoutReorderDiscountRow");
+  if (discount > 0) {
+    if (!coDiscountRow && subtotalEl) {
+      coDiscountRow = document.createElement("div");
+      coDiscountRow.id = "checkoutReorderDiscountRow";
+      coDiscountRow.className = "summary-row cart-discount-row";
+      subtotalEl.closest(".summary-row, div")?.after(coDiscountRow);
+    }
+    if (coDiscountRow) {
+      coDiscountRow.innerHTML =
+        `<span>Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})</span>` +
+        `<strong>&minus;$${discount.toFixed(2)}</strong>`;
+      coDiscountRow.style.display = "";
+    }
+  } else if (coDiscountRow) {
+    coDiscountRow.style.display = "none";
+  }
+
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${(subtotal + tax).toFixed(2)}`;
+  if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax).toFixed(2)}`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
   // Recalculate tax live as the customer picks/changes their state. Bound
@@ -2893,6 +3022,13 @@ function setupCheckoutOrderTypeToggle() {
       checkoutOrderType = "reorder";
       if (reorderSection) reorderSection.style.display = "block";
     }
+
+    // Persisted because payment.html re-prices the cart server-side from
+    // localStorage and has no other way to know this toggle was set.
+    // Without it, choosing "One-time purchase" here (no discount shown)
+    // would still get the 5% applied on the next page -- the displayed
+    // and charged totals would disagree across a page boundary.
+    try { localStorage.setItem("rrs_order_type", checkoutOrderType); } catch {}
 
     loadCheckoutProducts();
   }
@@ -4670,11 +4806,17 @@ function updateMiniCart() {
   const units = cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
   const subtotal = cart.reduce((s, i) => s + getTierPrice(i) * (Number(i.quantity) || 0), 0);
 
-  // Case count drives the volume messaging, so dozen-sold lines are left
-  // out of it -- their quantity counts dozens, and mixing the two would
-  // push a customer over "50 cases" who has not ordered 50 cases.
-  const caseUnits = cart.reduce(
-    (n, i) => n + (isSoldByDozen(i) ? 0 : (Number(i.quantity) || 0)), 0);
+  // Volume tiers are PER ITEM, so the messaging below has to be about the
+  // single biggest line, never the cart total. It previously summed every
+  // case in the cart and then said "Add 4 more cases to reach 30+ case
+  // pricing" -- which was simply false: adding 4 cases of a different
+  // product moves no line into tier 3, and the promised price never
+  // arrived. Dozen-sold lines are excluded because their quantity counts
+  // dozens and they don't use the case tiers at all.
+  const caseLines = cart.filter(i => !isSoldByDozen(i));
+  const topLine = caseLines.reduce(
+    (best, i) => ((Number(i.quantity) || 0) > (Number(best && best.quantity) || 0) ? i : best), null);
+  const topLineQty = Number(topLine && topLine.quantity) || 0;
 
   // Free-shipping progress, keyed on the dollar subtotal rather than the
   // case count the tier note below uses -- the two thresholds are
@@ -4693,19 +4835,38 @@ function updateMiniCart() {
          Add <strong>$${(FREE_SHIPPING_MIN - subtotal).toFixed(2)}</strong> more for free shipping.
        </p>`;
 
+  // Named after the specific product it's talking about, so "add 4 more"
+  // is an instruction the customer can actually act on and that actually
+  // produces the promised price.
   let tierNote = "";
-  if (caseUnits >= BULK_VOLUME_MIN_CASES) {
+  if (topLineQty >= BULK_VOLUME_MIN_CASES) {
     tierNote = `<a class="mc-tier mc-tier-bulk" href="/quote">
-        <strong>${caseUnits} cases &mdash; you qualify for extra pricing</strong>
+        <strong>${topLineQty} cases of one item &mdash; you qualify for extra pricing</strong>
         <span>Send us your list for even better pricing &rsaquo;</span>
       </a>`;
-  } else if (caseUnits > 0) {
-    const toNext = caseUnits < 6 ? 6 - caseUnits : (caseUnits < 30 ? 30 - caseUnits : BULK_VOLUME_MIN_CASES - caseUnits);
-    const nextLabel = caseUnits < 6 ? "6+ case pricing" : (caseUnits < 30 ? "30+ case pricing" : "extra 50+ case pricing");
+  } else if (topLineQty > 0) {
+    const toNext = topLineQty < 6 ? 6 - topLineQty
+                 : (topLineQty < 30 ? 30 - topLineQty : BULK_VOLUME_MIN_CASES - topLineQty);
+    const nextLabel = topLineQty < 6 ? "6+ case pricing"
+                    : (topLineQty < 30 ? "30+ case pricing" : "extra 50+ case pricing");
+    const shortName = escapeMiniCart((topLine.name || "this item").split(",")[0]).slice(0, 38);
     tierNote = `<p class="mc-tier">
-        Add <strong>${toNext} more case${toNext === 1 ? "" : "s"}</strong> to reach ${nextLabel}.
+        Add <strong>${toNext} more case${toNext === 1 ? "" : "s"}</strong> of
+        <strong>${shortName}</strong> to reach ${nextLabel}.
       </p>`;
   }
+
+  // Reorder saving, when any line is on a schedule -- the mini-cart shows
+  // a running total, so it must reflect the same discount the cart and
+  // checkout apply or the number changes on the next page for no visible
+  // reason.
+  const mcDiscount = reorderDiscountAmount(subtotal, cart);
+  const reorderNote = mcDiscount > 0
+    ? `<p class="mc-tier mc-tier-ship">
+         <strong>Reorder Program &minus;${REORDER_DISCOUNT_LABEL}</strong>
+         <span>&minus;$${mcDiscount.toFixed(2)} applied at checkout</span>
+       </p>`
+    : "";
 
   const rows = cart.map(i => {
     const qty = Number(i.quantity) || 0;
@@ -4746,13 +4907,14 @@ function updateMiniCart() {
       <span class="mc-head-title">Your order
         <span class="mc-head-count">${units}</span>
       </span>
-      <span class="mc-head-total">$${subtotal.toFixed(2)}</span>
+      <span class="mc-head-total">$${(subtotal - mcDiscount).toFixed(2)}</span>
       <svg class="mc-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
            aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </button>
     <div class="mc-body">
       <ul class="mc-list">${rows}</ul>
+      ${reorderNote}
       ${freeShipNote}
       ${tierNote}
       <div class="mc-actions">

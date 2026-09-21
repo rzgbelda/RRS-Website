@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260921b" />
+  <link rel="stylesheet" href="style.css?v=20260922a" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -224,6 +224,13 @@
             <strong id="payment-subtotal">$0.00</strong>
           </div>
 
+          <!-- Shown only when the server confirms the order is on the
+               Reorder Program. Hidden by default so it never implies a
+               discount the charge won't include. -->
+          <div class="payment-summary-line" id="payment-discount-line" style="display:none;color:#15803d">
+            <span>Reorder Program (&minus;5%)</span>
+            <strong id="payment-discount">&minus;$0.00</strong>
+          </div>
 
           <div class="payment-summary-line">
             <span>Tax<span id="payment-tax-rate"></span></span>
@@ -296,7 +303,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260921d"></script>
+  <script src="script.js?v=20260922a"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -649,8 +656,21 @@
     // from the products table so the browser cannot name its own price.
     function cartLineItems() {
       var cart = JSON.parse(localStorage.getItem('cart') || '[]');
+      // Checkout's "One-time purchase" toggle overrides every line's own
+      // schedule. It's persisted as rrs_order_type so this page prices
+      // the same order checkout just showed -- otherwise picking one-time
+      // there (no discount) would still get 5% off here.
+      var oneTime = false;
+      try { oneTime = localStorage.getItem('rrs_order_type') === 'one-time'; } catch (e) {}
       return cart.map(function (i) {
-        return { sku: i.itemNumber || '', quantity: parseInt(i.quantity) || 1 };
+        // reorder is the schedule ("Monthly", "Once", ...). The server
+        // decides the 5% Reorder Program discount from these, rather than
+        // trusting any discount figure this page might send.
+        return {
+          sku: i.itemNumber || '',
+          quantity: parseInt(i.quantity) || 1,
+          reorder: oneTime ? 'Once' : (i.reorder || '')
+        };
       }).filter(function (i) { return i.sku; });
     }
 
@@ -668,6 +688,21 @@
       if (sub) sub.textContent = '$' + Number(data.subtotal).toFixed(2);
       if (tax) tax.textContent = '$' + Number(data.tax).toFixed(2);
       if (tot) tot.textContent = '$' + Number(data.total).toFixed(2);
+
+      // Reorder Program discount, straight from the server's own pricing
+      // pass -- never computed here, so what's displayed can't drift from
+      // what's charged.
+      var discLine = document.getElementById('payment-discount-line');
+      var discEl = document.getElementById('payment-discount');
+      var disc = Number(data.discount) || 0;
+      if (discLine && discEl) {
+        if (disc > 0) {
+          discEl.textContent = '−$' + disc.toFixed(2);
+          discLine.style.display = '';
+        } else {
+          discLine.style.display = 'none';
+        }
+      }
     }
 
     function initPaymentIntent() {
