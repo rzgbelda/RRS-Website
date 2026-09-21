@@ -4457,14 +4457,27 @@ function fillCategoryTiles() {
     // padded onto a white square, so they sit in the tile frame cleanly.
     // Anything else (e.g. a supplier's own crop) is a fallback.
     const withImg = list.filter(p => p.image);
-    if (!withImg.length) return;
-    const preferred = withImg.find(p => /res\.cloudinary\.com/.test(p.image)) || withImg[0];
 
+    // A category can be entirely real (list.length > 0) but have no
+    // product with a photo uploaded yet -- some Bed Sheets & Linens,
+    // Guest Amenities, Gloves & PPE, and Pillows & Protectors rows have
+    // no image_url set in Supabase. Previously this `return`ed here and
+    // left the tile's placeholder <img> with no src at all, which read
+    // as a broken/loading image forever rather than a deliberate
+    // placeholder. Falling through to the placeholder icon at least
+    // looks intentional; the real fix is uploading photos for those
+    // products in Admin -> Products.
     const img = tile.querySelector('.hc-cat-img img');
     if (img) {
-      // Same square-crop normalisation the product cards use, at tile size.
-      img.src = hcSquareImage(preferred.image, 240);
-      img.alt = (preferred.category || slug) + ' products';
+      if (withImg.length) {
+        const preferred = withImg.find(p => /res\.cloudinary\.com/.test(p.image)) || withImg[0];
+        // Same square-crop normalisation the product cards use, at tile size.
+        img.src = hcSquareImage(preferred.image, 240);
+        img.alt = (preferred.category || slug) + ' products';
+      } else {
+        img.src = '/assets/img/product-placeholder.svg';
+        img.alt = (list[0].category || slug) + ' products';
+      }
       img.onerror = function () { this.src = '/assets/img/product-placeholder.svg'; };
     }
 
@@ -4472,7 +4485,11 @@ function fillCategoryTiles() {
     if (h3 && !tile.querySelector('.hc-cat-count')) {
       const count = document.createElement('span');
       count.className = 'hc-cat-count';
-      count.textContent = withImg.length + (withImg.length === 1 ? ' product' : ' products');
+      // Total products in the category, not just the ones with a photo --
+      // the old count (withImg.length) understated real inventory for any
+      // category missing photos, which is the opposite of reassuring on a
+      // page meant to show what's in stock.
+      count.textContent = list.length + (list.length === 1 ? ' product' : ' products');
       h3.insertAdjacentElement('afterend', count);
     }
   });
