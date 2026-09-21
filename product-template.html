@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922e" />
+  <link rel="stylesheet" href="style.css?v=20260922f" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -251,10 +251,11 @@
              setPurchaseMode()/the add-to-cart handler find it. -->
         <div class="pp-purchase-panel">
 
-          <div class="rrs-brandmark" aria-hidden="true">
-            <span class="rrs-brandmark-icon">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-            </span>
+          <div class="rrs-brandmark">
+            <img class="rrs-brandmark-icon" alt=""
+                 src="assets/brand/reorder-badge-88.png"
+                 srcset="assets/brand/reorder-badge-88.png 1x, assets/brand/reorder-badge-176.png 2x"
+                 width="40" height="40" loading="lazy">
             <span class="rrs-brandmark-text">Supply <span class="rrs-shine">Smarter.</span> Stay <span class="rrs-shine">Ready.</span></span>
           </div>
 

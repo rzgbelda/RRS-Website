@@ -4820,14 +4820,16 @@ span.flatpickr-weekday {
   background: #fff;
   border: 1.5px solid #e4e9f2;
   border-radius: 14px;
-  /* The card itself stays full width for visual rhythm with the
-     Overview/Specifications/Key Features cards below, but its content
-     does not -- a two-card purchase decision stretched across the
-     middle column's full ~1fr width (the widest, most flexible column
-     on the page) is what actually read as "messed up": thin cards with
-     dead air inside them, not a real layout. Capping the inner content
-     keeps it a compact, natural size regardless of how wide its parent
-     column ends up on a given viewport. */
+  /* The CARD shrinks to fit its content now, not just the content inside
+     it -- capping only the inner width (the previous attempt) still left
+     the card's own border/background stretched to the full middle-column
+     width, which meant a big empty white region to the right of the
+     content but still inside the card. That empty region, not
+     misalignment, was the actual "not a smart layout" problem: a card
+     that visibly doesn't fit what's inside it. width:fit-content plus a
+     max-width keeps the card exactly as wide as its content demands, up
+     to a sane ceiling, and left-aligned by default as a block element. */
+  width: fit-content;
   max-width: 460px;
 }
 
@@ -4843,16 +4845,19 @@ span.flatpickr-weekday {
   gap: 8px;
   margin-bottom: 16px;
 }
+/* Real logo (assets/brand/Reorder Logo.png), not the generic reorder-
+   arrows glyph the placeholder used. Sized up from the placeholder's
+   26px so the badge's ring text stays legible rather than shrinking to
+   an illegible dot -- served pre-resized to 88px/176px (~10KB/~34KB;
+   the 1254px source is 1.08MB, too heavy to ship on every product page
+   load) with a 2x srcset for retina. No background circle: the source
+   image already has its own white background and ring artwork, so a
+   colored circle behind it would show through as an odd border. */
 .rrs-brandmark-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #fff4ec;
-  color: #ED7226;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
+  object-fit: contain;
 }
 .rrs-brandmark-text {
   font-size: 14px;
