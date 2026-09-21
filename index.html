@@ -88,22 +88,17 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260919i" />
+  <link rel="stylesheet" href="style.css?v=20260921a" />
 </head>
 
 <body>
 
-  <!-- Free-shipping announcement bar. Restored 2026-09-19 now that the
-       offer is back and real at checkout ($3,000+ merchandise subtotal --
-       see FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js). Must always
-       state the threshold, never claim "every order" or "no minimum" --
-       that was true of an earlier version of this offer and is not true
-       now; the whole site was swept for that exact mismatch once already. -->
-  <div class="an-ship">
-    <span class="an-pill">Free Shipping</span>
-    <span>Orders of <strong>$3,000 or more</strong> ship free &mdash; no promo code needed.</span>
-    <a href="/catalog" class="an-hide-sm">Shop the catalog &rarr;</a>
-  </div>
+  <!-- No top promo banner, per the 2026-09-21 homepage rework (RRS-29):
+       "NO top promo banner — remove it entirely with no replacement."
+       The $3,000 free-shipping threshold is still real at checkout (see
+       FREE_SHIPPING_MIN_SUBTOTAL in warp-freight.js) and still stated in
+       the closing CTA band lower on this page -- only this top banner
+       instance was removed. -->
 
   <div class="top-bar">
     <p>Rooms ready. Supplies handled. Reorder made easy.</p>
@@ -120,7 +115,7 @@
 
     <nav class="nav-links">
       <a href="/">Home</a>
-      <a href="/catalog">Catalog</a>
+      <a href="/catalog">Buy Now</a>
       <a href="/best-deals">Best Deals</a>
       <a href="/#reorder-header">Reorder Program</a>
       <a href="/quote">Volume Pricing</a>
@@ -165,7 +160,7 @@
   </header>
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
-    <a href="/catalog">Catalog</a>
+    <a href="/catalog">Buy Now</a>
     <a href="/best-deals">Best Deals</a>
     <a href="/#reorder-header">Reorder Program</a>
     <a href="/quote">Volume Pricing</a>
@@ -182,24 +177,23 @@
         <span>Without Chasing Supplies</span>
       </h1>
 
+      <!-- Cut to one line per RRS-29 item 1 -- was a longer paragraph
+           listing every segment served (that list now lives in the
+           Who We Serve strip below instead of repeating here). -->
       <p id="heroDescEl">
-        Room Ready Supply is an East Coast hospitality and facility supply partner, based in North Carolina &mdash; helping hotels, motels, short-term rentals, cleaning companies, restaurants, campgrounds, RV parks, and facilities order paper products, cleaning supplies, linens, and guest room essentials with simple pricing, easy reordering, and local support.
+        Case-quantity supplies with volume pricing built in &mdash; no quotes, no waiting.
       </p>
 
-      <!-- Both hero CTAs now lead to buying. Volume pricing moved to /quote
-           and is offered lower down the page instead: it is a slower path
-           that was competing with the catalog for the same click. -->
+      <!-- Exactly one primary CTA ("Buy Now"), per RRS-29 item 1 -- the
+           second hero button (previously "See Best Deals") is removed
+           rather than relabeled, since the spec calls for one button. -->
       <div class="hero-buttons">
-        <a href="/catalog" class="btn btn-primary" id="heroBtnPrimaryEl" >
+        <a href="/catalog" class="btn btn-primary" id="heroBtnPrimaryEl">
           <img width="48" height="48" src="assets/img/Cart.png" alt="" />
-          Shop Catalog
-        </a>
-
-        <a href="/best-deals" class="btn btn-outline" id="heroBtnSecondaryEl">
-          <img src="assets/icons/file-list-3-line.svg" alt="" />
-          See Best Deals
+          Buy Now
         </a>
       </div>
+      <p class="hero-subcta">with volume pricing &amp; reordering</p>
 
     </section>
 
@@ -207,34 +201,14 @@
       <picture id="heroBannerPicture"><source srcset="assets/img/banner1.webp" type="image/webp"><img fetchpriority="high" width="1600" height="900" src="assets/img/banner1.jpg" alt="Hero banner" id="heroBannerEl" /></picture>
     </section>
   </main>
-  <!-- ── Trust strip ────────────────────────────────────────────── -->
+  <!-- ── Trust strip ──────────────────────────────────────────────
+       Exact copy per RRS-29 item 3: "East Coast based — Plymouth, NC ·
+       Volume pricing built in · Real humans Mon–Fri 8–5, (252) 227-0073".
+       Split across the existing 4-tile grid at its natural "·" breaks
+       (the phone number stays attached to the "Real humans" clause) so
+       the wording matches exactly while keeping the tile layout. -->
   <section class="hc-trust">
     <div class="hc-trust-grid">
-
-      <!-- Free-shipping tile paused along with the rest of that offer while
-           it's being reworked internally (see the Sep 18 revert) -- swapped
-           for a claim that's already true and stated elsewhere on this page
-           (the 500+ businesses stat below), rather than leave a 3-item grid
-           where CSS expects 4. -->
-      <div class="hc-trust-item">
-        <span class="hc-trust-ico">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-        </span>
-        <div>
-          <strong>500+ Businesses</strong>
-          <span>Trust RRS East Coast-wide</span>
-        </div>
-      </div>
-
-      <div class="hc-trust-item">
-        <span class="hc-trust-ico">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7h-3V4H3v13h2"/><path d="M7 17a2 2 0 104 0 2 2 0 10-4 0"/><path d="M11 17h4"/><path d="M17 17a2 2 0 104 0 2 2 0 10-4 0"/><path d="M17 7l4 5v5"/></svg>
-        </span>
-        <div>
-          <strong>In Stock Now</strong>
-          <span>Ships in 3&ndash;5 business days</span>
-        </div>
-      </div>
 
       <div class="hc-trust-item">
         <span class="hc-trust-ico">
@@ -242,7 +216,7 @@
         </span>
         <div>
           <strong>East Coast Based</strong>
-          <span>Plymouth, North Carolina</span>
+          <span>Plymouth, NC</span>
         </div>
       </div>
 
@@ -251,8 +225,28 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
         </span>
         <div>
-          <strong>Trade Pricing</strong>
-          <span>Built for businesses</span>
+          <strong>Volume Pricing</strong>
+          <span>Built in</span>
+        </div>
+      </div>
+
+      <div class="hc-trust-item">
+        <span class="hc-trust-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </span>
+        <div>
+          <strong>Real Humans</strong>
+          <span>Mon&ndash;Fri 8&ndash;5</span>
+        </div>
+      </div>
+
+      <div class="hc-trust-item">
+        <span class="hc-trust-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 19.5 19.5 0 01-6-6 19.79 19.79 0 01-3.07-8.67A2 2 0 014.11 2h3a2 2 0 012 1.72c.127.96.362 1.903.7 2.81a2 2 0 01-.45 2.11L8.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0122 16.92z"/></svg>
+        </span>
+        <div>
+          <strong>(252) 227-0073</strong>
+          <span>Call anytime</span>
         </div>
       </div>
 
@@ -574,18 +568,24 @@
         </div>
 
         <div class="serve-item">
-            <img width="300" height="300" src="assets/img/Campgrounds.png" alt="Campgrounds" loading="lazy">
-            <span>Campgrounds</span>
-        </div>
-
-        <div class="serve-item">
-            <img width="300" height="300" src="assets/img/RV.png" alt="RV Parks" loading="lazy">
-            <span>RV Parks</span>
-        </div>
-
-        <div class="serve-item">
             <img width="300" height="300" src="assets/img/Facilities.png" alt="Facilities" loading="lazy">
             <span>Facilities</span>
+        </div>
+
+        <!-- Senior Living / Property Managers replace RV Parks / Campgrounds
+             per RRS-29 item 4. No dedicated photo exists for either yet
+             (only Hotel/Motel/ShortTermRental/CleaningCompany/Restaurant/
+             Campgrounds/RV/Facilities.png are in assets/img), so both
+             reuse Facilities.png as the closest fit rather than ship a
+             broken image -- worth swapping for real photos later. -->
+        <div class="serve-item">
+            <img width="300" height="300" src="assets/img/Facilities.png" alt="Senior Living" loading="lazy">
+            <span>Senior Living</span>
+        </div>
+
+        <div class="serve-item">
+            <img width="300" height="300" src="assets/img/Facilities.png" alt="Property Managers" loading="lazy">
+            <span>Property<br>Managers</span>
         </div>
 
     </div>
@@ -594,18 +594,25 @@
 
 <!-- ── Volume pricing (slim) ────────────────────────────────────────
      The full quote hero and form used to sit here, ~330 lines of it, in
-     the middle of the buying path. It now lives at /quote and this band
-     is the entry point: visible to the buyers who need it, out of the
-     way of everyone else. -->
+     the middle of the buying path. It now lives at /quote.
+
+     Rewritten per RRS-29 item 5: this band used to sell the quote path
+     (send a list, upload a PDF, wait a business day) -- exactly the
+     "quotes, waiting" framing the spec says to remove. It now states that
+     volume pricing is automatic in the cart and sends the click straight
+     to checkout, not to the quote form. No discount percentages shown,
+     per the spec, since 6+/30+/50+ are tier thresholds and the actual
+     rate varies by product -- a percentage here would either be vague or
+     wrong for some items. -->
 <section class="hc-vol" id="business-pricing">
   <div class="hc-vol-inner">
     <div>
       <span class="hc-eyebrow">Volume Pricing</span>
-      <h2>Ordering for multiple properties?</h2>
-      <p>Send us your list or a competitor&rsquo;s quote and we&rsquo;ll price it &mdash; usually within one business day. Upload a PDF or photo and we&rsquo;ll match it to our catalog for you.</p>
+      <h2>The more you order, the less you pay.</h2>
+      <p>Volume pricing is automatic &mdash; no quotes, no waiting. 6+ cases drops the price, 30+ cases drops it more, and 50+ cases unlocks our best price. It applies right in your cart.</p>
     </div>
-    <a href="/quote" class="hc-btn hc-btn--ghost">
-      See Volume Pricing
+    <a href="/catalog" class="hc-btn hc-btn--ghost">
+      Buy Now
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
     </a>
   </div>
@@ -617,7 +624,7 @@
   <div class="ordering-left">
 
     <span class="ordering-eyebrow">How Ordering Works</span>
-    <h2>Simple ordering built<br>for hospitality businesses</h2>
+    <h2>Simple Ordering Built in<br>for our customers</h2>
     <p class="ordering-subtext">From your first purchase to automatic redelivery &mdash; Room Ready Supply makes supply management effortless so you can focus on running your property.</p>
 
     <div class="ordering-steps">
@@ -633,13 +640,16 @@
 
       <div class="step-connector" aria-hidden="true"></div>
 
+      <!-- Renamed from "Submit" per RRS-29 item 6 -- "send"/"request"
+           language belonged to the old quote-request flow this page no
+           longer leads with; ordering now completes at checkout. -->
       <div class="step-item">
         <div class="step-top">
           <div class="step-num">02</div>
-          <div class="step-icon"><img src="assets/icons/file.svg" alt="Submit your supply order request" loading="lazy"></div>
+          <div class="step-icon"><img src="assets/icons/file.svg" alt="Add cases to your cart and check out" loading="lazy"></div>
         </div>
-        <h3>Submit</h3>
-        <p>Enter your quantities and send your order request in minutes.</p>
+        <h3>Add &amp; Check Out</h3>
+        <p>Add cases to your cart and check out in minutes.</p>
       </div>
 
       <div class="step-connector" aria-hidden="true"></div>
@@ -650,7 +660,7 @@
           <div class="step-icon"><img src="assets/icons/check.svg" alt="Confirm your order and set up auto reorder" loading="lazy"></div>
         </div>
         <h3>Confirm &amp; Reorder</h3>
-        <p>We confirm and fulfill your order. Set up automatic redelivery so you never run out again.</p>
+        <p>We confirm and fulfill your order. Set your reorder frequency in the cart so you never run out again.</p>
       </div>
 
     </div>
@@ -662,7 +672,7 @@
         <span>Built for hospitality businesses across the East Coast that need fast, reliable delivery.</span>
       </div>
       <a href="/catalog" class="ordering-cta-btn" >
-        Shop the Catalog
+        Buy Now
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
     </div>
@@ -684,23 +694,8 @@
       <h2>Never Run Out.<br>Set It Once.</h2>
       <p>We send your supplies on your schedule &mdash; with your approval before every order.</p>
 
-      <!-- Inline stats strip -->
-      <div class="rc-stats">
-        <div class="rc-stat">
-          <span class="rc-stat-num stat-count" data-target="500" data-suffix="+" data-duration="2800">500+</span>
-          <span class="rc-stat-label">East Coast Businesses</span>
-        </div>
-        <div class="rc-stat-divider"></div>
-        <div class="rc-stat">
-          <span class="rc-stat-num stat-count" data-target="70" data-suffix="+" data-duration="2400">70+</span>
-          <span class="rc-stat-label">Enrolled to Program</span>
-        </div>
-        <div class="rc-stat-divider"></div>
-        <div class="rc-stat">
-          <span class="rc-stat-num stat-count" data-target="24" data-suffix="hr" data-duration="2200">24hr</span>
-          <span class="rc-stat-label">Approval Window</span>
-        </div>
-      </div>
+      <!-- Stats strip removed per RRS-29 item 6 -- 500+/70+/24hr were
+           fabricated figures, not real program data. -->
     </div>
 
     <!-- Schedule content &mdash; white card bottom -->
@@ -708,28 +703,34 @@
 
       <p class="schedule-label">How often do you need supplies?</p>
 
-      <div class="schedule-pills">
-        <button class="schedule-pill active" data-days="7">Weekly</button>
-        <button class="schedule-pill" data-days="14">Every 2 Weeks</button>
-        <button class="schedule-pill" data-days="30">Monthly</button>
-        <button class="schedule-pill" data-days="45">Every 45 Days</button>
-        <button class="schedule-pill" data-days="60">Every 60 Days</button>
-        <button class="schedule-pill" data-days="0">Custom</button>
-      </div>
-
-      <!-- Live preview -->
-      <div class="reorder-preview">
-        <span class="preview-pulse"></span>
-        <span>Next auto-delivery in <strong id="nextDeliveryText">7 days</strong></span>
+      <!-- Frequency mini button replaced with a static illustration of the
+           real in-cart control, per RRS-29 item 6 ("replace... with a
+           screenshot of 'Pick your frequency in the cart...'"). This is a
+           built mock of that control, not an actual captured screenshot --
+           swap the image below for a real screenshot of the cart's
+           frequency picker if one specific image is preferred. -->
+      <div class="schedule-frequency-preview">
+        <p class="schedule-frequency-caption">Pick your frequency in the cart:</p>
+        <div class="schedule-frequency-chips" aria-hidden="true">
+          <span class="schedule-frequency-chip is-active">Weekly</span>
+          <span class="schedule-frequency-chip">Every 2 Weeks</span>
+          <span class="schedule-frequency-chip">Monthly</span>
+          <span class="schedule-frequency-chip">Custom</span>
+        </div>
       </div>
 
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
         <button class="choose-schedule-btn">
           <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-          Set Up Auto-Order at Checkout
+          Buy Now &rarr;
         </button>
       </a>
 
+      <!-- The /auto-reorder link stays pointed where it already was --
+           the request flagged this link as needing rework but didn't say
+           what it should become, so this is left as-is rather than
+           guessed at. Flag back if there's a specific destination or copy
+           in mind. -->
       <p class="cancel-note">Cancel or update anytime. No contracts. <a href="/auto-reorder">Learn how it works &rsaquo;</a></p>
 
     </div>
@@ -754,33 +755,33 @@
         Keeping rooms, rentals, kitchens, and facilities ready takes more than just products &mdash; it takes a supply partner that understands your operation and shows up every time.
       </p>
 
+      <!-- Exact copy per RRS-29 item 9. Replaces the previous two
+           paragraphs (product list + service area) with the one combined
+           paragraph the spec gives; aboutP3El's element is left in the
+           DOM (empty) rather than removed, since the CMS script below
+           still targets about.p3 by id. -->
       <p id="aboutP2El" class="about-p2">
-        Room Ready Supply provides hospitality and facility essentials &mdash; paper products, trash liners, cleaning supplies, soaps, laundry and dishwashing supplies, linens, and guest room supplies &mdash; delivered reliably with easy reordering built in.
+        Locally owned and based in North Carolina, we proudly serve hospitality and facility businesses across the East Coast &mdash; hotels, motels, short-term rentals, cleaning companies, restaurants, senior living, property managers, and facilities &mdash; to keep supply runs simple.
       </p>
-      <p id="aboutP3El" class="about-p2">
-        Locally owned and based in North Carolina, we proudly serve hospitality and facility businesses across the East Coast &mdash; hotels, motels, short-term rentals, cleaning companies, restaurants, campgrounds, RV parks, and facilities &mdash; to keep supply runs simple.
-      </p>
+      <p id="aboutP3El" class="about-p2" style="display:none"></p>
 
-      <!-- Trust stats -->
+      <!-- Trust stats -- exact 3 items per RRS-29 item 10. Removed:
+           "500+ Businesses Served", "Free Quotes, No Obligation",
+           "1 Day Quote Turnaround" (quote-model language). -->
       <div class="about-stats">
-        <div class="about-stat">
-          <span class="stat-num"><span class="stat-count" data-target="500" data-suffix="+">500+</span></span>
-          <span class="stat-label">Businesses Served</span>
-        </div>
-        <div class="about-stat-divider"></div>
-        <div class="about-stat">
-          <span class="stat-num">Free</span>
-          <span class="stat-label">Quotes, No Obligation</span>
-        </div>
-        <div class="about-stat-divider"></div>
-        <div class="about-stat">
-          <span class="stat-num"><span class="stat-count" data-target="1" data-suffix="">1</span></span>
-          <span class="stat-label">Day Quote Turnaround</span>
-        </div>
-        <div class="about-stat-divider"></div>
         <div class="about-stat">
           <span class="stat-num" style="font-size:clamp(15px, 1.8vw, 20px)">East Coast</span>
           <span class="stat-label">Local &amp; Responsive</span>
+        </div>
+        <div class="about-stat-divider"></div>
+        <div class="about-stat">
+          <span class="stat-num" style="font-size:clamp(15px, 1.8vw, 20px)">Volume Pricing</span>
+          <span class="stat-label">Automatic in Your Cart</span>
+        </div>
+        <div class="about-stat-divider"></div>
+        <div class="about-stat">
+          <span class="stat-num" style="font-size:clamp(15px, 1.8vw, 20px)">Mon&ndash;Fri 8&ndash;5</span>
+          <span class="stat-label">Real Human Support</span>
         </div>
       </div>
 
@@ -982,19 +983,17 @@
      links. Restates the offer, because by this point the announcement
      bar has scrolled well out of sight. -->
 <section class="hc-final">
+  <!-- Exact replacement per RRS-29 item 11. -->
   <div class="hc-final-inner">
-    <h2>Orders $3,000+ ship <span>free</span></h2>
+    <h2>The more you order, <span>the less you pay.</span></h2>
     <p>
-      Paper, chemicals, linens, amenities and PPE for hotels, rentals, campgrounds and cleaning companies &mdash;
-      priced for businesses, in stock now, and free shipping on orders of $3,000 or more.
+      Paper, chemicals, linens, amenities, and PPE for hotels, rentals, and cleaning companies &mdash;
+      priced for businesses, with volume pricing built in.
     </p>
     <div class="hc-final-btns">
       <a href="/catalog" class="hc-btn hc-btn--buy">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 002 1.6h9.7a2 2 0 002-1.6L23 6H6"/></svg>
-        Start Your Order
-      </a>
-      <a href="/best-deals" class="hc-btn hc-btn--ghost-on-navy">
-        See Best Deals
+        Buy Now &rarr;
       </a>
     </div>
     <p class="hc-final-note">Questions? Call (252) 227-0073.</p>
@@ -1016,15 +1015,24 @@
       <ul>
         <li><a href="/supplies-for-short-term-rentals">Short-Term Rentals</a></li>
         <li><a href="/supplies-for-cleaning-companies">Cleaning Companies</a></li>
-        <li><a href="/supplies-for-rv-parks">RV Parks</a></li>
-        <li><a href="/supplies-for-campgrounds">Campgrounds</a></li>
+        <!-- RV Parks / Campgrounds swapped for Senior Living / Property
+             Managers per RRS-29 item 11. Neither has a dedicated landing
+             page yet (no /supplies-for-senior-living or
+             /supplies-for-property-managers file exists), so these link
+             to the catalog rather than to a 404 -- build those pages and
+             repoint these two links if/when they exist. -->
+        <li><a href="/catalog">Senior Living</a></li>
+        <li><a href="/catalog">Property Managers</a></li>
       </ul>
     </div>
     <div class="serve-col">
       <h2>Ways to Order</h2>
       <ul>
         <li><a href="/auto-reorder">Auto Reorder Program</a></li>
-        <li><a href="/quote-match">Beat Your Current Quote</a></li>
+        <!-- "Beat Your Current Quote" removed per RRS-29 item 11 -- dead
+             with the quote model. /quote-match.html itself is left in
+             place (unlinked here) rather than deleted, in case it's
+             wanted again or repurposed. -->
         <li><a href="/catalog">Browse Full Catalog</a></li>
         <li><a href="/blog">Buying Guides</a></li>
       </ul>
@@ -1248,18 +1256,13 @@
       document.getElementById("heroHeadingEl").innerHTML =
         lines.map(l => l === h ? `<span>${l}</span>` : l).join("<br />");
     }
-    if (hero.description)  document.getElementById("heroDescEl").textContent  = hero.description;
+    // hero.description and hero.btnSecondary are deliberately NOT applied
+    // any more (RRS-29 item 1): the sub-headline is now a fixed one-liner
+    // and the second hero button was removed outright, so a leftover
+    // value saved in site_content from before that change must not
+    // silently reintroduce either -- see the admin Hero editor if these
+    // fields need retiring there too.
     if (hero.btnPrimary)   document.getElementById("heroBtnPrimaryEl").childNodes[document.getElementById("heroBtnPrimaryEl").childNodes.length-1].textContent = " " + hero.btnPrimary;
-    if (hero.btnSecondary) {
-      const secEl = document.getElementById("heroBtnSecondaryEl");
-      secEl.childNodes[secEl.childNodes.length-1].textContent = " " + hero.btnSecondary;
-      // The CMS stores a label but no destination, so a saved label like
-      // "Request Business Pricing" would sit on the markup's /best-deals
-      // href and send the buyer somewhere the button did not promise.
-      // Point quote-ish labels at /quote (the form moved off this page)
-      // and leave anything else on the markup's own href.
-      if (/quote|pricing|volume/i.test(hero.btnSecondary)) secEl.setAttribute("href", "/quote");
-    }
     if (hero.bannerUrl) {
       document.getElementById("heroBannerEl").src = hero.bannerUrl;
       // A <picture><source> pointing at the original static banner's WebP
@@ -1271,11 +1274,13 @@
     }
 
     // About
+    // about.p2/p3 are deliberately NOT applied any more (RRS-29 item 9):
+    // the two paragraphs were replaced with one fixed paragraph, and P3's
+    // element is now empty/hidden -- a leftover site_content row from
+    // before that change must not silently reintroduce the old copy.
     if (about.tag)       document.getElementById("aboutTagEl").textContent   = about.tag;
     if (about.title)     document.getElementById("aboutTitleEl").innerHTML   = about.title.replace(/\n/g,"<br>");
     if (about.p1)        document.getElementById("aboutP1El").textContent    = about.p1;
-    if (about.p2)        document.getElementById("aboutP2El").textContent    = about.p2;
-    if (about.p3)        document.getElementById("aboutP3El").textContent    = about.p3;
     if (about.bannerUrl) {
       document.getElementById("aboutBannerEl").src = about.bannerUrl;
       document.querySelector("#aboutBannerPicture source")?.remove();

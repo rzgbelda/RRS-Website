@@ -384,7 +384,11 @@ body {
   min-height: auto;
 padding-top: 20px;
   display: grid;
-  grid-template-columns: 62% 38%;
+  /* Widened from 62/38 -- RRS-29 item 1 dropped the second hero button
+     and cut the sub-headline to one line, which left dead space next to
+     a comparatively small image. The larger image column fills that
+     space instead of leaving the hero shorter/emptier on the left. */
+  grid-template-columns: 54% 46%;
   align-items: center;
   background: rgba(255, 255, 255, 0.88);
 }
@@ -487,10 +491,18 @@ padding-top: 20px;
 
 .hero-image img {
   width: 110%;
-  max-width: 800px;
-  height: 420px;
+  max-width: 900px;
+  height: 460px;
   object-fit: cover;
   object-position: center;
+}
+
+/* Directly under the primary button, per RRS-29 item 1. */
+.hero-subcta {
+  margin: 10px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #5B6C7E;
 }
 
 .supply-section {
@@ -1210,6 +1222,39 @@ padding-top: 20px;
 }
 
 .schedule-pill.active {
+  background: #ED7226;
+  border-color: #ED7226;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 4px 14px rgba(237,114,38,.35);
+}
+
+/* Static frequency illustration (RRS-29 item 6) -- same visual language
+   as .schedule-pill above but non-interactive, since this card no longer
+   sets the schedule itself; that now happens in the cart. */
+.schedule-frequency-preview { margin-bottom: 18px; text-align: center; }
+.schedule-frequency-caption {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #64748b;
+  margin: 0 0 10px;
+}
+.schedule-frequency-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.schedule-frequency-chip {
+  padding: 8px 16px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 100px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #475569;
+}
+.schedule-frequency-chip.is-active {
   background: #ED7226;
   border-color: #ED7226;
   color: #fff;

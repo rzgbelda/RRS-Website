@@ -36,7 +36,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260919i" />
+  <link rel="stylesheet" href="style.css?v=20260921a" />
 </head>
 
 <body>
@@ -191,7 +191,9 @@
              not keyword guesses. The previous list matched against product
              prose and misfired badly (see applyFilters in script.js). -->
         <div class="filter-list">
-          <label><input type="checkbox" class="category-filter" value="a-z">A-Z</label>
+          <!-- "A-Z" checkbox removed per RRS-29 item 8 -- value="a-z" was
+               never read by applyFilters() in script.js, so checking it
+               did nothing; it just looked broken. -->
           <label><input type="checkbox" class="category-filter" value="bed-sheets-linens">Bed Sheets &amp; Linens</label>
           <label><input type="checkbox" class="category-filter" value="towels">Towels</label>
           <label><input type="checkbox" class="category-filter" value="paper-products">Paper Products</label>
