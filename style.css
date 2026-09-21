@@ -4851,6 +4851,18 @@ span.flatpickr-weekday {
      own column edge to edge. */
   width: 100%;
   box-sizing: border-box;
+  /* Stretches to match row 2's real height, same as .pp-faq-card beside
+     it (see that rule for the full explanation). Previously only the
+     FAQ card had align-self:stretch, on the assumption the purchase
+     panel would always be the taller of the two -- that assumption
+     broke the next time either side's content changed size (the
+     brandmark logo and "Your price" text both grew in later edits),
+     and the misalignment just flipped to the other side instead of
+     going away. Both items stretch now, so whichever is genuinely
+     taller at any given time sets the row height and the shorter one
+     always fills it -- correct regardless of future content changes to
+     either side, not a fix pinned to today's specific heights. */
+  align-self: stretch;
 }
 
 /* Brandmark: gives the Reorder Program its own identity, the way the
@@ -5193,16 +5205,17 @@ span.flatpickr-weekday {
 .pp-faq-card {
   padding: 18px 20px 20px;
   /* Stretches to match row 2's real height instead of sitting at its own
-     shorter natural height -- .product-layout sets align-items:start
-     for the grid as a whole (needed so .product-gallery/.pp-purchase-
-     panel don't stretch to match the much taller .product-info/.buy-box
-     spanning both rows), but that same rule left THIS card, which is
-     genuinely shorter than its row-2 neighbor .pp-purchase-panel, sitting
-     at its own height with visible empty space below it inside the grid
-     cell -- exactly what the screenshot showed. align-self:stretch
-     overrides the grid default for just this one item so its border/
-     background fills the row, while gallery and purchase-panel above
-     keep their own natural heights via the grid's default. */
+     natural height -- .product-layout sets align-items:start for the
+     grid as a whole (needed so .product-gallery doesn't stretch to
+     match the much taller .product-info/.buy-box spanning both rows),
+     but row 2 specifically holds two items side by side (this card and
+     .pp-purchase-panel) whose natural heights differ and have swapped
+     which one is taller more than once as their content changed (bigger
+     logo, bigger price text, added FAQ answers). Both this rule and the
+     matching one on .pp-purchase-panel set align-self:stretch, so
+     whichever is genuinely taller at any point sets the row height and
+     the other always fills it -- not pinned to today's specific
+     content. */
   align-self: stretch;
   box-sizing: border-box;
 }
