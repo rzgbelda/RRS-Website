@@ -1990,6 +1990,8 @@ function populateProductPage(product) {
       .join("");
   }
 
+  renderProductFaq(product);
+
   const addBtn = document.getElementById("productAddToCart");
   if (addBtn) {
     addBtn.dataset.item        = product.itemNumber;
@@ -2029,6 +2031,145 @@ function populateProductPage(product) {
     currency: "USD",
     value: cleanPrice(product.price || product.price1) || 0,
     items: [gaItem(product, 1)],
+  });
+}
+
+/**
+ * Two FAQs per product, generated from that product's own real catalog
+ * data (case/dozen quantity, MOQ, weight, dimensions) rather than
+ * written by hand per SKU or filled with invented specifics -- this
+ * runs across 110+ products, and a hand-authored FAQ set that size
+ * would either be copy-pasted boilerplate or too much to keep accurate
+ * as products change.
+ *
+ * The two questions themselves were chosen from what commercial/
+ * wholesale buyers in this exact industry actually ask most, checked
+ * against real buying guides (case-quantity/minimum-order sizing shows
+ * up as the first question in every wholesale gloves/paper-towel guide
+ * reviewed -- gloves.com, buygloves.com, Schneider Direct; shipping
+ * weight/dimensions is what a facilities buyer needs before ordering to
+ * plan freight, loading dock access, and storage, which is also why
+ * shipping-policy.html on this site treats weight as what decides
+ * parcel vs. LTL freight). A third common one for the Cleaning Chemicals
+ * categories -- dilution ratios -- was deliberately left out: there is
+ * no per-SKU dilution-ratio field in this data, and printing a specific
+ * ratio for a specific chemical without a real source would be
+ * inventing a safety-relevant number, not a reasonable default.
+ */
+function renderProductFaq(product) {
+  const card = document.getElementById("ppFaqCard");
+  const list = document.getElementById("ppFaqList");
+  if (!card || !list) return;
+
+  const dozen = isSoldByDozen(product);
+  // priceBy holds the real unit string (Case/Each/Pail/Pack/Box/Pallet),
+  // lowercased for a natural sentence. "Each" gets its own branch below
+  // rather than being treated as a generic countable noun -- "a each" /
+  // "Each each weighs" read as broken English, which the first version
+  // of this function actually shipped with (caught by testing all real
+  // unit values in the catalog before this went live).
+  const unitRaw = dozen ? "dozen" : String(product.priceBy || product.unit || "case").trim().toLowerCase();
+  const isEach = unitRaw === "each";
+  // "a case" / "a pail" / "an each"(never happens, but correct if it did) --
+  // real a/an, not a hardcoded "a".
+  const article = /^[aeiou]/.test(unitRaw) ? "an" : "a";
+  const caseQty = String(product.caseQty || "").trim();
+  const moq = productMoq(product);
+  const hasGroup = !!product.moqGroup;
+
+  // Q1: case/order quantity + minimum. Mix & Match products (moqGroup
+  // set) are checked FIRST and separately: their caseQty field holds the
+  // GROUP's combined minimum, not a per-unit pack count (confirmed
+  // against live catalog data -- several 5-gallon Pail products carry
+  // moq=1, case_qty="36", moq_group_min=36, meaning "36 combined across
+  // the whole tagged group," not "36 pails in this one case"). Reading
+  // caseQty at face value for these would have printed a false claim
+  // ("each pail contains 36").
+  let q1Answer;
+  if (hasGroup && product.moqGroupMin > 0) {
+    q1Answer = `This item is sold by the ${unitRaw} and is part of a Mix &amp; Match group -- `
+      + `combine it with other products in the same group to reach the group's combined minimum of `
+      + `${product.moqGroupMin} units. Volume pricing applies automatically as the group's total grows.`;
+  } else if (dozen && moq > 1) {
+    q1Answer = `This item is sold by the dozen, with a minimum order of ${moq} dozen.`;
+  } else if (isEach) {
+    q1Answer = `This item is sold individually (each) rather than by the case. There's no minimum order beyond 1, `
+      + `and volume pricing applies automatically as you order more of this item.`;
+  } else if (caseQty && caseQty !== "1") {
+    q1Answer = `Each ${unitRaw} contains ${caseQty}${product.size && product.size !== caseQty ? ` (${product.size})` : ""}. `
+      + `There's no minimum beyond 1 ${unitRaw}, and volume pricing applies automatically as you order more of this item.`;
+  } else {
+    q1Answer = `This item ships as a single unit per ${unitRaw}. There's no minimum order beyond 1, and volume pricing applies automatically as you order more of this item.`;
+  }
+  const q1 = {
+    q: isEach
+      ? `Is this sold individually, and is there a minimum order?`
+      : `How many come in ${article} ${unitRaw}, and is there a minimum order?`,
+    a: q1Answer,
+  };
+
+  // Q2: shipping weight/dimensions -- what a facilities buyer needs to
+  // plan freight, a loading dock, or storage space before ordering.
+  // Always answerable -- weight/length/width/height are populated on
+  // every product in this catalog (confirmed: 110/110 as of 2026-09-22).
+  // "This" rather than "Each <unit>" -- isEach made "Each each weighs"
+  // read as broken English; "This" is correct for every unit including
+  // that one.
+  const dims = [product.length, product.width, product.height].filter(Boolean);
+  let q2Answer;
+  if (product.weight && dims.length === 3) {
+    q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs and ships in a carton measuring `
+      + `${dims.join('" × ')}". Orders are processed within 3&ndash;5 business days, then shipped as standard `
+      + `parcel or palletized freight depending on order size &mdash; see our `
+      + `<a href="/shipping-policy">Shipping Policy</a> for details.`;
+  } else if (product.weight) {
+    q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs. Orders are processed within `
+      + `3&ndash;5 business days, then shipped as standard parcel or palletized freight depending on order size `
+      + `&mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
+  } else {
+    q2Answer = `Orders are processed within 3&ndash;5 business days, then shipped as standard parcel or `
+      + `palletized freight depending on order size &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
+  }
+  const q2 = {
+    q: `How much does this weigh, and how is it shipped?`,
+    a: q2Answer,
+  };
+
+  const faqs = [q1, q2];
+
+  list.innerHTML = faqs.map(f => `
+    <div class="pp-faq-item">
+      <h4>${f.q}</h4>
+      <p>${f.a}</p>
+    </div>`).join("");
+  card.style.display = "";
+
+  // FAQPage structured data, same pattern as the category landing pages
+  // (hotel-supplies-north-carolina.html etc.) -- lets a real FAQ rich
+  // result show for this specific product in search, not just the
+  // category page.
+  let faqLd = document.getElementById("productFaqJsonLd");
+  if (!faqLd) {
+    faqLd = document.createElement("script");
+    faqLd.type = "application/ld+json";
+    faqLd.id = "productFaqJsonLd";
+    document.head.appendChild(faqLd);
+  }
+  // Strip HTML tags for the schema's plain-text answer field -- the
+  // visible answer can carry a real <a> link, but structured data should
+  // hold text, not markup.
+  const plainText = html => html
+    .replace(/<[^>]+>/g, "")
+    .replace(/&ndash;/g, "–").replace(/&mdash;/g, "—")
+    .replace(/&amp;/g, "&");
+  faqLd.textContent = JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": faqs.map(f => ({
+      "@type": "Question",
+      "name": f.q,
+      "acceptedAnswer": { "@type": "Answer", "text": plainText(f.a) },
+    })),
   });
 }
 

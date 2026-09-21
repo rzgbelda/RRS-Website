@@ -4815,22 +4815,24 @@ span.flatpickr-weekday {
    prices side by side is the whole point -- the 5% saving has to be
    visible before the click, not hidden behind a second button. */
 .pp-purchase-panel {
-  margin-top: 28px;
-  padding: 22px 24px 24px;
+  margin-top: 20px;
+  padding: 18px 20px 20px;
   background: #fff;
   border: 1.5px solid #e4e9f2;
   border-radius: 14px;
-  /* The CARD shrinks to fit its content now, not just the content inside
-     it -- capping only the inner width (the previous attempt) still left
-     the card's own border/background stretched to the full middle-column
-     width, which meant a big empty white region to the right of the
-     content but still inside the card. That empty region, not
-     misalignment, was the actual "not a smart layout" problem: a card
-     that visibly doesn't fit what's inside it. width:fit-content plus a
-     max-width keeps the card exactly as wide as its content demands, up
-     to a sane ceiling, and left-aligned by default as a block element. */
-  width: fit-content;
-  max-width: 460px;
+  /* Lives in .product-gallery now (moved so its top edge lines up with
+     the product photo -- see the comment on this block in
+     product-template.html), which is a 440px column with 32px padding on
+     each side, i.e. ~376px of real content width. width:100% instead of
+     fit-content: fit-content made sense when this sat in the much wider
+     middle column and needed to shrink away from empty space; here the
+     column is already narrow and fixed-width, so filling it edge to edge
+     reads as intentional rather than stretched -- the same reason the
+     product photo above it and the buy box across the page both go full
+     width of their own column instead of centering with gaps beside
+     them. */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Brandmark: gives the Reorder Program its own identity, the way the
@@ -5130,6 +5132,30 @@ span.flatpickr-weekday {
 
 .specs-card td:first-child {
   font-weight: 800;
+}
+
+/* ── Product FAQ ── sits below .details-grid as its own full-width card,
+   not squeezed into one of its three columns -- two questions read
+   better as a short list than crammed beside Overview/Specs/Features. */
+.pp-faq-card { margin-top: 22px; }
+.pp-faq-item {
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.pp-faq-item:last-child { margin-bottom: 0; }
+.pp-faq-item h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0B1F38;
+}
+.pp-faq-item p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #5B6C7E;
 }
 
 .specs-card button {
