@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922d" />
+  <link rel="stylesheet" href="style.css?v=20260922e" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -272,18 +272,30 @@
                Cart" / "Add to Reorder Program") that gave no hint the
                second one was cheaper. Choosing a mode first, then one
                Add button, mirrors how buyers actually decide and makes
-               the 5% reorder saving visible before the click. -->
+               the 5% reorder saving visible before the click.
+               Stacked selectable rows (radio dot + label + price), not
+               side-by-side cards -- two cards sharing this column's full
+               width each ended up a big shallow box with a short title
+               floating at the top and a price floating at the bottom. A
+               row reads as "pick one of two options," which is what this
+               actually is. -->
           <div class="pp-modes" role="radiogroup" aria-label="Purchase type">
             <button type="button" class="pp-mode is-active" id="ppModeOnce"
                     role="radio" aria-checked="true" data-mode="once">
-              <span class="pp-mode-title">One-Time Purchase</span>
-              <span class="pp-mode-price" id="ppModeOncePrice">&mdash;</span>
+              <span class="pp-mode-dot" aria-hidden="true"></span>
+              <span class="pp-mode-body">
+                <span class="pp-mode-title">One-Time Purchase</span>
+                <span class="pp-mode-price" id="ppModeOncePrice">&mdash;</span>
+              </span>
             </button>
             <button type="button" class="pp-mode pp-mode--save" id="ppModeReorder"
                     role="radio" aria-checked="false" data-mode="reorder">
+              <span class="pp-mode-dot" aria-hidden="true"></span>
+              <span class="pp-mode-body">
+                <span class="pp-mode-title">Reorder &amp; Save</span>
+                <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+              </span>
               <span class="pp-mode-flag">Save 5%</span>
-              <span class="pp-mode-title">Reorder &amp; Save</span>
-              <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
             </button>
           </div>
 

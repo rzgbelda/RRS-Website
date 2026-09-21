@@ -4820,6 +4820,15 @@ span.flatpickr-weekday {
   background: #fff;
   border: 1.5px solid #e4e9f2;
   border-radius: 14px;
+  /* The card itself stays full width for visual rhythm with the
+     Overview/Specifications/Key Features cards below, but its content
+     does not -- a two-card purchase decision stretched across the
+     middle column's full ~1fr width (the widest, most flexible column
+     on the page) is what actually read as "messed up": thin cards with
+     dead air inside them, not a real layout. Capping the inner content
+     keeps it a compact, natural size regardless of how wide its parent
+     column ends up on a given viewport. */
+  max-width: 460px;
 }
 
 /* Brandmark: gives the Reorder Program its own identity, the way the
@@ -4910,25 +4919,29 @@ span.flatpickr-weekday {
 .pp-lt-rate  { font-size: 12px; color: #8494a8; margin-left: auto; }
 .pp-lt-total { font-size: 20px; font-weight: 800; color: #0B1F38; width: 100%; text-align: right; }
 
+/* Stacked rows, not side-by-side cards. Two cards sharing a wide row each
+   got their own big empty box with a short title floating at the top and
+   a price floating at the bottom -- lots of air, no real content density.
+   A single selectable row per option (radio dot + label left, price
+   right) is the denser, more deliberate pattern: it reads as "pick one
+   of two options" rather than "two boxes that happen to sit side by
+   side," and it's the same left-label/right-value rhythm already used by
+   .pp-linetotal and the tier cards elsewhere on this page. */
 .pp-modes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   margin-top: 14px;
-  /* stretch (the grid default) makes both cards the height of the taller
-     one, which is what lets .pp-mode-price bottom-align across them. */
-  align-items: stretch;
 }
 .pp-mode {
   position: relative;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 12px 13px;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
   background: #fff;
   border: 1.5px solid #e4e9f2;
-  border-radius: 12px;
+  border-radius: 11px;
   cursor: pointer;
   text-align: left;
   font-family: inherit;
@@ -4940,31 +4953,46 @@ span.flatpickr-weekday {
   background: #fffaf6;
   box-shadow: 0 0 0 3px rgba(237,114,38,.13);
 }
-/* Fixed two-line title box with the price pinned below it. "One-Time
-   Purchase" wraps to two lines while "Reorder & Save" fits on one, which
-   pushed the two prices to different heights and made the pair look
-   misaligned. Reserving the same title height in both cards lines the
-   prices up whatever the label length. */
+/* Radio-style indicator: the strongest visual cue that these two rows
+   are mutually exclusive choices, not two independent buttons. Drawn in
+   CSS (no icon file, never 404s), same technique as the checkmarks on
+   the Key Features list further down this page. */
+.pp-mode-dot {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: #fff;
+  transition: border-color .15s, background .15s;
+}
+.pp-mode.is-active .pp-mode-dot {
+  border-color: #ED7226;
+  border-width: 5px;
+}
+.pp-mode-body {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
 .pp-mode-title {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: #0B1F38;
   line-height: 1.3;
-  min-height: 2.6em;      /* exactly two lines at this line-height */
-  display: flex;
-  align-items: flex-start;
 }
 .pp-mode-price {
   font-size: 16px;
   font-weight: 800;
   color: #0B1F38;
-  margin-top: auto;       /* bottom-anchored, so both cards agree */
+  white-space: nowrap;
 }
 .pp-mode--save.is-active .pp-mode-price { color: #ED7226; }
 .pp-mode-flag {
-  position: absolute;
-  top: -9px;
-  right: 10px;
+  flex-shrink: 0;
   background: #15803d;
   color: #fff;
   font-size: 9.5px;
@@ -5010,10 +5038,6 @@ span.flatpickr-weekday {
    matched to the existing .summary-row rhythm. */
 .cart-discount-row { color: #15803d; }
 .cart-discount-row strong { color: #15803d; }
-
-@media (max-width: 480px) {
-  .pp-modes { grid-template-columns: 1fr; }
-}
 
 .delivery-info div {
   margin-bottom: 22px;
