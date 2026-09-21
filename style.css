@@ -4392,9 +4392,24 @@ span.flatpickr-weekday {
 .product-layout {
   display: grid;
   grid-template-columns: 440px minmax(0, 1fr) 330px;
-  gap: 38px;
+  /* Two rows so .pp-purchase-panel can be placed explicitly under the
+     gallery (row 2, column 1) -- true CSS grid alignment to the photo,
+     not the panel's HTML being nested inside the gallery's own markup.
+     .product-gallery sits ONLY in row 1 (its own natural content
+     height); the panel sits ONLY in row 2, directly below it -- the two
+     must not both claim column 1 across both rows or they'd overlap in
+     the same cell. .product-info and .buy-box, which are taller than
+     gallery+panel combined or shorter depending on the product, span
+     both rows so their own content is never constrained by row 1's
+     height. */
+  grid-template-rows: auto auto;
+  gap: 24px 38px;
   align-items: start;
 }
+.product-gallery { grid-column: 1; grid-row: 1; }
+.pp-purchase-panel { grid-column: 1; grid-row: 2; }
+.product-info { grid-column: 2; grid-row: 1 / span 2; }
+.buy-box { grid-column: 3; grid-row: 1 / span 2; }
 
 .product-gallery {
   position: relative;
@@ -4814,23 +4829,20 @@ span.flatpickr-weekday {
    costs, and what the same order would cost on the Reorder Program. Two
    prices side by side is the whole point -- the 5% saving has to be
    visible before the click, not hidden behind a second button. */
+/* Card styling only -- grid placement (grid-column/grid-row, putting
+   this directly under .product-gallery in the same 440px column) lives
+   with the rest of .product-layout's grid rules near the top of this
+   file, not here, so the two aren't split across the file disagreeing
+   with each other. */
 .pp-purchase-panel {
-  margin-top: 20px;
   padding: 18px 20px 20px;
   background: #fff;
   border: 1.5px solid #e4e9f2;
   border-radius: 14px;
-  /* Lives in .product-gallery now (moved so its top edge lines up with
-     the product photo -- see the comment on this block in
-     product-template.html), which is a 440px column with 32px padding on
-     each side, i.e. ~376px of real content width. width:100% instead of
-     fit-content: fit-content made sense when this sat in the much wider
-     middle column and needed to shrink away from empty space; here the
-     column is already narrow and fixed-width, so filling it edge to edge
-     reads as intentional rather than stretched -- the same reason the
-     product photo above it and the buy box across the page both go full
-     width of their own column instead of centering with gaps beside
-     them. */
+  /* This grid column is 440px with no padding of its own (unlike
+     .product-gallery, which has 32px built in) -- full width here
+     matches how .product-gallery and .buy-box each already fill their
+     own column edge to edge. */
   width: 100%;
   box-sizing: border-box;
 }
@@ -7300,6 +7312,22 @@ button, a, [role="button"] { touch-action: manipulation; }
 /* ── Product detail: collapse 3-col at narrow ── */
 @media (max-width: 960px) {
   .product-layout { grid-template-columns: 1fr; }
+  /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
+     grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
+     col 1 row 2, product-info col 2, buy-box col 3) would otherwise try
+     to place things in columns/rows that no longer exist. Reset every
+     explicit placement back to plain document-order stacking, which is
+     what a single column should do -- gallery, then the purchase panel
+     right under it (same visual relationship as desktop, achieved here
+     by normal flow instead of grid placement), then product info, then
+     the buy box. */
+  .product-gallery,
+  .pp-purchase-panel,
+  .product-info,
+  .buy-box {
+    grid-column: 1;
+    grid-row: auto;
+  }
   .buy-box {
     max-width: min(480px, 100%);
     /* Sticky only makes sense beside a taller neighbor in the 3-column
