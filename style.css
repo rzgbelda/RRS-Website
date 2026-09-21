@@ -4806,12 +4806,94 @@ span.flatpickr-weekday {
   cursor: pointer;
 }
 
-/* ── Product page buy box: line total + purchase modes ──────────────
-   The tier cards above the buy box show the RATE at each break; these
-   show what the chosen quantity actually costs, and what the same order
-   would cost on the Reorder Program. Two prices side by side is the
-   whole point -- the 5% saving has to be visible before the click, not
-   hidden behind a second button. */
+/* ── Product page: purchase panel (line total + purchase modes) ─────
+   Lives in the middle column now, below the tier cards -- moved out of
+   the buy box, which was tall enough on its own to make the shorter
+   middle column look empty beside it. The tier cards above show the
+   RATE at each break; these show what the chosen quantity actually
+   costs, and what the same order would cost on the Reorder Program. Two
+   prices side by side is the whole point -- the 5% saving has to be
+   visible before the click, not hidden behind a second button. */
+.pp-purchase-panel {
+  margin-top: 28px;
+  padding: 22px 24px 24px;
+  background: #fff;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 14px;
+}
+
+/* Brandmark: gives the Reorder Program its own identity, the way the
+   competitor's "Crave & Save AutoShip" logo anchors their subscribe
+   panel, instead of two plain buttons with no header. Deliberately not
+   the reorder-chip pill used on the homepage's Auto Reorder card -- this
+   sits above BOTH purchase modes (one-time is right there too), so it
+   reads as this site's own mark, not a label on just the reorder half. */
+.rrs-brandmark {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.rrs-brandmark-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #fff4ec;
+  color: #ED7226;
+  flex-shrink: 0;
+}
+.rrs-brandmark-text {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  color: #0B1F38;
+}
+
+/* Shine: an animated light-colored band sweeps across the orange text
+   via a background-clip gradient, rather than a full-word color flash --
+   reads as a subtle polish, not a flashing ad. Static orange when motion
+   is reduced or the browser can't clip a gradient to text, so the word
+   is never just invisible. */
+.rrs-shine {
+  color: #ED7226;
+  background: linear-gradient(
+    100deg,
+    #ED7226 30%, #ED7226 42%,
+    #ffd8b8 50%,
+    #ED7226 58%, #ED7226 100%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rrs-shine-sweep 3.2s ease-in-out infinite;
+  animation-delay: 1s;
+}
+@keyframes rrs-shine-sweep {
+  0%   { background-position: 100% 0; }
+  40%  { background-position: 0% 0; }
+  100% { background-position: 0% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rrs-shine {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: #ED7226;
+    color: #ED7226;
+  }
+}
+/* Older Safari/Firefox without background-clip:text support: the
+   gradient still applies as a normal background, painting a visible box
+   behind the word instead of clipping to its letters. Fall back to plain
+   solid orange text in that case via feature detection. */
+@supports not (background-clip: text) {
+  .rrs-shine { background: none; color: #ED7226; -webkit-text-fill-color: #ED7226; animation: none; }
+}
+
 .pp-linetotal {
   display: flex;
   align-items: baseline;

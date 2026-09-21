@@ -24,7 +24,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260922c" />
+  <link rel="stylesheet" href="style.css?v=20260922d" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -234,27 +234,29 @@
 </div>
 
 </div>
-      </div>
 
-      <aside class="buy-box">
+        <!-- Purchase mode + Reorder Program, moved out of the buy box and
+             into the space freed up by the buy box going sticky. Was
+             crammed into the buy box, which made it the tallest column on
+             the page (see the previous two commits); this both fixes that
+             and gives the Reorder Program a real visual anchor of its own,
+             the way the "Crave & Save AutoShip" logo anchors that
+             program's panel on the competitor's product page, rather than
+             sitting as two plain buttons.
+             The Add to Cart button stays IN the buy box -- it has to, it's
+             the thing that's always in reach as the page scrolls -- and
+             reads which mode is selected from addBtn.dataset.purchaseMode
+             exactly as before; every JS reference here is by id, not DOM
+             position, so moving this block changes nothing about how
+             setPurchaseMode()/the add-to-cart handler find it. -->
+        <div class="pp-purchase-panel">
 
-        <div class="pricing-box">
-  <span class="price-label">Starting At</span>
-
-  <h2 id="productPrice">$--.--</h2>
-
-  <p>Per Case</p>
-</div>
-
-        <div class="qty-section">
-          <label>Quantity</label>
-
-          <div class="qty-control">
-            <button id="minusQty">-</button>
-            <input type="number" id="qtyValue" value="1" min="1" max="9999" inputmode="numeric" />
-            <button id="plusQty">+</button>
+          <div class="rrs-brandmark" aria-hidden="true">
+            <span class="rrs-brandmark-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+            </span>
+            <span class="rrs-brandmark-text">Supply <span class="rrs-shine">Smarter.</span> Stay <span class="rrs-shine">Ready.</span></span>
           </div>
-          <p id="moqNote" style="display:none;margin-top:8px;font-size:13px;font-weight:700;color:#ED7226"></p>
 
           <!-- Live line total for the quantity actually chosen. The tier
                cards above show the rate at each break; this shows what
@@ -299,6 +301,29 @@
             </select>
             <p class="pp-freq-note">Approve every order before it ships. Cancel or change anytime.</p>
           </div>
+
+        </div>
+      </div>
+
+      <aside class="buy-box">
+
+        <div class="pricing-box">
+  <span class="price-label">Starting At</span>
+
+  <h2 id="productPrice">$--.--</h2>
+
+  <p>Per Case</p>
+</div>
+
+        <div class="qty-section">
+          <label>Quantity</label>
+
+          <div class="qty-control">
+            <button id="minusQty">-</button>
+            <input type="number" id="qtyValue" value="1" min="1" max="9999" inputmode="numeric" />
+            <button id="plusQty">+</button>
+          </div>
+          <p id="moqNote" style="display:none;margin-top:8px;font-size:13px;font-weight:700;color:#ED7226"></p>
 
           <button class="add-btn" id="productAddToCart">
   <img width="48" height="48" src="assets/img/Cart.png" alt="">
@@ -395,7 +420,7 @@
 
   </section>
 
-  <script src="script.js?v=20260922c"></script>
+  <script src="script.js?v=20260922d"></script>
 
 </body>
 <!-- -- Floating Catalog QR Widget ----------------------------- -->
