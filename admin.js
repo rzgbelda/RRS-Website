@@ -2470,12 +2470,36 @@ async function runCsvImport() {
     // Optional. Left blank, a product has no volume tiers -- getTierPrice()
     // (script.js) falls back to `price` at any quantity, same as the
     // "Flat price" option in the single-product editor. Filled in, these
-    // are what the storefront actually charges at 1-5 / 6-29 / 30+ cases;
-    // nothing here is derived or auto-calculated the way the admin editor's
-    // cost-per-case markup is -- CSV rows are trusted as typed.
+    // are what the storefront actually charges; nothing here is derived or
+    // auto-calculated the way the admin editor's cost-per-case markup is --
+    // CSV rows are trusted as typed.
     price_tier1  : parseMoneyCell(r.price_tier1).empty ? null : parseMoneyCell(r.price_tier1).value,
     price_tier2  : parseMoneyCell(r.price_tier2).empty ? null : parseMoneyCell(r.price_tier2).value,
     price_tier3  : parseMoneyCell(r.price_tier3).empty ? null : parseMoneyCell(r.price_tier3).value,
+
+    // The quantity each tier starts at. Per-product rather than a fixed
+    // 6/30 (20260923b) because distributors set their own breakpoints.
+    // Null means that tier does not exist for this product -- a tier price
+    // without a threshold is never applied, so the two must travel
+    // together.
+    tier1_min_qty: parseNumCell(r.tier1_min_qty).empty ? null : Math.round(parseNumCell(r.tier1_min_qty).value),
+    tier2_min_qty: parseNumCell(r.tier2_min_qty).empty ? null : Math.round(parseNumCell(r.tier2_min_qty).value),
+    tier3_min_qty: parseNumCell(r.tier3_min_qty).empty ? null : Math.round(parseNumCell(r.tier3_min_qty).value),
+
+    // Staff-only margin data -- excluded from products_public, so these
+    // never reach a customer.
+    cost_per_case: parseMoneyCell(r.cost_per_case).empty ? null : parseMoneyCell(r.cost_per_case).value,
+    tier1_cost   : parseMoneyCell(r.tier1_cost).empty ? null : parseMoneyCell(r.tier1_cost).value,
+    tier2_cost   : parseMoneyCell(r.tier2_cost).empty ? null : parseMoneyCell(r.tier2_cost).value,
+    tier3_cost   : parseMoneyCell(r.tier3_cost).empty ? null : parseMoneyCell(r.tier3_cost).value,
+
+    // Which distributor dropships this. Internal.
+    distributor  : (r.distributor || "").trim().toLowerCase() || null,
+
+    // Defaults TRUE when the column is absent or unrecognised: a feed that
+    // carries no stock data must leave products sellable rather than
+    // silently pulling them off the storefront.
+    in_stock     : (r.in_stock || "").trim().toLowerCase() !== "false",
     is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
     category_name: r.category_name || null,
     case_qty     : parseInt(r.case_qty)  || 1,
