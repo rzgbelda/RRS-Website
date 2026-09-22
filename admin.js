@@ -1709,6 +1709,36 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
  */
 const CVT_TIER_DEFAULT_MIN = { tier1_min_qty: 1, tier2_min_qty: 6, tier3_min_qty: 30 };
 
+/* Known-bad figures in a supplier feed, corrected on import.
+ *
+ * Deliberately a short, explicit, per-SKU list rather than a rule that
+ * "fixes" suspicious numbers: silently rewriting supplier pricing is how
+ * a wrong price reaches a customer with nobody able to explain it. Each
+ * entry records a value whose intended figure is unambiguous, and is
+ * removed once the distributor corrects their file.
+ *
+ * 3098 (Clorox 2 for Colors) -- OfficeCrave's tier-2 COST reads $55.84
+ * where $5.84 belongs, a misplaced decimal that inflated the 105+ price
+ * to $80.97 against a $9.06 base. $5.84 x 1.43 (the Laundry & Cleaning
+ * Chemicals 6-29 markup) = $8.35, which sits correctly below the $8.85
+ * tier 1. Confirmed against products - Markup%.csv, which reproduces
+ * every other tier price on this SKU exactly.
+ *
+ * Not listed: 99737, whose tier costs run backwards (31.72 base, 33.74
+ * at 3+, 32.30 at 28+). There is no single unambiguous fix there, so its
+ * tiers are dropped by the above-base rule instead and it sells at its
+ * correct base price until OfficeCrave confirms the real figures.
+ */
+const CVT_PRICE_CORRECTIONS = {
+  "3098:price_tier2": "8.35",
+};
+
+/* The SKU of a source row, for the corrections list above. */
+function cvtRowSku(srcRow) {
+  const col = _cvtMapping.sku;
+  return col ? String(srcRow[col] ?? "").trim() : "";
+}
+
 /* The base price must be in the same unit as the tier prices.
  *
  * InnStyle's feed mixes them: "Selling Price" is per EACH while its tier
@@ -1752,13 +1782,63 @@ function cvtNormalizeValue(key, value, srcRow) {
   }
 
   if (key in CVT_TIER_DEFAULT_MIN) {
-    if (v) return String(parseInt(v.replace(/[^0-9]/g, ""), 10) || "");
-    // No threshold column in this feed: fall back to the fixed scheme,
-    // but only for tiers that actually carry a price.
+    // A threshold is meaningless without a price to go with it -- it
+    // would describe a tier the pricing code then can't apply. Checked
+    // against the CLEANED price so a junk cell (a lone ".") doesn't count
+    // as one.
     const priceKey = "price_tier" + key.charAt(4);
     const priceCol = _cvtMapping[priceKey];
-    const hasPrice = priceCol && String(srcRow[priceCol] ?? "").trim() !== "";
-    return hasPrice ? String(CVT_TIER_DEFAULT_MIN[key]) : "";
+    const rawPrice = priceCol ? String(srcRow[priceCol] ?? "") : "";
+    const hasPrice = cvtNormalizeValue(priceKey, rawPrice, srcRow) !== "";
+    if (!hasPrice) return "";
+
+    if (v) return String(parseInt(v.replace(/[^0-9]/g, ""), 10) || "");
+    // No threshold column in this feed: fall back to the fixed scheme.
+    return String(CVT_TIER_DEFAULT_MIN[key]);
+  }
+
+  // A tier priced AT OR ABOVE the base price is not a volume discount --
+  // it charges more for ordering more. Dropped rather than imported,
+  // since the threshold rule below then drops with it and the card
+  // disappears cleanly.
+  //
+  // Two real cases in the OfficeCrave feed, both traced to its cost
+  // column rather than to the thresholds (the Markup% sheet reproduces
+  // every tier-1 price exactly, so the markup formula is sound):
+  //
+  //   99737 -- costs run backwards (31.72 base, 33.74 at 3+, 32.30 at
+  //     28+, 31.72 at 87+), so tier 1 and 2 price above base. All its
+  //     tiers drop; it sells at its correct $45.99 base until OfficeCrave
+  //     confirms the real figures.
+  //
+  //   3098 -- tier-2 cost reads $55.84 where $5.84 belongs, inflating
+  //     that tier to $80.97 against a $9.06 base. Corrected below rather
+  //     than dropped, because the intended value is unambiguous.
+  //
+  // A tier EQUAL to base is caught by the same test: InnStyle's only tier
+  // column is "Price 1-5 Cases", which restates the regular price, and
+  // 170 of its 172 products would otherwise render a "1+ Cases" card
+  // advertising a discount the buyer can never get. Dropping the price
+  // drops the threshold with it (the threshold rule above requires a
+  // valid price), so the card disappears cleanly.
+  if (/^price_tier[123]$/.test(key) && v) {
+    const corrected = CVT_PRICE_CORRECTIONS[cvtRowSku(srcRow) + ":" + key];
+    if (corrected != null) return corrected;
+
+    const priceCol = _cvtMapping.price;
+    const base = priceCol
+      ? cvtNormalizeValue("price", String(srcRow[priceCol] ?? ""), srcRow)
+      : "";
+    const cleaned = v.replace(/[$,\s]/g, "");
+    if (base && parseFloat(cleaned) >= parseFloat(base)) return "";
+  }
+
+  // Supplier feeds disagree on casing -- Sasso writes "EACH", the others
+  // "Each". Left as two distinct units they'd group and filter
+  // separately. Only the casing is touched: Pack/Set/Box/Pair/Bucket are
+  // genuinely different pack forms a buyer sees, not noise.
+  if (key === "unit" && v) {
+    return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
   if (key === "in_stock") {
@@ -1767,10 +1847,17 @@ function cvtNormalizeValue(key, value, srcRow) {
   }
 
   // Strip currency symbols and thousands separators from numeric columns.
+  //
+  // Anything that still isn't a number after cleaning is dropped rather
+  // than passed through: these feeds contain stray cells (a lone "."
+  // sits in one InnStyle 30+ price), and letting that reach the importer
+  // writes a junk price onto a live product. Empty is the honest value --
+  // an absent tier price just means that tier doesn't exist.
   if (/^(price|sale_price|retail_price|price_tier[123]|cost_per_case|tier[123]_cost|weight|length|width|height|moq_group_min|case_qty)$/.test(key)) {
     if (!v) return "";
     const cleaned = v.replace(/[$,\s]/g, "");
-    return /^-?\d*\.?\d+$/.test(cleaned) ? cleaned : v;
+    if (!/^-?\d*\.?\d+$/.test(cleaned)) return "";
+    return Number.isFinite(parseFloat(cleaned)) ? cleaned : "";
   }
 
   return v;
