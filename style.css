@@ -859,7 +859,7 @@ padding-top: 20px;
   font-size: 16px;
   line-height: 1.75;
   color: #64748b;
-  margin-bottom: 44px;
+  margin-bottom: 28px;
   max-width: 520px;
 }
 
@@ -1299,7 +1299,8 @@ padding-top: 20px;
 /* ── Reorder-setup video (now sits in .ordering-left, swapped with the
    3 steps which moved into the reorder card) ── */
 .reorder-video-section {
-  margin-top: 36px;
+  margin-top: 4px;
+  margin-bottom: 36px;
 }
 
 .reorder-video-header {
