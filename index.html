@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922n" />
+  <link rel="stylesheet" href="style.css?v=20260922o" />
 </head>
 
 <body>
@@ -706,19 +706,39 @@
 
       <p class="schedule-label">How often do you need supplies?</p>
 
-      <!-- Frequency mini button replaced with a static illustration of the
-           real in-cart control, per RRS-29 item 6 ("replace... with a
-           screenshot of 'Pick your frequency in the cart...'"). This is a
-           built mock of that control, not an actual captured screenshot --
-           swap the image below for a real screenshot of the cart's
-           frequency picker if one specific image is preferred. -->
+      <!-- RRS-37: the static frequency-chip mock (RRS-29 item 6) is
+           replaced with a short product-demo video per Eric's note --
+           "remove sequence buttons and replace with a loom short video
+           of in cart action setting the intervals (weekly, 3 weeks,
+           monthly)... I belive that it will present better lead seeing
+           in action."
+           No Loom link exists in the codebase yet (checked: zero
+           loom.com references anywhere), so this is the embed SLOT, not
+           a finished embed -- an invented/placeholder video URL would be
+           worse than this, since it would either 404 or show unrelated
+           content. To wire up the real video once it's recorded:
+             1. Get the Loom share link's embed URL (Share -> Embed,
+                or https://www.loom.com/embed/<id>).
+             2. Replace the poster <div> below with:
+                <iframe src="https://www.loom.com/embed/<id>"
+                  title="How to set your reorder frequency in the cart"
+                  loading="lazy" allowfullscreen
+                  style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px;"></iframe>
+             3. Delete .schedule-video-poster's CSS rules in style.css
+                (no longer needed once a real iframe replaces the poster).
+           "3 weeks" in Eric's note doesn't match any interval the cart
+           actually offers (Weekly / Every 2 Weeks / Monthly / Every 45
+           Days / Every 60 Days / Custom -- see script.js's reorder
+           dropdown) -- likely he meant "every 2 weeks" loosely. Left
+           the real options in the caption below rather than adding a
+           45/2/3-week option that doesn't exist in the cart, which
+           would make the homepage promise something the product
+           doesn't have. -->
       <div class="schedule-frequency-preview">
-        <p class="schedule-frequency-caption">Pick your frequency in the cart:</p>
-        <div class="schedule-frequency-chips" aria-hidden="true">
-          <span class="schedule-frequency-chip is-active">Weekly</span>
-          <span class="schedule-frequency-chip">Every 2 Weeks</span>
-          <span class="schedule-frequency-chip">Monthly</span>
-          <span class="schedule-frequency-chip">Custom</span>
+        <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom:</p>
+        <div class="schedule-video-poster">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+          <span>Video coming soon &mdash; how to set your reorder frequency in the cart</span>
         </div>
       </div>
 

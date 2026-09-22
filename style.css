@@ -390,7 +390,17 @@ padding-top: 20px;
      space instead of leaving the hero shorter/emptier on the left. */
   grid-template-columns: 54% 46%;
   align-items: center;
-  background: rgba(255, 255, 255, 0.88);
+  /* RRS-37: "I feel we need some color at the top of the home page."
+     The top-bar strip above the navbar is already brand orange, but
+     everything below it -- navbar, then this hero -- was flat near-white
+     (rgba(255,255,255,.88)), which is genuinely what a plain top-to-
+     bottom screenshot shows. A soft brand-tinted wash (navy corner into
+     white, a faint orange glow behind the hero image) reads as
+     "polished," not a loud redesign -- text contrast and the existing
+     layout are untouched, this only changes what's behind them. */
+  background:
+    radial-gradient(1100px 520px at 82% -10%, rgba(237,114,38,.10), transparent 60%),
+    linear-gradient(135deg, rgba(11,31,56,.06) 0%, rgba(255,255,255,.88) 42%);
 }
 
 .hero-content {
@@ -1239,27 +1249,31 @@ padding-top: 20px;
   color: #64748b;
   margin: 0 0 10px;
 }
-.schedule-frequency-chips {
+/* RRS-37: placeholder for the Loom demo video Eric asked for -- see the
+   long comment in index.html above this element for exactly how to swap
+   this for the real <iframe> once a Loom link exists. Delete this whole
+   rule once that swap happens; it exists only to make the empty slot
+   look deliberate instead of broken while there's no video yet. */
+.schedule-video-poster {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-}
-.schedule-frequency-chip {
-  padding: 8px 16px;
-  border: 1.5px solid #e2e8f0;
-  background: #f8fafc;
-  border-radius: 100px;
-  font-size: 12.5px;
-  font-weight: 600;
-  color: #475569;
-}
-.schedule-frequency-chip.is-active {
-  background: #ED7226;
-  border-color: #ED7226;
+  gap: 10px;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #0B1F38, #16305a);
   color: #fff;
+}
+.schedule-video-poster svg { opacity: .9; }
+.schedule-video-poster span {
+  max-width: 70%;
+  font-size: 12.5px;
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(237,114,38,.35);
+  color: rgba(255,255,255,.85);
+  letter-spacing: .02em;
+  text-align: center;
+  line-height: 1.5;
 }
 
 /* Live preview */
