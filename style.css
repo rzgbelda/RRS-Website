@@ -1206,6 +1206,39 @@ padding-top: 20px;
   margin-bottom: 14px;
 }
 
+/* RRS-37 follow-up: the 3 ordering steps moved into this card (swapped
+   with the video, which now lives where the steps used to be). They're
+   sized for an ~880px-wide left column originally; shrunk here to fit
+   the card's ~560px max width. */
+.schedule-section-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #1e293b;
+  margin: 0 0 18px;
+}
+
+.schedule-content .ordering-steps {
+  margin-bottom: 26px;
+}
+
+.schedule-content .step-icon {
+  width: 56px;
+  height: 56px;
+}
+
+.schedule-content .step-icon img {
+  width: 28px;
+  height: 28px;
+}
+
+.schedule-content .step-num { font-size: 14px; margin-bottom: 6px; }
+.schedule-content .step-top { margin-bottom: 10px; }
+.schedule-content .step-item h3 { font-size: 12px; }
+.schedule-content .step-item p { font-size: 11px; line-height: 1.45; }
+.schedule-content .step-connector { margin-top: 46px; width: 18px; }
+
 /* Pills */
 .schedule-pills {
   display: flex;
@@ -1263,12 +1296,10 @@ padding-top: 20px;
   text-underline-offset: 4px;
 }
 
-/* ── Full-width reorder-setup video (below the steps + reorder card) ── */
+/* ── Reorder-setup video (now sits in .ordering-left, swapped with the
+   3 steps which moved into the reorder card) ── */
 .reorder-video-section {
-  grid-column: 1 / -1;
-  margin-top: 56px;
-  padding-top: 48px;
-  border-top: 1.5px solid #e4e9f0;
+  margin-top: 36px;
 }
 
 .reorder-video-header {
@@ -1341,7 +1372,7 @@ padding-top: 20px;
 .reorder-video-trigger:hover .reorder-video-expand { background: rgba(237,114,38,.94); }
 
 @media (max-width: 600px) {
-  .reorder-video-section { margin-top: 40px; padding-top: 32px; }
+  .reorder-video-section { margin-top: 28px; }
   .reorder-video-header h3 { font-size: 17px; }
   .reorder-video-player { max-height: 320px; }
 }
@@ -1464,7 +1495,7 @@ padding-top: 20px;
   text-align: center;
 }
 
-.schedule-content > p:not(.schedule-label):not(.cancel-note):not(.schedule-frequency-caption) { display: none; }
+.schedule-content > p:not(.schedule-label):not(.cancel-note):not(.schedule-frequency-caption):not(.schedule-section-label) { display: none; }
 
 /* ===========================
    REQUEST BUSINESS PRICING

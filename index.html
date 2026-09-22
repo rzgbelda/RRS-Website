@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922t" />
+  <link rel="stylesheet" href="style.css?v=20260922u" />
 </head>
 
 <body>
@@ -624,44 +624,6 @@
     <h2>Simple Ordering Built in<br>for our customers</h2>
     <p class="ordering-subtext">From your first purchase to automatic redelivery &mdash; Room Ready Supply makes supply management effortless so you can focus on running your property.</p>
 
-    <div class="ordering-steps">
-
-      <div class="step-item">
-        <div class="step-top">
-          <div class="step-num">01</div>
-          <div class="step-icon"><img width="250" height="243" src="assets/img/browseandbuild.png" alt="Browse and build your hospitality supply order" loading="lazy"></div>
-        </div>
-        <h3>Browse &amp; Build</h3>
-        <p>Explore our full catalog of hospitality and facility essentials. Add exactly what your property needs.</p>
-      </div>
-
-      <div class="step-connector" aria-hidden="true"></div>
-
-      <!-- Renamed from "Submit" per RRS-29 item 6 -- "send"/"request"
-           language belonged to the old quote-request flow this page no
-           longer leads with; ordering now completes at checkout. -->
-      <div class="step-item">
-        <div class="step-top">
-          <div class="step-num">02</div>
-          <div class="step-icon"><img src="assets/icons/file.svg" alt="Add cases to your cart and check out" loading="lazy"></div>
-        </div>
-        <h3>Add &amp; Check Out</h3>
-        <p>Add cases to your cart and check out in minutes.</p>
-      </div>
-
-      <div class="step-connector" aria-hidden="true"></div>
-
-      <div class="step-item">
-        <div class="step-top">
-          <div class="step-num">03</div>
-          <div class="step-icon"><img src="assets/icons/check.svg" alt="Confirm your order and set up auto reorder" loading="lazy"></div>
-        </div>
-        <h3>Confirm &amp; Reorder</h3>
-        <p>We confirm and fulfill your order. Set your reorder frequency in the cart so you never run out again.</p>
-      </div>
-
-    </div>
-
     <!-- CTA callout -->
     <div class="ordering-cta-box">
       <div class="ordering-cta-text">
@@ -672,6 +634,30 @@
         Buy Now
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
       </a>
+    </div>
+
+    <!-- RRS-37 follow-up: video moved here (was the reorder card's spot)
+         so it has room to show at full size, uncropped, instead of being
+         squeezed into the narrow reorder-card column. -->
+    <div class="reorder-video-section">
+      <div class="reorder-video-header">
+        <span class="reorder-video-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+        </span>
+        <h3>How to setup your reorder program?</h3>
+      </div>
+      <button type="button" class="reorder-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
+        <video class="reorder-video-player" autoplay muted loop playsinline
+               preload="metadata"
+               poster="assets/img/reorder-frequency-demo-poster.jpg"
+               aria-hidden="true" tabindex="-1">
+          <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
+        </video>
+        <span class="reorder-video-expand" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+          Expand
+        </span>
+      </button>
     </div>
 
   </div>
@@ -698,12 +684,46 @@
     <!-- Schedule content &mdash; white card bottom -->
     <div class="schedule-content">
 
-      <p class="schedule-label">How often do you need supplies?</p>
+      <p class="schedule-section-label">How It Works</p>
 
-      <!-- RRS-37 follow-up: the frequency-demo video moved out of this card
-           into its own full-width "How to setup your reorder program?"
-           container below .ordering-section, so it has room to show at
-           full size instead of being cropped/tiny in this narrow card. -->
+      <!-- RRS-37 follow-up: the 3 ordering steps moved here from
+           .ordering-left, swapping places with the demo video. -->
+      <div class="ordering-steps">
+
+        <div class="step-item">
+          <div class="step-top">
+            <div class="step-num">01</div>
+            <div class="step-icon"><img width="250" height="243" src="assets/img/browseandbuild.png" alt="Browse and build your hospitality supply order" loading="lazy"></div>
+          </div>
+          <h3>Browse &amp; Build</h3>
+          <p>Explore our full catalog of hospitality and facility essentials. Add exactly what your property needs.</p>
+        </div>
+
+        <div class="step-connector" aria-hidden="true"></div>
+
+        <div class="step-item">
+          <div class="step-top">
+            <div class="step-num">02</div>
+            <div class="step-icon"><img src="assets/icons/file.svg" alt="Add cases to your cart and check out" loading="lazy"></div>
+          </div>
+          <h3>Add &amp; Check Out</h3>
+          <p>Add cases to your cart and check out in minutes.</p>
+        </div>
+
+        <div class="step-connector" aria-hidden="true"></div>
+
+        <div class="step-item">
+          <div class="step-top">
+            <div class="step-num">03</div>
+            <div class="step-icon"><img src="assets/icons/check.svg" alt="Confirm your order and set up auto reorder" loading="lazy"></div>
+          </div>
+          <h3>Confirm &amp; Reorder</h3>
+          <p>We confirm and fulfill your order. Set your reorder frequency in the cart so you never run out again.</p>
+        </div>
+
+      </div>
+
+      <p class="schedule-label">How often do you need supplies?</p>
       <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom.</p>
 
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
@@ -722,31 +742,6 @@
 
     </div>
 
-  </div>
-
-  <!-- Full-width reorder-setup video, below the 3 steps + reorder card so
-       the clip has room to show at full size instead of being squeezed
-       into the narrow reorder-card column. object-fit: contain (not
-       cover) so nothing gets cropped. -->
-  <div class="reorder-video-section">
-    <div class="reorder-video-header">
-      <span class="reorder-video-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
-      </span>
-      <h3>How to setup your reorder program?</h3>
-    </div>
-    <button type="button" class="reorder-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
-      <video class="reorder-video-player" autoplay muted loop playsinline
-             preload="metadata"
-             poster="assets/img/reorder-frequency-demo-poster.jpg"
-             aria-hidden="true" tabindex="-1">
-        <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
-      </video>
-      <span class="reorder-video-expand" aria-hidden="true">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-        Expand
-      </span>
-    </button>
   </div>
 
 </section>
@@ -1075,7 +1070,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260922i"></script>
+<script src="script.js?v=20260922j"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">
