@@ -831,7 +831,12 @@ padding-top: 20px;
      enough room to actually be readable, not just decorative. */
   grid-template-columns: 1fr minmax(0, 560px);
   gap: 70px;
-  align-items: stretch;
+  /* Was "stretch": with the video now making the left column much taller
+     than the reorder card's own content, stretch forced the card to grow
+     to match and left .schedule-content's flex-end pushing everything
+     down, showing as a big dead gap in the card. "start" lets the card
+     end at its natural (shorter) height instead. */
+  align-items: start;
 }
 
 /* Legacy alias */
