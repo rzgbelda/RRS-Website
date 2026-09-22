@@ -836,6 +836,7 @@ padding-top: 20px;
 
 /* Legacy alias */
 .ordering-left h4 { display: none; }
+.ordering-left .rss-step h4 { display: block; }
 
 .ordering-eyebrow {
   display: inline-block;
@@ -1144,6 +1145,42 @@ padding-top: 20px;
   margin-bottom: 24px;
 }
 
+/* Benefit row -- qualitative claims, not the fabricated 500+/70+/24hr
+   numeric stats that were removed per RRS-29 item 6. */
+.rc-benefits {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px 20px;
+  position: relative;
+}
+
+.rc-benefit {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.rc-benefit svg { flex-shrink: 0; margin-top: 1px; }
+
+.rc-benefit strong {
+  display: block;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 2px;
+}
+
+.rc-benefit span {
+  display: block;
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255,255,255,.5);
+}
+
+@media (max-width: 420px) {
+  .rc-benefits { grid-template-columns: 1fr; }
+}
+
 /* Stats strip */
 .rc-stats {
   display: flex;
@@ -1294,6 +1331,66 @@ padding-top: 20px;
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 4px;
+}
+
+/* ── 4-step strip above the video ── */
+.reorder-steps-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+  background: #fff6ef;
+  border: 1px solid #fbdfc4;
+  border-radius: 16px;
+  padding: 24px 26px;
+  margin-bottom: 28px;
+}
+
+.rss-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(237,114,38,.14);
+  margin-bottom: 12px;
+}
+
+.rss-step h4 {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--rrs-navy, #0b2d52);
+  margin: 0 0 6px;
+}
+
+.rss-step p {
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #6b7280;
+  margin: 0;
+}
+
+.rss-note {
+  position: absolute;
+  top: -22px;
+  right: 6px;
+  font-family: 'Segoe Print', 'Comic Sans MS', cursive;
+  font-size: 13px;
+  color: #b45309;
+  line-height: 1.3;
+  transform: rotate(-3deg);
+  text-align: right;
+}
+
+@media (max-width: 860px) {
+  .reorder-steps-strip { grid-template-columns: repeat(2, 1fr); }
+  .rss-note { display: none; }
+}
+
+@media (max-width: 480px) {
+  .reorder-steps-strip { grid-template-columns: 1fr; padding: 20px; }
 }
 
 /* ── Reorder-setup video (now sits in .ordering-left, swapped with the
