@@ -8397,6 +8397,18 @@ input.qty-input:focus {
   flex-wrap: wrap;
 }
 
+.order-option input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .option-card {
   flex: 1 1 160px;
   min-height: 72px;
