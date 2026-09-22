@@ -34,9 +34,23 @@ function cleanPrice(v) {
   return Number(String(v == null ? '' : v).replace('$', '').replace(',', '').trim()) || 0;
 }
 
-// Mirrors getTierPrice() in script.js. Tier 3 has no upper bound on
-// purpose: a 50+ case order still pays this rate automatically, and any
-// further discount is negotiated by sales rather than computed here.
+// Mirrors getTierPrice() in script.js.
+//
+// Volume breakpoints are per-product (products.tier1_min_qty etc., added
+// in 20260923b) rather than a fixed 6/30 pair: distributors honour
+// different thresholds, and the OfficeCrave catalog alone carries 76
+// distinct combinations. A null threshold means that tier does not exist
+// for this product, so it is skipped and the next tier down applies --
+// tiers are ragged, and a product may have none at all.
+//
+// The top tier has no upper bound on purpose: a quantity past it still
+// pays that rate; anything further is negotiated by sales, not computed
+// here.
+function tierMinQty(raw) {
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
 function tierPriceFor(row, qty) {
   const tier1 = cleanPrice(row.price_tier1);
   const tier2 = cleanPrice(row.price_tier2);
@@ -44,9 +58,16 @@ function tierPriceFor(row, qty) {
   const base  = cleanPrice(row.price);
 
   if (isSoldByDozen(row)) return tier1 || base || 0;
-  if (qty >= 30) return tier3 || tier2 || tier1 || base || 0;
-  if (qty >= 6)  return tier2 || tier1 || base || 0;
-  return tier1 || base || 0;
+
+  const t1Min = tierMinQty(row.tier1_min_qty);
+  const t2Min = tierMinQty(row.tier2_min_qty);
+  const t3Min = tierMinQty(row.tier3_min_qty);
+
+  if (t3Min && qty >= t3Min && tier3) return tier3;
+  if (t2Min && qty >= t2Min && tier2) return tier2;
+  if (t1Min && qty >= t1Min && tier1) return tier1;
+
+  return base || tier1 || 0;
 }
 
 // Shipping allowance per packaged pound, from the 2026-09 shipping fee
@@ -61,6 +82,18 @@ function tierPriceFor(row, qty) {
 // shows only the resulting dollar total, never "$0.50/lb" or the weight
 // it was derived from.
 const SHIPPING_RATE_PER_LB = 0.50;
+
+// Minimum delivery charge per ORDER, not per line. Weight alone
+// undercharges on light goods -- a 0.15 lb item computes to $0.07, which
+// does not cover picking, packing or a carrier's own minimum -- so any
+// shipped order below this floor is charged the floor instead.
+//
+// Per order deliberately: applying it per line would charge a ten-item
+// light order ten separate minimums.
+//
+// Under 21.98 lb the floor wins; above it, weight does. Mirrored by
+// SHIPPING_MIN_CHARGE in script.js.
+const SHIPPING_MIN_CHARGE = 10.99;
 
 /**
  * items: [{ sku, quantity }] as sent by the browser.
@@ -113,7 +146,7 @@ async function priceCart(items, state, fulfillmentMethod) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, unit, is_active, weight')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -178,11 +211,14 @@ async function priceCart(items, state, fulfillmentMethod) {
   // remitted, so it stays as-is until that's confirmed with an accountant.
   const tax = Math.round(discountedSubtotal * getTaxRate(state) * 100) / 100;
 
-  // Warehouse pickup is never freighted, so it carries no allowance.
+  // Warehouse pickup is never freighted, so it carries no allowance and
+  // no minimum -- the floor exists to cover shipping an order, and a
+  // pickup is not shipped.
   const isPickup = String(fulfillmentMethod || '').trim().toLowerCase() === 'pickup';
+  const byWeight = Math.round(totalWeightLb * SHIPPING_RATE_PER_LB * 100) / 100;
   const shipping = isPickup
     ? 0
-    : Math.round(totalWeightLb * SHIPPING_RATE_PER_LB * 100) / 100;
+    : Math.max(byWeight, SHIPPING_MIN_CHARGE);
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 

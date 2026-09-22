@@ -350,6 +350,16 @@ function mapDbProductToLegacyShape(row) {
     // from stock/category -- see the migration comment on
     // products.is_fast_ship for why this has to stay a human decision.
     isFastShip: !!row.is_fast_ship,
+    // Whether the distributor can supply this right now. Defaults to true
+    // when the column is absent (an older cached row, or a feed that
+    // carries no stock data) so a missing field never silently makes a
+    // sellable product unbuyable.
+    inStock: row.in_stock !== false,
+    // Per-product volume breakpoints -- see getTierPrice(). Null when the
+    // product has no such tier; tiers are ragged across distributors.
+    tier1MinQty: row.tier1_min_qty != null ? Number(row.tier1_min_qty) : null,
+    tier2MinQty: row.tier2_min_qty != null ? Number(row.tier2_min_qty) : null,
+    tier3MinQty: row.tier3_min_qty != null ? Number(row.tier3_min_qty) : null,
     weight: row.weight != null ? String(row.weight) : "",
     length: row.length != null ? String(row.length) : "",
     width: row.width != null ? String(row.width) : "",
@@ -695,18 +705,29 @@ const REORDER_DISCOUNT_LABEL = "5%";
 // weight. Don't surface either in UI copy.
 const SHIPPING_RATE_PER_LB = 0.50;
 
+// Minimum delivery charge per ORDER (not per line). Light orders compute
+// to less than it costs to ship them at all, so anything below this floor
+// is charged the floor. Authoritative copy is SHIPPING_MIN_CHARGE in
+// api/_lib/price-cart.js -- if they disagree the customer is shown one
+// number and charged another.
+const SHIPPING_MIN_CHARGE = 10.99;
+
 // Order shipping allowance = total packaged weight x the rate. A line with
 // no usable weight contributes 0 lb rather than blocking checkout, matching
 // price-cart.js -- catalog weights are still being corrected and a customer
 // must not hit a dead end on a real product.
 function shippingFeeForCart(cart) {
+  if (!cart || !cart.length) return 0;
   let lbs = 0;
-  for (const item of (cart || [])) {
+  for (const item of cart) {
     const w = Number(item && item.weight);
     const qty = Number(item && item.quantity) || 1;
     if (Number.isFinite(w) && w > 0) lbs += w * qty;
   }
-  return Math.round(lbs * SHIPPING_RATE_PER_LB * 100) / 100;
+  const byWeight = Math.round(lbs * SHIPPING_RATE_PER_LB * 100) / 100;
+  // Floor applies to the order as a whole. An empty cart returns 0 above
+  // rather than the minimum -- there is nothing to ship.
+  return Math.max(byWeight, SHIPPING_MIN_CHARGE);
 }
 
 // A cart line counts toward the reorder discount when it carries a real
@@ -758,19 +779,44 @@ function getTierPrice(item) {
     return tier1 || base || 0;
   }
 
-  // Tier 3 is "30-49 cases" in the copy, but there is deliberately no
-  // upper bound here: a 50+ order still pays this price automatically.
-  // The difference at 50+ is an additional negotiated discount applied by
-  // sales, not a different rate the cart can compute on its own.
-  if (qty >= 30) {
-    return tier3 || tier2 || tier1 || base || 0;
-  }
+  // Volume breakpoints come from the product, not from a fixed 6/30 pair.
+  // Different distributors honour different thresholds -- the OfficeCrave
+  // catalog alone carries 76 distinct combinations (3/16/36, 5/43/127,
+  // 2/12/28, ...) -- so a hardcoded pair would show a tier price at a
+  // quantity the supplier does not actually give it at.
+  //
+  // Tiers are ragged: a product may have one, two, three or none. A null
+  // threshold means that tier does not exist for this product, so it is
+  // skipped rather than defaulted, and the next tier down applies. A
+  // product with no thresholds at all just pays its base price at every
+  // quantity.
+  //
+  // The top tier has no upper bound on purpose: a quantity past it still
+  // pays that rate. Anything beyond is a negotiated discount sales apply
+  // by hand, not a rate the cart computes.
+  //
+  // Mirrored exactly by tierPriceFor() in api/_lib/price-cart.js, which
+  // is what actually charges the card. If one changes, both must.
+  const t1Min = tierMinQty(item, "tier1_min_qty", "tier1MinQty");
+  const t2Min = tierMinQty(item, "tier2_min_qty", "tier2MinQty");
+  const t3Min = tierMinQty(item, "tier3_min_qty", "tier3MinQty");
 
-  if (qty >= 6) {
-    return tier2 || tier1 || base || 0;
-  }
+  if (t3Min && qty >= t3Min && tier3) return tier3;
+  if (t2Min && qty >= t2Min && tier2) return tier2;
+  if (t1Min && qty >= t1Min && tier1) return tier1;
 
-  return tier1 || base || 0;
+  return base || tier1 || 0;
+}
+
+// Reads a tier threshold off a product or a cart line. Supabase rows use
+// snake_case; cart lines built from data-* attributes use camelCase, and
+// the same product flows through both. 0 and "" are treated as absent --
+// a threshold of 0 would make the tier apply at every quantity, which is
+// never what an empty spreadsheet cell means.
+function tierMinQty(item, snake, camel) {
+  const raw = item && (item[snake] ?? item[camel]);
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : null;
 }
 
 /* =========================
@@ -916,6 +962,7 @@ function renderSingleCard(product) {
             data-moq-group="${product.moqGroup || ''}"
             data-moq-group-min="${product.moqGroupMin || ''}"
             data-weight="${product.weight || ''}"
+            data-in-stock="${product.inStock === false ? 'false' : 'true'}"
             data-image="${product.image}"
           >
             Add to Order
@@ -1085,6 +1132,7 @@ function renderVariantCard(variants) {
             data-moq-group="${v.moqGroup || ''}"
             data-moq-group-min="${v.moqGroupMin || ''}"
             data-weight="${v.weight || ''}"
+            data-in-stock="${v.inStock === false ? 'false' : 'true'}"
             data-image="${v.image}"
           >
             Add to Order
@@ -1970,14 +2018,65 @@ function populateProductPage(product) {
     document.getElementById("tier3Badge")?.classList.remove("best-value");
     if (tierCardsEl) tierCardsEl.style.display = rate ? "" : "none";
   } else {
-    setText("tier1Price", product.price1 ? `$${cleanPrice(product.price1).toFixed(2)}` : "$--.--");
-    setText("tier2Price", product.price2 ? `$${cleanPrice(product.price2).toFixed(2)}` : "$--.--");
-    setText("tier3Price", product.price3 ? `$${cleanPrice(product.price3).toFixed(2)}` : "$--.--");
+    // Volume breakpoints are per-product now (see getTierPrice). The
+    // labels used to be hardcoded "1-5 / 6-29 / 30-49 Cases" in
+    // product-template.html, which is wrong for any product whose
+    // distributor sets different thresholds -- OfficeCrave alone has 76
+    // distinct combinations -- so each label is built from that product's
+    // own numbers.
+    //
+    // Tiers are also ragged: a product may have one, two, three or none.
+    // A tier with no threshold or no price does not exist for this
+    // product and its card is hidden outright rather than padded with a
+    // repeated price, which would advertise a volume discount the buyer
+    // can never actually reach.
+    const unitWord = (product.priceBy || "Case").replace(/s$/i, "");
+    const mins = [
+      tierMinQty(product, "tier1_min_qty", "tier1MinQty"),
+      tierMinQty(product, "tier2_min_qty", "tier2MinQty"),
+      tierMinQty(product, "tier3_min_qty", "tier3MinQty"),
+    ];
+    const prices = [t1, t2, t3];
+    let shownCount = 0;
+
+    [0, 1, 2].forEach(i => {
+      const card = document.getElementById(`tier${i + 1}Price`)?.closest(".tier-card");
+      const min = mins[i];
+      const price = prices[i];
+
+      if (!min || !price) {
+        if (card) card.style.display = "none";
+        return;
+      }
+      if (card) card.style.display = "";
+      shownCount++;
+
+      // Upper bound is one below the next existing tier's threshold; the
+      // highest tier is open-ended because a larger order still pays it.
+      const nextMin = mins.slice(i + 1).find((m, j) => m && prices[i + 1 + j]);
+      const label = nextMin
+        ? `${min}–${nextMin - 1} ${unitWord}s`
+        : `${min}+ ${unitWord}s`;
+
+      setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
+      setText(`tier${i + 1}Label`, label);
+    });
+
+    // With only one real tier there is no "volume discount" to speak of --
+    // relabel so a single card doesn't imply savings that need a second
+    // tier to exist.
+    if (shownCount === 1) {
+      setText("tier1Badge", "STANDARD");
+      setText("tier1Sub", "Standard Pricing");
+      document.getElementById("tier1Badge")?.classList.remove("best-value");
+    }
 
     if (tierCardsEl) {
-      const allSame = t1 && t2 && t3 && t1 === t2 && t2 === t3;
-      const noPrices = !t1 && !t2 && !t3;
-      tierCardsEl.style.display = (allSame || noPrices) ? "none" : "";
+      // Hidden when every visible tier is the same price (no actual
+      // break), or when nothing qualified at all.
+      const visible = prices.filter((p, i) => p && mins[i]);
+      const allSame = visible.length > 1 && visible.every(p => p === visible[0]);
+      tierCardsEl.style.display = (!shownCount || allSame) ? "none" : "";
     }
   }
 
@@ -2326,6 +2425,15 @@ function setupAddToCartButtons() {
     button.onclick = e => {
       e.preventDefault();
       e.stopPropagation();
+
+      // An out-of-stock product stays listed and clickable-looking, so the
+      // guard belongs here rather than relying on the disabled attribute
+      // alone -- these handlers are bound directly and would still fire if
+      // the attribute were ever missed on one of the render paths.
+      if (button.disabled || button.dataset.inStock === "false") {
+        alert("This item is currently out of stock. Please contact us at sales@roomreadysupply.com if you'd like to be notified when it's back.");
+        return;
+      }
 
       const qtyValue = document.getElementById("qtyValue");
 
@@ -3567,9 +3675,9 @@ function showFeaturedProducts() {
           </div>
         </div>
 
-        <div class="stock-status">
+        <div class="stock-status${product.inStock === false ? ' is-out' : ''}">
           <span class="dot"></span>
-          In Stock
+          ${product.inStock === false ? "Out of Stock" : "In Stock"}
         </div>
 
         <div class="price">
@@ -3578,6 +3686,7 @@ function showFeaturedProducts() {
 
         <button
           class="add-btn"
+          ${product.inStock === false ? "disabled" : ""}
           data-item="${product.itemNumber}"
           data-name="${product.name}"
           data-description="${product.description || ""}"
@@ -3590,10 +3699,11 @@ function showFeaturedProducts() {
           data-moq-group="${product.moqGroup || ''}"
           data-moq-group-min="${product.moqGroupMin || ''}"
           data-weight="${product.weight || ''}"
+          data-in-stock="${product.inStock === false ? 'false' : 'true'}"
           data-image="${product.image}"
         >
           <img src="assets/img/Cart.png" alt="">
-          ADD TO CART
+          ${product.inStock === false ? "OUT OF STOCK" : "ADD TO CART"}
         </button>
 
       </div>
@@ -4749,6 +4859,7 @@ function hcProductCard(product, badge) {
           data-moq-group="${product.moqGroup || ''}"
           data-moq-group-min="${product.moqGroupMin || ''}"
           data-weight="${product.weight || ''}"
+          data-in-stock="${product.inStock === false ? 'false' : 'true'}"
           data-image="${product.image}">
           <img src="assets/img/Cart.png" alt="">
           ADD TO CART

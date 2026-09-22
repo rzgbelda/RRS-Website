@@ -1328,6 +1328,21 @@ const CVT_COLS = [
   { key:"price_tier1",   label:"Price: 1-5 Cases" },
   { key:"price_tier2",   label:"Price: 6-29 Cases" },
   { key:"price_tier3",   label:"Price: 30+ Cases" },
+  // Per-product volume breakpoints. Distributors set their own: the
+  // OfficeCrave feed carries 76 distinct combinations, so these cannot be
+  // assumed to be 6/30. In that file they are columns O/P/Q, and the
+  // PRICES that go with them are U/V/W (Tier N Selling Price) -- NOT
+  // R/S/T, which are supplier cost.
+  { key:"tier1_min_qty", label:"Tier 1: Min Qty (OfficeCrave col O)" },
+  { key:"tier2_min_qty", label:"Tier 2: Min Qty (OfficeCrave col P)" },
+  { key:"tier3_min_qty", label:"Tier 3: Min Qty (OfficeCrave col Q)" },
+  // Staff-only margin data -- never reaches products_public.
+  { key:"cost_per_case", label:"Cost (staff only)" },
+  { key:"tier1_cost",    label:"Tier 1 Cost (staff only)" },
+  { key:"tier2_cost",    label:"Tier 2 Cost (staff only)" },
+  { key:"tier3_cost",    label:"Tier 3 Cost (staff only)" },
+  { key:"distributor",   label:"Distributor (innstyle / sasso / officecrave)" },
+  { key:"in_stock",      label:"In Stock (false hides Add to Cart)" },
   { key:"is_on_sale",    label:"Is On Sale" },
   { key:"category_name", label:"Category",     required:true },
   { key:"case_qty",      label:"Case Qty" },
@@ -1442,24 +1457,61 @@ function cvtAutoMap(cols) {
   const norm = s => s.toLowerCase().replace(/[\s_\-\/]+/g,"");
   const aliases = {
     name:          ["name","productname","title","item","itemname"],
-    sku:           ["sku","skucode","itemcode","code","partnumber","id","productid"],
+    // "itemnumber" first so it wins outright on the supplier feeds, which
+    // all head this column "Item Number".
+    //
+    // Bare "id" is deliberately NOT an alias. The fallback match is a
+    // substring test, so "id" is contained in "width (inches)" -- every
+    // one of these feeds has a width column, and the SKU silently became
+    // the width. "productid" still covers the genuine case.
+    sku:           ["itemnumber","sku","skucode","itemcode","code","partnumber","productid"],
     description:   ["description","desc","details","info","notes"],
     overview:      ["overview","longdescription","fulldescription","productoverview"],
     feature1:      ["feature1","feature1description","keyfeature1"],
     feature2:      ["feature2","feature2description","keyfeature2"],
     feature3:      ["feature3","feature3description","keyfeature3"],
     feature4:      ["feature4","feature4description","keyfeature4"],
-    price:         ["price","cost","caseprice","unitprice"],
+    // "sellingprice" first: all three supplier feeds carry BOTH a
+    // "Price" column (their own cost to us) and a "Selling Price" column
+    // (what the customer pays). Matching "price" first mapped the
+    // supplier's cost in as the retail price.
+    //
+    // "cost" is NOT an alias here for the same reason -- it belongs to
+    // cost_per_case, and a selling-price field must never resolve to it.
+    price:         ["sellingprice","price","caseprice","unitprice"],
     sale_price:    ["saleprice","discountprice","specialprice","promoprice"],
     retail_price:  ["retailprice","msrp","listprice","comparatprice","compareatprice"],
-    price_tier1:   ["pricetier1","tier1price","price15","price1to5","price15cases"],
-    price_tier2:   ["pricetier2","tier2price","price629","price6to29","price629cases"],
-    price_tier3:   ["pricetier3","tier3price","price30","price30plus","price30cases"],
+    // Tier SELLING prices. "tierNsellingprice" is listed first and matched
+    // exactly so OfficeCrave's "Tier 1 Selling Price" (col U) wins over
+    // its "Tier 1 Cost" (col R) -- mapping cost here would publish the
+    // supplier's cost as the customer's price.
+    price_tier1:   ["tier1sellingprice","pricetier1","tier1price","price15","price1to5","price15cases"],
+    price_tier2:   ["tier2sellingprice","pricetier2","tier2price","price629","price6to29","price629cases"],
+    price_tier3:   ["tier3sellingprice","pricetier3","tier3price","price30","price30plus","price30cases"],
+    // Tier quantity thresholds -- OfficeCrave cols O/P/Q, headed bare
+    // "Tier 1"/"Tier 2"/"Tier 3".
+    tier1_min_qty: ["tier1","tier1minqty","tier1qty","tier1quantity","tier1min"],
+    tier2_min_qty: ["tier2","tier2minqty","tier2qty","tier2quantity","tier2min"],
+    tier3_min_qty: ["tier3","tier3minqty","tier3qty","tier3quantity","tier3min"],
+    // Staff-only cost columns.
+    cost_per_case: ["cost","costpercase","unitcost","supplierCost"],
+    tier1_cost:    ["tier1cost"],
+    tier2_cost:    ["tier2cost"],
+    tier3_cost:    ["tier3cost"],
+    distributor:   ["distributor","supplier","vendor","source"],
+    // OfficeCrave heads this column bare "STOCK"; the others have no
+    // stock column at all and fall back to in-stock (see
+    // cvtNormalizeValue).
+    in_stock:      ["stock","instock","stockstatus","availability"],
     is_on_sale:    ["isonsale","onsale","sale","discount","promo"],
     category_name: ["category","categoryname","dept","department","type","producttype","productcategory"],
-    case_qty:      ["caseqty","casecount","quantitypercase","casesize","qtypercase"],
+    // "cs" is how all three supplier feeds head the case quantity. It is
+    // also what cvtPerCaseBasePrice() needs to spot a per-each base price
+    // sitting beside per-case tier prices.
+    case_qty:      ["cs","caseqty","casecount","quantitypercase","casesize","qtypercase"],
     pack_size:     ["packsize","pack","packs","packcount","packqty"],
-    unit:          ["unit","uom","unitofmeasure","unittype"],
+    // "priceby" is how all three supplier feeds head this column.
+    unit:          ["priceby","unit","uom","unitofmeasure","unittype"],
     is_featured:   ["isfeatured","featured","highlight","top","bestseller"],
     is_active:     ["isactive","active","status","enabled","available"],
     image_url:     ["imageurl","image","img","photo","picture","url","photourl"],
@@ -1476,10 +1528,48 @@ function cvtAutoMap(cols) {
     variant_label: ["variantlabel","variant","option","optionlabel","sizelabel","variantname"],
     product_tier:  ["producttier","tier","grade","quality","qualitytier","line","productline","collection"],
   };
+  // Two passes, exact before fuzzy. The fuzzy rule is a substring test, so
+  // a single pass lets a longer header be claimed by a shorter alias that
+  // happens to be contained in it: OfficeCrave's "Tier 1 Cost" (supplier
+  // cost) contains "tier1" and would be mapped as the tier QUANTITY, and
+  // "Tier 1 Selling Price" likewise -- publishing cost as the customer
+  // price, or a price where a quantity belongs. Matching every exact
+  // header first means each column is claimed by the alias that names it
+  // precisely, and only genuinely unmatched columns fall through to the
+  // looser test.
+  const claimed = new Set();
+
+  // Pass 0: preferred exact headers. A target whose FIRST alias matches a
+  // header exactly claims it before any other target can, even if that
+  // other target also matches exactly.
+  //
+  // Needed because these feeds carry both "Price" (their cost to us) and
+  // "Selling Price" (what the customer pays). Both exact-match something,
+  // and whichever the loop reached first won -- which mapped the
+  // supplier's cost in as the retail price.
+  for (const [tk, al] of Object.entries(aliases)) {
+    const preferred = al[0];
+    const hit = cols.find(c => !claimed.has(c) && norm(c) === preferred);
+    if (hit && !mapping[tk]) { mapping[tk] = hit; claimed.add(hit); }
+  }
+
   for (const col of cols) {
+    if (claimed.has(col)) continue;
     const n = norm(col);
     for (const [tk, al] of Object.entries(aliases)) {
-      if (al.some(a => n === a || n.includes(a)) && !mapping[tk]) { mapping[tk] = col; break; }
+      if (!mapping[tk] && al.some(a => n === a)) {
+        mapping[tk] = col; claimed.add(col); break;
+      }
+    }
+  }
+
+  for (const col of cols) {
+    if (claimed.has(col)) continue;
+    const n = norm(col);
+    for (const [tk, al] of Object.entries(aliases)) {
+      if (!mapping[tk] && al.some(a => n.includes(a))) {
+        mapping[tk] = col; claimed.add(col); break;
+      }
     }
   }
   return mapping;
@@ -1596,7 +1686,137 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   return derived;
 }
 
+/* Per-column cleanup applied to every emitted cell.
+ *
+ * Three things the supplier feeds need before they can be imported:
+ *
+ * 1. TIER THRESHOLDS. Only OfficeCrave ships them (cols O/P/Q). The
+ *    InnStyle and Sasso files use the older fixed scheme, and their tier
+ *    price columns literally say "Price 1-5 / 6-29 / 30+ Cases" -- so
+ *    when a threshold column is absent but that tier HAS a price, the
+ *    scheme's own breakpoints (1/6/30) are filled in. Leaving them blank
+ *    would make getTierPrice() treat the tier as nonexistent and silently
+ *    drop the volume discount those files do offer.
+ *
+ * 2. STOCK. Only OfficeCrave's "In Stock"/"Out Of Stock" label is trusted.
+ *    InnStyle's numeric Inventory column is NOT read as availability --
+ *    64 of its 174 rows sit at 0, and treating those as unavailable would
+ *    pull a third of that catalog off the storefront on an assumption.
+ *    Anything unrecognised stays in stock.
+ *
+ * 3. NUMBERS. These files write "1,106.00" and "$45.00"; both have to lose
+ *    their separators or the numeric columns import as null.
+ */
+const CVT_TIER_DEFAULT_MIN = { tier1_min_qty: 1, tier2_min_qty: 6, tier3_min_qty: 30 };
+
+/* The base price must be in the same unit as the tier prices.
+ *
+ * InnStyle's feed mixes them: "Selling Price" is per EACH while its tier
+ * columns are per CASE, on 90 of its 172 rows. Imported literally, a
+ * product page showed a $10.08 base beside a $483.60 "1-5 cases" tier --
+ * reading as a 4,700% markup for ordering one case. OfficeCrave has no
+ * such mismatch (0 of 99).
+ *
+ * Detected rather than hardcoded per distributor: when tier 1 is
+ * approximately the base times the case quantity, the two are in
+ * different units and the tier figure (per case) is the correct base.
+ * A genuine per-case base never sits at 1/CS of its own tier price, so
+ * this cannot fire on a correctly-formed row.
+ */
+function cvtPerCaseBasePrice(srcRow) {
+  const num = key => {
+    const col = _cvtMapping[key];
+    if (!col) return null;
+    const n = parseFloat(String(srcRow[col] ?? "").replace(/[$,\s]/g, ""));
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  const base = num("price");
+  const tier1 = num("price_tier1");
+  const csCol = _cvtMapping.case_qty;
+  const cs = csCol ? parseInt(String(srcRow[csCol] ?? "").replace(/[^0-9]/g, ""), 10) : NaN;
+
+  if (!base || !tier1 || !Number.isFinite(cs) || cs < 2) return null;
+
+  // Within 2% of base x case-qty -- allows for the supplier's own rounding.
+  const expected = base * cs;
+  if (Math.abs(tier1 - expected) / expected < 0.02) return tier1;
+  return null;
+}
+
+function cvtNormalizeValue(key, value, srcRow) {
+  let v = String(value ?? "").trim();
+
+  if (key === "price") {
+    const perCase = cvtPerCaseBasePrice(srcRow);
+    if (perCase != null) return perCase.toFixed(2);
+  }
+
+  if (key in CVT_TIER_DEFAULT_MIN) {
+    if (v) return String(parseInt(v.replace(/[^0-9]/g, ""), 10) || "");
+    // No threshold column in this feed: fall back to the fixed scheme,
+    // but only for tiers that actually carry a price.
+    const priceKey = "price_tier" + key.charAt(4);
+    const priceCol = _cvtMapping[priceKey];
+    const hasPrice = priceCol && String(srcRow[priceCol] ?? "").trim() !== "";
+    return hasPrice ? String(CVT_TIER_DEFAULT_MIN[key]) : "";
+  }
+
+  if (key === "in_stock") {
+    if (!v) return "true";
+    return /out\s*of\s*stock|^no$|^false$|^0$/i.test(v) ? "false" : "true";
+  }
+
+  // Strip currency symbols and thousands separators from numeric columns.
+  if (/^(price|sale_price|retail_price|price_tier[123]|cost_per_case|tier[123]_cost|weight|length|width|height|moq_group_min|case_qty)$/.test(key)) {
+    if (!v) return "";
+    const cleaned = v.replace(/[$,\s]/g, "");
+    return /^-?\d*\.?\d+$/.test(cleaned) ? cleaned : v;
+  }
+
+  return v;
+}
+
+/* Refuses to emit if any customer-facing price column is mapped to a
+ * source column whose header names it as cost.
+ *
+ * These feeds carry cost and selling price side by side, with near-
+ * identical headers ("Tier 1 Cost" vs "Tier 1 Selling Price", "Price" vs
+ * "Selling Price"). A mis-map there publishes what RRS pays as what the
+ * customer pays -- every sale at zero margin, and nothing downstream
+ * would flag it. Blocking beats warning: the file still imports cleanly
+ * after the mapping is corrected, and an unnoticed warning does not.
+ *
+ * Returns an array of human-readable problems; empty means safe.
+ */
+function cvtPriceMappingProblems(mapping) {
+  const customerFacing = {
+    price:        "Base Price",
+    sale_price:   "Sale Price",
+    price_tier1:  "Tier 1 Price",
+    price_tier2:  "Tier 2 Price",
+    price_tier3:  "Tier 3 Price",
+  };
+  const problems = [];
+  for (const [key, label] of Object.entries(customerFacing)) {
+    const srcCol = mapping[key];
+    if (srcCol && /\bcost\b/i.test(srcCol)) {
+      problems.push(`${label} is mapped to "${srcCol}" — that's a cost column, not a selling price.`);
+    }
+  }
+  return problems;
+}
+
 function cvtBuildAndDownload() {
+  const problems = cvtPriceMappingProblems(_cvtMapping);
+  if (problems.length) {
+    alert(
+      "Import blocked — a customer-facing price is mapped to a cost column:\n\n" +
+      problems.map(p => "  • " + p).join("\n") +
+      "\n\nFix the mapping above and try again."
+    );
+    return;
+  }
+
   const BOM = "﻿";
   const headers = CVT_COLS.map(c => c.key);
   const lines = [headers.map(h => `"${h}"`).join(",")];
@@ -1616,6 +1836,7 @@ function cvtBuildAndDownload() {
         const d = derived.get(srcRow) || { family: "", label: "" };
         v = h === "product_family" ? d.family : d.label;
       }
+      v = cvtNormalizeValue(h, v, srcRow);
       return `"${v.replace(/"/g,'""')}"`;
     });
     lines.push(vals.join(","));

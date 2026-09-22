@@ -698,6 +698,26 @@ padding-top: 20px;
     border-radius: 50%;
 }
 
+/* Out of stock: the product stays listed (and indexed) but cannot be
+   bought -- the distributor can't supply it right now. Red rather than
+   the default green, and the Add to Cart button is visibly inert so the
+   state is obvious before the click. */
+.stock-status.is-out { color: #dc2626; }
+.stock-status.is-out .dot { background: #dc2626; }
+
+.add-btn:disabled,
+.add-btn[disabled] {
+    opacity: .45;
+    cursor: not-allowed;
+    filter: grayscale(1);
+}
+
+.add-btn:disabled:hover,
+.add-btn[disabled]:hover {
+    transform: none;
+    box-shadow: none;
+}
+
 .price {
     margin-top: 10px;
     font-size: 28px;
