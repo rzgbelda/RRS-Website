@@ -1241,67 +1241,110 @@ padding-top: 20px;
   box-shadow: 0 4px 14px rgba(237,114,38,.35);
 }
 
-/* Static frequency illustration (RRS-29 item 6) -- same visual language
-   as .schedule-pill above but non-interactive, since this card no longer
-   sets the schedule itself; that now happens in the cart. */
-.schedule-frequency-preview { margin-bottom: 18px; text-align: center; }
 .schedule-frequency-caption {
   font-size: 12.5px;
   font-weight: 600;
   color: #64748b;
-  margin: 0 0 10px;
+  margin: 0 0 18px;
+  text-align: center;
 }
 /* RRS-37: the reorder-frequency demo clip (autoplay/muted/looping MP4 --
    see the comment in index.html on why not a GIF or a Loom iframe). The
    navy gradient background shows only while the video's first frame is
    still loading (or if the file/poster is ever missing), so the slot
    never goes visually blank. */
-.schedule-video-poster {
-  display: block;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #0B1F38, #16305a);
-  object-fit: cover;
-  pointer-events: none;
+/* rc-emphasis: the "Once" in "Set It Once." -- orange + underlined per
+   RRS-37 follow-up, matching the site's existing orange accent-underline
+   language (see .heading-line under section headings). */
+.rc-emphasis {
+  color: #ED7226;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
 }
 
-/* Wraps the video in a button so the whole preview is clickable to expand
-   -- bumped up from the old fixed 16:9-in-a-narrow-card size (RRS-37
-   follow-up: on-screen text in the clip was unreadable that small). */
-.schedule-video-trigger {
+/* ── Full-width reorder-setup video (below the steps + reorder card) ── */
+.reorder-video-section {
+  grid-column: 1 / -1;
+  margin-top: 56px;
+  padding-top: 48px;
+  border-top: 1.5px solid #e4e9f0;
+}
+
+.reorder-video-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.reorder-video-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #fff1e8;
+  flex-shrink: 0;
+}
+
+.reorder-video-header h3 {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--rrs-navy, #0b2d52);
+  margin: 0;
+}
+
+.reorder-video-trigger {
   display: block;
   position: relative;
   width: 100%;
   padding: 0;
   border: none;
-  background: none;
   cursor: pointer;
-  border-radius: 12px;
+  border-radius: 16px;
   overflow: hidden;
+  background: #0B1F38;
 }
 
-.schedule-video-trigger:hover .schedule-video-poster { filter: brightness(.92); }
+.reorder-video-player {
+  display: block;
+  width: 100%;
+  max-height: 640px;
+  aspect-ratio: 1894 / 886;
+  object-fit: contain;
+  background: #0B1F38;
+  pointer-events: none;
+}
 
-.schedule-video-expand {
+.reorder-video-trigger:hover .reorder-video-player { filter: brightness(.94); }
+
+.reorder-video-expand {
   position: absolute;
-  right: 10px;
-  bottom: 10px;
+  right: 14px;
+  bottom: 14px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 7px 12px;
-  border-radius: 20px;
-  background: rgba(11,31,56,.72);
+  padding: 9px 16px;
+  border-radius: 22px;
+  background: rgba(11,31,56,.78);
   backdrop-filter: blur(2px);
   color: #fff;
-  font-size: 11.5px;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: .01em;
   transition: background .18s;
 }
 
-.schedule-video-trigger:hover .schedule-video-expand { background: rgba(237,114,38,.92); }
+.reorder-video-trigger:hover .reorder-video-expand { background: rgba(237,114,38,.94); }
+
+@media (max-width: 600px) {
+  .reorder-video-section { margin-top: 40px; padding-top: 32px; }
+  .reorder-video-header h3 { font-size: 17px; }
+  .reorder-video-player { max-height: 320px; }
+}
 
 /* ── Reorder demo lightbox ── */
 .video-lightbox {
@@ -1421,7 +1464,7 @@ padding-top: 20px;
   text-align: center;
 }
 
-.schedule-content > p:not(.schedule-label):not(.cancel-note) { display: none; }
+.schedule-content > p:not(.schedule-label):not(.cancel-note):not(.schedule-frequency-caption) { display: none; }
 
 /* ===========================
    REQUEST BUSINESS PRICING

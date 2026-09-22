@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922s" />
+  <link rel="stylesheet" href="style.css?v=20260922t" />
 </head>
 
 <body>
@@ -688,7 +688,7 @@
         </div>
         <span class="reorder-chip">Auto Reorder Program</span>
       </div>
-      <h2>Never Run Out.<br>Set It Once.</h2>
+      <h2>Never Run Out.<br>Set It <span class="rc-emphasis">Once</span>.</h2>
       <p>We send your supplies on your schedule &mdash; with your approval before every order.</p>
 
       <!-- Stats strip removed per RRS-29 item 6 -- 500+/70+/24hr were
@@ -700,45 +700,11 @@
 
       <p class="schedule-label">How often do you need supplies?</p>
 
-      <!-- RRS-37: short demo clip of setting the reorder frequency in
-           the cart, per Eric's note. Shipped as an autoplay/muted/
-           looping MP4 rather than a real GIF or a Loom iframe -- same
-           silent-loop look a GIF gives, but a fraction of the file size
-           for the same clip (GIF has no real video compression), and no
-           external embed/network dependency the way a Loom iframe would
-           be. playsinline is required for iOS Safari to autoplay inline
-           instead of forcing fullscreen; muted is required by every
-           mobile browser for autoplay to be allowed at all.
-           Expects assets/video/reorder-frequency-demo.mp4 -- drop the
-           file at that exact path (create assets/video/ if it doesn't
-           exist yet) and this renders with no further code change.
-           "3 weeks" in Eric's note doesn't match any interval the cart
-           actually offers (Weekly / Every 2 Weeks / Monthly / Every 45
-           Days / Every 60 Days / Custom -- see script.js's reorder
-           dropdown) -- likely he meant "every 2 weeks" loosely. Caption
-           below states the real options rather than a 45/2/3-week
-           option that doesn't exist in the cart. -->
-      <div class="schedule-frequency-preview">
-        <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom:</p>
-        <!-- RRS-37 follow-up: the clip walks through the whole flow (product
-             page -> cart -> checkout), so it can't be cropped to one corner
-             without losing most of it. Instead the inline preview is bigger
-             and now doubles as a button that opens the same clip full-size
-             in a lightbox (openVideoLightbox below) so the on-screen text is
-             actually readable. -->
-        <button type="button" class="schedule-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
-          <video class="schedule-video-poster" autoplay muted loop playsinline
-                 preload="metadata"
-                 poster="assets/img/reorder-frequency-demo-poster.jpg"
-                 aria-hidden="true" tabindex="-1">
-            <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
-          </video>
-          <span class="schedule-video-expand" aria-hidden="true">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
-            Expand
-          </span>
-        </button>
-      </div>
+      <!-- RRS-37 follow-up: the frequency-demo video moved out of this card
+           into its own full-width "How to setup your reorder program?"
+           container below .ordering-section, so it has room to show at
+           full size instead of being cropped/tiny in this narrow card. -->
+      <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom.</p>
 
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
         <button class="choose-schedule-btn">
@@ -756,6 +722,31 @@
 
     </div>
 
+  </div>
+
+  <!-- Full-width reorder-setup video, below the 3 steps + reorder card so
+       the clip has room to show at full size instead of being squeezed
+       into the narrow reorder-card column. object-fit: contain (not
+       cover) so nothing gets cropped. -->
+  <div class="reorder-video-section">
+    <div class="reorder-video-header">
+      <span class="reorder-video-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+      </span>
+      <h3>How to setup your reorder program?</h3>
+    </div>
+    <button type="button" class="reorder-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
+      <video class="reorder-video-player" autoplay muted loop playsinline
+             preload="metadata"
+             poster="assets/img/reorder-frequency-demo-poster.jpg"
+             aria-hidden="true" tabindex="-1">
+        <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
+      </video>
+      <span class="reorder-video-expand" aria-hidden="true">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+        Expand
+      </span>
+    </button>
   </div>
 
 </section>
@@ -1084,7 +1075,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260922h"></script>
+<script src="script.js?v=20260922i"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">
