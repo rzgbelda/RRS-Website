@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260923a" />
+  <link rel="stylesheet" href="style.css?v=20260923b" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -237,6 +237,14 @@
             <strong id="payment-tax">$0.00</strong>
           </div>
 
+          <!-- Filled from the server's own pricing pass (see
+               applyServerTotals). Hidden until then so it can't show a
+               delivery figure that differs from what's charged. -->
+          <div class="payment-summary-line" id="payment-shipping-line" style="display:none">
+            <span>Delivery</span>
+            <strong id="payment-shipping">$0.00</strong>
+          </div>
+
           <div class="payment-summary-total">
             <span>Estimated Total</span>
             <strong id="payment-total">$0.00</strong>
@@ -303,7 +311,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260923a"></script>
+  <script src="script.js?v=20260923c"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -631,7 +639,23 @@
       var checkoutForTax = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
       var taxRate = checkoutForTax.state ? (window.getTaxRate ? (window.getTaxRate(checkoutForTax.state) || 0) : 0) : 0;
       var tax = subtotal * taxRate;
-      var total = subtotal + tax;
+
+      // Delivery is included in this pre-server estimate so the total shown
+      // on arrival isn't lower than the one the server returns a moment
+      // later. applyServerTotals() overwrites all of this with the
+      // authoritative figures as soon as the PaymentIntent comes back.
+      var isPickup = String(checkoutForTax.fulfillmentMethod || '').toLowerCase() === 'pickup';
+      var shipping = isPickup || typeof shippingFeeForCart !== 'function'
+        ? 0
+        : shippingFeeForCart(cart);
+      var shipLine0 = document.getElementById('payment-shipping-line');
+      var shipEl0 = document.getElementById('payment-shipping');
+      if (shipLine0 && shipEl0) {
+        shipEl0.textContent = shipping > 0 ? '$' + shipping.toFixed(2) : 'Free';
+        shipLine0.style.display = '';
+      }
+
+      var total = subtotal + tax + shipping;
       document.getElementById('payment-subtotal').textContent = '$' + subtotal.toFixed(2);
       document.getElementById('payment-tax').textContent = '$' + tax.toFixed(2);
       var taxRateEl = document.getElementById('payment-tax-rate');
@@ -639,6 +663,7 @@
       document.getElementById('payment-total').textContent = '$' + total.toFixed(2);
       window._orderSubtotal = subtotal;
       window._orderTax = tax;
+      window._orderShipping = shipping;
       window._orderTotal = total;
       window._orderItems = cart;
 
@@ -681,6 +706,7 @@
       if (!data || typeof data.total !== 'number') return;
       window._orderSubtotal = data.subtotal;
       window._orderTax = data.tax;
+      window._orderShipping = Number(data.shipping) || 0;
       window._orderTotal = data.total;
       var sub = document.getElementById('payment-subtotal');
       var tax = document.getElementById('payment-tax');
@@ -702,6 +728,18 @@
         } else {
           discLine.style.display = 'none';
         }
+      }
+
+      // Delivery, also straight from the server's pricing pass. Shown even
+      // at $0 (a warehouse pickup) so the visible rows always add up to the
+      // total being charged. Amount only -- the per-pound basis is internal.
+      var shipLine = document.getElementById('payment-shipping-line');
+      var shipEl = document.getElementById('payment-shipping');
+      if (shipLine && shipEl && typeof data.shipping === 'number') {
+        shipEl.textContent = data.shipping > 0
+          ? '$' + data.shipping.toFixed(2)
+          : 'Free';
+        shipLine.style.display = '';
       }
     }
 
@@ -1091,6 +1129,11 @@
                 phone: checkout.phone || '',
                 shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
                 subtotal: window._orderSubtotal || window._orderTotal,
+                // The delivery allowance included in the charge. Written to
+                // the same column staff bill freight from, so it can't read
+                // as $0 and get billed a second time. Matches what
+                // api/stripe-webhook.js writes for the same order.
+                freight_fee: window._orderShipping || 0,
                 total: window._orderTotal,
                 payment_method: method,
                 payment_status: paymentStatus,

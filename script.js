@@ -686,6 +686,29 @@ const BULK_VOLUME_MIN_CASES = 50;
 const REORDER_DISCOUNT_RATE = 0.05;
 const REORDER_DISCOUNT_LABEL = "5%";
 
+// Shipping allowance per packaged pound. Same duplication constraint as the
+// reorder rate above: the authoritative copy is SHIPPING_RATE_PER_LB in
+// api/_lib/price-cart.js, which is what actually charges the card.
+//
+// The rate itself is internal. What the customer sees is the resulting
+// dollar amount on the Delivery line -- never "$0.50/lb", never the order's
+// weight. Don't surface either in UI copy.
+const SHIPPING_RATE_PER_LB = 0.50;
+
+// Order shipping allowance = total packaged weight x the rate. A line with
+// no usable weight contributes 0 lb rather than blocking checkout, matching
+// price-cart.js -- catalog weights are still being corrected and a customer
+// must not hit a dead end on a real product.
+function shippingFeeForCart(cart) {
+  let lbs = 0;
+  for (const item of (cart || [])) {
+    const w = Number(item && item.weight);
+    const qty = Number(item && item.quantity) || 1;
+    if (Number.isFinite(w) && w > 0) lbs += w * qty;
+  }
+  return Math.round(lbs * SHIPPING_RATE_PER_LB * 100) / 100;
+}
+
 // A cart line counts toward the reorder discount when it carries a real
 // recurring schedule. "Once" (and an absent value) is a one-time buy.
 function isReorderLine(item) {
@@ -892,6 +915,7 @@ function renderSingleCard(product) {
             data-moq="${productMoq(product)}"
             data-moq-group="${product.moqGroup || ''}"
             data-moq-group-min="${product.moqGroupMin || ''}"
+            data-weight="${product.weight || ''}"
             data-image="${product.image}"
           >
             Add to Order
@@ -1060,6 +1084,7 @@ function renderVariantCard(variants) {
             data-moq="${productMoq(v)}"
             data-moq-group="${v.moqGroup || ''}"
             data-moq-group-min="${v.moqGroupMin || ''}"
+            data-weight="${v.weight || ''}"
             data-image="${v.image}"
           >
             Add to Order
@@ -2331,6 +2356,11 @@ function setupAddToCartButtons() {
         moq: itemMoq,
         moqGroup: button.dataset.moqGroup || "",
         moqGroupMin: Number(button.dataset.moqGroupMin) || 0,
+        // Packaged weight, carried so the checkout summary can show a
+        // delivery total without re-fetching the catalog. Display only --
+        // the figure actually charged is recomputed server-side from the
+        // database in api/_lib/price-cart.js.
+        weight: Number(button.dataset.weight) || 0,
         quantity: quantity
       };
 
@@ -3146,9 +3176,34 @@ function loadCheckoutProducts() {
     coDiscountRow.style.display = "none";
   }
 
+  // Delivery. Warehouse pickup is never freighted, so it shows Free rather
+  // than an allowance. Only the resulting dollar amount is ever shown --
+  // never the per-pound rate or the order's weight.
+  //
+  // This is a preview: api/_lib/price-cart.js recomputes it from the
+  // database and that figure is what's charged. The two use the same rate,
+  // but a stale cart line (an old weight cached in localStorage) would only
+  // affect what's displayed here, never the amount billed.
+  const isPickup = !!document.getElementById('fulfillPickup')?.checked;
+  const shipping = isPickup ? 0 : shippingFeeForCart(cart);
+  const shippingEl = document.getElementById('summary-shipping');
+  if (shippingEl) {
+    if (isPickup) {
+      shippingEl.textContent = 'Free — pickup';
+      shippingEl.style.color = '#15803d';
+      shippingEl.style.fontWeight = '800';
+      shippingEl.style.fontSize = '';
+    } else {
+      shippingEl.textContent = `$${shipping.toFixed(2)}`;
+      shippingEl.style.color = '';
+      shippingEl.style.fontWeight = '800';
+      shippingEl.style.fontSize = '';
+    }
+  }
+
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax).toFixed(2)}`;
+  if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
   // Recalculate tax live as the customer picks/changes their state. Bound
@@ -3534,6 +3589,7 @@ function showFeaturedProducts() {
           data-moq="${productMoq(product)}"
           data-moq-group="${product.moqGroup || ''}"
           data-moq-group-min="${product.moqGroupMin || ''}"
+          data-weight="${product.weight || ''}"
           data-image="${product.image}"
         >
           <img src="assets/img/Cart.png" alt="">
@@ -3663,23 +3719,32 @@ function loadPaymentSummary() {
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // Freight is no longer billed to the customer as a separate line: it is
-  // built into product pricing and shows up only in P&L. The freight quote
-  // is still fetched and stored for the admin side (it drives Warp
-  // booking), it just no longer adds to what is charged here.
+  // Delivery is a weight-based allowance again (it used to be folded into
+  // product pricing, which is why this was hardcoded to 0 -- leaving that
+  // in place made this function render a total that excluded delivery,
+  // overwriting the correct figure payment.html's inline loadSummary() had
+  // just written). Pickup carries no allowance.
   //
-  // Stated explicitly rather than relying on the shipping element having
-  // been removed -- that would leave the total correct only by accident,
-  // and silently re-charge freight if the element ever came back.
-  const shippingCost = 0;
+  // Preview only: api/_lib/price-cart.js recomputes it server-side and
+  // that is what's charged.
+  let checkoutData = {};
+  try { checkoutData = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}'); } catch {}
+  const shippingCost = String(checkoutData.fulfillmentMethod || '').toLowerCase() === 'pickup'
+    ? 0
+    : shippingFeeForCart(cart);
+  const shipEl = document.getElementById('payment-shipping');
+  const shipLine = document.getElementById('payment-shipping-line');
+  if (shipEl && shipLine) {
+    shipEl.textContent = shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free';
+    shipLine.style.display = '';
+  }
 
   // This function's own output is superseded by payment.html's inline
   // loadSummary() (which also sets window._orderTax etc., the values that
   // actually get charged) -- fixed here anyway so nothing ever flashes a
   // stale/wrong tax figure between the two running, and so this stays
   // correct if it's ever relied on directly for another page.
-  let checkoutState = '';
-  try { checkoutState = (JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}').state) || ''; } catch {}
+  const checkoutState = checkoutData.state || '';
   const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
   const tax = subtotal * taxRate;
   const taxEl = document.getElementById('payment-tax');
@@ -4683,6 +4748,7 @@ function hcProductCard(product, badge) {
           data-moq="${productMoq(product)}"
           data-moq-group="${product.moqGroup || ''}"
           data-moq-group-min="${product.moqGroupMin || ''}"
+          data-weight="${product.weight || ''}"
           data-image="${product.image}">
           <img src="assets/img/Cart.png" alt="">
           ADD TO CART

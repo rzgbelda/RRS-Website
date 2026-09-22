@@ -92,7 +92,11 @@ module.exports = async (req, res) => {
 
     // Price the order from the database. Whatever `amount` the caller may
     // have sent is deliberately not read.
-    const priced = await priceCart(items, state);
+    //
+    // fulfillment_method is read for one reason only: a warehouse pickup
+    // carries no shipping allowance. It rides in metadata (that's where
+    // checkout already puts it) rather than as its own body field.
+    const priced = await priceCart(items, state, metadata.fulfillment_method);
     if (!priced.ok) return res.status(400).json({ error: priced.error });
     if (priced.amountCents < 50) {
       return res.status(400).json({ error: 'Order total is below the $0.50 minimum.' });
@@ -125,17 +129,26 @@ module.exports = async (req, res) => {
         // the same pass that set the charge amount rather than from a
         // number the browser supplied alongside it.
         tax_amount: String(Math.round(priced.tax * 100)),
+        // Same reasoning as tax_amount: the webhook writes orders.shipping
+        // from the pass that set the charge, not from a browser figure.
+        shipping_amount: String(Math.round(priced.shipping * 100)),
       },
     });
 
     // The priced totals go back so the page can show exactly what will be
     // charged -- if the browser's own arithmetic ever drifts from the
     // server's, the customer sees the server's figure, not a stale one.
+    //
+    // `discount` and `shipping` are included because payment.html renders
+    // both as their own summary lines; without them those lines stay
+    // hidden and the displayed rows wouldn't add up to the total charged.
     res.status(200).json({
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       subtotal: priced.subtotal,
+      discount: priced.discount,
       tax: priced.tax,
+      shipping: priced.shipping,
       total: priced.total,
       amountCents: priced.amountCents,
     });

@@ -101,6 +101,11 @@ module.exports = async (req, res) => {
     phone:              b.phone || '',
     shipping_address:   b.shipping_address || null,
     subtotal:           b.subtotal ?? b.total ?? 0,
+    // The weight-based delivery allowance already included in `total`.
+    // Recorded in the column staff bill freight from so a charged order
+    // doesn't read as $0 freight and get billed for it twice. Mirrors what
+    // api/stripe-webhook.js writes for the same order_number.
+    freight_fee:        Number(b.freight_fee) || 0,
     total:              b.total ?? 0,
     payment_method:     b.payment_method || '',
     payment_status:     b.payment_status || 'pending',
@@ -130,11 +135,27 @@ module.exports = async (req, res) => {
 
   if (!orderData.order_number) return res.status(400).json({ error: 'order_number is required' });
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('orders')
     .insert(orderData)
     .select('id')
     .single();
+
+  // PGRST204 = a column in the write body doesn't exist. freight_fee is the
+  // only optional one here (migration 20260831b_orders_freight_fee.sql,
+  // which admin.js guards for the same way). The card path calls this
+  // AFTER the charge succeeded, so failing the whole insert over it would
+  // show "we hit a problem" to a customer who has already been charged --
+  // retry without the column instead.
+  if (error && error.code === 'PGRST204') {
+    console.warn('[create-order] orders.freight_fee missing -- retrying without it. Run 20260831b_orders_freight_fee.sql.');
+    const { freight_fee, ...withoutFreight } = orderData;
+    ({ data, error } = await supabase
+      .from('orders')
+      .insert(withoutFreight)
+      .select('id')
+      .single());
+  }
 
   if (error) {
     console.error('[create-order] insert failed:', error.message);

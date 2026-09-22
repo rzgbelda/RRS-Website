@@ -49,15 +49,30 @@ function tierPriceFor(row, qty) {
   return tier1 || base || 0;
 }
 
+// Shipping allowance per packaged pound, from the 2026-09 shipping fee
+// analysis (median observed rate $0.47/lb across the reviewed products;
+// $0.50 adopted as the standard allowance). Mirrored by SHIPPING_RATE_PER_LB
+// in script.js for the checkout summary -- same constraint as the reorder
+// discount rate below: script.js is a plain browser script with no exports,
+// so if these two disagree the customer is shown one number and charged
+// another.
+//
+// Deliberately not exposed to customers as a rate. The checkout summary
+// shows only the resulting dollar total, never "$0.50/lb" or the weight
+// it was derived from.
+const SHIPPING_RATE_PER_LB = 0.50;
+
 /**
  * items: [{ sku, quantity }] as sent by the browser.
  * state: USPS two-letter code used for sales tax.
+ * fulfillmentMethod: 'pickup' zeroes shipping -- a warehouse pickup is
+ *   never freighted. Anything else (including undefined) ships.
  *
- * Returns { ok: true, amountCents, subtotal, tax, total, lines } or
- * { ok: false, error } -- the caller turns a failure into a 400 rather
+ * Returns { ok: true, amountCents, subtotal, shipping, tax, total, lines }
+ * or { ok: false, error } -- the caller turns a failure into a 400 rather
  * than falling back to a client-supplied figure.
  */
-async function priceCart(items, state) {
+async function priceCart(items, state, fulfillmentMethod) {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, error: 'Cart is empty.' };
   }
@@ -98,7 +113,7 @@ async function priceCart(items, state) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, unit, is_active')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, unit, is_active, weight')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -106,6 +121,7 @@ async function priceCart(items, state) {
   const bySku = new Map((rows || []).map(r => [r.sku, r]));
 
   let subtotal = 0;
+  let totalWeightLb = 0;
   const lines = [];
   for (const [sku, qty] of wanted) {
     const row = bySku.get(sku);
@@ -122,6 +138,17 @@ async function priceCart(items, state) {
       return { ok: false, error: 'No price is set for ' + (row.name || sku) + '.' };
     }
     subtotal += unitPrice * qty;
+
+    // Packaged weight drives the shipping allowance. A missing, zero or
+    // unparseable weight contributes 0 lb rather than failing the order:
+    // catalog weights are still being corrected, and a customer must not
+    // hit a dead end on a real product because its weight hasn't been
+    // filled in yet. The shortfall is absorbed until the data is fixed.
+    const unitWeight = Number(row.weight);
+    if (Number.isFinite(unitWeight) && unitWeight > 0) {
+      totalWeightLb += unitWeight * qty;
+    }
+
     lines.push({ sku, name: row.name, quantity: qty, unitPrice });
   }
 
@@ -143,8 +170,21 @@ async function priceCart(items, state) {
 
   // Tax follows the discounted subtotal -- taxing the pre-discount figure
   // would charge sales tax on money the customer never paid.
+  //
+  // Shipping is deliberately OUTSIDE the taxable base: tax is charged on
+  // merchandise only, which is how this order total has always been
+  // computed. NC generally treats delivery charges on taxable goods as
+  // taxable, so this may need revisiting -- changing it alters what gets
+  // remitted, so it stays as-is until that's confirmed with an accountant.
   const tax = Math.round(discountedSubtotal * getTaxRate(state) * 100) / 100;
-  const total = Math.round((discountedSubtotal + tax) * 100) / 100;
+
+  // Warehouse pickup is never freighted, so it carries no allowance.
+  const isPickup = String(fulfillmentMethod || '').trim().toLowerCase() === 'pickup';
+  const shipping = isPickup
+    ? 0
+    : Math.round(totalWeightLb * SHIPPING_RATE_PER_LB * 100) / 100;
+
+  const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 
   return {
     ok: true,
@@ -154,6 +194,8 @@ async function priceCart(items, state) {
     hasReorder,
     discountedSubtotal,
     tax,
+    shipping,
+    totalWeightLb: Math.round(totalWeightLb * 100) / 100,
     total,
     lines,
   };

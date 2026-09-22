@@ -228,6 +228,12 @@ module.exports = async (req, res) => {
     // paid_at DO exist as of the payment-proof migration above.
     const totalDollars = (pi.amount || 0) / 100;
     const taxDollars   = meta.tax_amount ? parseInt(meta.tax_amount) / 100 : 0;
+    // The charge now includes a weight-based delivery allowance, so it has
+    // to come back out when deriving merchandise subtotal -- otherwise
+    // orders.subtotal silently absorbs the shipping and every downstream
+    // figure (invoice, reporting) reads high by that amount. Absent on
+    // orders placed before this field existed, which correctly yields 0.
+    const shipDollars  = meta.shipping_amount ? parseInt(meta.shipping_amount) / 100 : 0;
 
     const orderData = {
       order_number:   meta.order_number || `RRS-${Date.now()}`,
@@ -239,7 +245,11 @@ module.exports = async (req, res) => {
       business_name:  meta.business_name || meta.customer_name || 'N/A',
       phone:          meta.phone || null,
       shipping_address: meta.shipping_address ? JSON.parse(meta.shipping_address) : null,
-      subtotal:       Math.max(0, totalDollars - taxDollars),
+      subtotal:       Math.max(0, totalDollars - taxDollars - shipDollars),
+      // Same column staff already use to bill freight on the invoice, so
+      // the allowance that was actually charged shows up there rather than
+      // reading as $0 and inviting someone to bill it a second time.
+      freight_fee:    shipDollars,
       total:          totalDollars,
       notes:          meta.notes || null,
       order_type:     meta.order_type || 'one_time',
@@ -263,10 +273,25 @@ module.exports = async (req, res) => {
     // (customer closes the tab, connection drops). Upserting on
     // order_number means it records the order if it is missing and is a
     // no-op if the browser already got there -- never a duplicate.
-    const { data: upserted, error } = await supabase
+    let { data: upserted, error } = await supabase
       .from('orders')
       .upsert(orderData, { onConflict: 'order_number', ignoreDuplicates: true })
       .select('id');
+
+    // PGRST204 = a column named in the write body does not exist. The only
+    // one that can be missing here is freight_fee (see migration
+    // 20260831b_orders_freight_fee.sql, which admin.js also guards for).
+    // This handler is the safety net for orders the browser failed to
+    // record, so losing the whole row over one optional column would cost
+    // a paid order -- retry without it instead.
+    if (error && error.code === 'PGRST204') {
+      console.warn('[webhook] orders.freight_fee missing -- retrying without it. Run 20260831b_orders_freight_fee.sql.');
+      const { freight_fee, ...withoutFreight } = orderData;
+      ({ data: upserted, error } = await supabase
+        .from('orders')
+        .upsert(withoutFreight, { onConflict: 'order_number', ignoreDuplicates: true })
+        .select('id'));
+    }
 
     if (error) {
       console.error('Supabase upsert error:', error);

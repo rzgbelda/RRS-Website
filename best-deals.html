@@ -20,7 +20,7 @@
   <!-- Marketing-campaign landing page: kept out of search results (it's meant
        to be reached from ads/email/social, not organic search) but links to
        real product pages still get crawled and pass value through. -->
-  <link rel="stylesheet" href="style.css?v=20260923a" />
+  <link rel="stylesheet" href="style.css?v=20260923b" />
 
   <!-- Organization schema -- identifies Room Ready Supply itself to search
        engines. Belongs once per crawlable page, not per-product; this page
@@ -468,7 +468,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260923a"></script>
+  <script src="script.js?v=20260923c"></script>
   <script>
     // Renders whatever the admin "Best Deals" tab currently has active --
     // price, name, and image always come from the live products row, never
@@ -581,6 +581,7 @@
                 data-moq="${p.moq || 1}"
                 data-moq-group="${escBd(p.moq_group || '')}"
                 data-moq-group-min="${p.moq_group_min || ''}"
+                data-weight="${p.weight ?? ''}"
                 data-image="${escBd(p.image_url || '')}"
                 title="Add to cart"
                 aria-label="Add ${escBd(p.name || 'item')} to cart"

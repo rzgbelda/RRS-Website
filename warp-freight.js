@@ -375,9 +375,11 @@ function getCartItemsForFreight() {
   } catch { return []; }
 }
 
+// Renders the staff-facing freight panel only. It no longer writes to
+// #summary-shipping: that line is the weight-based delivery allowance,
+// owned by loadCheckoutProducts() and recomputed server-side.
 function renderQuotePanel(quotes, state) {
   const panel = document.getElementById('freight-quote-panel');
-  const shippingEl = document.getElementById('summary-shipping');
   if (!panel) return;
 
   if (state === 'waiting') {
@@ -387,7 +389,6 @@ function renderQuotePanel(quotes, state) {
     // customers (staff quote each order and bill it on the invoice), so
     // a bare "TBD" left the buyer with no idea what happens next. The
     // staff-facing panel above still shows the real quoting state.
-    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     _selectedQuote = null;
     return;
   }
@@ -419,7 +420,6 @@ function renderQuotePanel(quotes, state) {
           <p style="color:#166534;font-size:12px;margin:2px 0 0;">Your order is over ${FREE_SHIPPING_MIN_LABEL} &mdash; shipping is on us.</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'Free';
     return;
   }
 
@@ -434,7 +434,6 @@ function renderQuotePanel(quotes, state) {
           <p style="color:#1d4ed8;font-size:12px;margin:2px 0 0;">Your order is under 150 lbs — shipping will be quoted as parcel (UPS/FedEx). Final cost confirmed in your order.</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -449,7 +448,6 @@ function renderQuotePanel(quotes, state) {
           <p style="color:#92400e;font-size:12px;margin:2px 0 0;">The estimated freight cost seems unusually high. Our team will confirm the correct shipping cost in your order confirmation.</p>
         </div>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -459,7 +457,6 @@ function renderQuotePanel(quotes, state) {
         <strong>Unable to retrieve rates for this ZIP.</strong>
         <span>Our team will include shipping in your quote confirmation.</span>
       </div>`;
-    if (shippingEl) shippingEl.textContent = 'Quoted separately';
     return;
   }
 
@@ -506,23 +503,20 @@ function selectFreightQuote(jsonStr) {
   } catch(e) { console.error(e); }
 }
 
-function updateShippingSummary(quote) {
-  const shippingEl = document.getElementById('summary-shipping');
-  const totalEl    = document.getElementById('summary-total');
-  if (!quote || !shippingEl) return;
-
-  const price = quote.total_charge || quote.price || 0;
-  shippingEl.textContent = `$${Number(price).toFixed(2)}`;
-
-  // Recalculate total (subtotal + shipping + tax by shipping state)
-  const subtotalEl = document.getElementById('summary-subtotal');
-  if (subtotalEl && totalEl) {
-    const sub = parseFloat(subtotalEl.textContent.replace(/[^0-9.]/g, '')) || 0;
-    const state = document.getElementById('checkout-state')?.value || '';
-    const taxRate = state ? (window.getTaxRate?.(state) || 0) : 0;
-    const tax = sub * taxRate;
-    totalEl.textContent = `$${(sub + Number(price) + tax).toFixed(2)}`;
-  }
+// Deliberately does not touch the checkout summary any more.
+//
+// Delivery is now a weight-based allowance owned by loadCheckoutProducts()
+// in script.js and recomputed server-side in api/_lib/price-cart.js. This
+// function used to overwrite #summary-shipping with a raw carrier quote and
+// rebuild #summary-total from it -- which both contradicted the figure the
+// customer is actually charged and dropped the Reorder Program discount
+// from that total (it summed subtotal + shipping + tax only).
+//
+// The quoting itself still runs: _selectedQuote / rrs_freight_quote continue
+// to feed payment.html's Warp auto-booking step. Only the display is gone.
+// Kept as a no-op rather than deleted because callers still invoke it.
+function updateShippingSummary(_quote) {
+  /* no-op by design -- see comment above */
 }
 
 // Expose selected quote for order submission
