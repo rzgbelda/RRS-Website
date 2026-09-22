@@ -3115,13 +3115,26 @@ function loadCheckoutProducts() {
 
   // Injected next to the existing subtotal row rather than hardcoded in
   // checkout.html, since it only exists for reorder carts.
+  //
+  // Was a <div class="summary-row cart-discount-row">, but checkout's
+  // real summary rows are <p> elements inside .summary-price (see
+  // checkout.html -- Subtotal/Tax/Delivery are all <p><span>...</span>
+  // <strong>...</strong></p>), styled by .summary-price p with the
+  // 22px side padding that comes from .summary-price's own parent
+  // padding. .summary-row is a DIFFERENT rule, built for the cart
+  // page's .order-summary card, which has no such padding in this
+  // context -- so the discount row rendered flush against the card's
+  // left edge with none of the inset its sibling rows had. Matching the
+  // real markup (<p>, inserted after subtotalEl's own <p>, no
+  // .summary-row class) fixes the spacing at the source instead of
+  // patching it with one-off CSS.
   let coDiscountRow = document.getElementById("checkoutReorderDiscountRow");
   if (discount > 0) {
     if (!coDiscountRow && subtotalEl) {
-      coDiscountRow = document.createElement("div");
+      coDiscountRow = document.createElement("p");
       coDiscountRow.id = "checkoutReorderDiscountRow";
-      coDiscountRow.className = "summary-row cart-discount-row";
-      subtotalEl.closest(".summary-row, div")?.after(coDiscountRow);
+      coDiscountRow.className = "cart-discount-row";
+      subtotalEl.closest("p")?.after(coDiscountRow);
     }
     if (coDiscountRow) {
       coDiscountRow.innerHTML =

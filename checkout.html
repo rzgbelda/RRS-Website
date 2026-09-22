@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260922q" />
+  <link rel="stylesheet" href="style.css?v=20260922r" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -167,14 +167,34 @@
         </div>
 
         <p class="field-title" style="margin-top:18px">How would you like to receive this order?*</p>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-          <label style="display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.5px solid #d0d7e0;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;color:#1f2d3d">
+        <!-- Same custom radio-card component as "How would you like to
+             order" below (.order-option/.option-card/.radio-circle),
+             not the plain unstyled browser radios this used to be --
+             two same-shaped choices ("pick one of two") on one page
+             read as two different components before this, one custom
+             and orange-branded, one native-blue. IDs, name, and the
+             onchange handler are unchanged, so onFulfillmentChange()
+             (below) needs no changes. -->
+        <div class="order-options" style="margin-top:12px;margin-bottom:16px">
+          <label class="order-option">
             <input type="radio" name="fulfillmentMethod" id="fulfillShip" checked onchange="onFulfillmentChange()">
-            Ship to my address
+            <div class="option-card">
+              <span class="radio-circle"></span>
+              <div class="option-content">
+                <h4>Ship to My Address</h4>
+                <p>We'll deliver to the address you provide below.</p>
+              </div>
+            </div>
           </label>
-          <label style="display:flex;align-items:center;gap:8px;padding:11px 16px;border:1.5px solid #d0d7e0;border-radius:9px;cursor:pointer;font-size:13.5px;font-weight:600;color:#1f2d3d">
+          <label class="order-option">
             <input type="radio" name="fulfillmentMethod" id="fulfillPickup" onchange="onFulfillmentChange()">
-            Pick up at our warehouse
+            <div class="option-card">
+              <span class="radio-circle"></span>
+              <div class="option-content">
+                <h4>Pick Up at Our Warehouse</h4>
+                <p>No shipping charge. Pick up in Plymouth, NC.</p>
+              </div>
+            </div>
           </label>
         </div>
 
@@ -433,13 +453,19 @@
       </div>
 
     </aside>
-  
+
+  </div><!-- /.checkout-layout -- was missing its own closing tag (pre-
+             existing before this session; browsers auto-close it via
+             HTML5's forgiving parsing, which is why it never visibly
+             broke anything, but it's invalid markup and every tag-
+             balance check on this file has had to explain around it). -->
+
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20260922f"></script>
+<script src="script.js?v=20260922g"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="warp-freight.js?v=17"></script>
 <script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
@@ -454,17 +480,24 @@ function syncSubmitEnabled() {
 document.addEventListener('DOMContentLoaded', syncSubmitEnabled);
 </script>
 <style>
+  /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
+     CHECKOUT — MODERNIZED UI v2") instead of the standalone bordered box
+     this used to be -- that box had its own margin/padding disconnected
+     from the card's real spacing system, which is what made it read as
+     cramped against the total above it and the button below. A plain
+     top border (matching .summary-price p's own row dividers) separates
+     it from .summary-note above without a second nested "card" fighting
+     the outer one for visual attention. */
   .ack-check {
     display: flex; align-items: flex-start; gap: 10px;
-    margin: 4px 0 14px;
-    padding: 12px 14px;
-    background: #fbfcfe;
-    border: 1px solid #e2e8f0; border-radius: 10px;
-    font-size: 12.5px; line-height: 1.55; color: #475569;
+    margin: 0;
+    padding: 16px 22px 18px;
+    border-top: 1.5px solid var(--rrs-border, #e4e9f0);
+    font-size: 12.5px; line-height: 1.55; color: var(--rrs-muted, #6b7280);
     cursor: pointer;
   }
-  .ack-check input { flex-shrink: 0; margin-top: 2px; width: 16px; height: 16px; accent-color: #ED7226; cursor: pointer; }
-  .ack-check:hover { border-color: #cbd5e1; }
+  .ack-check input { flex-shrink: 0; margin-top: 2px; width: 16px; height: 16px; accent-color: var(--rrs-orange, #ED7226); cursor: pointer; }
+  .ack-check:hover { background: #fafbfd; }
   .submit-order-btn:disabled { opacity: .55; cursor: not-allowed; }
 </style>
 <script>

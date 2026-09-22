@@ -3490,219 +3490,32 @@ textarea:focus {
   line-height: 1.4;
 }
 
-.checkout-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 450px;
-  gap: 12px;
-  align-items: start;
-}
-
-.checkout-left {
-  display: grid;
-  gap: 22px;
-}
-
-.checkout-card,
-.checkout-summary {
-  border: 1px solid #bfc5cb;
-  border-radius: 7px;
-  background: #fff;
-}
-
-.checkout-card {
-  padding: 20px 18px;
-}
-
-.checkout-card h2 {
-  font-size: 22px;
-  margin-bottom: 18px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px 30px;
-}
-
-.checkout-card label,
+/* RRS-35/RRS-37 cleanup: this used to be a full pre-v2 checkout stylesheet
+   (.checkout-layout, .checkout-card, .checkout-summary, .form-grid,
+   .address-grid, .checkbox-line, .order-options/.option-card/.radio-circle/
+   .option-content, .product-list-title, .checkout-product -- ~200 lines).
+   Every one of those selectors has a complete, later-cascading replacement
+   in the "CART & CHECKOUT — MODERNIZED UI v2" block further down this file,
+   confirmed by grepping each selector before deleting anything here -- so
+   this block was dead weight that the browser computed and immediately
+   lost to cascade order on every single rule. Left in place, it's exactly
+   the kind of landmine that caused the Reorder Program discount row's
+   padding bug (RRS-35): a rule gets added against the wrong same-named
+   selector and nothing points out that a newer one already exists and
+   wins. Deleted rather than left "just in case" -- the v2 versions are
+   verified in the live page to be what actually renders.
+   .field-title had no v2 counterpart (everything else in this block did),
+   so it's preserved on its own below instead of deleted with the rest. */
+/* Matches .checkout-card label exactly (same v2 block, further down this
+   file) -- #8a9ab0 there is a one-off value, not --rrs-muted (#6b7280),
+   so hardcoded here too rather than silently landing on a different gray
+   via the CSS variable's fallback only kicking in when undefined. */
 .field-title {
-  font-size: 13px;
-  color: #0d2c50;
-}
-
-.checkout-card input,
-.checkout-card select {
-  width: 100%;
-  height: 31px;
-  margin-top: 8px;
-  padding: 0 8px;
-  border: 1px solid #aeb4ba;
-  border-radius: 4px;
-}
-
-.full-field {
-  display: block;
-  margin-top: 14px;
-}
-
-.address-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 12px;
-  margin-top: 14px;
-}
-
-.checkbox-line {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin-top: 10px;
-}
-
-.checkbox-line input {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-}
-
-.order-type-row {
-  display: flex;
-  gap: 16px;
-  margin: 10px 0 18px;
-  flex-wrap: wrap;
-}
-
-.order-options {
-    display: flex;
-    gap: 24px;
-    align-items: stretch;
-    margin-top: 16px;
-    margin-bottom: 22px;
-    
-}
-
-.order-option input {
-    display: none;
-}
-
-.option-card {
-    width: 190px;
-    min-height: 66px;
-
-    display: flex;
-    align-items: center;
-    gap: 20px;
-
-    padding: 14px 12px;
-    border: 1px solid #aeb7c2;
-    border-radius: 4px;
-    background: #fff;
-
-    cursor: pointer;
-    transition: all .25s ease;
-}
-
-.option-card:hover {
-    border-color: #ED7226;
-}
-
-.radio-circle {
-    width: 12px;
-    height: 12px;
-
-    border: 1.5px solid #aeb7c2;
-    border-radius: 50%;
-    flex-shrink: 0;
-
-    position: relative;
-}
-
-.radio-circle::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-
-    width: 5px;
-    height: 5px;
-
-    border-radius: 50%;
-    background: #ED7226;
-
-    transform: translate(-50%, -50%) scale(0);
-    transition: .2s ease;
-}
-
-.option-content h4 {
-    margin: 0 0 6px;
-    font-size: 13px;
-    font-weight: 700;
-    color: #002b57;
-}
-
-.option-content p {
-    margin: 0;
-    font-size: 11px;
-    line-height: 1.25;
-    color: #002b57;
-}
-
-/* Selected */
-.order-option input:checked + .option-card {
-    background: #FFF5EE;
-    border: 1.5px solid #ED7226;
-}
-
-.order-option input:checked + .option-card .radio-circle {
-    border-color: #ED7226;
-}
-
-.order-option input:checked + .option-card .radio-circle::after {
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.product-list-title {
-  font-size: 13px;
-  margin-bottom: 10px;
-}
-
-.checkout-product {
-  border: 1px solid #bfc5cb;
-  border-radius: 6px;
-  padding: 18px 12px;
-  display: grid;
-  grid-template-columns: 90px 1fr 80px 100px 80px 35px;
-  align-items: center;
-  gap: 14px;
-}
-
-.checkout-product img {
-  width: 85px;
-  height: 60px;
-  object-fit: contain;
-}
-
-.checkout-product h4 {
-  font-size: 13px;
-  margin-bottom: 7px;
-}
-
-.checkout-product p {
-  font-size: 11px;
-  margin-bottom: 7px;
-}
-
-.checkout-product small {
-  color: #22b24c;
-  font-size: 10px;
-}
-
-.checkout-summary {
-  border: 1px solid #cfd4d9;
-  border-radius: 8px;
-  background: #fff;
-  overflow: hidden;
-  color: #002b55;
+  font-size: 12px;
+  font-weight: 700;
+  color: #8a9ab0;
+  text-transform: uppercase;
+  letter-spacing: .06em;
 }
 
 .order-footer {
@@ -7970,7 +7783,17 @@ button, a, [role="button"] { touch-action: manipulation; }
 :root {
   --rrs-navy:   #0b2d52;
   --rrs-orange: #ed7226;
-  --rrs-bg:     #ffffff;
+  /* Was #ffffff -- identical to --rrs-card, so a white .checkout-card /
+     .checkout-summary sitting on a white page had nothing but a 1.5px
+     border and a soft shadow telling them apart, which read as flat/
+     basic (reported on both cart.html and checkout.html, which both use
+     this same variable). A faint cool gray gives the white cards
+     somewhere to actually stand out against, without introducing a new,
+     third background color the rest of the site doesn't use --
+     #f4f6fa is the same family as --rrs-border (#e4e9f0)/the existing
+     #f8fafd used for .summary-head, just a touch lighter, so it reads
+     as "the site's own neutral," not a new color choice. */
+  --rrs-bg:     #f4f6fa;
   --rrs-card:   #ffffff;
   --rrs-border: #e4e9f0;
   --rrs-text:   #1a2e44;
