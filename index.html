@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922p" />
+  <link rel="stylesheet" href="style.css?v=20260922q" />
 </head>
 
 <body>
@@ -706,40 +706,32 @@
 
       <p class="schedule-label">How often do you need supplies?</p>
 
-      <!-- RRS-37: the static frequency-chip mock (RRS-29 item 6) is
-           replaced with a short product-demo video per Eric's note --
-           "remove sequence buttons and replace with a loom short video
-           of in cart action setting the intervals (weekly, 3 weeks,
-           monthly)... I belive that it will present better lead seeing
-           in action."
-           No Loom link exists in the codebase yet (checked: zero
-           loom.com references anywhere), so this is the embed SLOT, not
-           a finished embed -- an invented/placeholder video URL would be
-           worse than this, since it would either 404 or show unrelated
-           content. To wire up the real video once it's recorded:
-             1. Get the Loom share link's embed URL (Share -> Embed,
-                or https://www.loom.com/embed/<id>).
-             2. Replace the poster <div> below with:
-                <iframe src="https://www.loom.com/embed/<id>"
-                  title="How to set your reorder frequency in the cart"
-                  loading="lazy" allowfullscreen
-                  style="width:100%;aspect-ratio:16/9;border:0;border-radius:12px;"></iframe>
-             3. Delete .schedule-video-poster's CSS rules in style.css
-                (no longer needed once a real iframe replaces the poster).
+      <!-- RRS-37: short demo clip of setting the reorder frequency in
+           the cart, per Eric's note. Shipped as an autoplay/muted/
+           looping MP4 rather than a real GIF or a Loom iframe -- same
+           silent-loop look a GIF gives, but a fraction of the file size
+           for the same clip (GIF has no real video compression), and no
+           external embed/network dependency the way a Loom iframe would
+           be. playsinline is required for iOS Safari to autoplay inline
+           instead of forcing fullscreen; muted is required by every
+           mobile browser for autoplay to be allowed at all.
+           Expects assets/video/reorder-frequency-demo.mp4 -- drop the
+           file at that exact path (create assets/video/ if it doesn't
+           exist yet) and this renders with no further code change.
            "3 weeks" in Eric's note doesn't match any interval the cart
            actually offers (Weekly / Every 2 Weeks / Monthly / Every 45
            Days / Every 60 Days / Custom -- see script.js's reorder
-           dropdown) -- likely he meant "every 2 weeks" loosely. Left
-           the real options in the caption below rather than adding a
-           45/2/3-week option that doesn't exist in the cart, which
-           would make the homepage promise something the product
-           doesn't have. -->
+           dropdown) -- likely he meant "every 2 weeks" loosely. Caption
+           below states the real options rather than a 45/2/3-week
+           option that doesn't exist in the cart. -->
       <div class="schedule-frequency-preview">
         <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom:</p>
-        <div class="schedule-video-poster">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-          <span>Video coming soon &mdash; how to set your reorder frequency in the cart</span>
-        </div>
+        <video class="schedule-video-poster" autoplay muted loop playsinline
+               preload="metadata"
+               poster="assets/img/reorder-frequency-demo-poster.jpg"
+               aria-label="Demo: setting your reorder frequency in the cart">
+          <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
+        </video>
       </div>
 
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
