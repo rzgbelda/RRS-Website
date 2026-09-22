@@ -10115,6 +10115,30 @@ input.qty-input:focus {
   z-index: 9997;
   width: 320px;
   max-width: calc(100vw - 32px);
+  /* RRS-35: "the minimum order and the cart sit on top of each other, so
+     you can't read or see MOQ count." Root cause -- .mc-body alone had a
+     max-height (52vh/420px) and its own scroll, but the PANEL as a whole
+     (header + body) had no height limit against the real viewport. A
+     product row + tier note (the "Add N more cases" MOQ message) could
+     add up to more vertical space than the header-to-actions math left
+     room for, and on a real phone the *usable* viewport is smaller than
+     100vh/window.innerHeight (address bar, gesture nav bar eat into it,
+     confirmed by reproducing the exact cart state from the report and
+     comparing getBoundingClientRect() against a real screenshot, not
+     just the reported viewport height) -- so the bottom of the panel,
+     including the MOQ note and the View Cart/Checkout buttons, could
+     render below the fold with no visible scrollbar and no way to reach
+     it except collapsing the whole panel. This caps the ENTIRE panel
+     (not just the body) against dvh -- the dynamic viewport height unit,
+     which already accounts for mobile browser chrome instead of the
+     static 100vh that ignores it -- so the header always stays visible
+     and anything else scrolls inside .mc-body rather than pushing the
+     actions row off-screen. calc() with a fallback max-height above it
+     for browsers without dvh support. */
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border: 1.5px solid #e4e9f0;
   border-radius: 14px;
@@ -10125,6 +10149,7 @@ input.qty-input:focus {
 
 .mc-head {
   width: 100%;
+  flex-shrink: 0;    /* stays fixed-height so .mc-body flexes/scrolls instead of pushing this off-panel */
   display: flex;
   align-items: center;
   gap: 10px;
@@ -10165,7 +10190,15 @@ input.qty-input:focus {
 .mini-cart.mc-collapsed .mc-chevron { transform: rotate(180deg); }
 .mini-cart.mc-collapsed .mc-body { display: none; }
 
-.mc-body { max-height: min(52vh, 420px); overflow-y: auto; }
+/* .mini-cart is display:flex now (see that rule), so this no longer
+   needs its own max-height to avoid overrunning the panel -- the flex
+   column (.mc-head flex-shrink:0, this flex:1 min-height:0) already
+   guarantees .mc-head + .mc-body never exceed .mini-cart's own
+   max-height. min-height:0 is required on a flex child for its own
+   overflow:auto to actually engage instead of growing past its
+   container -- a flex item's default min-height is 'auto' (its content
+   size), which silently defeats overflow scrolling otherwise. */
+.mc-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
 .mc-list { list-style: none; margin: 0; padding: 0; }
 .mc-row {
