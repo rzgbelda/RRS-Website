@@ -827,7 +827,9 @@ padding-top: 20px;
   padding: 90px 70px 100px;
   background: #ffffff;
   display: grid;
-  grid-template-columns: 1fr minmax(0, 480px);
+  /* Widened from 480px (RRS-37 follow-up) so the reorder-demo video has
+     enough room to actually be readable, not just decorative. */
+  grid-template-columns: 1fr minmax(0, 560px);
   gap: 70px;
   align-items: stretch;
 }
@@ -1261,6 +1263,94 @@ padding-top: 20px;
   border-radius: 12px;
   background: linear-gradient(135deg, #0B1F38, #16305a);
   object-fit: cover;
+  pointer-events: none;
+}
+
+/* Wraps the video in a button so the whole preview is clickable to expand
+   -- bumped up from the old fixed 16:9-in-a-narrow-card size (RRS-37
+   follow-up: on-screen text in the clip was unreadable that small). */
+.schedule-video-trigger {
+  display: block;
+  position: relative;
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.schedule-video-trigger:hover .schedule-video-poster { filter: brightness(.92); }
+
+.schedule-video-expand {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  background: rgba(11,31,56,.72);
+  backdrop-filter: blur(2px);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .01em;
+  transition: background .18s;
+}
+
+.schedule-video-trigger:hover .schedule-video-expand { background: rgba(237,114,38,.92); }
+
+/* ── Reorder demo lightbox ── */
+.video-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(6,16,28,.86);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.video-lightbox-inner {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+}
+
+.video-lightbox-inner video {
+  display: block;
+  width: 100%;
+  border-radius: 14px;
+  box-shadow: 0 24px 64px rgba(0,0,0,.4);
+  background: #0B1F38;
+}
+
+.video-lightbox-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255,255,255,.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background .15s;
+}
+
+.video-lightbox-close:hover { background: rgba(255,255,255,.24); }
+
+@media (max-width: 600px) {
+  .video-lightbox { padding: 14px; }
+  .video-lightbox-close { top: -40px; }
 }
 
 /* Live preview */

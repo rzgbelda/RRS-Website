@@ -88,7 +88,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260922r" />
+  <link rel="stylesheet" href="style.css?v=20260922s" />
 </head>
 
 <body>
@@ -726,12 +726,24 @@
            option that doesn't exist in the cart. -->
       <div class="schedule-frequency-preview">
         <p class="schedule-frequency-caption">Set it once in your cart &mdash; weekly, every 2 weeks, monthly, or custom:</p>
-        <video class="schedule-video-poster" autoplay muted loop playsinline
-               preload="metadata"
-               poster="assets/img/reorder-frequency-demo-poster.jpg"
-               aria-label="Demo: setting your reorder frequency in the cart">
-          <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
-        </video>
+        <!-- RRS-37 follow-up: the clip walks through the whole flow (product
+             page -> cart -> checkout), so it can't be cropped to one corner
+             without losing most of it. Instead the inline preview is bigger
+             and now doubles as a button that opens the same clip full-size
+             in a lightbox (openVideoLightbox below) so the on-screen text is
+             actually readable. -->
+        <button type="button" class="schedule-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
+          <video class="schedule-video-poster" autoplay muted loop playsinline
+                 preload="metadata"
+                 poster="assets/img/reorder-frequency-demo-poster.jpg"
+                 aria-hidden="true" tabindex="-1">
+            <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
+          </video>
+          <span class="schedule-video-expand" aria-hidden="true">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>
+            Expand
+          </span>
+        </button>
       </div>
 
       <a href="/cart" class="schedule-content-link" onclick="return requireAuth('/cart')">
@@ -1078,7 +1090,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260922g"></script>
+<script src="script.js?v=20260922h"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">
@@ -1259,7 +1271,42 @@
   const dz = document.getElementById('competitorDropZone');
   if (dz) dz.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.getElementById('competitorFile').click(); } });
 })();
+
+// Reorder-frequency demo lightbox -- the inline card video is small and
+// muted/looping; this opens the same clip large, with sound controls, in
+// a centered overlay instead of trying to crop or resize it into legibility.
+function openVideoLightbox() {
+  const overlay = document.getElementById('videoLightbox');
+  const video = document.getElementById('videoLightboxPlayer');
+  if (!overlay || !video) return;
+  overlay.style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  video.currentTime = 0;
+  video.muted = false;
+  video.play().catch(() => {});
+}
+function closeVideoLightbox() {
+  const overlay = document.getElementById('videoLightbox');
+  const video = document.getElementById('videoLightboxPlayer');
+  if (!overlay || !video) return;
+  overlay.style.display = 'none';
+  document.body.style.overflow = '';
+  video.pause();
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVideoLightbox(); });
 </script>
+
+<!-- -- Reorder-frequency demo lightbox ------------------------- -->
+<div id="videoLightbox" class="video-lightbox" style="display:none" onclick="if(event.target===this) closeVideoLightbox()">
+  <div class="video-lightbox-inner">
+    <button type="button" class="video-lightbox-close" onclick="closeVideoLightbox()" aria-label="Close video">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <video id="videoLightboxPlayer" controls playsinline preload="none" poster="assets/img/reorder-frequency-demo-poster.jpg">
+      <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
+    </video>
+  </div>
+</div>
 
 </body>
 <!-- -- CMS: Load Hero & About content from Supabase -- -->
