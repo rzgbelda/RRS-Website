@@ -1398,6 +1398,11 @@ padding-top: 20px;
   text-align: right;
 }
 
+.rss-note-underline {
+  display: block;
+  margin: 2px 0 0 auto;
+}
+
 @media (max-width: 860px) {
   .reorder-steps-strip { grid-template-columns: repeat(2, 1fr); }
   .rss-note { display: none; }
