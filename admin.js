@@ -3284,19 +3284,19 @@ async function openOrderModal(id) {
           <span style="font-size:20px;">📋</span>
           <div>
             <strong style="font-size:14px;color:#15803d;display:block;">Order Pending Review</strong>
-            <span style="font-size:12px;color:#166534;">Get a freight quote from Warp, then confirm to book.</span>
+            <span style="font-size:12px;color:#166534;">Place this order with the distributor, then confirm it here. Enter their tracking number below once they send it.</span>
           </div>
         </div>
         ${quotePanel}
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button onclick="getFreightQuote('${o.id}')"
-            style="flex:1;min-width:160px;background:#fff;color:#0b2d52;border:1.5px solid #0b2d52;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            📦 ${freightQuoted ? "Refresh Quote" : "Get Warp Quote"}
-          </button>
-          ${freightQuoted ? `<button onclick="bookWithWarp('${o.id}')"
+          <!-- Confirming used to mean "book with Warp". RRS dropships now,
+               so this just marks the order confirmed; the shipment itself
+               is recorded in the Shipment Tracking panel below once the
+               distributor emails a tracking number. -->
+          <button onclick="updateOrderStatus('${o.id}', 'confirmed')"
             style="flex:2;min-width:180px;background:#0b2d52;color:#fff;border:none;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
-            🚚 Confirm &amp; Book with Warp
-          </button>` : ""}
+            ✓ Confirm Order
+          </button>
           <button onclick="cancelOrderFromModal('${o.id}')"
             style="flex:1;min-width:120px;background:#fff;color:#dc2626;border:1.5px solid #fca5a5;border-radius:10px;padding:11px 18px;font-size:13px;font-weight:600;cursor:pointer;">
             ✕ Cancel Order
@@ -3307,7 +3307,7 @@ async function openOrderModal(id) {
             Freight Fee &mdash; Billed on Invoice
           </span>
           <p style="font-size:11.5px;color:#166534;margin:0 0 8px;">
-            Not shown live to the customer anymore &mdash; review the Warp quote above, then set what actually goes on their invoice (a Warp quote, a flat rate, or $0 if freight's already baked in).
+            Checkout already charged a delivery allowance based on the order's weight &mdash; this is what appears on the invoice. Adjust it only if the distributor's actual shipping cost differs, or set $0 if it's already covered.
           </p>
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <label style="font-size:12px;font-weight:700;color:#166534;white-space:nowrap;">Freight $</label>
@@ -3333,12 +3333,15 @@ async function openOrderModal(id) {
           ${o.estes_pro_number ? ` &nbsp;·&nbsp; PRO: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.estes_pro_number)}</code>` : ""}</span>
         </div>
       </div>`;
+  // Legacy display only -- nothing books with a carrier any more. This
+  // still renders so orders booked before the dropship switch keep showing
+  // the BOL/tracking they were actually shipped under.
   } else if (isConfirmed && freightBooked) {
     actionBar = `
       <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:14px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;">
         <span style="font-size:20px;">✅</span>
         <div>
-          <strong style="color:#15803d;font-size:13px;display:block;">Booked with Warp</strong>
+          <strong style="color:#15803d;font-size:13px;display:block;">Booked with ${isWarpQuote ? "Warp" : "carrier"} <span style="font-weight:500;color:#94a3b8">(legacy)</span></strong>
           <span style="color:#166534;font-size:12px;">Order #: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.bol_number)}</code>
           ${o.pro_number ? ` &nbsp;·&nbsp; Tracking #: <code style="background:#dcfce7;padding:2px 6px;border-radius:4px;">${escHtml(o.pro_number)}</code>` : ""}</span>
         </div>
@@ -3478,6 +3481,7 @@ async function openOrderModal(id) {
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
     <div id="orderVendorPoPanel-${o.id}"></div>
+    <div id="orderShipmentsPanel-${o.id}"></div>
     ${(o.label_url || o.tracking_number || o.bol_number || o.pro_number) ? `
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
     <h4 style="margin-bottom:12px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Shipping</h4>
@@ -3564,6 +3568,170 @@ async function openOrderModal(id) {
   if (taxStateEl) taxStateEl.value = addr.state || "";
   openModal("orderModal");
   renderOrderVendorPoPanel(o);
+  renderOrderShipmentsPanel(o);
+}
+
+// Dropship shipment tracking. Distributors (InnStyle, Sasso, OfficeCrave)
+// ship straight to the customer and email a tracking number back; staff
+// enter it here by hand. There is no rate quoting and no carrier booking
+// in this flow -- see supabase/migrations/20260923_dropship_shipments.sql.
+//
+// One row per package, because a single order can contain items from more
+// than one distributor and those ship separately. Whatever is saved here
+// is what the customer sees on /account -- the distributor name is the one
+// field that deliberately stays internal.
+const RRS_DISTRIBUTORS = [
+  { value: "innstyle",    label: "InnStyle" },
+  { value: "sasso",       label: "Sasso" },
+  { value: "officecrave", label: "OfficeCrave" },
+  { value: "other",       label: "Other" },
+];
+
+const SHIPMENT_STATUS_LABEL = {
+  processing: "Processing",
+  shipped:    "Shipped",
+  delivered:  "Delivered",
+};
+
+async function renderOrderShipmentsPanel(o) {
+  const panel = document.getElementById(`orderShipmentsPanel-${o.id}`);
+  if (!panel) return;
+
+  // A warehouse pickup is never shipped, so there is nothing to track.
+  if (o.fulfillment_method === "pickup") return;
+
+  const { data: shipments, error } = await window.sb
+    .from("order_shipments")
+    .select("*")
+    .eq("order_id", o.id)
+    .order("created_at", { ascending: true });
+
+  // 42P01 = table missing (migration not run yet). Say so plainly rather
+  // than rendering an editor whose every save would fail.
+  if (error) {
+    panel.innerHTML = `
+      <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+      <p style="font-size:12.5px;color:#b45309;margin:0">
+        ${error.code === "42P01"
+          ? "Shipment tracking isn't set up on the database yet — run the migration 20260923_dropship_shipments.sql in Supabase."
+          : `Could not load shipments: ${escHtml(error.message || "unknown error")}`}
+      </p>`;
+    return;
+  }
+
+  const rows = (shipments || []).map(s => `
+    <tr style="border-top:1px solid #f0f4fa">
+      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(RRS_DISTRIBUTORS.find(d => d.value === s.distributor)?.label || s.distributor)}</td>
+      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(SHIPMENT_STATUS_LABEL[s.status] || s.status)}</td>
+      <td style="padding:8px 10px;font-size:12.5px;">
+        ${s.tracking_number
+          ? (s.tracking_url
+              ? `<a href="${escHtml(s.tracking_url)}" target="_blank" rel="noopener" style="font-weight:700;color:#0B1F38;">${escHtml(s.tracking_number)}</a>`
+              : `<strong>${escHtml(s.tracking_number)}</strong>`)
+          : '<span style="color:#94a3b8">—</span>'}
+        ${s.carrier ? `<span style="color:#94a3b8;font-size:11px;"> (${escHtml(s.carrier)})</span>` : ""}
+      </td>
+      <td style="padding:8px 10px;text-align:right;">
+        <button onclick="deleteOrderShipment('${s.id}', '${o.id}')"
+          style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
+          Remove
+        </button>
+      </td>
+    </tr>`).join("");
+
+  panel.innerHTML = `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:6px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">Shipment Tracking</h4>
+    <p style="font-size:12.5px;color:#64748b;margin:0 0 12px;">
+      Enter what the distributor emailed you. The status and tracking link show on the customer's Orders tab — the distributor name does not.
+    </p>
+
+    ${rows ? `
+      <table style="width:100%;border-collapse:collapse;margin-bottom:14px;">
+        <thead>
+          <tr style="background:#f8fafc;">
+            <th style="text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">Distributor</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">Status</th>
+            <th style="text-align:left;padding:8px 10px;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:#64748b;">Tracking</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`
+    : `<p style="font-size:12.5px;color:#94a3b8;margin:0 0 14px;">No shipments recorded yet.</p>`}
+
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+      <select id="shipDistributor-${o.id}" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px;width:auto">
+        ${RRS_DISTRIBUTORS.map(d => `<option value="${d.value}">${d.label}</option>`).join("")}
+      </select>
+      <select id="shipStatus-${o.id}" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px;width:auto">
+        <option value="processing">Processing</option>
+        <option value="shipped" selected>Shipped</option>
+        <option value="delivered">Delivered</option>
+      </select>
+      <input id="shipTracking-${o.id}" placeholder="Tracking number"
+        style="height:34px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:12.5px;padding:0 10px;width:190px">
+      <input id="shipCarrier-${o.id}" placeholder="Carrier (optional)"
+        style="height:34px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:12.5px;padding:0 10px;width:150px">
+      <input id="shipUrl-${o.id}" placeholder="Tracking URL"
+        style="height:34px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:12.5px;padding:0 10px;width:260px">
+      <button onclick="saveOrderShipment('${o.id}')"
+        style="height:34px;background:#ED7226;color:#fff;border:none;border-radius:8px;padding:0 16px;font-size:12.5px;font-weight:700;cursor:pointer">
+        Save Shipment
+      </button>
+    </div>`;
+}
+
+// Adds one shipment row. Deliberately insert-only rather than an
+// edit-in-place grid: a distributor sends one tracking email per package,
+// so the common action is "add what just arrived", and a wrong entry is
+// removed and re-added rather than silently rewritten.
+async function saveOrderShipment(orderId) {
+  const distributor = document.getElementById(`shipDistributor-${orderId}`)?.value || "";
+  const status      = document.getElementById(`shipStatus-${orderId}`)?.value || "processing";
+  const tracking    = (document.getElementById(`shipTracking-${orderId}`)?.value || "").trim();
+  const carrier     = (document.getElementById(`shipCarrier-${orderId}`)?.value || "").trim();
+  const url         = (document.getElementById(`shipUrl-${orderId}`)?.value || "").trim();
+
+  if (!distributor) { alert("Pick which distributor shipped this."); return; }
+  // A 'shipped' or 'delivered' row with no tracking number tells the
+  // customer their order moved but gives them nothing to look up.
+  if (status !== "processing" && !tracking) {
+    alert("Enter the tracking number before marking this shipped or delivered.");
+    return;
+  }
+  // Guard against a pasted value that isn't a link -- href="innstyle.com"
+  // resolves relative to the site and 404s for the customer.
+  if (url && !/^https?:\/\//i.test(url)) {
+    alert("The tracking URL must start with http:// or https://");
+    return;
+  }
+
+  const { error } = await window.sb.from("order_shipments").insert({
+    order_id:        orderId,
+    distributor,
+    status,
+    tracking_number: tracking || null,
+    tracking_url:    url || null,
+    carrier:         carrier || null,
+    shipped_at:      status === "shipped"   ? new Date().toISOString() : null,
+    delivered_at:    status === "delivered" ? new Date().toISOString() : null,
+  });
+
+  if (error) {
+    alert(error.code === "42P01"
+      ? "Shipment tracking isn't set up on the database yet — run the migration 20260923_dropship_shipments.sql in Supabase."
+      : "Could not save the shipment: " + (error.message || "unknown error"));
+    return;
+  }
+  openOrderModal(orderId);
+}
+
+async function deleteOrderShipment(shipmentId, orderId) {
+  if (!confirm("Remove this shipment? The customer will no longer see its tracking.")) return;
+  const { error } = await window.sb.from("order_shipments").delete().eq("id", shipmentId);
+  if (error) { alert("Could not remove the shipment: " + (error.message || "unknown error")); return; }
+  openOrderModal(orderId);
 }
 
 // Groups this order's line items by vendor (via products.vendor_id) and
@@ -3822,225 +3990,13 @@ function viewQuotePdf() {
   window.open(`/quote-view?id=${currentQuoteId}&print=1`, "_blank");
 }
 
-// (The old pre-Estes Warp integration that used to live here -- a dead
-// showWarpConfirmDialog()/approveAndBookWithWarp() pair calling a
-// long-retired /functions/v1/warp-quote endpoint -- has been fully
-// replaced by the real Warp integration below, built from WARP's actual
-// published API docs. See getFreightQuote()/bookWithWarp().)
-
-// ── Warp Freight Integration ─────────────────────────────────────────────────
-// Real schema pulled from WARP's own published OpenAPI docs
-// (https://developer.wearewarp.com/docs/freight/) -- see
-// supabase/functions/warp-freight/index.ts for the actual API calls.
-const SUPABASE_ANON_KEY_ESTES = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
-const WARP_FN_URL = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight";
-
-async function callWarpFunction(action, payload) {
-  const res = await fetch(WARP_FN_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${SUPABASE_ANON_KEY_ESTES}`,
-    },
-    body: JSON.stringify({ action, payload }),
-  });
-  const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || `Warp error (${res.status})`);
-  return data;
-}
-
-async function getFreightQuote(orderId) {
-  const resultEl = document.getElementById("orderActionResult");
-  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Getting Warp rate quote…</div>`; }
-
-  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
-  const addr  = order?.shipping_address || {};
-  const items = order?.order_items || [];
-
-  // The action bar only offers this button for ship orders, but guard it
-  // directly too -- a pickup order should never be able to trigger a
-  // freight quote, full stop, regardless of what called this.
-  if (order?.fulfillment_method === "pickup") {
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#fff7f0;border:1.5px solid #fed7aa;border-radius:10px;padding:12px 16px;">
-        <strong style="color:#9a3412;font-size:13px;">This order is marked as warehouse pickup — no freight quote needed.</strong>
-      </div>`;
-    }
-    return;
-  }
-
-  // Invoice- and terms-agreement-created orders never collect an address
-  // (see api/send-invoice.js), so this is a real, expected case -- not
-  // just defensive coding. Catching it here means a clear, actionable
-  // message instead of Warp's raw "required_field_missing" error, which
-  // is what an empty zip produces.
-  if (!addr.city || !addr.state || !addr.zip) {
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 16px;">
-        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ No shipping address on file</strong>
-        <span style="color:#b91c1c;font-size:12px;">This order has no ship-to address yet -- click "Add address" next to Ship To above, then try the quote again.</span>
-      </div>`;
-    }
-    return;
-  }
-
-  // Warp requires an itemized line list on every quote (name/dims/weight
-  // per line), not just a total weight -- order_items doesn't carry
-  // per-item dims, so default box size is applied the same way
-  // warp-freight.js does at checkout.
-  try {
-    const quote = await callWarpFunction("quote", {
-      destination_zip: addr.zip || "",
-      items: items.map(i => ({
-        description: i.name || i.product_name || "Product",
-        quantity:    i.quantity,
-        weight_lbs:  i.weight_lbs || 40,
-      })),
-    });
-
-    // Save quote to order
-    await window.sb.from("orders").update({
-      freight_quote: JSON.stringify(quote),
-      updated_at: new Date().toISOString(),
-    }).eq("id", orderId);
-
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px 16px;">
-        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Quote received — Warp</strong>
-        <span style="color:#166534;font-size:12px;">$${Number(quote.total_charge).toFixed(2)} · ${quote.transit_days ?? "?"} transit days · Est. delivery: ${quote.delivery_date ?? "TBD"}</span>
-      </div>`;
-    }
-    showToast("Warp quote received! Click 'Confirm & Book' to proceed.");
-    // Reopen modal to refresh action bar with quote panel
-    setTimeout(() => showOrderModal(orderId), 800);
-  } catch (e) {
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px 16px;">
-        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Quote Failed</strong>
-        <span style="color:#b91c1c;font-size:12px;">${escHtml(e.message)}</span>
-      </div>`;
-    }
-  }
-}
-
-async function bookWithWarp(orderId) {
-  const resultEl = document.getElementById("orderActionResult");
-
-  const { data: order } = await window.sb.from("orders").select("*, order_items(*)").eq("id", orderId).single();
-  const addr  = order?.shipping_address || {};
-  const items = order?.order_items || [];
-  const freightQuote = order?.freight_quote
-    ? (typeof order.freight_quote === "string" ? JSON.parse(order.freight_quote) : order.freight_quote)
-    : null;
-
-  const freightCostStr = freightQuote?.total_charge ? `$${Number(freightQuote.total_charge).toFixed(2)}` : "TBD";
-  const confirmed = await showFreightConfirmDialog({
-    orderNumber: order?.order_number,
-    customer:    order?.customer_name,
-    business:    order?.business_name,
-    shipTo:      [addr.street, addr.city, addr.state, addr.zip].filter(Boolean).join(", "),
-    total:       `$${Number(order?.total || 0).toFixed(2)}`,
-    freightCost: freightCostStr,
-    transitDays: freightQuote?.transit_days ?? "?",
-    testMode:    !!freightQuote?.test_mode,
-  });
-  if (!confirmed) return;
-
-  const btn = document.querySelector('[onclick^="bookWithWarp"]');
-  if (btn) { btn.disabled = true; btn.innerHTML = "⏳ Booking…"; }
-  if (resultEl) { resultEl.style.display = ""; resultEl.innerHTML = `<div style="color:#64748b;font-size:13px;padding:10px 0;">⏳ Booking with Warp…</div>`; }
-
-  try {
-    const result = await callWarpFunction("book", {
-      order_number: order?.order_number,
-      quote_id:     freightQuote?.quote_id ?? null,
-      ship_date:    freightQuote?.ship_date ?? null,
-      customer_email: order?.customer_email || "",
-      customer_name:  order?.customer_name  || "",
-      destination: {
-        name:   order?.business_name || order?.customer_name || "Customer",
-        street: addr.street || "",
-        city:   addr.city   || "",
-        state:  addr.state  || "",
-        zip:    addr.zip    || "",
-        phone:  order?.phone          || "",
-        email:  order?.customer_email || "",
-      },
-      items: items.map(i => ({
-        description: i.name || i.product_name || "Product",
-        quantity:    i.quantity,
-        weight_lbs:  i.weight_lbs || 40,
-      })),
-    });
-
-    // Save order # + tracking # + confirm order. Reuses the same neutral
-    // bol_number/pro_number columns the checkout auto-book path writes to
-    // (see 20260725_orders_bol_columns.sql) -- carrier is identified from
-    // freight_quote.carrier_name at display time, so no schema change or
-    // carrier-specific columns are needed.
-    await window.sb.from("orders").update({
-      status:      "confirmed",
-      bol_number:  result.warp_order_number || "booked",
-      pro_number:  result.tracking_number   || null,
-      bol_created_at: new Date().toISOString(),
-      updated_at:  new Date().toISOString(),
-    }).eq("id", orderId);
-
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:14px 16px;">
-        <strong style="color:#15803d;font-size:13px;display:block;margin-bottom:4px;">✅ Booked with Warp!</strong>
-        <span style="color:#166534;font-size:12px;">Order #: <strong>${escHtml(result.warp_order_number)}</strong>${result.tracking_number ? ` · Tracking #: <strong>${escHtml(result.tracking_number)}</strong>` : ""}</span>
-      </div>`;
-    }
-    showToast("Order confirmed and booked with Warp! 🚚");
-    renderOrdersTable();
-  } catch (e) {
-    if (resultEl) {
-      resultEl.innerHTML = `<div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:14px 16px;">
-        <strong style="color:#dc2626;font-size:13px;display:block;margin-bottom:4px;">⚠️ Warp Booking Failed — Order Still Pending</strong>
-        <span style="color:#b91c1c;font-size:12px;">${escHtml(e.message)}</span>
-      </div>`;
-    }
-    if (btn) { btn.disabled = false; btn.innerHTML = "🚚 Confirm &amp; Book with Warp"; }
-    showToast("Warp booking failed — order remains pending.");
-  }
-}
-
-function showFreightConfirmDialog({ orderNumber, customer, business, shipTo, total, freightCost, transitDays, testMode }) {
-  return new Promise((resolve) => {
-    const existing = document.getElementById("estesConfirmOverlay");
-    if (existing) existing.remove();
-    const overlay = document.createElement("div");
-    overlay.id = "estesConfirmOverlay";
-    overlay.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;";
-    overlay.innerHTML = `
-      <div style="background:#fff;border-radius:18px;max-width:420px;width:100%;box-shadow:0 24px 80px rgba(0,0,0,.25);overflow:hidden;">
-        <div style="padding:22px 24px 16px;border-bottom:1px solid #f0f4fa;">
-          <strong style="font-size:16px;color:#0d1f38;display:block;margin-bottom:4px;">Confirm Warp Booking</strong>
-          <span style="font-size:12px;color:#64748b;">Order #${escHtml(orderNumber)}</span>
-        </div>
-        ${testMode ? `<div style="background:#fef9ec;border-bottom:1px solid #fde68a;padding:10px 24px;font-size:12px;color:#b45309;font-weight:700;">🧪 TEST MODE — No real shipment or charges.</div>` : `<div style="background:#fef2f2;border-bottom:1px solid #fecaca;padding:10px 24px;font-size:12px;color:#dc2626;font-weight:700;">⚠️ LIVE — This will create a real Warp shipment.</div>`}
-        <div style="padding:20px 24px;display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:13px;">
-          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Customer</span>${escHtml(customer || "—")}</div>
-          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Business</span>${escHtml(business || "—")}</div>
-          <div style="grid-column:span 2"><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Ship To</span>${escHtml(shipTo || "—")}</div>
-          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Order Total</span>${escHtml(total)}</div>
-          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Freight Cost</span><strong style="color:#0b2d52;">${escHtml(freightCost)}</strong></div>
-          <div><span style="color:#64748b;font-size:11px;font-weight:700;text-transform:uppercase;display:block;margin-bottom:2px;">Transit Days</span>${escHtml(String(transitDays))}</div>
-        </div>
-        <div style="padding:0 24px 20px;display:flex;gap:10px;">
-          <button id="estesCancel" style="flex:1;padding:11px;border:1.5px solid #e4e9f2;border-radius:10px;background:#fff;font-size:13px;font-weight:600;color:#64748b;cursor:pointer;">Cancel</button>
-          <button id="estesProceed" style="flex:2;padding:11px;border:none;border-radius:10px;background:#0b2d52;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">
-            ${testMode ? "✅ Yes, Book (Test)" : "✅ Yes, Book Shipment"}
-          </button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-    document.getElementById("estesCancel").onclick  = () => { overlay.remove(); resolve(false); };
-    document.getElementById("estesProceed").onclick = () => { overlay.remove(); resolve(true); };
-    overlay.addEventListener("click", e => { if (e.target === overlay) { overlay.remove(); resolve(false); } });
-  });
-}
+// The Warp freight integration (WARP_FN_URL, callWarpFunction,
+// getFreightQuote, bookWithWarp, showFreightConfirmDialog) used to live
+// here. RRS dropships now: InnStyle, Sasso and OfficeCrave ship direct to
+// the customer and email a tracking number, which staff enter by hand in
+// the order modal's Shipment Tracking panel (renderOrderShipmentsPanel).
+// There is no rate to quote and no carrier to book, so all of it is gone,
+// along with the warp-freight.js checkout script it mirrored.
 
 async function cancelOrderFromModal(orderId) {
   if (!confirm("Are you sure you want to cancel this order? This cannot be undone.")) return;
@@ -9286,49 +9242,10 @@ function quoteFreightFee() {
   return Math.max(0, parseFloat(document.getElementById("quoteFreightFee")?.value) || 0);
 }
 
-// Pulls a real Warp quote using the lead's shipping ZIP on file (set when
-// the quote request came in, or by staff on the CRM lead) -- same
-// callWarpFunction() the order flow already uses. Result is shown for
-// review and pre-fills quoteFreightFee, never auto-saved: staff still
-// have to actually put a number there and it only reaches a real
-// customer once the quote is sent.
-async function getComposerWarpQuote() {
-  const resultEl = document.getElementById("quoteWarpQuoteResult");
-  const btn = document.getElementById("quoteWarpQuoteBtn");
-  const r = allQuoteRequests.find(x => x.id === currentQuoteId);
-  if (!r) return;
-
-  if (!r.shipping_zip) {
-    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "No shipping ZIP on file for this lead -- add one on the lead's record first."; }
-    return;
-  }
-
-  const items = _quoteComposerLines
-    .filter(l => l.name?.trim() && Number(l.unit_price) > 0)
-    .map(l => ({ description: l.name.trim(), quantity: parseInt(l.quantity) || 1, weight_lbs: 40 }));
-  if (!items.length) {
-    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "Add at least one priced item before getting a freight quote."; }
-    return;
-  }
-
-  if (btn) { btn.disabled = true; btn.textContent = "⏳ Getting quote…"; }
-  if (resultEl) { resultEl.style.color = "#64748b"; resultEl.textContent = "Getting Warp rate quote…"; }
-
-  try {
-    const quote = await callWarpFunction("quote", { destination_zip: r.shipping_zip, items });
-    const feeInput = document.getElementById("quoteFreightFee");
-    if (feeInput) feeInput.value = Number(quote.total_charge).toFixed(2);
-    if (resultEl) {
-      resultEl.style.color = "#15803d";
-      resultEl.textContent = `✅ Warp quote: $${Number(quote.total_charge).toFixed(2)} · ${quote.transit_days ?? "?"} transit days. Pre-filled below -- review and adjust if needed.`;
-    }
-    recalcQuoteTotal();
-  } catch (e) {
-    if (resultEl) { resultEl.style.color = "#dc2626"; resultEl.textContent = "Quote failed: " + e.message; }
-  } finally {
-    if (btn) { btn.disabled = false; btn.textContent = "📦 Get Warp Quote"; }
-  }
-}
+// The quote composer's "Get Warp Quote" button used to live here
+// (getComposerWarpQuote). RRS dropships, so there is no carrier rate to
+// pull -- staff type the distributor's freight figure into quoteFreightFee
+// directly.
 
 // Subtotal (items + in-house delivery fee) -> tax by shipping state ->
 // grand total. Tax is 0 whenever no state is picked yet -- getTaxRate()

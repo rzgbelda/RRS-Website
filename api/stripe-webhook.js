@@ -124,51 +124,12 @@ function getRawBody(req) {
   });
 }
 
-const SUPABASE_FUNCTIONS_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight';
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-async function bookWarpShipment(orderNumber, shippingAddr, items) {
-  // No quote_id survives to this fallback path (nothing ever set an
-  // estes_quote_id/warp_quote_id in the payment-intent metadata this webhook
-  // reads from) -- Warp still books fine without one, just without the
-  // price-lock guarantee a prior quote would give.
-  const payload = {
-    action: 'book',
-    payload: {
-      order_number: orderNumber,
-      destination: {
-        name:   shippingAddr.name   || 'Customer',
-        street: shippingAddr.street || '',
-        city:   shippingAddr.city   || '',
-        state:  shippingAddr.state  || '',
-        zip:    shippingAddr.zip    || '',
-        phone:  shippingAddr.phone  || '',
-        email:  shippingAddr.email  || '',
-      },
-      items: (items || []).map(function (i) {
-        return {
-          description: i.name || 'Supply Item',
-          weight_lbs:  parseFloat(i.weight_lbs) || 20,
-          quantity:    parseInt(i.quantity) || 1,
-        };
-      }),
-    },
-  };
-
-  const res = await fetch(SUPABASE_FUNCTIONS_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': 'Bearer ' + SUPABASE_ANON_KEY,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  const data = await res.json();
-  if (!res.ok || data.error) throw new Error(data.error || 'Warp booking failed (' + res.status + ')');
-  console.log('[Warp] booked — order #:', data.warp_order_number, '| tracking #:', data.tracking_number);
-  return data;
-}
+// Warp freight booking used to live here (SUPABASE_FUNCTIONS_URL +
+// bookWarpShipment). RRS dropships now -- distributors ship direct to the
+// customer and email a tracking number, which staff enter in admin. There
+// is no carrier for this handler to book, so the booking call is gone.
+// The warp-freight edge function is no longer called from anywhere in
+// this repo.
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).end();
@@ -301,13 +262,16 @@ module.exports = async (req, res) => {
         createdHere ? `(expected ${expectedItemCount} items, none recoverable from metadata -- see receipt email)` : '');
 
       // Everything below is fallback work. When the browser completed
-      // normally it has already sent the receipt and booked freight, so
-      // repeating it here would double-send email and -- more expensively --
-      // book a second Warp shipment against the same order. Only run when
-      // this handler was the one that had to record the order.
+      // normally it has already sent the receipt, so repeating it here
+      // would double-send email. Only run when this handler was the one
+      // that had to record the order.
+      //
+      // Freight auto-booking used to live here too (Warp). RRS dropships
+      // now: the distributor ships direct and emails a tracking number,
+      // which staff enter in admin (see order_shipments). There is no
+      // carrier for this handler to book with.
       if (createdHere) {
         const emailOrder = { ...orderData, items: parsedItems, amount_total: pi.amount };
-        const shippingAddr = orderData.shipping_address || {};
 
         Promise.all([
           orderData.customer_email
@@ -315,28 +279,6 @@ module.exports = async (req, res) => {
             : Promise.resolve(),
 
           sendInternalAlert(emailOrder).catch(function (e) { console.error('Internal alert email failed:', e.message); }),
-
-          // No item detail survives to this fallback path (see note above),
-          // and freight can't be booked sensibly with an empty commodity
-          // list, so skip auto-booking rather than send Warp a bogus
-          // zero-item request. Staff can book manually from the admin panel
-          // -- this only triggers in the rare case the browser died mid-flow.
-          (shippingAddr.street && shippingAddr.city && shippingAddr.state && shippingAddr.zip && parsedItems.length)
-            ? bookWarpShipment(orderData.order_number, shippingAddr, parsedItems)
-                .then(function (booked) {
-                  if (booked) {
-                    return supabase.from('orders')
-                      .update({
-                        bol_number:     booked.warp_order_number,
-                        pro_number:     booked.tracking_number,
-                        bol_created_at: new Date().toISOString(),
-                        status:         'processing',
-                      })
-                      .eq('order_number', orderData.order_number);
-                  }
-                })
-                .catch(function (e) { console.error('Warp booking failed:', e.message); })
-            : Promise.resolve(),
         ]);
       } else {
         // Order already existed. This is the normal path for an emailed

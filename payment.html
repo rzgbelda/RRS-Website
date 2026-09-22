@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260923b" />
+  <link rel="stylesheet" href="style.css?v=20260923c" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -311,7 +311,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20260923c"></script>
+  <script src="script.js?v=20260923d"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -1171,95 +1171,11 @@
                 var cardItemsRes = await window.sb.from('order_items').insert(cardItems);
                 if (cardItemsRes.error) console.error('[order_items] save error:', cardItemsRes.error.message);
               }
-              // Auto-purchase shipping label or BOL for a CONFIRMED payment
-              // only -- never for pickup (nothing to ship), and never for an
-              // ACH payment still sitting at 'processing': a bank debit can
-              // still bounce days later (insufficient funds), and shipping
-              // product against a payment that isn't actually guaranteed yet
-              // is a real loss risk, not just a cosmetic one. Staff books
-              // freight manually from the admin panel once an ACH order
-              // shows as paid (the webhook flips it when the debit clears).
-              var freightQuote = (checkout.fulfillmentMethod === 'pickup' || paymentStatus === 'processing') ? {} : JSON.parse(localStorage.getItem('rrs_freight_quote') || '{}');
-              var isWarpFreight = (freightQuote.carrier_name || '').toLowerCase() === 'warp';
-
-              // Warp LTL freight — auto-book the shipment
-              if (isWarpFreight) {
-                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/warp-freight', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN',
-                  },
-                  body: JSON.stringify({
-                    action: 'book',
-                    payload: {
-                      order_number:   orderNum,
-                      quote_id:       freightQuote.quote_id || null,
-                      customer_email: checkout.email || '',
-                      customer_name:  checkout.contact || checkout.business || '',
-                      destination: {
-                        name:   checkout.contact || checkout.business || 'Customer',
-                        street: checkout.street || '',
-                        city:   checkout.city   || '',
-                        state:  checkout.state  || '',
-                        zip:    checkout.zip    || '',
-                        phone:  (checkout.phone || '').replace(/\D/g, ''),
-                        email:  checkout.email || '',
-                      },
-                      items: (window._orderItems || []).map(function(i) {
-                        return { description: i.name || 'Hospitality Supply', weight_lbs: 20, quantity: i.quantity || 1 };
-                      }),
-                    },
-                  }),
-                }).then(function(r) { return r.json(); }).then(function(warpData) {
-                  if (warpData.warp_order_number || warpData.tracking_number) {
-                    console.log('[warp] booked — order #:', warpData.warp_order_number, 'tracking #:', warpData.tracking_number);
-                    // Reuses the same neutral bol_number/pro_number columns
-                    // every carrier's auto-book has always written to --
-                    // see 20260725_orders_bol_columns.sql. Carrier is
-                    // identified from freight_quote.carrier_name at
-                    // display time (admin.js), not from a separate column.
-                    window.sb.from('orders').update({
-                      bol_number: warpData.warp_order_number || null,
-                      pro_number: warpData.tracking_number   || null,
-                      bol_created_at: new Date().toISOString(),
-                      status: 'processing',
-                    }).eq('id', orderInsert.data.id).then(function() {});
-                  } else {
-                    console.warn('[warp] booking failed:', warpData.error);
-                  }
-                }).catch(function(err) { console.error('[warp] fetch error:', err); });
-              }
-
-              // Shippo parcel — auto-purchase label
-              if (!isWarpFreight && freightQuote.service_token) {
-                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/purchase-label', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN',
-                  },
-                  body: JSON.stringify({
-                    order_id:      orderInsert.data.id,
-                    service_token: freightQuote.service_token,
-                    carrier_name:  freightQuote.carrier_name || '',
-                    items: (window._orderItems || []).map(function(i) { return { name: i.name, itemNumber: i.itemNumber || '', quantity: i.quantity || 1 }; }),
-                    customer_name: checkout.contact || checkout.business || '',
-                    street: checkout.street || '',
-                    city:   checkout.city   || '',
-                    state:  checkout.state  || '',
-                    zip:    checkout.zip    || '',
-                  }),
-                }).then(function(r) { return r.json(); }).then(function(labelData) {
-                  if (labelData.tracking_number) {
-                    console.log('[label] purchased:', labelData.tracking_number);
-                  } else {
-                    console.warn('[label] purchase failed:', labelData.error);
-                  }
-                }).catch(function(err) {
-                  console.error('[label] fetch error:', err);
-                });
-              }
+              // Carrier auto-booking (Warp LTL + Shippo parcel) used to
+              // run here. RRS dropships now: the distributor ships direct
+              // to the customer and emails a tracking number, which staff
+              // enter in admin against order_shipments. Nothing is booked
+              // from the browser at payment time any more.
               // Send receipt email
               if (checkout.email) {
                 fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {

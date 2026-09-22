@@ -15,7 +15,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20260923b" />
+  <link rel="stylesheet" href="style.css?v=20260923c" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -294,24 +294,13 @@
           </div>
         </div>
 
-        <!-- Live freight quote panel -- hidden from customers. Staff now
-             decide freight per order (Warp quote or in-house delivery) and
-             it's billed on the emailed invoice instead of shown live at
-             checkout, so a customer never sees a raw carrier quote or a
-             "shipping rate under review" warning. Left in the DOM (just
-             hidden) rather than removed: initFreightQuoting() below still
-             runs in the background exactly as before -- it's what feeds
-             payment.html's auto-book-with-Warp step after a card/ACH
-             checkout, which is unrelated to this display and still needed. -->
-        <div class="fq-section" id="freightQuoteSection" style="display:none">
-          <div class="fq-section-label">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="2.2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 5v4h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-            Live Freight Rates
-          </div>
-          <div id="freight-quote-panel">
-            <p class="fq-hint">Enter your ZIP code above to see live freight rates.</p>
-          </div>
-        </div>
+        <!-- The hidden live-freight-quote panel that sat here has been
+             removed along with warp-freight.js. It was kept (hidden) only
+             because it fed payment.html's auto-book-with-Warp step; RRS
+             dropships now, so nothing is quoted or booked at checkout.
+             Delivery is the weight-based allowance shown in the summary,
+             and the distributor's own tracking number is entered by staff
+             after the fact (see order_shipments). -->
       </div>
 
       <div class="checkout-card">
@@ -465,10 +454,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20260923c"></script>
+<script src="script.js?v=20260923d"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script src="warp-freight.js?v=18"></script>
-<script>document.addEventListener('DOMContentLoaded', initFreightQuoting);</script>
 <script>
 // The delivery-estimate box gates submission. Held in one place so the
 // button can never drift out of sync with the checkbox.
@@ -523,18 +510,14 @@ document.addEventListener('DOMContentLoaded', function () {
 function onFulfillmentChange() {
   const isPickup = document.getElementById('fulfillPickup')?.checked;
   const shipBlock = document.getElementById('shipToBlock');
-  const freightSection = document.getElementById('freightQuoteSection');
   const pickupNotice = document.getElementById('pickupNotice');
 
   if (shipBlock) shipBlock.style.display = isPickup ? 'none' : '';
-  if (freightSection) freightSection.style.display = isPickup ? 'none' : '';
   if (pickupNotice) pickupNotice.style.display = isPickup ? 'block' : 'none';
 
-  // A stale quote from switching Ship -> Pickup -> Ship, or from a
-  // previous visit, must not silently trigger freight booking on
-  // payment.html for an order that's actually a pickup.
-  if (isPickup) localStorage.removeItem('rrs_freight_quote');
-  else if (typeof initFreightQuoting === 'function') initFreightQuoting();
+  // Clears any freight quote left in storage by the removed Warp flow, so
+  // an old cached value can't be read by anything still looking for it.
+  localStorage.removeItem('rrs_freight_quote');
 
   // Pickup carries no delivery charge, so the summary total has to be
   // rebuilt when this switches -- otherwise it keeps showing (and adding)

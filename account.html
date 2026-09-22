@@ -17,7 +17,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Account &mdash; Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="style.css?v=20260923b" />
+  <link rel="stylesheet" href="style.css?v=20260923c" />
   <style>
     /* ── Page shell ── */
     .acc-page { background:#f4f6fb; min-height:100vh; }
@@ -535,7 +535,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260923c"></script>
+  <script src="script.js?v=20260923d"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       if (typeof window.sb === "undefined") {
@@ -907,15 +907,88 @@
       setTimeout(() => { successEl.style.display = "none"; }, 3000);
     }
 
+    /** Dropship tracking for one order card.
+     *
+     *  Distributors ship direct to the customer and email a tracking
+     *  number, which staff enter in admin -- so an order can carry several
+     *  shipments (one per distributor/package) or none at all before
+     *  anything has shipped. Which distributor sent it is internal and is
+     *  neither selected nor shown here.
+     *
+     *  Renders nothing when there are no shipments, so an order that
+     *  hasn't shipped keeps the card as it was rather than showing an
+     *  empty "Tracking" heading. */
+    function renderShipmentTracking(o) {
+      const shipments = o.order_shipments || [];
+      if (!shipments.length) return "";
+
+      const LABEL = { processing: "Processing", shipped: "Shipped", delivered: "Delivered" };
+      const TONE  = {
+        processing: { bg: "#fef3c7", fg: "#92400e" },
+        shipped:    { bg: "#dbeafe", fg: "#1e40af" },
+        delivered:  { bg: "#dcfce7", fg: "#166534" },
+      };
+
+      const rows = shipments.map(s => {
+        const tone = TONE[s.status] || TONE.processing;
+        const when = s.delivered_at || s.shipped_at;
+        // Only link out when staff actually saved a URL -- guessing a
+        // carrier's tracking page from the number alone would send the
+        // customer somewhere broken.
+        const trackingBit = s.tracking_number
+          ? (s.tracking_url
+              ? `<a href="${escapeHtml(s.tracking_url)}" target="_blank" rel="noopener"
+                   style="font-weight:700;color:#0B1F38;text-decoration:underline">${escapeHtml(s.tracking_number)}</a>`
+              : `<strong style="color:#0B1F38">${escapeHtml(s.tracking_number)}</strong>`)
+          : "";
+
+        return `
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#475569;margin-top:6px">
+            <span style="background:${tone.bg};color:${tone.fg};font-weight:700;padding:3px 9px;border-radius:20px;font-size:11px">
+              ${LABEL[s.status] || escapeHtml(s.status)}
+            </span>
+            ${trackingBit ? `<span>Tracking: ${trackingBit}</span>` : ""}
+            ${s.carrier ? `<span style="color:#94a3b8">via ${escapeHtml(s.carrier)}</span>` : ""}
+            ${when ? `<span style="color:#94a3b8">${new Date(when).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}</span>` : ""}
+          </div>`;
+      }).join("");
+
+      return `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">
+            ${shipments.length > 1 ? `Shipments (${shipments.length})` : "Shipment"}
+          </div>
+          ${rows}
+        </div>`;
+    }
+
     async function loadOrders(userId, userEmail) {
       const list = document.getElementById("orderList");
       list.innerHTML = `<div class="acc-loading">Loading orders&hellip;</div>`;
+      // order_shipments carries dropship tracking: distributors ship direct
+      // and staff enter the tracking number by hand (see admin.js's
+      // shipment panel). Embedded here rather than fetched per card so the
+      // list stays one round trip. The distributor column is deliberately
+      // NOT selected -- it's internal, and RLS lets a customer read these
+      // rows, so naming the field here would expose it in the response.
       let { data: orders, error } = await window.sb
         .from("orders")
-        .select("*, order_items(*)")
+        .select("*, order_items(*), order_shipments(id, status, tracking_number, tracking_url, carrier, shipped_at, delivered_at)")
         .or(`user_id.eq.${userId},customer_email.eq.${userEmail}`)
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
+
+      // 42P01 = order_shipments table missing (migration not run yet).
+      // Retry without it so the customer's order history still loads
+      // rather than showing "no orders" because of a missing join.
+      if (error && error.code === "42P01") {
+        ({ data: orders, error } = await window.sb
+          .from("orders")
+          .select("*, order_items(*)")
+          .or(`user_id.eq.${userId},customer_email.eq.${userEmail}`)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false }));
+      }
       orders = filterRowsByActiveBiz(orders || []);
       if (error || !orders?.length) {
         const bizName = activeBizName();
@@ -943,6 +1016,7 @@
                   Cancel Schedule
                 </button>
               </div>` : ""}
+            ${renderShipmentTracking(o)}
             <button onclick="downloadOrderPdf('${o.id}', this)"
               style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;cursor:pointer;padding:7px 14px;border-radius:8px;font-size:12px;font-weight:700">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
