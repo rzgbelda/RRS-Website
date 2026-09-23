@@ -346,17 +346,6 @@
 
 </div>
 
-        <!-- Moved below the pricing tier cards, in normal document flow
-             inside .product-info, so it can never overlap them -- it
-             previously lived in its own grid cell (column 2, row 2) that
-             coincided with the bottom of .product-info's own content,
-             which is exactly what caused the overlap. -->
-        <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
-          <div class="tabs">
-            <h3>Common Questions</h3>
-          </div>
-          <div id="ppFaqList"></div>
-        </section>
       </div>
 
       <aside class="buy-box">
@@ -471,6 +460,17 @@
       </div>
 
     </div>
+
+    <!-- Sits below Overview/Specifications/Key Features as its own
+         full-width card, not squeezed beside the tier cards -- that grid
+         placement (column 2, row 2, beside .pp-purchase-panel) is what
+         previously caused it to overlap the tier cards above. -->
+    <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
+      <div class="tabs">
+        <h3>Common Questions</h3>
+      </div>
+      <div id="ppFaqList"></div>
+    </section>
 
   </section>
 

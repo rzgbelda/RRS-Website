@@ -5341,12 +5341,13 @@ span.flatpickr-weekday {
    cards, in normal document flow. It used to be placed via CSS grid in
    its own cell (column 2, row 2) beside .pp-purchase-panel, which put it
    in the same space as the bottom of .product-info's own content and
-   caused the two to visibly overlap -- moving it into the document flow
-   makes that overlap structurally impossible. */
+   caused the two to visibly overlap. It now sits below .details-grid,
+   full width, at its own natural place in document flow -- the same
+   overlap is structurally impossible there, and it uses .detail-card's
+   default padding/tabs sizing like Overview/Specs/Key Features instead
+   of the narrow-column overrides it needed in the old layout. */
 .pp-faq-card {
   margin-top: 24px;
-  padding: 18px 20px 20px;
-  box-sizing: border-box;
 }
 .pp-faq-item {
   border: 1.5px solid #e2e8f0;
@@ -5368,18 +5369,6 @@ span.flatpickr-weekday {
   line-height: 1.6;
   color: #5B6C7E;
 }
-/* This card's tabs header keeps the same left/right inset as its own
-   padding (18/20px) rather than .detail-card's wider 22px default --
-   .detail-card is a shared base class (Overview/Specs/Key Features use
-   it too, all at the page's full available width), and this instance
-   overrides its padding for the narrower column, so .tabs' own -22px/
-   22px negative-margin reset (sized for the base class) would otherwise
-   pull it past this card's actual edges. */
-.pp-faq-card .tabs {
-  margin: -18px -20px 18px;
-  padding: 0 20px;
-}
-
 .specs-card button {
   margin-top: 12px;
   border: none;
@@ -7526,12 +7515,11 @@ button, a, [role="button"] { touch-action: manipulation; }
      grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
      col 1 row 2, product-info col 2, buy-box col 3) would otherwise try
      to place things in columns/rows that no longer exist. .pp-faq-card
-     lives inside .product-info's normal document flow (not a grid item
-     of .product-layout), so it needs no placement reset here -- it
-     stacks whereever .product-info places it. Reset the remaining
-     explicit placements back to plain document-order stacking: gallery,
-     then the purchase panel right under it, then product info (with its
-     own FAQ card at the bottom), then the buy box. */
+     is not a grid item of .product-layout at all (it sits below
+     .details-grid, outside this grid entirely), so it needs no
+     placement reset here. Reset the remaining explicit placements back
+     to plain document-order stacking: gallery, then the purchase panel
+     right under it, then product info, then the buy box. */
   .product-gallery,
   .pp-purchase-panel,
   .product-info,
