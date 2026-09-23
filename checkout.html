@@ -166,42 +166,13 @@
           <label>Email Address: <input type="email" id="checkout-email" placeholder="email@business.com"></label>
         </div>
 
-        <p class="field-title" style="margin-top:18px">How would you like to receive this order?*</p>
-        <!-- Same custom radio-card component as "How would you like to
-             order" below (.order-option/.option-card/.radio-circle),
-             not the plain unstyled browser radios this used to be --
-             two same-shaped choices ("pick one of two") on one page
-             read as two different components before this, one custom
-             and orange-branded, one native-blue. IDs, name, and the
-             onchange handler are unchanged, so onFulfillmentChange()
-             (below) needs no changes. -->
-        <div class="order-options" style="margin-top:12px;margin-bottom:16px">
-          <label class="order-option">
-            <input type="radio" name="fulfillmentMethod" id="fulfillShip" checked onchange="onFulfillmentChange()">
-            <div class="option-card">
-              <span class="radio-circle"></span>
-              <div class="option-content">
-                <h4>Ship to My Address</h4>
-                <p>We'll deliver to the address you provide below.</p>
-              </div>
-            </div>
-          </label>
-          <label class="order-option">
-            <input type="radio" name="fulfillmentMethod" id="fulfillPickup" onchange="onFulfillmentChange()">
-            <div class="option-card">
-              <span class="radio-circle"></span>
-              <div class="option-content">
-                <h4>Pick Up at Our Warehouse</h4>
-                <p>No shipping charge. Pick up in Plymouth, NC.</p>
-              </div>
-            </div>
-          </label>
-        </div>
-
-        <div id="pickupNotice" style="display:none;background:#fff7f0;border:1.5px solid #fed7aa;border-radius:10px;padding:14px 16px;margin-bottom:18px;font-size:13.5px;color:#7c3f12;line-height:1.6">
-          <strong>Pickup location:</strong> 609 Washington St, Plymouth, NC 27962<br>
-          No shipping charge for warehouse pickup. We'll email you when your order is ready.
-        </div>
+        <!-- Warehouse pickup was removed as a checkout option per CEO
+             request (2026-09-24) -- every order now ships.
+             saveCheckoutAndProceed() below submits fulfillmentMethod as
+             the fixed literal 'ship' rather than reading a form control,
+             since payment.html and admin.js still key on that exact
+             string for every order, including PAST orders that used
+             pickup. -->
 
         <div id="shipToBlock">
         <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address"></label>
@@ -417,14 +388,18 @@
         <input type="checkbox" id="ackDeliveryEstimate" onchange="syncSubmitEnabled()">
         <!-- This previously read "the stated delivery date", but no date was
              ever stated on this page -- the buyer was asked to acknowledge
-             something they could not see. It now states the real processing
-             window RRS publishes elsewhere on the site (1-2 business days,
-             separate from transit). A specific delivery DATE is deliberately
-             not shown: transit time is not known until freight is quoted,
-             and promising a date we cannot compute would be worse than
-             showing none. The exact wording is captured with the order
+             something they could not see. It now states the real order-
+             confirmation window (1-2 days for the order to be confirmed
+             and transmitted to the supplier, separate from transit).
+             CEO-provided wording (2026-09-24), intentionally scoped to
+             this checkbox only -- shipping-policy.html and the rest of the
+             site still say "processed within 1-2 business days". A
+             specific delivery DATE is deliberately not shown: transit time
+             is not known until freight is quoted, and promising a date we
+             cannot compute would be worse than showing none. The exact
+             wording is captured with the order
              (deliveryAckText) so the record shows what was on screen. -->
-        <span id="ackDeliveryEstimateText">I acknowledge that orders are processed within 1&ndash;2 business days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</span>
+        <span id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</span>
       </label>
 
       <div class="submit-order-actions">
@@ -502,29 +477,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 <script>
-// Pickup skips the address entirely -- there's nothing to ship to, and
-// the live freight-rate panel (which needs a ZIP to quote against) has
-// nothing to quote. Toggling back to Ship restores both and re-fires the
-// freight quote in case the customer had already filled in an address
-// before switching.
-function onFulfillmentChange() {
-  const isPickup = document.getElementById('fulfillPickup')?.checked;
-  const shipBlock = document.getElementById('shipToBlock');
-  const pickupNotice = document.getElementById('pickupNotice');
-
-  if (shipBlock) shipBlock.style.display = isPickup ? 'none' : '';
-  if (pickupNotice) pickupNotice.style.display = isPickup ? 'block' : 'none';
-
-  // Clears any freight quote left in storage by the removed Warp flow, so
-  // an old cached value can't be read by anything still looking for it.
-  localStorage.removeItem('rrs_freight_quote');
-
-  // Pickup carries no delivery charge, so the summary total has to be
-  // rebuilt when this switches -- otherwise it keeps showing (and adding)
-  // a delivery amount the customer won't be charged.
-  if (typeof loadCheckoutProducts === 'function') loadCheckoutProducts();
-}
-
 // Reorder frequency UI: shown/hidden by setupCheckoutOrderTypeToggle /
 // setupOrderTypeToggle (script.js) via #reorderFrequencySection, which
 // previously didn't exist -- this file only wires the parts specific to it.
@@ -561,7 +513,11 @@ function computeFirstReorderDate(frequency) {
 }
 
 async function saveCheckoutAndProceed() {
-  const fulfillmentMethod = document.getElementById('fulfillPickup')?.checked ? 'pickup' : 'ship';
+  // Warehouse pickup is no longer offered at checkout (see the comment
+  // above #fulfillShip) -- every new order ships. This stays a variable
+  // rather than a literal inline below because payment.html and
+  // admin.js's order-fulfillment tracking both key on this exact string.
+  const fulfillmentMethod = 'ship';
   const orderType = document.getElementById('reorderOption')?.checked ? 'reorder' : 'one_time';
 
   let reorderFrequency = null, reorderNextDate = null, reorderCustomDates = null;
@@ -587,10 +543,10 @@ async function saveCheckoutAndProceed() {
     contact:  document.getElementById('checkout-contact')?.value.trim()  || '',
     phone:    document.getElementById('checkout-phone')?.value.trim()    || '',
     email:    document.getElementById('checkout-email')?.value.trim()    || '',
-    street:   fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-street')?.value.trim() || ''),
-    city:     fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-city')?.value.trim()   || ''),
-    state:    fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-state')?.value          || ''),
-    zip:      fulfillmentMethod === 'pickup' ? '' : (document.getElementById('checkout-zip')?.value.trim()    || ''),
+    street:   document.getElementById('checkout-street')?.value.trim() || '',
+    city:     document.getElementById('checkout-city')?.value.trim()   || '',
+    state:    document.getElementById('checkout-state')?.value          || '',
+    zip:      document.getElementById('checkout-zip')?.value.trim()    || '',
     notes:    document.getElementById('checkout-notes')?.value.trim()    || '',
     orderType,
     reorderFrequency, reorderNextDate, reorderCustomDates,
@@ -613,7 +569,7 @@ async function saveCheckoutAndProceed() {
     return;
   }
   if (!data.phone)    { alert('Please enter your phone number.'); return; }
-  if (fulfillmentMethod === 'ship' && !data.street) { alert('Please enter your delivery address.'); return; }
+  if (!data.street) { alert('Please enter your delivery address.'); return; }
 
   // Cart persists in localStorage across visits, and a Mix & Match minimum
   // can change (or a group member can be removed) after items were added,
