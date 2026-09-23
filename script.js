@@ -925,6 +925,7 @@ function renderSingleCard(product) {
       <div class="product-image">
         ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
         ${product.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
+        <span class="card-stock-badge${product.inStock === false ? ' is-out' : ''}"><span class="dot"></span>${product.inStock === false ? "Out of Stock" : "In Stock"}</span>
         <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
@@ -1092,6 +1093,7 @@ function renderVariantCard(variants) {
          data-variants="${escapedJson}">
       <div class="product-image">
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
+        <span class="card-stock-badge${v.inStock === false ? ' is-out' : ''}"><span class="dot"></span>${v.inStock === false ? "Out of Stock" : "In Stock"}</span>
         <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">

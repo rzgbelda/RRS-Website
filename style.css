@@ -3141,6 +3141,38 @@ textarea:focus {
 }
 .fast-ship-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
 
+/* Card-level stock indicator, top-right. Sits below .fast-ship-badge when
+   a product carries both (grid-column-gap-style stacking via the badge's
+   own top offset), rather than overlapping it. */
+.card-stock-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #fff;
+  color: #1f8a3b;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  padding: 5px 9px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(13,44,80,.18);
+}
+.card-stock-badge .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #22a944;
+  flex-shrink: 0;
+}
+.card-stock-badge.is-out { color: #dc2626; }
+.card-stock-badge.is-out .dot { background: #dc2626; }
+.product-image .fast-ship-badge + .card-stock-badge { top: 40px; }
+
 /* Live progress toward any Mix & Match group's combined minimum, injected
    by updateMoqGroupBar() (script.js) the moment the cart holds a grouped
    item, on any page -- catalog, product, cart, checkout alike. */
