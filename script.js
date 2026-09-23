@@ -872,6 +872,32 @@ function injectVariantCSS() {
       font-weight: 600;
       box-shadow: 0 2px 6px rgba(10, 50, 30, 0.22);
     }
+    /* Out-of-stock: stays visible (never hidden -- the option still
+       exists, it just can't be ordered right now) but reads as inert.
+       Real :disabled, not just a style hook, so there's no click handler
+       to have forgotten to guard. */
+    .variant-pill:disabled,
+    .variant-pill.is-out {
+      background: #f6f7f8;
+      border-color: #e4e7eb;
+      color: #b6bcc6;
+      cursor: not-allowed;
+      opacity: .75;
+    }
+    .variant-pill:disabled:hover,
+    .variant-pill.is-out:hover {
+      border-color: #e4e7eb;
+      background: #f6f7f8;
+      color: #b6bcc6;
+    }
+    .pill-oos-tag {
+      font-size: 9.5px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .03em;
+      color: #dc2626;
+      margin-left: 5px;
+    }
 
     /* -- Product page pills – larger, with a header label -- */
     #product-variant-selector {
@@ -993,8 +1019,39 @@ function variantPriceRange(variants) {
   return { min: Math.min(...prices), max: Math.max(...prices) };
 }
 
+// A family is IN STOCK when any member is -- the catalog card represents
+// the family, not one SKU, so one sold-out size must not read as the
+// whole product being unavailable while a sibling size still ships.
+function familyInStock(variants) {
+  return variants.some(v => v.inStock !== false);
+}
+
+// Presentation-only: chooses which variant a family card leads with. Never
+// touches the database, never creates or merges anything -- purely which
+// of the EXISTING variant records this render picks to show as the
+// representative image/price/SKU.
+//
+// Picks uniformly at random among in-stock members so the same size/color
+// doesn't always front every family (the customer still reaches every
+// option through the picker regardless of which one is shown first).
+// Falls back to variants[0] only when the whole family is sold out --
+// there is no in-stock option to prefer at that point, and the card's own
+// OUT OF STOCK state (familyInStock() above) is what actually communicates
+// that, not which SKU happens to be shown.
+//
+// Called once per render and the result is used for that entire card's
+// markup -- nothing re-picks after the fact, so a customer looking at a
+// rendered card never sees it change under them; a fresh pick only
+// happens on the next full render (catalog reload/filter/search), matching
+// "keep stable until the page is refreshed."
+function pickRepresentativeVariant(variants) {
+  const available = variants.filter(v => v.inStock !== false);
+  if (!available.length) return variants[0];
+  return available[Math.floor(Math.random() * available.length)];
+}
+
 function renderVariantCard(variants) {
-  const v = variants[0];
+  const v = pickRepresentativeVariant(variants);
   const displayPrice = cleanPrice(v.price);
   const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
   const price = displayPrice || cartPrice;
@@ -1096,13 +1153,20 @@ function renderVariantCard(variants) {
     ).join("");
   }
 
+  // Family-level, not the shown variant's own flag: the card represents
+  // every option, so it reads OUT OF STOCK only when none of them are
+  // available, even though the one SKU pictured here is always an
+  // available one already (pickRepresentativeVariant only falls back to
+  // an out-of-stock variant when the whole family has nothing else).
+  const famOut = !familyInStock(variants);
+
   return `
     <div class="product-card"
          data-url="/product?item=${encodeURIComponent(v.slug)}"
          data-variants="${escapedJson}">
       <div class="product-image">
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
-        <span class="card-stock-badge${v.inStock === false ? ' is-out' : ''}"><span class="dot"></span>${v.inStock === false ? "Out of Stock" : "In Stock"}</span>
+        <span class="card-stock-badge${famOut ? ' is-out' : ''}"><span class="dot"></span>${famOut ? "Out of Stock" : "In Stock"}</span>
         <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
@@ -2361,25 +2425,31 @@ function injectProductVariantSelector(variants, activeProduct) {
 
   // Size pills – only show unique sizes (exclude color duplicates from same size)
   const sizeVariants = variants.filter(v => !v.colorGroup || v.colorLabel === (activeProduct.colorLabel || "Tan") || !activeProduct.colorLabel);
-  const pillsHtml = sizeVariants.map(v =>
-    `<button class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}"
+  // Out-of-stock options stay visible (never hidden -- a buyer needs to
+  // see the size/color exists even when it can't be ordered right now)
+  // but are greyed out and inert: no onclick at all, rather than an
+  // onclick that's expected to no-op, so there is no path by which
+  // clicking one could still switch the page onto an unbuyable SKU.
+  const pillsHtml = sizeVariants.map(v => {
+    const out = v.inStock === false;
+    return `<button type="button" class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}${out ? " is-out" : ""}"
              data-slug="${v.slug}"
-             onclick="switchProductVariant('${v.slug}')"
-     >${v.variantLabel || v.size || v.name}</button>`
-  ).join("");
+             ${out ? `disabled aria-disabled="true" title="${(v.variantLabel || v.size || v.name)} — Out of Stock"` : `onclick="switchProductVariant('${v.slug}')"`}
+     >${v.variantLabel || v.size || v.name}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
+  }).join("");
 
   // Color pills – find siblings with same colorGroup
   let colorHtml = "";
   if (activeProduct.colorGroup) {
     const colorSiblings = allProducts.filter(p => p.colorGroup === activeProduct.colorGroup);
     if (colorSiblings.length > 1) {
-      const colorPills = colorSiblings.map(p =>
-        `<button class="variant-pill color-pill${p.itemNumber === activeProduct.itemNumber ? " active" : ""}"
+      const colorPills = colorSiblings.map(p => {
+        const out = p.inStock === false;
+        return `<button type="button" class="variant-pill color-pill${p.itemNumber === activeProduct.itemNumber ? " active" : ""}${out ? " is-out" : ""}"
                  data-slug="${p.slug}"
-                 onclick="switchProductVariant('${p.slug}')"
-                 title="${p.colorLabel}"
-         >${p.colorLabel}</button>`
-      ).join("");
+                 ${out ? `disabled aria-disabled="true" title="${p.colorLabel} — Out of Stock"` : `onclick="switchProductVariant('${p.slug}')" title="${p.colorLabel}"`}
+         >${p.colorLabel}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
+      }).join("");
       colorHtml = `
         <div class="variant-option-label" style="margin-top:12px;">Select Color</div>
         <div class="variant-selector">${colorPills}</div>
