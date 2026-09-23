@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
-  <link rel="stylesheet" href="admin.css?v=7" />
+  <link rel="stylesheet" href="admin.css?v=8" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -931,24 +931,24 @@
           <h3 id="famPreviewTitle">Apply Grouping</h3>
           <button class="a-modal-close" onclick="document.getElementById('famPreviewModal').style.display='none'">&times;</button>
         </div>
-        <div class="a-modal-body" style="overflow-y:auto;flex:1">
-          <div id="famPreviewMeta" style="margin-bottom:12px"></div>
-          <div style="overflow-x:auto;border:1px solid #e5e9f0;border-radius:9px">
-            <table style="width:100%;border-collapse:collapse;min-width:680px">
+        <div class="a-modal-body fam-preview-body">
+          <div id="famPreviewMeta" class="fam-preview-meta"></div>
+          <div class="a-table-wrap">
+            <table class="a-table">
               <thead>
-                <tr style="background:#f8fafc">
-                  <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">SKU</th>
-                  <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Product Name</th>
-                  <th style="text-align:left;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Variant Label</th>
-                  <th style="text-align:right;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Price</th>
-                  <th style="text-align:right;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Case Qty</th>
-                  <th style="text-align:right;padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Stock</th>
+                <tr>
+                  <th>SKU</th>
+                  <th>Product Name</th>
+                  <th>Variant Label</th>
+                  <th class="fam-num">Price</th>
+                  <th class="fam-num">Case Qty</th>
+                  <th class="fam-num">Stock</th>
                 </tr>
               </thead>
               <tbody id="famPreviewRows"></tbody>
             </table>
           </div>
-          <p style="font-size:12px;color:#94a3b8;margin:12px 0 0">
+          <p class="fam-preview-note">
             Applying writes only <code>product_family</code> and <code>variant_label</code> for these SKUs.
             Price, inventory, MOQ, case quantity, images and every other field stay exactly as they are —
             and the same is true of every SKU already in the catalog, which is not touched by this action.
@@ -3195,7 +3195,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=96"></script>
+<script src="admin.js?v=97"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

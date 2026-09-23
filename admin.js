@@ -972,9 +972,9 @@ async function renderFamiliesTab() {
     ["Ungrouped SKUs", solo.length],
     ["Catalog cards", families.size + solo.length],
   ].map(([label, n]) => `
-    <div style="background:#fff;border:1px solid #e5e9f0;border-radius:9px;padding:9px 14px;min-width:112px">
-      <div style="font-size:19px;font-weight:800;color:#0d2c50;line-height:1.1">${n}</div>
-      <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-top:2px">${label}</div>
+    <div class="fam-stat">
+      <div class="fam-stat-num">${n}</div>
+      <div class="fam-stat-label">${label}</div>
     </div>`).join("");
 
   const matches = (fam, members) => {
@@ -1003,42 +1003,43 @@ async function renderFamiliesTab() {
 
     const rows = members.map(m => `
       <tr>
-        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap">${famEsc(m.sku)}</td>
-        <td style="font-size:12.5px">${famEsc(m.variant_label || "—")}</td>
-        <td style="font-size:12.5px;color:#64748b">${famEsc(m.name)}</td>
-        <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.price || 0).toFixed(2)}</td>
-        <td style="text-align:right;white-space:nowrap">${famEsc(m.case_qty || "—")}</td>
-        <td style="text-align:right;white-space:nowrap">${m.moq || 1}</td>
-        <td style="text-align:right;white-space:nowrap">${m.in_stock === false
-          ? `<span style="color:#dc2626;font-weight:700;font-size:11.5px">OUT</span>`
-          : `<span style="color:#16a34a;font-size:11.5px">In stock</span>`}</td>
+        <td class="fam-sku">${famEsc(m.sku)}</td>
+        <td class="fam-label-cell">${famEsc(m.variant_label || "—")}</td>
+        <td class="fam-name-cell">${famEsc(m.name)}</td>
+        <td class="fam-num">$${Number(m.price || 0).toFixed(2)}</td>
+        <td class="fam-num">${famEsc(m.case_qty || "—")}</td>
+        <td class="fam-num">${m.moq || 1}</td>
+        <td class="fam-num">${m.in_stock === false
+          ? `<span class="a-badge a-badge-red">Out</span>`
+          : `<span class="a-badge a-badge-green">In stock</span>`}</td>
       </tr>`).join("");
 
     const flags = [];
-    if (missing) flags.push(`<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">Missing variant label</span>`);
-    if (dupe)    flags.push(`<span style="background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">Duplicate labels</span>`);
-    if (out)     flags.push(`<span style="background:#f1f5f9;color:#475569;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">${out} out of stock</span>`);
+    if (missing) flags.push(`<span class="a-badge a-badge-yellow">Missing variant label</span>`);
+    if (dupe)    flags.push(`<span class="a-badge a-badge-red">Duplicate labels</span>`);
+    if (out)     flags.push(`<span class="a-badge a-badge-gray">${out} out of stock</span>`);
 
     return `
-      <div style="background:#fff;border:1px solid #e5e9f0;border-radius:11px;margin-bottom:12px;overflow:hidden">
-        <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;flex-wrap:wrap">
-          <strong style="font-size:14.5px;color:#0d2c50;flex:1;min-width:200px">${famEsc(fam)}</strong>
-          ${flags.join(" ")}
-          <span style="font-size:12px;color:#94a3b8;white-space:nowrap">${members.length} variants</span>
-          <button class="a-btn-secondary" style="width:auto;padding:6px 13px;font-size:12.5px"
-                  onclick="openFamilyModal(${famAttr(fam)})">Edit</button>
+      <div class="a-card fam-card">
+        <div class="a-card-header fam-card-header">
+          <div class="fam-card-title">
+            <h3>${famEsc(fam)}</h3>
+            <span class="fam-variant-count">${members.length} variant${members.length === 1 ? "" : "s"}</span>
+            ${flags.join("")}
+          </div>
+          <button class="a-btn-sm" onclick="openFamilyModal(${famAttr(fam)})">Edit</button>
         </div>
-        <div style="overflow-x:auto;border-top:1px solid #eef2f7">
-          <table style="width:100%;border-collapse:collapse;min-width:640px">
+        <div class="a-table-wrap">
+          <table class="a-table">
             <thead>
-              <tr style="background:#f8fafc">
-                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">SKU</th>
-                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Variant label</th>
-                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Product name</th>
-                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Price</th>
-                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Case</th>
-                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">MOQ</th>
-                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Stock</th>
+              <tr>
+                <th>SKU</th>
+                <th>Variant label</th>
+                <th>Product name</th>
+                <th class="fam-num">Price</th>
+                <th class="fam-num">Case</th>
+                <th class="fam-num">MOQ</th>
+                <th class="fam-num">Stock</th>
               </tr>
             </thead>
             <tbody>${rows}</tbody>
@@ -1066,15 +1067,15 @@ function famRenderProposals() {
     !_famProposalsIgnored.has(p.base));
   if (!all.length) { wrap.innerHTML = ""; return; }
 
-  const section = (title, sub, items, renderRow) => {
+  const section = (title, sub, items, cls, renderRow) => {
     if (!items.length) return "";
     return `
-      <div style="margin-bottom:14px">
-        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
-          <strong style="font-size:13.5px;color:#0d2c50">${title}</strong>
-          <span style="font-size:11.5px;color:#94a3b8">${sub}</span>
+      <div class="fam-proposal-section">
+        <div class="fam-proposal-section-head">
+          <strong>${title}</strong>
+          <span>${sub}</span>
         </div>
-        ${items.map(renderRow).join("")}
+        ${items.map(p => renderRow(p)).join("")}
       </div>`;
   };
 
@@ -1083,84 +1084,88 @@ function famRenderProposals() {
   // preview, so a reviewer can judge a MEDIUM/DATA candidate without
   // opening another modal first.
   const memberTable = (p, showLabel) => `
-    <div style="overflow-x:auto;margin-top:8px">
-      <table style="width:100%;border-collapse:collapse;min-width:520px">
+    <div class="a-table-wrap fam-proposal-table-wrap">
+      <table class="a-table fam-proposal-table">
         <thead>
           <tr>
-            <th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">SKU</th>
-            <th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Product Name</th>
-            ${showLabel ? '<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Variant Label</th>' : ""}
-            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Price</th>
-            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Case Qty</th>
-            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Stock</th>
+            <th>SKU</th>
+            <th>Product Name</th>
+            ${showLabel ? "<th>Variant Label</th>" : ""}
+            <th class="fam-num">Price</th>
+            <th class="fam-num">Case Qty</th>
+            <th class="fam-num">Stock</th>
           </tr>
         </thead>
         <tbody>
           ${p.members.map(m => `
             <tr>
-              <td style="padding:5px 8px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap">${famEsc(m.row.sku)}</td>
-              <td style="padding:5px 8px;font-size:11.5px;color:#64748b">${famEsc(m.row.name)}</td>
-              ${showLabel ? `<td style="padding:5px 8px;font-size:11.5px;font-weight:600;color:#0d2c50;white-space:nowrap">${famEsc(cvtCleanLabel(m.tail)) || `<span style="color:#dc2626;font-style:italic">unresolved</span>`}</td>` : ""}
-              <td style="padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.row.price || 0).toFixed(2)}</td>
-              <td style="padding:5px 8px;text-align:right;white-space:nowrap">${famEsc(m.row.case_qty || "—")}</td>
-              <td style="padding:5px 8px;text-align:right;white-space:nowrap">${m.row.in_stock === false ? '<span style="color:#dc2626;font-weight:700;font-size:11px">OUT</span>' : '<span style="color:#16a34a;font-size:11px">In stock</span>'}</td>
+              <td class="fam-sku">${famEsc(m.row.sku)}</td>
+              <td class="fam-name-cell">${famEsc(m.row.name)}</td>
+              ${showLabel ? `<td class="fam-label-cell">${famEsc(cvtCleanLabel(m.tail)) || `<span class="fam-unresolved">unresolved</span>`}</td>` : ""}
+              <td class="fam-num">$${Number(m.row.price || 0).toFixed(2)}</td>
+              <td class="fam-num">${famEsc(m.row.case_qty || "—")}</td>
+              <td class="fam-num">${m.row.in_stock === false ? '<span class="a-badge a-badge-red">Out</span>' : '<span class="a-badge a-badge-green">In stock</span>'}</td>
             </tr>`).join("")}
         </tbody>
       </table>
     </div>`;
 
   const highRow = (p) => `
-    <div style="background:#fff;border:1px solid #bbf7d0;border-left:3px solid #16a34a;border-radius:9px;padding:11px 14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
-        <div style="flex:1;min-width:200px">
-          <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
-          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs &middot; ${famEsc(p.axes.join(", "))}</span>
+    <div class="fam-proposal-card fam-proposal-high">
+      <div class="fam-proposal-row">
+        <div class="fam-proposal-title">
+          <strong>${famEsc(p.base)}</strong>
+          <span>${p.members.length} SKUs &middot; ${famEsc(p.axes.join(", "))}</span>
         </div>
-        <div style="display:flex;gap:7px">
-          <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
-          <button class="a-btn-primary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famApplyProposal(${famAttr(p.base)})">Apply grouping…</button>
+        <div class="fam-proposal-actions">
+          <button class="a-btn-sm" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
+          <button class="a-btn-sm fam-btn-apply" onclick="famApplyProposal(${famAttr(p.base)})">Apply grouping…</button>
         </div>
       </div>
-      <p style="font-size:12px;color:#64748b;margin:7px 0 0">${famEsc(p.reason)}</p>
+      <p class="fam-proposal-reason">${famEsc(p.reason)}</p>
       ${memberTable(p, true)}
     </div>`;
 
   const mediumRow = (p) => `
-    <div style="background:#fff;border:1px solid #fde68a;border-left:3px solid #d97706;border-radius:9px;padding:11px 14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
-        <div style="flex:1;min-width:200px">
-          <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
-          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs &middot; REVIEW</span>
+    <div class="fam-proposal-card fam-proposal-medium">
+      <div class="fam-proposal-row">
+        <div class="fam-proposal-title">
+          <strong>${famEsc(p.base)}</strong>
+          <span>${p.members.length} SKUs &middot; REVIEW</span>
         </div>
-        <div style="display:flex;gap:7px">
-          <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
-          <button class="a-btn-secondary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famReviewProposal(${famAttr(p.base)})">Review &amp; group manually</button>
+        <div class="fam-proposal-actions">
+          <button class="a-btn-sm" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
+          <button class="a-btn-sm" onclick="famReviewProposal(${famAttr(p.base)})">Review &amp; group manually</button>
         </div>
       </div>
-      <p style="font-size:12px;color:#92400e;margin:7px 0 0">${famEsc(p.reason)}</p>
+      <p class="fam-proposal-reason fam-proposal-reason-warn">${famEsc(p.reason)}</p>
       ${memberTable(p, false)}
     </div>`;
 
   const dataRow = (p) => `
-    <div style="background:#fff;border:1px solid #ddd6fe;border-left:3px solid #7c3aed;border-radius:9px;padding:11px 14px;margin-bottom:8px">
-      <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
-      <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">DATA ISSUE</span>
-      <p style="font-size:12px;color:#5b21b6;margin:7px 0 0">${famEsc(p.reason)}</p>
+    <div class="fam-proposal-card fam-proposal-data">
+      <div class="fam-proposal-row">
+        <div class="fam-proposal-title">
+          <strong>${famEsc(p.base)}</strong>
+          <span>DATA ISSUE</span>
+        </div>
+      </div>
+      <p class="fam-proposal-reason fam-proposal-reason-data">${famEsc(p.reason)}</p>
       ${memberTable(p, false)}
-      <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">Not a grouping decision &mdash; fix the underlying product data first. No family is created or modified for these SKUs.</p>
+      <p class="fam-proposal-footnote">Not a grouping decision &mdash; fix the underlying product data first. No family is created or modified for these SKUs.</p>
     </div>`;
 
   wrap.innerHTML = `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-      <strong style="font-size:15px;color:#0d2c50">Suggested groupings</strong>
-      <span style="font-size:12px;color:#94a3b8">from ungrouped SKUs &mdash; nothing here is applied automatically</span>
+    <div class="fam-proposals-head">
+      <strong>Suggested groupings</strong>
+      <span>from ungrouped SKUs &mdash; nothing here is applied automatically</span>
     </div>
     ${section("High confidence", "same brand + product name, differ only by known variant attributes",
-        all.filter(p => p.confidence === "HIGH"), highRow)}
+        all.filter(p => p.confidence === "HIGH"), "high", highRow)}
     ${section("Needs review", "grouping is plausible but a human should confirm the axis",
-        all.filter(p => p.confidence === "MEDIUM"), mediumRow)}
+        all.filter(p => p.confidence === "MEDIUM"), "medium", mediumRow)}
     ${section("Data issues", "not a grouping question — a duplicate SKU or a price/name conflict",
-        all.filter(p => p.confidence === "DATA"), dataRow)}
+        all.filter(p => p.confidence === "DATA"), "data", dataRow)}
   `;
 }
 
@@ -1186,24 +1191,22 @@ function famApplyProposal(base) {
 
   document.getElementById("famPreviewTitle").textContent = "Apply Grouping";
   document.getElementById("famPreviewMeta").innerHTML = `
-    <p style="font-size:13.5px;font-weight:700;color:#0d2c50;margin:0 0 4px">${famEsc(proposal.base)}</p>
-    <p style="font-size:12.5px;color:#64748b;margin:0 0 3px">
-      <strong style="color:#16a34a">HIGH confidence</strong> &middot; ${famEsc(proposal.reason)}
-    </p>
-    <p style="font-size:11.5px;color:#94a3b8;margin:0">Detected attributes: ${famEsc(proposal.axes.join(", ") || "—")}</p>`;
+    <p class="fam-preview-title">${famEsc(proposal.base)}</p>
+    <p class="fam-preview-confidence"><strong>HIGH confidence</strong> &middot; ${famEsc(proposal.reason)}</p>
+    <p class="fam-preview-axes">Detected attributes: ${famEsc(proposal.axes.join(", ") || "—")}</p>`;
 
   document.getElementById("famPreviewRows").innerHTML = proposal.members.map(m => {
     const label = cvtCleanLabel(m.tail);
     return `
       <tr>
-        <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap">${famEsc(m.row.sku)}</td>
-        <td style="padding:8px 12px;font-size:12px;color:#64748b;max-width:220px">${famEsc(m.row.name)}</td>
-        <td style="padding:8px 12px;font-size:12.5px;font-weight:600;color:#0d2c50;white-space:nowrap">${famEsc(label) || `<span style="color:#dc2626;font-style:italic">needs manual label</span>`}</td>
-        <td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.row.price || 0).toFixed(2)}</td>
-        <td style="padding:8px 12px;text-align:right;white-space:nowrap">${famEsc(m.row.case_qty || "—")}</td>
-        <td style="padding:8px 12px;text-align:right;white-space:nowrap">${m.row.in_stock === false
-          ? `<span style="color:#dc2626;font-weight:700;font-size:11.5px">OUT</span>`
-          : `<span style="color:#16a34a;font-size:11.5px">In stock</span>`}</td>
+        <td class="fam-sku">${famEsc(m.row.sku)}</td>
+        <td class="fam-name-cell">${famEsc(m.row.name)}</td>
+        <td class="fam-label-cell">${famEsc(label) || `<span class="fam-unresolved">needs manual label</span>`}</td>
+        <td class="fam-num">$${Number(m.row.price || 0).toFixed(2)}</td>
+        <td class="fam-num">${famEsc(m.row.case_qty || "—")}</td>
+        <td class="fam-num">${m.row.in_stock === false
+          ? `<span class="a-badge a-badge-red">Out</span>`
+          : `<span class="a-badge a-badge-green">In stock</span>`}</td>
       </tr>`;
   }).join("");
 

@@ -3874,3 +3874,122 @@ select.crm-filtersel { width: auto; min-width: 150px; }
   .pt-vrow { padding-left: 18px; flex-wrap: wrap; }
   .pt-vrow-case { flex: 1 1 100%; order: 3; }
 }
+
+/* ─────────────────────────────────────────
+   PRODUCT FAMILIES
+   Built on the shared .a-card/.a-table/.a-badge/.a-btn-sm components
+   (defined above) rather than one-off inline styles, so this tab matches
+   the spacing, hover states and zebra striping every other admin tab
+   already has instead of reading as a bare HTML table bolted on beside
+   them.
+───────────────────────────────────────── */
+.fam-stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  min-width: 130px;
+  box-shadow: var(--shadow-xs);
+}
+.fam-stat-num {
+  font-size: 22px; font-weight: 800; color: var(--text);
+  line-height: 1.1; letter-spacing: -0.3px;
+}
+.fam-stat-label {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.06em;
+  margin-top: 4px;
+}
+
+.fam-card { margin-bottom: 18px; }
+.fam-card-header {
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: center;
+}
+.fam-card-title {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 10px; flex: 1; min-width: 220px;
+}
+.fam-card-title h3 { margin: 0; }
+.fam-variant-count {
+  font-size: 12.5px; color: var(--text-muted); font-weight: 600;
+  white-space: nowrap;
+}
+
+.fam-sku {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px; color: var(--text); white-space: nowrap;
+}
+.fam-label-cell { font-weight: 600; color: var(--text); white-space: nowrap; }
+.fam-name-cell { color: var(--text-secondary); max-width: 320px; }
+.fam-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+th.fam-num { text-align: right; }
+
+@media (max-width: 720px) {
+  .fam-card-header { flex-direction: column; align-items: stretch; }
+  .fam-card-header .a-btn-sm { align-self: flex-start; }
+}
+
+/* ── Suggested groupings queue ── */
+.fam-proposals-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.fam-proposals-head strong { font-size: 16px; color: var(--text); }
+.fam-proposals-head span { font-size: 12.5px; color: var(--text-muted); }
+
+.fam-proposal-section { margin-bottom: 20px; }
+.fam-proposal-section-head {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.fam-proposal-section-head strong { font-size: 13.5px; color: var(--text); }
+.fam-proposal-section-head span { font-size: 12px; color: var(--text-muted); }
+
+.fam-proposal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xs);
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+.fam-proposal-high   { border-left-color: var(--success); }
+.fam-proposal-medium { border-left-color: var(--warning); }
+.fam-proposal-data   { border-left-color: var(--purple); }
+
+.fam-proposal-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap;
+}
+.fam-proposal-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 200px; }
+.fam-proposal-title strong { font-size: 14px; color: var(--text); }
+.fam-proposal-title span { font-size: 12px; color: var(--text-muted); }
+.fam-proposal-actions { display: flex; gap: 8px; }
+.fam-btn-apply { border-color: var(--success); color: #15803d; background: #f0fdf4; }
+.fam-btn-apply:hover { background: #dcfce7; border-color: #16a34a; color: #15803d; }
+
+.fam-proposal-reason { font-size: 13px; color: var(--text-secondary); margin: 10px 0 0; line-height: 1.5; }
+.fam-proposal-reason-warn { color: #92400e; }
+.fam-proposal-reason-data { color: #5b21b6; }
+.fam-proposal-footnote { font-size: 11.5px; color: var(--text-muted); margin: 10px 0 0; }
+
+.fam-proposal-table-wrap { margin-top: 12px; border: 1px solid var(--border-soft); border-radius: var(--radius-sm); }
+.fam-proposal-table th, .fam-proposal-table td { padding: 8px 12px; font-size: 12.5px; }
+.fam-unresolved { color: var(--danger); font-style: italic; }
+
+@media (max-width: 720px) {
+  .fam-proposal-row { flex-direction: column; align-items: stretch; }
+  .fam-proposal-actions { justify-content: flex-start; }
+}
+
+/* ── Apply Grouping preview modal ── */
+.fam-preview-body { overflow-y: auto; flex: 1; }
+.fam-preview-meta { margin-bottom: 16px; }
+.fam-preview-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0 0 6px; }
+.fam-preview-confidence { font-size: 13px; color: var(--text-secondary); margin: 0 0 4px; }
+.fam-preview-confidence strong { color: var(--success); }
+.fam-preview-axes { font-size: 12px; color: var(--text-muted); margin: 0; }
+.fam-preview-note { font-size: 12px; color: var(--text-muted); margin: 14px 0 0; line-height: 1.5; }
