@@ -1986,7 +1986,19 @@ function populateProductPage(product) {
     // an unset value is otherwise treated as "unknown" freshness. Rolling
     // 90-day window; regenerated on every page load either way.
     priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    availability: "https://schema.org/InStock",
+    // This page represents exactly one SKU -- product.itemNumber below,
+    // the same one the URL's ?item= names and the same one "sku" reports
+    // a few lines down -- never a family as its own schema.org entity, so
+    // there is no aggregate/multi-offer case to build here: sibling sizes
+    // are UI navigation (the pill selector), not additional Offers this
+    // page is making. Read from product.inStock, the exact field every
+    // other stock UI element on this page (the delivery-panel badge, the
+    // Add to Cart guard) already reads -- previously hardcoded to InStock
+    // regardless of actual availability, which is what search engines had
+    // been shown for a sold-out SKU.
+    availability: product.inStock === false
+      ? "https://schema.org/OutOfStock"
+      : "https://schema.org/InStock",
     seller: { "@type": "Organization", name: "Room Ready Supply" }
   };
 

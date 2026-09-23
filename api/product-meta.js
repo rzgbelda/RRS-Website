@@ -25,7 +25,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -289,7 +289,16 @@ function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
     priceCurrency: 'USD',
     price: priceVal > 0 ? priceVal.toFixed(2) : null,
     priceValidUntil: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-    availability: 'https://schema.org/InStock',
+    // This function returns one Offer for exactly the one SKU `p` names
+    // (sku: p.sku below) -- the same single-SKU-per-page shape
+    // populateProductPage() uses client-side, so there is no family/
+    // multi-offer case to build here. p.in_stock is the same column the
+    // storefront's own stock badge and Add to Cart guard read; this was
+    // previously hardcoded to InStock regardless of it, so a sold-out SKU
+    // reported available to search engines and Merchant Center.
+    availability: p.in_stock === false
+      ? 'https://schema.org/OutOfStock'
+      : 'https://schema.org/InStock',
     seller: { '@type': 'Organization', name: 'Room Ready Supply' },
   };
 
