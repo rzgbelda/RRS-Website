@@ -5108,6 +5108,17 @@ function miniCartTypeQty(itemNumber, rawValue, commit) {
   }
 }
 
+// Removes the whole line regardless of quantity -- a dedicated action for
+// "I don't want this item" rather than stepping the minus button down N
+// times to get there.
+function miniCartRemove(itemNumber) {
+  const cart = getCart();
+  const remaining = cart.filter(i => String(i.itemNumber) !== String(itemNumber));
+  saveCart(remaining);
+  updateCartBadge();
+  if (typeof renderCartPage === "function") renderCartPage();
+}
+
 function updateMiniCart() {
   if (miniCartSuppressed()) {
     const existing = document.getElementById("miniCart");
@@ -5228,6 +5239,15 @@ function updateMiniCart() {
           <button type="button" aria-label="Increase quantity"
             onclick="miniCartSetQty('${String(i.itemNumber).replace(/'/g, "\\'")}', 1)">+</button>
         </div>
+        <button type="button" class="mc-remove" aria-label="Remove item"
+          onclick="miniCartRemove('${String(i.itemNumber).replace(/'/g, "\\'")}')">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            <path d="M10 11v6"/><path d="M14 11v6"/>
+          </svg>
+        </button>
       </li>`;
   }).join("");
 

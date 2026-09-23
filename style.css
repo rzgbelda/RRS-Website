@@ -10403,6 +10403,20 @@ input.qty-input:focus {
 .mc-qty-input::-webkit-outer-spin-button,
 .mc-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
+.mc-remove {
+  width: 24px; height: 24px;
+  flex: 0 0 24px;
+  border: none;
+  background: transparent;
+  color: #c53030;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 6px;
+}
+.mc-remove:hover { background: #fdecec; color: #a02525; }
+
 .mc-tier {
   margin: 0;
   padding: 9px 12px;
