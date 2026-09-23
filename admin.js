@@ -1078,9 +1078,36 @@ function famRenderProposals() {
       </div>`;
   };
 
-  const skuList = (p) => p.members.map(m =>
-    `<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;margin:0 4px 4px 0;display:inline-block">${famEsc(m.row.sku)}</span>`
-  ).join("");
+  // Full field set per member -- SKU, product name, variant label, price,
+  // stock, case qty -- shown in the queue itself, not only in the apply
+  // preview, so a reviewer can judge a MEDIUM/DATA candidate without
+  // opening another modal first.
+  const memberTable = (p, showLabel) => `
+    <div style="overflow-x:auto;margin-top:8px">
+      <table style="width:100%;border-collapse:collapse;min-width:520px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">SKU</th>
+            <th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Product Name</th>
+            ${showLabel ? '<th style="text-align:left;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Variant Label</th>' : ""}
+            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Price</th>
+            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Case Qty</th>
+            <th style="text-align:right;padding:5px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#94a3b8">Stock</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${p.members.map(m => `
+            <tr>
+              <td style="padding:5px 8px;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;white-space:nowrap">${famEsc(m.row.sku)}</td>
+              <td style="padding:5px 8px;font-size:11.5px;color:#64748b">${famEsc(m.row.name)}</td>
+              ${showLabel ? `<td style="padding:5px 8px;font-size:11.5px;font-weight:600;color:#0d2c50;white-space:nowrap">${famEsc(cvtCleanLabel(m.tail)) || `<span style="color:#dc2626;font-style:italic">unresolved</span>`}</td>` : ""}
+              <td style="padding:5px 8px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.row.price || 0).toFixed(2)}</td>
+              <td style="padding:5px 8px;text-align:right;white-space:nowrap">${famEsc(m.row.case_qty || "—")}</td>
+              <td style="padding:5px 8px;text-align:right;white-space:nowrap">${m.row.in_stock === false ? '<span style="color:#dc2626;font-weight:700;font-size:11px">OUT</span>' : '<span style="color:#16a34a;font-size:11px">In stock</span>'}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>
+    </div>`;
 
   const highRow = (p) => `
     <div style="background:#fff;border:1px solid #bbf7d0;border-left:3px solid #16a34a;border-radius:9px;padding:11px 14px;margin-bottom:8px">
@@ -1091,11 +1118,11 @@ function famRenderProposals() {
         </div>
         <div style="display:flex;gap:7px">
           <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
-          <button class="a-btn-primary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famApplyProposal(${famAttr(p.base)})">Apply grouping</button>
+          <button class="a-btn-primary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famApplyProposal(${famAttr(p.base)})">Apply grouping…</button>
         </div>
       </div>
-      <p style="font-size:12px;color:#64748b;margin:7px 0 6px">${famEsc(p.reason)}</p>
-      <div>${skuList(p)}</div>
+      <p style="font-size:12px;color:#64748b;margin:7px 0 0">${famEsc(p.reason)}</p>
+      ${memberTable(p, true)}
     </div>`;
 
   const mediumRow = (p) => `
@@ -1103,23 +1130,24 @@ function famRenderProposals() {
       <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
         <div style="flex:1;min-width:200px">
           <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
-          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs</span>
+          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs &middot; REVIEW</span>
         </div>
         <div style="display:flex;gap:7px">
           <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
           <button class="a-btn-secondary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famReviewProposal(${famAttr(p.base)})">Review &amp; group manually</button>
         </div>
       </div>
-      <p style="font-size:12px;color:#92400e;margin:7px 0 6px">${famEsc(p.reason)}</p>
-      <div>${skuList(p)}</div>
+      <p style="font-size:12px;color:#92400e;margin:7px 0 0">${famEsc(p.reason)}</p>
+      ${memberTable(p, false)}
     </div>`;
 
   const dataRow = (p) => `
     <div style="background:#fff;border:1px solid #ddd6fe;border-left:3px solid #7c3aed;border-radius:9px;padding:11px 14px;margin-bottom:8px">
       <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
-      <p style="font-size:12px;color:#5b21b6;margin:6px 0">${famEsc(p.reason)}</p>
-      <div>${skuList(p)}</div>
-      <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">Not a grouping decision &mdash; fix the underlying product data first.</p>
+      <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">DATA ISSUE</span>
+      <p style="font-size:12px;color:#5b21b6;margin:7px 0 0">${famEsc(p.reason)}</p>
+      ${memberTable(p, false)}
+      <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">Not a grouping decision &mdash; fix the underlying product data first. No family is created or modified for these SKUs.</p>
     </div>`;
 
   wrap.innerHTML = `
@@ -1146,7 +1174,7 @@ function famDismissProposal(base) {
 // and re-derives the members from _famRows by id rather than trusting the
 // proposal's own snapshot, in case something else changed since it was
 // scored.
-async function famApplyProposal(base) {
+function famApplyProposal(base) {
   const proposal = cvtProposeCommaGroupings(_famRows).find(p => p.base === base);
   if (!proposal) { famRenderProposals(); return; }
   if (proposal.confidence !== "HIGH") { alert("Only high-confidence groupings can be applied directly."); return; }
@@ -1156,12 +1184,49 @@ async function famApplyProposal(base) {
     return;
   }
 
-  const preview = proposal.members.map(m => `  ${m.row.sku}  —  ${m.tail.join(", ")}`).join("\n");
-  if (!confirm(`Create "${proposal.base}" from ${proposal.members.length} SKUs?\n\n${preview}\n\nEach SKU keeps its own price, stock and item number — this only changes how they're grouped on the catalog page.`)) return;
+  document.getElementById("famPreviewTitle").textContent = "Apply Grouping";
+  document.getElementById("famPreviewMeta").innerHTML = `
+    <p style="font-size:13.5px;font-weight:700;color:#0d2c50;margin:0 0 4px">${famEsc(proposal.base)}</p>
+    <p style="font-size:12.5px;color:#64748b;margin:0 0 3px">
+      <strong style="color:#16a34a">HIGH confidence</strong> &middot; ${famEsc(proposal.reason)}
+    </p>
+    <p style="font-size:11.5px;color:#94a3b8;margin:0">Detected attributes: ${famEsc(proposal.axes.join(", ") || "—")}</p>`;
+
+  document.getElementById("famPreviewRows").innerHTML = proposal.members.map(m => {
+    const label = cvtCleanLabel(m.tail);
+    return `
+      <tr>
+        <td style="padding:8px 12px;font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap">${famEsc(m.row.sku)}</td>
+        <td style="padding:8px 12px;font-size:12px;color:#64748b;max-width:220px">${famEsc(m.row.name)}</td>
+        <td style="padding:8px 12px;font-size:12.5px;font-weight:600;color:#0d2c50;white-space:nowrap">${famEsc(label) || `<span style="color:#dc2626;font-style:italic">needs manual label</span>`}</td>
+        <td style="padding:8px 12px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.row.price || 0).toFixed(2)}</td>
+        <td style="padding:8px 12px;text-align:right;white-space:nowrap">${famEsc(m.row.case_qty || "—")}</td>
+        <td style="padding:8px 12px;text-align:right;white-space:nowrap">${m.row.in_stock === false
+          ? `<span style="color:#dc2626;font-weight:700;font-size:11.5px">OUT</span>`
+          : `<span style="color:#16a34a;font-size:11.5px">In stock</span>`}</td>
+      </tr>`;
+  }).join("");
+
+  const anyMissingLabel = proposal.members.some(m => !cvtCleanLabel(m.tail));
+  const confirmBtn = document.getElementById("famPreviewConfirmBtn");
+  confirmBtn.disabled = anyMissingLabel;
+  confirmBtn.title = anyMissingLabel ? "One or more variant labels could not be generated cleanly — use \"Review & group manually\" instead." : "";
+  confirmBtn.onclick = () => famApplyProposalConfirmed(proposal.base);
+
+  document.getElementById("famPreviewModal").style.display = "flex";
+}
+
+// The actual write, reached only from the preview modal's own confirm
+// button -- re-resolves the proposal fresh (rather than trusting a
+// closure) in case the catalog changed while the modal was open.
+async function famApplyProposalConfirmed(base) {
+  const proposal = cvtProposeCommaGroupings(_famRows).find(p => p.base === base);
+  if (!proposal || proposal.confidence !== "HIGH") { document.getElementById("famPreviewModal").style.display = "none"; return; }
 
   const stamp = new Date().toISOString();
   for (const m of proposal.members) {
-    const label = m.tail.join(", ");
+    const label = cvtCleanLabel(m.tail);
+    if (!label) { alert(`${m.row.sku} has no usable variant label — skipping this grouping. Use "Review & group manually" instead.`); return; }
     const { error } = await window.sb.from("products")
       .update({ product_family: proposal.base, variant_label: label, updated_at: stamp })
       .eq("id", m.row.id);
@@ -1170,6 +1235,7 @@ async function famApplyProposal(base) {
     m.row.variant_label = label;
   }
 
+  document.getElementById("famPreviewModal").style.display = "none";
   showToast(`Grouped ${proposal.members.length} SKUs into "${proposal.base}".`);
   _famRows = [];
   renderFamiliesTab();
@@ -1188,11 +1254,12 @@ function famReviewProposal(base) {
   document.getElementById("famAddWrap").style.display = "none";
   document.getElementById("famWarn").style.display = "none";
   famRenderMembers();
-  // Pre-fill each label from the detected tail so the reviewer is editing,
-  // not starting from blank text.
+  // Pre-fill each label from the cleaned detected tail (never the raw
+  // parser text) so the reviewer is editing a sensible starting point,
+  // not starting from blank text or fixing up messy punctuation by hand.
   proposal.members.forEach(m => {
     const input = document.querySelector(`.fam-label-input[data-id="${m.row.id}"]`);
-    if (input) input.value = m.tail.join(", ");
+    if (input) input.value = cvtCleanLabel(m.tail);
   });
   famCheckWarnings();
   document.getElementById("familyModal").style.display = "flex";
@@ -2360,6 +2427,65 @@ function cvtDetectAxes(tailSegments) {
     if (re.test(text)) axes.push(name);
   }
   return axes;
+}
+
+/* Builds the CUSTOMER-FACING variant label from a candidate's raw tail
+   segments -- never the raw parser text. Confirmed live on the two named
+   HIGH examples:
+     Pacific Blue Hardwound: "White 1-Ply, 1150-ft Rolls, 6 Rolls"
+       -> "White — 1150 ft — 6 Rolls"
+     Morcon Morsoft:         "1-Ply, 8\" x 800 ft, Brown, 6 Rolls/Carton"
+       -> "Brown — 800 ft — 6 Rolls"
+
+   Each axis has its own extractor that scans EVERY tail segment (not just
+   one), so a compound segment like "White 1-Ply" still yields its color
+   even though ply shares the segment -- a per-segment "first match wins"
+   strategy (tried and reverted) silently dropped the color there because
+   ply's own pattern happened to test true first.
+
+   Axes are then emitted in a FIXED order (color, scent, length,
+   dimensions, ply, counts, pack size, weight/volume) regardless of what
+   order the source text listed them in, so every member of a family
+   reads the same way -- Pacific Blue's raw text puts length before color
+   on one SKU and omits it on another; the label must not inherit that
+   inconsistency.
+
+   Ply is intentionally excluded from the label: cvtScoreCandidate already
+   requires every member of a HIGH family to share the same ply (a
+   difference there would fail the "format must match" check), so it is
+   identical across every option and never distinguishes one from another
+   -- showing it on every row would be noise, not a customer choice. */
+const CVT_LABEL_AXES = [
+  ["color",  s => { const m = s.match(/\b(white|brown|black|blue|green|yellow|clear|grey|gray|natural|tan)\b/i); return m ? cvtLabelWord(m[1]) : null; }],
+  ["scent",  s => { const m = s.match(/\b(unscented|fragrance-free|fresh scent|lemon\s*(?:&|and)\s*lime(?:\s+blossom)?|lemon(?:\s+fresh)?|citrus|lavender|floral|outdoor fresh|april fresh|crisp(?:\s+clean)?|early morning breeze)\b/i); return m ? cvtLabelWord(m[1]) : null; }],
+  ["length", s => { const m = s.match(/(\d+(?:\.\d+)?)[\-\s]*(?:ft|feet)\b/i); return m ? `${m[1]} ft` : null; }],
+  ["dims",   s => { const m = s.match(/(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)(?:\s*[x×]\s*(\d+(?:\.\d+)?))?\s*(in|inch|inches|mm|cm)?/i);
+                     if (!m) return null;
+                     const unit = m[4] ? " " + m[4].toLowerCase() : "\"";
+                     return [m[1], m[2], m[3]].filter(Boolean).join(" x ") + unit; }],
+  ["sheets", s => { const m = s.match(/(\d+)\s*sheets?\b/i); return m ? `${m[1]} Sheets` : null; }],
+  ["rolls",  s => { const m = s.match(/(\d+)\s*rolls?\b/i); return m ? `${m[1]} Rolls` : null; }],
+  ["wipes",  s => { const m = s.match(/(\d+)\s*wipes?\b/i); return m ? `${m[1]} Wipes` : null; }],
+  ["pack",   s => { const m = s.match(/(\d+)\s*\/\s*(carton|case|box|pack|canister)\b/i); return m ? `${m[1]}/${cvtLabelWord(m[2])}` : null; }],
+  ["weight", s => { const m = s.match(/(\d+(?:\.\d+)?)\s*(oz|lb|lbs|gal|gallons?|qt)\b/i); return m ? `${m[1]} ${m[2]}` : null; }],
+];
+function cvtLabelWord(s) {
+  return s.trim().replace(/\w\S*/g, w => w[0].toUpperCase() + w.slice(1).toLowerCase())
+    .replace(/\b(And|Or|Of|The)\b/g, w => w.toLowerCase());
+}
+function cvtCleanLabel(tailSegments) {
+  const joined = tailSegments.join(", ");
+  const parts = [];
+  for (const [, extract] of CVT_LABEL_AXES) {
+    const v = extract(joined);
+    if (v) parts.push(v);
+  }
+  // A segment matching nothing above is silently left out of the label
+  // rather than shown raw. cvtScoreCandidate already keeps that segment
+  // out of HIGH confidence (it fails the "every segment recognised"
+  // check), so this only affects MEDIUM/DATA candidates opened for
+  // manual review, where the admin edits the label before saving.
+  return parts.join(" — ");
 }
 
 // Tokens that mark a genuine FORMAT change rather than a size/color/count
