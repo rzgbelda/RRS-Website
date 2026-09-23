@@ -178,7 +178,7 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","product-families","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -190,7 +190,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 // Marketing owns full day-to-day operations -- everything except
 // account/user management and the dev ticket board.
 const MARKETING_TABS = [
-  "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "orders",
+  "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "product-families", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
 ];
@@ -371,6 +371,7 @@ function switchTab(tab) {
   document.getElementById("adminPageTitle").textContent =
     { dashboard:"Dashboard", products:"Products", inventory:"Inventory",
       "mix-match":"Mix & Match Groups",
+      "product-families":"Product Families",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
@@ -382,6 +383,7 @@ function switchTab(tab) {
   if (tab === "products")         renderProductsTable();
   if (tab === "inventory")        renderInventoryTable();
   if (tab === "mix-match")        renderMixMatchTab();
+  if (tab === "product-families") renderFamiliesTab();
   if (tab === "orders")           renderOrdersTable(document.getElementById("orderSearch")?.value.trim() || "");
   if (tab === "users")            renderUsersTable();
   if (tab === "reports")          renderReportsTab();
@@ -915,6 +917,332 @@ async function deleteMoqGroup() {
   closeModal("moqGroupModal");
   showToast("Group deleted.");
   renderMixMatchTab();
+}
+
+/* ── Product Families ──────────────────────────────────────────
+   Curates products.product_family / products.variant_label -- the pair
+   renderProductGrid() in script.js groups on to show one catalog card per
+   family instead of one per SKU.
+
+   This is a PRESENTATION layer and nothing else. Every write here touches
+   exactly those two columns: no price, cost, stock, image, MOQ, category or
+   item number is ever modified, and no product row is created or deleted.
+   Clearing a family puts its SKUs straight back to their own cards, so any
+   grouping done here is reversible.
+
+   Both columns move together, matching what the CSV importer writes (see
+   runCsvImport): a family with no label, or a label with no family, would
+   leave a card whose option button has nothing to name. ────────────────── */
+
+let _famRows = [];          // every active product, as the storefront sees them
+let _famEditing = null;     // family name being edited, or null when creating
+let _famDraft = [];         // member product ids while the modal is open
+
+async function renderFamiliesTab() {
+  const list = document.getElementById("famList");
+  if (!list) return;
+
+  if (!_famRows.length) {
+    list.innerHTML = `<div class="a-empty">Loading…</div>`;
+    // Same column set the storefront reads, so what staff curate here is
+    // what a customer will actually see on the card.
+    const { data, error } = await window.sb
+      .from("products")
+      .select("id, sku, name, product_family, variant_label, category_name, price, in_stock, case_qty, pack_size, moq, unit, image_url")
+      .eq("is_active", true)
+      .order("name");
+    if (error) { list.innerHTML = `<div class="a-empty">Error: ${famEsc(error.message)}</div>`; return; }
+    _famRows = data || [];
+  }
+
+  const q = (document.getElementById("famSearch")?.value || "").trim().toLowerCase();
+
+  const families = new Map();
+  _famRows.forEach(r => {
+    if (!r.product_family) return;
+    if (!families.has(r.product_family)) families.set(r.product_family, []);
+    families.get(r.product_family).push(r);
+  });
+
+  const solo = _famRows.filter(r => !r.product_family);
+
+  document.getElementById("famStats").innerHTML = [
+    ["Families", families.size],
+    ["Grouped SKUs", _famRows.length - solo.length],
+    ["Ungrouped SKUs", solo.length],
+    ["Catalog cards", families.size + solo.length],
+  ].map(([label, n]) => `
+    <div style="background:#fff;border:1px solid #e5e9f0;border-radius:9px;padding:9px 14px;min-width:112px">
+      <div style="font-size:19px;font-weight:800;color:#0d2c50;line-height:1.1">${n}</div>
+      <div style="font-size:11px;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;font-weight:700;margin-top:2px">${label}</div>
+    </div>`).join("");
+
+  const matches = (fam, members) => {
+    if (!q) return true;
+    if (fam.toLowerCase().includes(q)) return true;
+    return members.some(m =>
+      (m.name || "").toLowerCase().includes(q) || (m.sku || "").toLowerCase().includes(q));
+  };
+
+  const shown = [...families.entries()]
+    .filter(([fam, members]) => matches(fam, members))
+    .sort((a, b) => a[0].localeCompare(b[0]));
+
+  if (!shown.length) {
+    list.innerHTML = `<div class="a-empty">${q ? "No families match that search." : "No product families yet. Create one to group sibling SKUs into a single catalog card."}</div>`;
+    return;
+  }
+
+  list.innerHTML = shown.map(([fam, members]) => {
+    // Surfaced rather than silently tolerated: two members sharing a label
+    // render as two identical-looking rows in the customer's option picker.
+    const labels = members.map(m => m.variant_label || "");
+    const dupe = new Set(labels).size !== labels.length;
+    const missing = members.some(m => !m.variant_label);
+    const out = members.filter(m => m.in_stock === false).length;
+
+    const rows = members.map(m => `
+      <tr>
+        <td style="font-family:ui-monospace,Menlo,monospace;font-size:12px;white-space:nowrap">${famEsc(m.sku)}</td>
+        <td style="font-size:12.5px">${famEsc(m.variant_label || "—")}</td>
+        <td style="font-size:12.5px;color:#64748b">${famEsc(m.name)}</td>
+        <td style="text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">$${Number(m.price || 0).toFixed(2)}</td>
+        <td style="text-align:right;white-space:nowrap">${famEsc(m.case_qty || "—")}</td>
+        <td style="text-align:right;white-space:nowrap">${m.moq || 1}</td>
+        <td style="text-align:right;white-space:nowrap">${m.in_stock === false
+          ? `<span style="color:#dc2626;font-weight:700;font-size:11.5px">OUT</span>`
+          : `<span style="color:#16a34a;font-size:11.5px">In stock</span>`}</td>
+      </tr>`).join("");
+
+    const flags = [];
+    if (missing) flags.push(`<span style="background:#fef3c7;color:#92400e;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">Missing variant label</span>`);
+    if (dupe)    flags.push(`<span style="background:#fee2e2;color:#b91c1c;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">Duplicate labels</span>`);
+    if (out)     flags.push(`<span style="background:#f1f5f9;color:#475569;font-size:11px;font-weight:700;padding:3px 8px;border-radius:5px">${out} out of stock</span>`);
+
+    return `
+      <div style="background:#fff;border:1px solid #e5e9f0;border-radius:11px;margin-bottom:12px;overflow:hidden">
+        <div style="display:flex;align-items:center;gap:12px;padding:13px 16px;flex-wrap:wrap">
+          <strong style="font-size:14.5px;color:#0d2c50;flex:1;min-width:200px">${famEsc(fam)}</strong>
+          ${flags.join(" ")}
+          <span style="font-size:12px;color:#94a3b8;white-space:nowrap">${members.length} variants</span>
+          <button class="a-btn-secondary" style="width:auto;padding:6px 13px;font-size:12.5px"
+                  onclick="openFamilyModal(${famAttr(fam)})">Edit</button>
+        </div>
+        <div style="overflow-x:auto;border-top:1px solid #eef2f7">
+          <table style="width:100%;border-collapse:collapse;min-width:640px">
+            <thead>
+              <tr style="background:#f8fafc">
+                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">SKU</th>
+                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Variant label</th>
+                <th style="text-align:left;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Product name</th>
+                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Price</th>
+                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Case</th>
+                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">MOQ</th>
+                <th style="text-align:right;padding:7px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8">Stock</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function famEsc(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+// Family names carry quotes, ampersands and ® -- passing one through an
+// inline onclick needs it encoded as a JS string literal, not just HTML-escaped.
+function famAttr(s) {
+  return famEsc(JSON.stringify(String(s == null ? "" : s)));
+}
+
+function openFamilyModal(familyName) {
+  _famEditing = familyName || null;
+  _famDraft = _famRows.filter(r => familyName && r.product_family === familyName).map(r => r.id);
+
+  document.getElementById("familyModalTitle").textContent =
+    familyName ? "Edit Family" : "New Family";
+  document.getElementById("famName").value = familyName || "";
+  document.getElementById("famAddWrap").style.display = "none";
+  document.getElementById("famAddSearch").value = "";
+  document.getElementById("famWarn").style.display = "none";
+
+  famRenderMembers();
+  document.getElementById("familyModal").style.display = "flex";
+}
+
+function famRenderMembers() {
+  const wrap = document.getElementById("famMembers");
+  const members = _famDraft.map(id => _famRows.find(r => r.id === id)).filter(Boolean);
+
+  document.getElementById("famMemberCount").textContent =
+    members.length ? `${members.length} SKU${members.length === 1 ? "" : "s"}` : "";
+
+  if (!members.length) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:18px;font-size:13px">No SKUs yet — use “Add SKU” to choose which products belong to this family.</div>`;
+    famCheckWarnings(members);
+    return;
+  }
+
+  wrap.innerHTML = members.map(m => `
+    <div style="display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #e5e9f0;border-radius:9px;margin-bottom:7px;flex-wrap:wrap">
+      <img src="${famEsc(m.image_url || "assets/img/product-placeholder.svg")}" alt=""
+           onerror="this.src='assets/img/product-placeholder.svg'"
+           style="width:34px;height:34px;object-fit:contain;background:#f7f9fc;border-radius:6px;flex:0 0 34px">
+      <div style="flex:1;min-width:170px">
+        <div style="font-size:12.5px;font-weight:600;color:#0d2c50;line-height:1.3">${famEsc(m.name)}</div>
+        <div style="font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#94a3b8">${famEsc(m.sku)} · $${Number(m.price || 0).toFixed(2)}</div>
+      </div>
+      <input type="text" class="fam-label-input" data-id="${famEsc(m.id)}"
+             value="${famEsc(m.variant_label || "")}"
+             oninput="famCheckWarnings()"
+             placeholder="Option label, e.g. Brown / 800 ft"
+             style="padding:7px 10px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12.5px;min-width:180px;flex:1">
+      <button type="button" onclick="famRemove(${famAttr(m.id)})"
+              title="Remove from family"
+              style="border:none;background:transparent;color:#dc2626;cursor:pointer;font-size:18px;line-height:1;padding:4px 7px">&times;</button>
+    </div>`).join("");
+
+  famCheckWarnings(members);
+}
+
+// Live guard rails. These mirror exactly what breaks on the storefront: a
+// one-member family renders as a plain card (pointless), a missing label
+// leaves the option button unnamed, and two identical labels show the
+// customer two rows they cannot tell apart.
+function famCheckWarnings() {
+  const warn = document.getElementById("famWarn");
+  if (!warn) return;
+  const labels = [...document.querySelectorAll(".fam-label-input")].map(i => i.value.trim());
+  const msgs = [];
+
+  if (_famDraft.length === 1) msgs.push("A family with one SKU shows as an ordinary product card — add another SKU or leave this product ungrouped.");
+  if (labels.some(l => !l))   msgs.push("Every member needs a variant label; that text is what the customer picks between.");
+  const filled = labels.filter(Boolean);
+  if (new Set(filled).size !== filled.length) msgs.push("Two members share the same label — the option list would show duplicate rows.");
+
+  warn.innerHTML = msgs.join("<br>");
+  warn.style.display = msgs.length ? "block" : "none";
+}
+
+function famToggleAdd() {
+  const w = document.getElementById("famAddWrap");
+  const open = w.style.display === "none";
+  w.style.display = open ? "block" : "none";
+  if (open) { famRenderAddResults(); document.getElementById("famAddSearch").focus(); }
+}
+
+function famRenderAddResults() {
+  const q = (document.getElementById("famAddSearch")?.value || "").trim().toLowerCase();
+  const box = document.getElementById("famAddResults");
+
+  // Offer ungrouped products, plus anything already in THIS family. A SKU
+  // belonging to another family is deliberately excluded: moving it is a
+  // decision to make from that family, so a product can never silently end
+  // up in two places.
+  let pool = _famRows.filter(r =>
+    !_famDraft.includes(r.id) &&
+    (!r.product_family || r.product_family === _famEditing));
+
+  if (q) pool = pool.filter(r =>
+    (r.name || "").toLowerCase().includes(q) || (r.sku || "").toLowerCase().includes(q));
+
+  if (!pool.length) {
+    box.innerHTML = `<div style="padding:12px;font-size:12.5px;color:#94a3b8">${q ? "No ungrouped products match." : "No ungrouped products left."}</div>`;
+    return;
+  }
+
+  box.innerHTML = pool.slice(0, 60).map(r => `
+    <button type="button" onclick="famAdd(${famAttr(r.id)})"
+            style="display:flex;gap:9px;align-items:center;width:100%;text-align:left;padding:8px 11px;border:none;border-bottom:1px solid #eef2f7;background:#fff;cursor:pointer">
+      <img src="${famEsc(r.image_url || "assets/img/product-placeholder.svg")}" alt=""
+           onerror="this.src='assets/img/product-placeholder.svg'"
+           style="width:28px;height:28px;object-fit:contain;background:#f7f9fc;border-radius:5px;flex:0 0 28px">
+      <span style="flex:1;min-width:0">
+        <span style="display:block;font-size:12.5px;color:#0d2c50;font-weight:600;line-height:1.3">${famEsc(r.name)}</span>
+        <span style="display:block;font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#94a3b8">${famEsc(r.sku)} · ${famEsc(r.category_name || "")}</span>
+      </span>
+      <span style="font-size:12px;color:#64748b;white-space:nowrap">$${Number(r.price || 0).toFixed(2)}</span>
+    </button>`).join("");
+}
+
+function famAdd(id) {
+  if (!_famDraft.includes(id)) _famDraft.push(id);
+  famRenderMembers();
+  famRenderAddResults();
+}
+
+function famRemove(id) {
+  _famDraft = _famDraft.filter(x => x !== id);
+  famRenderMembers();
+  famRenderAddResults();
+}
+
+async function saveFamily() {
+  const name = (document.getElementById("famName")?.value || "").trim();
+  if (!name) { alert("Enter a family display name."); return; }
+
+  // Creating a family under a name already in use would merge the two
+  // silently, which is the one grouping mistake that is tedious to undo.
+  if (!_famEditing && _famRows.some(r => r.product_family === name)) {
+    alert(`A family named "${name}" already exists. Edit that family instead.`);
+    return;
+  }
+
+  const labels = {};
+  let blank = false;
+  document.querySelectorAll(".fam-label-input").forEach(i => {
+    const v = i.value.trim();
+    if (!v) blank = true;
+    labels[i.dataset.id] = v;
+  });
+
+  if (!_famDraft.length) { alert("Add at least one SKU, or delete the family."); return; }
+  if (blank) { alert("Every member needs a variant label before saving."); return; }
+
+  const filled = Object.values(labels);
+  if (new Set(filled).size !== filled.length) {
+    alert("Two members share the same variant label. Give each one a label the customer can tell apart.");
+    return;
+  }
+  if (_famDraft.length === 1 &&
+      !confirm("This family has only one SKU, so it will show as an ordinary product card. Save anyway?")) return;
+
+  const stamp = new Date().toISOString();
+
+  // One update per distinct label -- Supabase cannot set different values
+  // for different rows in a single call, and the row count here is a
+  // handful, not a bulk job.
+  for (const id of _famDraft) {
+    const { error } = await window.sb.from("products")
+      .update({ product_family: name, variant_label: labels[id], updated_at: stamp })
+      .eq("id", id);
+    if (error) { alert("Error saving: " + error.message); return; }
+  }
+
+  // Anyone dropped from the family goes back to being its own card. Both
+  // columns are cleared together so no SKU is left with a label but no
+  // family (which the storefront would ignore, and the importer treats as
+  // invalid).
+  if (_famEditing) {
+    const removed = _famRows
+      .filter(r => r.product_family === _famEditing && !_famDraft.includes(r.id))
+      .map(r => r.id);
+    if (removed.length) {
+      const { error } = await window.sb.from("products")
+        .update({ product_family: null, variant_label: null, updated_at: stamp })
+        .in("id", removed);
+      if (error) { alert("Error releasing removed SKUs: " + error.message); return; }
+    }
+  }
+
+  document.getElementById("familyModal").style.display = "none";
+  showToast(_famEditing ? "Family updated." : "Family created.");
+  _famRows = [];            // force a refetch so the table matches the database
+  renderFamiliesTab();
 }
 
 /* ── Product Modal ─────────────────────────────────────────── */
