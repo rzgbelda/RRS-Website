@@ -965,8 +965,9 @@ function renderSingleCard(product) {
             data-weight="${product.weight || ''}"
             data-in-stock="${product.inStock === false ? 'false' : 'true'}"
             data-image="${product.image}"
+            ${product.inStock === false ? "disabled" : ""}
           >
-            Add to Order
+            ${product.inStock === false ? "Out of Stock" : "Add to Order"}
           </button>
           <button
             class="quote-add-btn"
@@ -1028,6 +1029,14 @@ function renderVariantCard(variants) {
     // fast-ship, another not yet), so this must follow the selected
     // variant rather than be read once from variants[0].
     isFastShip:    !!vv.isFastShip,
+    // Stock and weight were missing here while the card markup and the
+    // add-to-cart guard both read them, so switching variant left the
+    // stock badge and data-in-stock showing variants[0]'s state -- an
+    // out-of-stock SKU could be added to the cart from a family card
+    // whose first variant happened to be in stock. Both must travel with
+    // the variant for applyVariantToCard() to have anything to apply.
+    inStock:       vv.inStock !== false,
+    weight:        vv.weight || "",
   }));
 
   const escapedJson = JSON.stringify(variantsData)
@@ -1136,8 +1145,9 @@ function renderVariantCard(variants) {
             data-weight="${v.weight || ''}"
             data-in-stock="${v.inStock === false ? 'false' : 'true'}"
             data-image="${v.image}"
+            ${v.inStock === false ? "disabled" : ""}
           >
-            Add to Order
+            ${v.inStock === false ? "Out of Stock" : "Add to Order"}
           </button>
           <button
             class="quote-add-btn"
@@ -1185,6 +1195,17 @@ function applyVariantToCard(card, v) {
     }
   }
 
+  // Stock state follows the selected variant. A family can mix in- and
+  // out-of-stock SKUs, and both the badge and the add-to-cart guard below
+  // read from here -- left unset, switching to an out-of-stock size kept
+  // variants[0]'s "In Stock" badge and let the SKU into the cart.
+  const outOfStock = v.inStock === false;
+  const stockBadge = card.querySelector(".card-stock-badge");
+  if (stockBadge) {
+    stockBadge.classList.toggle("is-out", outOfStock);
+    stockBadge.innerHTML = `<span class="dot"></span>${outOfStock ? "Out of Stock" : "In Stock"}`;
+  }
+
   const descEl = card.querySelector(".product-description");
   if (descEl) descEl.textContent = v.description || "";
 
@@ -1214,6 +1235,14 @@ function applyVariantToCard(card, v) {
     btn.dataset.price2      = cleanPrice(v.price2);
     btn.dataset.price3      = cleanPrice(v.price3);
     btn.dataset.image       = v.image;
+    btn.dataset.unit        = v.priceBy || "";
+    btn.dataset.weight      = v.weight  || "";
+    // setupAddToCartButtons() gates on this exact attribute, so it has to
+    // follow the selection -- otherwise the guard is checking the wrong
+    // SKU's availability.
+    btn.dataset.inStock     = outOfStock ? "false" : "true";
+    btn.disabled            = outOfStock;
+    btn.textContent         = outOfStock ? "Out of Stock" : "Add to Order";
     // Minimums travel with the variant. Previously these were left at the
     // first variant's values, so switching size could let a customer order
     // below the selected SKU's real minimum.
@@ -1429,8 +1458,15 @@ function openVariantModal(card) {
     const bits = [];
     if (v.caseQty) bits.push(`Case qty ${vmEsc(v.caseQty)}`);
     if (v.size)    bits.push(`Pack ${vmEsc(v.size)}`);
+    // An unavailable option is shown and labelled rather than hidden: a
+    // buyer comparing sizes needs to see that the 800 ft exists and is
+    // out, not silently find a gap in the list. It stays selectable so
+    // they can read its price and specs -- the add-to-cart guard is what
+    // actually blocks the purchase.
+    const out = v.inStock === false;
+    if (out) bits.push("Out of stock");
     return `
-      <button type="button" class="vm-row" data-slug="${vmEsc(v.slug)}">
+      <button type="button" class="vm-row${out ? " is-out" : ""}" data-slug="${vmEsc(v.slug)}">
         <img class="vm-row-img" src="${vmEsc(v.image)}" alt=""
              onerror="this.src='/assets/img/product-placeholder.svg'">
         <span class="vm-row-main">
@@ -2131,9 +2167,27 @@ function populateProductPage(product) {
     // Carried through so the quantity control and the cart can enforce the
     // minimum, and so getTierPrice() knows not to apply case volume tiers.
     addBtn.dataset.unit        = product.priceBy || "";
+    addBtn.dataset.weight      = product.weight || "";
     addBtn.dataset.moq         = productMoq(product);
     addBtn.dataset.moqGroup    = product.moqGroup || "";
     addBtn.dataset.moqGroupMin = product.moqGroupMin || "";
+    // The page template hardcodes "In Stock", and switching variant only
+    // re-runs this function -- so without this an out-of-stock SKU showed
+    // an in-stock badge and a live ADD TO CART, and setupAddToCartButtons()
+    // had no data-in-stock to gate on.
+    const ppOut = product.inStock === false;
+    addBtn.dataset.inStock = ppOut ? "false" : "true";
+    addBtn.disabled = ppOut;
+    const ppAddLabel = document.getElementById("ppAddLabel");
+    if (ppAddLabel) ppAddLabel.textContent = ppOut ? "OUT OF STOCK" : "ADD TO CART";
+  }
+
+  // Mirrors the button state in the delivery panel beside it.
+  const ppStock = document.querySelector(".delivery-info .stock");
+  if (ppStock) {
+    const ppOut = product.inStock === false;
+    ppStock.classList.toggle("is-out", ppOut);
+    ppStock.innerHTML = ppOut ? "&#10007; Out of Stock" : "&#10003; In Stock";
   }
 
   // Dozen-sold products cannot be bought below their minimum, so the

@@ -5272,6 +5272,7 @@ span.flatpickr-weekday {
 .stock {
   color: #22b24c;
 }
+.stock.is-out { color: #dc2626; }
 
 .details-grid {
   display: grid;
@@ -7788,6 +7789,13 @@ button, a, [role="button"] { touch-action: manipulation; }
 .vm-row:last-child { margin-bottom: 0; }
 .vm-row:hover { border-color: #ED7226; box-shadow: 0 6px 18px rgba(11,31,56,.08); transform: translateY(-1px); }
 .vm-row:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; }
+/* Unavailable option: still selectable so its price and specs can be
+   read, but visibly set apart so the choice is informed. */
+.vm-row.is-out { background: #fbfcfd; border-color: #eef2f6; }
+.vm-row.is-out .vm-row-img { opacity: .5; }
+.vm-row.is-out .vm-row-label,
+.vm-row.is-out .vm-row-price { color: #94a3b8; }
+.vm-row.is-out .vm-row-meta { color: #dc2626; font-weight: 700; }
 
 .vm-row-img {
   flex-shrink: 0;
