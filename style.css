@@ -4555,12 +4555,6 @@ span.flatpickr-weekday {
 }
 .product-gallery { grid-column: 1; grid-row: 1; }
 .pp-purchase-panel { grid-column: 1; grid-row: 2; }
-/* Sits beside .pp-purchase-panel -- same row, next column over -- rather
-   than full-width, far below the fold where it used to be. Column 2 is
-   minmax(0, 1fr): whatever width is left between the fixed-width gallery
-   (440px) and buy box (330px) columns, so its own padding is tightened
-   below (see .pp-faq-card) rather than assuming a generous fixed width. */
-.pp-faq-card { grid-column: 2; grid-row: 2; }
 .product-info { grid-column: 2; grid-row: 1 / span 2; }
 .buy-box { grid-column: 3; grid-row: 1 / span 2; }
 
@@ -4998,18 +4992,6 @@ span.flatpickr-weekday {
      own column edge to edge. */
   width: 100%;
   box-sizing: border-box;
-  /* Stretches to match row 2's real height, same as .pp-faq-card beside
-     it (see that rule for the full explanation). Previously only the
-     FAQ card had align-self:stretch, on the assumption the purchase
-     panel would always be the taller of the two -- that assumption
-     broke the next time either side's content changed size (the
-     brandmark logo and "Your price" text both grew in later edits),
-     and the misalignment just flipped to the other side instead of
-     going away. Both items stretch now, so whichever is genuinely
-     taller at any given time sets the row height and the shorter one
-     always fills it -- correct regardless of future content changes to
-     either side, not a fix pinned to today's specific heights. */
-  align-self: stretch;
 }
 
 /* Brandmark: gives the Reorder Program its own identity, the way the
@@ -5355,31 +5337,15 @@ span.flatpickr-weekday {
   font-weight: 800;
 }
 
-/* ── Product FAQ ── sits below .details-grid as its own full-width card,
-   not squeezed into one of its three columns -- two questions read
-   better as a short list than crammed beside Overview/Specs/Features. */
-/* Grid placement lives with .product-layout's other placement rules
-   near the top of this file (grid-column: 2, grid-row: 2, beside
-   .pp-purchase-panel) -- only card-internal spacing here, tightened for
-   this column's real available width (whatever's left between the
-   440px gallery and 330px buy-box columns, easily under 400px on a
-   1440px viewport) rather than the wider "full page width" padding this
-   card used when it sat below .details-grid at the page's full width. */
+/* ── Product FAQ ── sits inside .product-info, below the pricing tier
+   cards, in normal document flow. It used to be placed via CSS grid in
+   its own cell (column 2, row 2) beside .pp-purchase-panel, which put it
+   in the same space as the bottom of .product-info's own content and
+   caused the two to visibly overlap -- moving it into the document flow
+   makes that overlap structurally impossible. */
 .pp-faq-card {
+  margin-top: 24px;
   padding: 18px 20px 20px;
-  /* Stretches to match row 2's real height instead of sitting at its own
-     natural height -- .product-layout sets align-items:start for the
-     grid as a whole (needed so .product-gallery doesn't stretch to
-     match the much taller .product-info/.buy-box spanning both rows),
-     but row 2 specifically holds two items side by side (this card and
-     .pp-purchase-panel) whose natural heights differ and have swapped
-     which one is taller more than once as their content changed (bigger
-     logo, bigger price text, added FAQ answers). Both this rule and the
-     matching one on .pp-purchase-panel set align-self:stretch, so
-     whichever is genuinely taller at any point sets the row height and
-     the other always fills it -- not pinned to today's specific
-     content. */
-  align-self: stretch;
   box-sizing: border-box;
 }
 .pp-faq-item {
@@ -7558,33 +7524,24 @@ button, a, [role="button"] { touch-action: manipulation; }
   .product-layout { grid-template-columns: 1fr; }
   /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
      grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
-     col 1 row 2, pp-faq-card col 2 row 2, product-info col 2, buy-box
-     col 3) would otherwise try to place things in columns/rows that no
-     longer exist. Reset every explicit placement back to plain
-     document-order stacking, which is what a single column should do --
-     gallery, then the purchase panel right under it, then the FAQ card
-     (same visual relationship each has on desktop, achieved here by
-     normal flow instead of grid placement), then product info, then the
-     buy box. */
+     col 1 row 2, product-info col 2, buy-box col 3) would otherwise try
+     to place things in columns/rows that no longer exist. .pp-faq-card
+     lives inside .product-info's normal document flow (not a grid item
+     of .product-layout), so it needs no placement reset here -- it
+     stacks whereever .product-info places it. Reset the remaining
+     explicit placements back to plain document-order stacking: gallery,
+     then the purchase panel right under it, then product info (with its
+     own FAQ card at the bottom), then the buy box. */
   .product-gallery,
   .pp-purchase-panel,
-  .pp-faq-card,
   .product-info,
   .buy-box {
     grid-column: 1;
     grid-row: auto;
   }
-  /* On mobile only, read order beats source order: FAQ sits right after
-     the purchase panel in the HTML (so desktop's row-2 grid placement
-     beside it makes sense there), but a first-time visitor scrolling a
-     stacked page should see the product name/description/tier cards
-     (.product-info) before two FAQ answers about it. `order` reshuffles
-     the visual sequence without touching the HTML or desktop's grid-
-     column/grid-row placement above. */
   .product-gallery  { order: 1; }
   .product-info     { order: 2; }
   .pp-purchase-panel{ order: 3; }
-  .pp-faq-card       { order: 4; }
   .buy-box           { order: 5; }
   .buy-box {
     max-width: min(480px, 100%);
