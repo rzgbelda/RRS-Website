@@ -686,6 +686,16 @@
         if (!already) addVqRow(item.name, item.quantity || 1, 'catalog');
       });
       if (basket.length) { localStorage.removeItem('quoteBasket'); saveVqFormState(); }
+      // The restored items land in the form (below the hero copy), so
+      // without this a visitor following "Continue your quote" from the
+      // catalog banner lands at the top of the page and sees no sign
+      // their items came back -- indistinguishable from a blank quote
+      // page until they scroll. Same scroll the fresh-catalog-basket
+      // branch below already does for the same reason.
+      setTimeout(() => {
+        const form = document.getElementById('uq-form');
+        if (form) form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
     } else if (basket.length) {
       basket.forEach(item => addVqRow(item.name, item.quantity || 1, 'catalog'));
       localStorage.removeItem('quoteBasket');
