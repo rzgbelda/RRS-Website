@@ -942,6 +942,25 @@ function injectVariantCSS() {
   document.head.appendChild(style);
 }
 
+// Escapes a value for safe interpolation into a double-quoted HTML
+// attribute (e.g. data-name="${escAttr(product.name)}"). This is
+// presentation-only -- it never touches the underlying product record,
+// only the markup string built for this render. A product name containing
+// a literal " (common in this catalog: dimension notation like
+// 20" × 40") was breaking data-name="${v.name}" open early, truncating
+// everything after the quote; & and unescaped angle brackets have the
+// same kind of problem in an attribute or could otherwise be misread as
+// markup. Escapes the same five characters escaping libraries and the
+// existing vmEsc() (used by the variant modal) agree on.
+function escAttr(s) {
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function renderSingleCard(product) {
   const displayPrice = cleanPrice(product.price);
   const cartPrice = cleanPrice(product.price1) || cleanPrice(product.price);
@@ -978,8 +997,8 @@ function renderSingleCard(product) {
           <button
             class="add-btn"
             data-item="${product.itemNumber}"
-            data-name="${product.name}"
-            data-description="${(product.description || "").replace(/"/g, "&quot;")}"
+            data-name="${escAttr(product.name)}"
+            data-description="${escAttr(product.description)}"
             data-price="${cartPrice}"
             data-price1="${cleanPrice(product.price1)}"
             data-price2="${cleanPrice(product.price2)}"
@@ -998,7 +1017,7 @@ function renderSingleCard(product) {
           <button
             class="quote-add-btn"
             data-item="${product.itemNumber}"
-            data-name="${product.name}"
+            data-name="${escAttr(product.name)}"
             data-image="${product.image}"
             title="Request volume pricing for this product"
           >
@@ -1220,8 +1239,8 @@ function renderVariantCard(variants) {
           <button
             class="add-btn"
             data-item="${v.itemNumber}"
-            data-name="${v.name}"
-            data-description="${(v.description || "").replace(/"/g, "&quot;")}"
+            data-name="${escAttr(v.name)}"
+            data-description="${escAttr(v.description)}"
             data-price="${cartPrice}"
             data-price1="${cleanPrice(v.price1)}"
             data-price2="${cleanPrice(v.price2)}"
@@ -1240,7 +1259,7 @@ function renderVariantCard(variants) {
           <button
             class="quote-add-btn"
             data-item="${v.itemNumber}"
-            data-name="${v.name}"
+            data-name="${escAttr(v.name)}"
             data-image="${v.image}"
             title="Request volume pricing for this product"
           >
@@ -3856,8 +3875,8 @@ function showFeaturedProducts() {
           class="add-btn"
           ${product.inStock === false ? "disabled" : ""}
           data-item="${product.itemNumber}"
-          data-name="${product.name}"
-          data-description="${product.description || ""}"
+          data-name="${escAttr(product.name)}"
+          data-description="${escAttr(product.description)}"
           data-price="${cleanPrice(product.price1) || price}"
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
@@ -5002,7 +5021,7 @@ function hcProductCard(product, badge) {
     <div class="hc-card" data-url="${url}">
       <div class="hc-card-img">
         ${badgeHtml}
-        <img src="${hcSquareImage(product.image)}" alt="${product.name}" loading="lazy"
+        <img src="${hcSquareImage(product.image)}" alt="${escAttr(product.name)}" loading="lazy"
              onerror="this.onerror=null;this.src='${product.image}'">
       </div>
       <div class="hc-card-body">
@@ -5016,8 +5035,8 @@ function hcProductCard(product, badge) {
 
         <button class="add-btn hc-add"
           data-item="${product.itemNumber}"
-          data-name="${product.name}"
-          data-description="${product.description || ""}"
+          data-name="${escAttr(product.name)}"
+          data-description="${escAttr(product.description)}"
           data-price="${cleanPrice(product.price1) || price}"
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
