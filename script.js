@@ -2245,15 +2245,15 @@ function renderProductFaq(product) {
   let q2Answer;
   if (product.weight && dims.length === 3) {
     q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs and ships in a carton measuring `
-      + `${dims.join('" × ')}". Orders are processed within 3&ndash;5 business days, then shipped as standard `
+      + `${dims.join('" × ')}". Orders are processed within 1&ndash;2 business days, then shipped as standard `
       + `parcel or palletized freight depending on order size &mdash; see our `
       + `<a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else if (product.weight) {
     q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs. Orders are processed within `
-      + `3&ndash;5 business days, then shipped as standard parcel or palletized freight depending on order size `
+      + `1&ndash;2 business days, then shipped as standard parcel or palletized freight depending on order size `
       + `&mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else {
-    q2Answer = `Orders are processed within 3&ndash;5 business days, then shipped as standard parcel or `
+    q2Answer = `Orders are processed within 1&ndash;2 business days, then shipped as standard parcel or `
       + `palletized freight depending on order size &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   }
   const q2 = {
