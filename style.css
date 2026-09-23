@@ -9769,41 +9769,56 @@ input.qty-input:focus {
   border-top: 1px solid #e8edf4;
   border-bottom: 1px solid #e8edf4;
   background: #fff;
-  padding: 0 clamp(16px, 5vw, 60px);
+  padding: 18px clamp(16px, 5vw, 60px);
 }
 .hc-trust-grid {
   max-width: 1320px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0;
+  /* Each tile is now its own bordered blue card (not a borderless strip
+     divided by inner border-right rules), so it needs real spacing
+     between tiles instead of gap:0 -- otherwise adjacent orange borders
+     would sit flush against each other. */
+  gap: 14px;
 }
 .hc-trust-item {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 20px 18px;
-  border-right: 1px solid #eef2f7;
+  background: #0b2d52;
+  border: 1.5px solid #ED7226;
+  border-radius: 12px;
 }
-.hc-trust-item:last-child { border-right: 0; }
+/* Each tile is its own bordered card now (not a shared strip split by
+   inner rules), so the old border-right/:last-child divider rule no
+   longer applies -- .hc-trust-grid's own `gap` (below) spaces them. */
 .hc-trust-ico {
   width: 38px; height: 38px;
   flex: 0 0 38px;
   border-radius: 10px;
-  background: #fff4ec;
-  color: #ED7226;
+  background: transparent;
+  color: #fff;
   /* Flex rather than grid, so centring survives a stray `display` rule
      landing on this span from a broader selector. */
   display: flex !important;
   align-items: center;
   justify-content: center;
 }
-.hc-trust-ico svg { width: 19px; height: 19px; }
+/* Icon files (assets/icons/trust-*.png) are pre-recolored white PNGs, not
+   currentColor-following SVGs -- .hc-trust-ico's own color is kept for
+   any future icon swap back to inline SVG, but doesn't affect these.
+   Shown near their native 40x40 size (28px, inside the 38px tile) rather
+   than the old inline-SVG's 19px -- the source PNGs are softly
+   anti-aliased, and downscaling them much past native size washed the
+   thin strokes out to near-invisible against the blue background. */
+.hc-trust-ico img { width: 28px; height: 28px; display: block; }
 .hc-trust-item strong {
   display: block;
   font-size: 13.5px;
   font-weight: 800;
-  color: #0b2d52;
+  color: #fff;
   line-height: 1.3;
 }
 /* Scoped to the text span deliberately: a bare `.hc-trust-item span` also
@@ -9814,14 +9829,17 @@ input.qty-input:focus {
 .hc-trust-item > div > span {
   display: block;
   font-size: 12px;
-  color: #6b7f94;
+  color: rgba(255,255,255,.75);
   margin-top: 2px;
   line-height: 1.4;
 }
 @media (max-width: 900px) {
   .hc-trust-grid { grid-template-columns: repeat(2, 1fr); }
-  .hc-trust-item:nth-child(2) { border-right: 0; }
-  .hc-trust-item:nth-child(-n+2) { border-bottom: 1px solid #eef2f7; }
+  /* Each tile carries its own full border now (see .hc-trust-item), so
+     the divider overrides this breakpoint used to apply (stripping the
+     shared border-right/adding a border-bottom between rows) no longer
+     have anything to do -- the grid's own gap already separates every
+     tile on every side. */
 }
 @media (max-width: 480px) {
   .hc-trust-item { padding: 15px 10px; gap: 9px; }
