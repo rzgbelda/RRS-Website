@@ -843,6 +843,18 @@
 
       <div id="famStats" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px"></div>
 
+      <!-- Dry-run only. cvtProposeCommaGroupings() (admin.js) scores every
+           ungrouped SKU pair by brand + product name + recognised variant
+           vocabulary (color, length, ply, sheet/roll/wipe count, pack
+           size, scent, dimensions) and never writes to the database on
+           its own -- "Apply" below is the one place that turns a proposal
+           into an actual product_family/variant_label write, and it is
+           only offered for HIGH confidence. MEDIUM goes to a review queue
+           for a human decision; DATA issues (duplicate SKUs, conflicting
+           prices on an identical name) are surfaced but are never
+           groupable either way. -->
+      <div id="famProposalsWrap" style="margin-bottom:22px"></div>
+
       <div id="famList">
         <div class="a-empty">Loading…</div>
       </div>
@@ -884,6 +896,17 @@
           </div>
 
           <div id="famMembers"></div>
+
+          <!-- Splitting is "some of these members were grouped wrongly" --
+               check the ones that belong elsewhere, name their new family,
+               and they leave this one in a single save. Only shown once a
+               family actually has members to split. -->
+          <div id="famSplitBar" style="display:none;align-items:center;gap:9px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;background:#f8fafc;border:1px dashed #cbd5e1;border-radius:9px">
+            <span style="font-size:12px;color:#64748b">Check members above that were grouped wrongly, then</span>
+            <input type="text" id="famSplitName" placeholder="New family name"
+                   style="padding:7px 10px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12.5px;flex:1;min-width:160px">
+            <button type="button" class="a-btn-secondary" onclick="splitFamily()" style="width:auto;padding:6px 12px;font-size:12.5px">Split into new family</button>
+          </div>
 
           <p id="famWarn" style="display:none;font-size:12.5px;color:#92400e;background:#fef3c7;border:1px solid #fde68a;border-radius:8px;padding:9px 12px;margin:14px 0 0"></p>
         </div>
@@ -3128,7 +3151,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=94"></script>
+<script src="admin.js?v=95"></script>
 <script src="admin-seo.js?v=4"></script>
 <script>
   function toggleSidebar() {

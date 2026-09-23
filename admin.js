@@ -1046,6 +1046,156 @@ async function renderFamiliesTab() {
         </div>
       </div>`;
   }).join("");
+
+  famRenderProposals();
+}
+
+// Suggested-groupings queue. Backed by cvtProposeCommaGroupings() (defined
+// alongside the CSV importer's comma-name parser) run against the same
+// _famRows this tab already has in memory -- read-only, no extra fetch,
+// and it re-scores automatically any time renderFamiliesTab() reloads
+// (e.g. after a save), so a family that gets grouped drops out of the
+// queue on its own.
+let _famProposalsIgnored = new Set();  // dismissed this session only (not persisted)
+
+function famRenderProposals() {
+  const wrap = document.getElementById("famProposalsWrap");
+  if (!wrap) return;
+
+  const all = cvtProposeCommaGroupings(_famRows).filter(p =>
+    !_famProposalsIgnored.has(p.base));
+  if (!all.length) { wrap.innerHTML = ""; return; }
+
+  const section = (title, sub, items, renderRow) => {
+    if (!items.length) return "";
+    return `
+      <div style="margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:8px">
+          <strong style="font-size:13.5px;color:#0d2c50">${title}</strong>
+          <span style="font-size:11.5px;color:#94a3b8">${sub}</span>
+        </div>
+        ${items.map(renderRow).join("")}
+      </div>`;
+  };
+
+  const skuList = (p) => p.members.map(m =>
+    `<span style="font-family:ui-monospace,Menlo,monospace;font-size:11px;background:#f1f5f9;color:#475569;padding:2px 6px;border-radius:4px;margin:0 4px 4px 0;display:inline-block">${famEsc(m.row.sku)}</span>`
+  ).join("");
+
+  const highRow = (p) => `
+    <div style="background:#fff;border:1px solid #bbf7d0;border-left:3px solid #16a34a;border-radius:9px;padding:11px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:200px">
+          <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
+          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs &middot; ${famEsc(p.axes.join(", "))}</span>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
+          <button class="a-btn-primary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famApplyProposal(${famAttr(p.base)})">Apply grouping</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#64748b;margin:7px 0 6px">${famEsc(p.reason)}</p>
+      <div>${skuList(p)}</div>
+    </div>`;
+
+  const mediumRow = (p) => `
+    <div style="background:#fff;border:1px solid #fde68a;border-left:3px solid #d97706;border-radius:9px;padding:11px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center">
+        <div style="flex:1;min-width:200px">
+          <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
+          <span style="font-size:11.5px;color:#94a3b8;margin-left:6px">${p.members.length} SKUs</span>
+        </div>
+        <div style="display:flex;gap:7px">
+          <button class="a-btn-secondary" style="width:auto;padding:5px 11px;font-size:12px" onclick="famDismissProposal(${famAttr(p.base)})">Dismiss</button>
+          <button class="a-btn-secondary" style="width:auto;padding:5px 13px;font-size:12px" onclick="famReviewProposal(${famAttr(p.base)})">Review &amp; group manually</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:#92400e;margin:7px 0 6px">${famEsc(p.reason)}</p>
+      <div>${skuList(p)}</div>
+    </div>`;
+
+  const dataRow = (p) => `
+    <div style="background:#fff;border:1px solid #ddd6fe;border-left:3px solid #7c3aed;border-radius:9px;padding:11px 14px;margin-bottom:8px">
+      <strong style="font-size:13px;color:#0d2c50">${famEsc(p.base)}</strong>
+      <p style="font-size:12px;color:#5b21b6;margin:6px 0">${famEsc(p.reason)}</p>
+      <div>${skuList(p)}</div>
+      <p style="font-size:11px;color:#94a3b8;margin:6px 0 0">Not a grouping decision &mdash; fix the underlying product data first.</p>
+    </div>`;
+
+  wrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <strong style="font-size:15px;color:#0d2c50">Suggested groupings</strong>
+      <span style="font-size:12px;color:#94a3b8">from ungrouped SKUs &mdash; nothing here is applied automatically</span>
+    </div>
+    ${section("High confidence", "same brand + product name, differ only by known variant attributes",
+        all.filter(p => p.confidence === "HIGH"), highRow)}
+    ${section("Needs review", "grouping is plausible but a human should confirm the axis",
+        all.filter(p => p.confidence === "MEDIUM"), mediumRow)}
+    ${section("Data issues", "not a grouping question — a duplicate SKU or a price/name conflict",
+        all.filter(p => p.confidence === "DATA"), dataRow)}
+  `;
+}
+
+function famDismissProposal(base) {
+  _famProposalsIgnored.add(base);
+  famRenderProposals();
+}
+
+// The one path that turns a scored proposal into an actual write. Confined
+// to HIGH confidence in the UI (the button doesn't exist for MEDIUM/DATA),
+// and re-derives the members from _famRows by id rather than trusting the
+// proposal's own snapshot, in case something else changed since it was
+// scored.
+async function famApplyProposal(base) {
+  const proposal = cvtProposeCommaGroupings(_famRows).find(p => p.base === base);
+  if (!proposal) { famRenderProposals(); return; }
+  if (proposal.confidence !== "HIGH") { alert("Only high-confidence groupings can be applied directly."); return; }
+
+  if (_famRows.some(r => r.product_family === proposal.base)) {
+    alert(`A family named "${proposal.base}" already exists.`);
+    return;
+  }
+
+  const preview = proposal.members.map(m => `  ${m.row.sku}  —  ${m.tail.join(", ")}`).join("\n");
+  if (!confirm(`Create "${proposal.base}" from ${proposal.members.length} SKUs?\n\n${preview}\n\nEach SKU keeps its own price, stock and item number — this only changes how they're grouped on the catalog page.`)) return;
+
+  const stamp = new Date().toISOString();
+  for (const m of proposal.members) {
+    const label = m.tail.join(", ");
+    const { error } = await window.sb.from("products")
+      .update({ product_family: proposal.base, variant_label: label, updated_at: stamp })
+      .eq("id", m.row.id);
+    if (error) { alert("Error applying grouping: " + error.message); return; }
+    m.row.product_family = proposal.base;
+    m.row.variant_label = label;
+  }
+
+  showToast(`Grouped ${proposal.members.length} SKUs into "${proposal.base}".`);
+  _famRows = [];
+  renderFamiliesTab();
+}
+
+// Opens the family editor pre-loaded with this proposal's SKUs so a human
+// can adjust labels/membership before anything is saved -- MEDIUM never
+// writes on its own.
+function famReviewProposal(base) {
+  const proposal = cvtProposeCommaGroupings(_famRows).find(p => p.base === base);
+  if (!proposal) return;
+  _famEditing = null; // creating, not editing an existing family
+  _famDraft = proposal.members.map(m => m.row.id);
+  document.getElementById("familyModalTitle").textContent = "New Family (review)";
+  document.getElementById("famName").value = proposal.base;
+  document.getElementById("famAddWrap").style.display = "none";
+  document.getElementById("famWarn").style.display = "none";
+  famRenderMembers();
+  // Pre-fill each label from the detected tail so the reviewer is editing,
+  // not starting from blank text.
+  proposal.members.forEach(m => {
+    const input = document.querySelector(`.fam-label-input[data-id="${m.row.id}"]`);
+    if (input) input.value = m.tail.join(", ");
+  });
+  famCheckWarnings();
+  document.getElementById("familyModal").style.display = "flex";
 }
 
 function famEsc(s) {
@@ -1077,18 +1227,30 @@ function openFamilyModal(familyName) {
 function famRenderMembers() {
   const wrap = document.getElementById("famMembers");
   const members = _famDraft.map(id => _famRows.find(r => r.id === id)).filter(Boolean);
+  const splitBar = document.getElementById("famSplitBar");
 
   document.getElementById("famMemberCount").textContent =
     members.length ? `${members.length} SKU${members.length === 1 ? "" : "s"}` : "";
 
   if (!members.length) {
     wrap.innerHTML = `<div class="a-empty" style="padding:18px;font-size:13px">No SKUs yet — use “Add SKU” to choose which products belong to this family.</div>`;
+    if (splitBar) splitBar.style.display = "none";
     famCheckWarnings(members);
     return;
   }
 
+  // "Move to" targets every OTHER existing family. Picking one is a single
+  // move: it leaves this family's draft immediately and is written to that
+  // target family (not this one) on save, same as re-doing it through two
+  // separate edits would, but in one action from the SKU's current row.
+  const otherFamilies = [...new Set(_famRows.map(r => r.product_family).filter(f => f && f !== _famEditing))].sort();
+  const moveOptions = `<option value="">Move to…</option>` +
+    otherFamilies.map(f => `<option value="${famEsc(f)}">${famEsc(f)}</option>`).join("");
+
   wrap.innerHTML = members.map(m => `
     <div style="display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #e5e9f0;border-radius:9px;margin-bottom:7px;flex-wrap:wrap">
+      <input type="checkbox" class="fam-split-cb" data-id="${famEsc(m.id)}" title="Select for split"
+             style="width:16px;height:16px;flex:0 0 16px">
       <img src="${famEsc(m.image_url || "assets/img/product-placeholder.svg")}" alt=""
            onerror="this.src='assets/img/product-placeholder.svg'"
            style="width:34px;height:34px;object-fit:contain;background:#f7f9fc;border-radius:6px;flex:0 0 34px">
@@ -1101,12 +1263,75 @@ function famRenderMembers() {
              oninput="famCheckWarnings()"
              placeholder="Option label, e.g. Brown / 800 ft"
              style="padding:7px 10px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12.5px;min-width:180px;flex:1">
+      ${otherFamilies.length ? `
+      <select onchange="if(this.value)moveMember(${famAttr(m.id)},this.value)"
+              style="padding:7px 8px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12px;max-width:150px">
+        ${moveOptions}
+      </select>` : ""}
       <button type="button" onclick="famRemove(${famAttr(m.id)})"
               title="Remove from family"
               style="border:none;background:transparent;color:#dc2626;cursor:pointer;font-size:18px;line-height:1;padding:4px 7px">&times;</button>
     </div>`).join("");
 
+  if (splitBar) splitBar.style.display = members.length > 1 ? "flex" : "none";
   famCheckWarnings(members);
+}
+
+// Moves one SKU straight into an existing family without a second modal:
+// clear its label (the target family's own labels won't match it), write
+// product_family + variant_label directly, then drop it from this draft
+// so the current family's editor reflects the move immediately.
+async function moveMember(id, targetFamily) {
+  const row = _famRows.find(r => r.id === id);
+  if (!row) return;
+  const label = prompt(`Variant label for "${row.name}" inside "${targetFamily}":`, row.variant_label || "");
+  if (label === null) { famRenderMembers(); return; } // cancelled -- undo the select's value
+  if (!label.trim()) { alert("A variant label is required."); famRenderMembers(); return; }
+
+  const { error } = await window.sb.from("products")
+    .update({ product_family: targetFamily, variant_label: label.trim(), updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) { alert("Error moving SKU: " + error.message); return; }
+
+  row.product_family = targetFamily;
+  row.variant_label = label.trim();
+  _famDraft = _famDraft.filter(x => x !== id);
+  famRenderMembers();
+  showToast(`Moved to "${targetFamily}".`);
+}
+
+// Splits the checked subset of the CURRENT family's members into a brand
+// new family in one save, instead of removing them here and separately
+// creating a family with them. The members being split keep whatever
+// variant label they already had -- a split is "these belong somewhere
+// else", not a relabeling, so nothing here should silently change the
+// text the customer already sees.
+async function splitFamily() {
+  const checked = [...document.querySelectorAll(".fam-split-cb:checked")].map(cb => cb.dataset.id);
+  if (!checked.length) { alert("Check at least one member to split out."); return; }
+  if (checked.length === _famDraft.length) { alert("That's every member — rename this family instead of splitting all of it out."); return; }
+
+  const newName = (document.getElementById("famSplitName")?.value || "").trim();
+  if (!newName) { alert("Enter a name for the new family."); return; }
+  if (_famRows.some(r => r.product_family === newName)) {
+    alert(`A family named "${newName}" already exists. Choose a different name, or move these SKUs to it individually instead.`);
+    return;
+  }
+
+  const stamp = new Date().toISOString();
+  for (const id of checked) {
+    const row = _famRows.find(r => r.id === id);
+    const { error } = await window.sb.from("products")
+      .update({ product_family: newName, updated_at: stamp })
+      .eq("id", id);
+    if (error) { alert("Error splitting family: " + error.message); return; }
+    if (row) row.product_family = newName;
+  }
+
+  _famDraft = _famDraft.filter(id => !checked.includes(id));
+  document.getElementById("famSplitName").value = "";
+  famRenderMembers();
+  showToast(`Split ${checked.length} SKU${checked.length === 1 ? "" : "s"} into "${newName}".`);
 }
 
 // Live guard rails. These mirror exactly what breaks on the storefront: a
@@ -2012,6 +2237,251 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
     }
   }
   return derived;
+}
+
+/* ── Comma-separated variant detection ─────────────────────────
+   cvtDeriveVariant() above only fires on "<Family> - <size>, <spec>"
+   names (a dash separator). Names that instead front-load everything
+   into commas -- "Pacific Blue® Hardwound Paper Towels, Brown, 800-ft.,
+   6 Rolls" -- have no dash at all, so they fell straight through
+   ungrouped. Confirmed against the live catalog: 149 of 300 active SKUs
+   are still ungrouped, and every one of the OfficeCrave-style paper/
+   chemical names uses this comma form.
+
+   This does NOT replace cvtDeriveVariant -- it is tried second, only
+   when the dash parser found nothing, and it is far more conservative:
+   it proposes candidates for review rather than writing product_family
+   directly. Grouping by keyword alone (Phase 4 of the brief this was
+   commissioned under) is exactly what this must not do, so nothing here
+   ever auto-applies without a HIGH confidence score, and even HIGH
+   results are surfaced in a dry-run report before any write happens. */
+
+// Vocabulary that marks a comma-delimited segment as a VARIANT descriptor
+// rather than more of the product's own name. Split into two groups on
+// purpose:
+//
+// - NUMERIC/UNIT patterns (dimensions, counts, ply, pack units) are safe
+//   to match anywhere inside a segment, since a real product name never
+//   contains a bare "7 x 8" or "6 Rolls/Carton".
+// - WORD patterns (color, scent, packaging) are NOT safe to match as a
+//   substring -- "Pacific Blue® Hardwound Paper Towels" contains "Blue"
+//   as part of the BRAND, not a color option, and matching it there
+//   wrongly split the brand's own name off as a variant tail. These only
+//   count when the color/scent word makes up the whole segment (allowing
+//   short qualifiers like "Fresh Scent" or "2/Box"), never when it's
+//   embedded in a longer descriptive phrase.
+const CVT_NUMERIC_ATTR_RE = new RegExp(
+  "\\b(" + [
+    // Unit can be space-joined ("800 ft") or hyphen-joined ("1150-ft",
+    // "800-ft."), and may be followed by another word ("1150-ft Rolls")
+    // rather than ending the segment -- the trailing \b alone (not \s*)
+    // already tolerates a period or word boundary right after the unit.
+    "\\d+(\\.\\d+)?[\\-\\s]*(oz|ft|lb|lbs|gal|gallon|gallons|qt|in|mm|cm)\\b",
+    "\\d+\\s*[x\\u00d7]\\s*\\d+",                 // "7 x 8", "8\" x 800 ft"
+    "\\d+[\\-\\s]?ply",
+    "\\d+\\s*(sheet|sheets|roll|rolls|wipe|wipes|towel|towels|packet|packets|pack|packs|pod|pods|box|boxes|bottle|bottles|canister|canisters|carton|cartons|bucket|pail)\\b",
+    "\\d+\\s*/\\s*(carton|case|box|pack|canister|roll)\\b",
+    "(individual|case of \\d+|pack of \\d+|box of \\d+|open stock)",
+  ].join("|") + ")",
+  "i"
+);
+// Whole-segment only (anchored ^...$, ignoring surrounding whitespace and
+// a trailing SKU-echo in parens) -- "Brown" is a color, "Pacific Blue®
+// Hardwound Paper Towels" is not, even though both contain "Blue".
+const CVT_WORD_ATTR_RE = new RegExp(
+  "^(" + [
+    "(white|brown|black|blue|green|yellow|clear|grey|gray|natural|tan)",
+    "(unscented|fragrance-free|original( scent)?|fresh scent|lemon( fresh)?|lemon\\s*(&|and)\\s*lime.*|citrus|lavender|floral|outdoor fresh|april fresh|crisp( clean)?)",
+  ].join("|") + ")\\s*(\\([A-Z0-9-]+\\))?$",
+  "i"
+);
+function CVT_ATTR_RE_test(segment) {
+  return CVT_NUMERIC_ATTR_RE.test(segment) || CVT_WORD_ATTR_RE.test(segment.trim());
+}
+
+// A whole segment that is JUST an in-parens SKU echo ("(80168CT)") or a
+// bare catalog/NSN number carries no product-name information either way
+// -- ignored when deciding where the descriptive tail begins.
+const CVT_SKU_ECHO_RE = /^\(?[A-Z0-9-]{5,}\)?$/;
+
+/* Splits "<Base Product Name>, <descriptor>, <descriptor>, ..." on commas
+   and returns the longest leading run of segments that together read as
+   the base product name -- i.e. none of them individually look like a
+   variant attribute. Everything after that run is the candidate variant
+   tail.
+
+   This is deliberately NOT "split on the first comma": a name like
+   "Mr. Clean Magic Eraser Extra Durable, 2.3 x 4.6, ..." has to keep
+   "Extra Durable" attached to the base, because it precedes the first
+   segment that actually matches CVT_ATTR_RE -- dropping it at the first
+   comma regardless of content would strip real product-name words.
+   Returns {base, tail[]}; tail is empty when no comma exists (nothing
+   for this pass to add over cvtDeriveVariant). */
+function cvtSplitCommaName(name) {
+  const raw = String(name || "").trim();
+  const segments = raw.split(",").map(s => s.trim()).filter(Boolean);
+  if (segments.length < 2) return { base: raw, tail: [] };
+
+  let splitAt = segments.length; // default: no attribute segment found at all
+  for (let i = 0; i < segments.length; i++) {
+    if (CVT_SKU_ECHO_RE.test(segments[i])) continue;
+    if (CVT_ATTR_RE_test(segments[i])) { splitAt = i; break; }
+  }
+  if (splitAt === 0) return { base: "", tail: segments };      // whole name is attributes -- no usable base
+  if (splitAt === segments.length) return { base: raw, tail: [] }; // no attribute segment -- leave as-is
+
+  return {
+    base: segments.slice(0, splitAt).join(", "),
+    tail: segments.slice(splitAt).filter(s => !CVT_SKU_ECHO_RE.test(s)),
+  };
+}
+
+// Recognised variant AXES, so the report can say what actually
+// distinguishes the members of a candidate family instead of just
+// dumping raw text. Order matters only for display.
+const CVT_AXIS_PATTERNS = [
+  ["Color",     /\b(white|brown|black|blue|green|yellow|clear|grey|gray|natural|tan)\b/i],
+  ["Scent",     /\b(unscented|fragrance-free|original scent|fresh scent|lemon|lime|citrus|lavender|floral|outdoor fresh|april fresh|crisp( clean)?|early morning breeze)\b/i],
+  ["Ply",       /\b(\d)[\-\s]?ply\b/i],
+  ["Length",    /\b(\d+([.,]\d+)?)[\-\s]?(ft|feet)\b/i],
+  ["Dimensions",/\b\d+(\.\d+)?\s*[x×]\s*\d+(\.\d+)?(\s*[x×]\s*\d+(\.\d+)?)?(\s*(in|inch|inches|mm|cm))?\b/i],
+  ["Sheet count", /\b(\d+)\s*sheets?\b/i],
+  ["Roll count",  /\b(\d+)\s*rolls?\b/i],
+  ["Wipe count",  /\b(\d+)\s*wipes?\b/i],
+  ["Pack size",   /\b(\d+)\s*\/\s*(carton|case|box|pack|canister)\b/i],
+  ["Weight/Volume", /\b(\d+(\.\d+)?)\s*(oz|lb|lbs|gal|gallons?|qt)\b/i],
+  ["Packaging", /\b(individual|case of \d+|pack of \d+|box of \d+|open stock)\b/i],
+];
+
+function cvtDetectAxes(tailSegments) {
+  const text = tailSegments.join(", ");
+  const axes = [];
+  for (const [name, re] of CVT_AXIS_PATTERNS) {
+    if (re.test(text)) axes.push(name);
+  }
+  return axes;
+}
+
+// Tokens that mark a genuine FORMAT change rather than a size/color/count
+// variant -- two SKUs differing only by these are not safely "the same
+// product, different option" without a human confirming it (Phase 4:
+// "Blue Laundry Detergent" vs "...With Oxi" must not auto-merge, and
+// bottle format is the same kind of problem -- a pull-top bottle and a
+// spray bottle are different physical products, not two sizes of one).
+const CVT_FORMAT_CHANGE_RE = /\b(spray|pull.?top|refill|pump|trigger|aerosol|concentrate[d]?|ready.to.use|wipes?|liquid|powder|pods?|sheets?|gel)\b/i;
+
+/* Scores one candidate family (base name + its member rows) against the
+   confidence rules this was commissioned under:
+
+     HIGH   -- 2+ distinct SKUs, every member's tail is built entirely from
+               recognised variant vocabulary (CVT_ATTR_RE), all members
+               share the same set of format-changing tokens (so the
+               difference really is size/color/count, not product type),
+               and no two members are exact name+price+image duplicates.
+     MEDIUM -- candidate has a real base and 2+ members, but the tails
+               mix in a format change, or contain text outside the known
+               attribute vocabulary that a parser cannot safely classify.
+     DATA   -- two members share the exact same name. This is a catalog
+               data problem (duplicate SKU, or a price/image conflict on
+               what claims to be one product), not a grouping decision,
+               and is never a candidate for auto-grouping either way.
+
+   Returns null for a "base" with fewer than 2 members (nothing to group).
+   Never mutates rows and never touches product_family/variant_label --
+   this is read-only analysis. */
+function cvtScoreCandidate(base, rows) {
+  if (rows.length < 2) return null;
+
+  const parsed = rows.map(r => ({ row: r, ...cvtSplitCommaName(r.name) }));
+
+  const exactDupes = [];
+  for (let i = 0; i < rows.length; i++) {
+    for (let j = i + 1; j < rows.length; j++) {
+      if (rows[i].name === rows[j].name) exactDupes.push([rows[i], rows[j]]);
+    }
+  }
+  if (exactDupes.length) {
+    const [a, b] = exactDupes[0];
+    const reason = (a.price === b.price && a.image_url === b.image_url)
+      ? `${a.sku} and ${b.sku} share an identical name, price and image — likely a duplicate SKU, not a variant pair.`
+      : `${a.sku} and ${b.sku} share an identical name but differ in price ($${a.price} vs $${b.price}) or image — a catalog data conflict, not a grouping decision.`;
+    return { base, confidence: "DATA", reason, members: parsed, axes: [] };
+  }
+
+  const emptyTail = parsed.filter(p => !p.tail.length);
+  if (emptyTail.length) {
+    return {
+      base, confidence: "LOW",
+      reason: `No comma-separated variant text was found in ${emptyTail.length} of ${rows.length} names — nothing for this parser to compare.`,
+      members: parsed, axes: [],
+    };
+  }
+
+  const allText = parsed.map(p => p.tail.join(", "));
+  // Every tail SEGMENT must look like recognised variant vocabulary, not
+  // just the joined text as a whole -- a tail can legitimately mix a
+  // numeric segment ("800-ft.") with a word segment ("Brown"), and each
+  // is checked on its own terms (CVT_ATTR_RE_test), not against a single
+  // pattern spanning the whole comma-joined string.
+  const unrecognised = parsed.filter(p => p.tail.some(seg => !CVT_ATTR_RE_test(seg)));
+  const formatFlags = allText.map(t => (t.match(CVT_FORMAT_CHANGE_RE) || []).map(m => m[0].toLowerCase()));
+  const formatSets = formatFlags.map(f => new Set(f));
+  const formatsDiffer = formatSets.some((s, i) => i > 0 &&
+    (s.size !== formatSets[0].size || [...s].some(t => !formatSets[0].has(t))));
+
+  const axes = cvtDetectAxes(parsed.flatMap(p => p.tail));
+
+  if (unrecognised.length) {
+    return {
+      base, confidence: "MEDIUM",
+      reason: `${unrecognised.length} of ${rows.length} members has variant text outside recognised size/color/count vocabulary — needs a human to confirm the axis.`,
+      members: parsed, axes,
+    };
+  }
+  if (formatsDiffer) {
+    return {
+      base, confidence: "MEDIUM",
+      reason: `Members differ by packaging FORMAT (e.g. spray vs. pull-top vs. refill), not just size or count — confirm these are the same product before grouping.`,
+      members: parsed, axes,
+    };
+  }
+  if (!axes.length) {
+    return {
+      base, confidence: "MEDIUM",
+      reason: `Variant text is present but didn't match a named axis (color/length/ply/etc.) — review before grouping.`,
+      members: parsed, axes,
+    };
+  }
+
+  return {
+    base, confidence: "HIGH",
+    reason: `Same brand and product name; members differ only by ${axes.join(", ").toLowerCase()}.`,
+    members: parsed, axes,
+  };
+}
+
+/* Runs the comma-based pass over every row NOT already in a family and
+   NOT already claimed by cvtDeriveVariant's dash pass. Returns an array
+   of scored candidates, sorted HIGH -> MEDIUM -> LOW -> DATA, for the
+   dry-run report. Read-only: this never writes to the database. */
+function cvtProposeCommaGroupings(rows) {
+  const ungrouped = rows.filter(r => !r.product_family);
+  const byBase = new Map();
+  for (const r of ungrouped) {
+    const { base } = cvtSplitCommaName(r.name);
+    if (!base) continue;
+    if (!byBase.has(base)) byBase.set(base, []);
+    byBase.get(base).push(r);
+  }
+
+  const order = { HIGH: 0, MEDIUM: 1, LOW: 2, DATA: 3 };
+  const results = [];
+  for (const [base, members] of byBase) {
+    if (members.length < 2) continue;
+    const scored = cvtScoreCandidate(base, members);
+    if (scored) results.push(scored);
+  }
+  return results.sort((a, b) => order[a.confidence] - order[b.confidence] || b.members.length - a.members.length);
 }
 
 /* Per-column cleanup applied to every emitted cell.
