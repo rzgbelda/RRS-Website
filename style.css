@@ -4555,7 +4555,14 @@ span.flatpickr-weekday {
 }
 .product-gallery { grid-column: 1; grid-row: 1; }
 .pp-purchase-panel { grid-column: 1; grid-row: 2; }
-.product-info { grid-column: 2; grid-row: 1 / span 2; }
+/* Row 1 only -- name/badges/description sit beside the gallery. The tier
+   cards used to live in this same element and spanned both rows, which
+   let them trail below wherever row 1's content ended rather than
+   lining up with .pp-purchase-panel. They're a separate grid item now
+   (.pp-tier-cards-block, row 2) precisely so their top edge is pinned to
+   the grid row instead of to product-info's variable content height. */
+.product-info { grid-column: 2; grid-row: 1; }
+.pp-tier-cards-block { grid-column: 2; grid-row: 2; }
 .buy-box { grid-column: 3; grid-row: 1 / span 2; }
 
 .product-gallery {
@@ -7513,24 +7520,27 @@ button, a, [role="button"] { touch-action: manipulation; }
   .product-layout { grid-template-columns: 1fr; }
   /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
      grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
-     col 1 row 2, product-info col 2, buy-box col 3) would otherwise try
-     to place things in columns/rows that no longer exist. .pp-faq-card
-     is not a grid item of .product-layout at all (it sits below
-     .details-grid, outside this grid entirely), so it needs no
-     placement reset here. Reset the remaining explicit placements back
-     to plain document-order stacking: gallery, then the purchase panel
-     right under it, then product info, then the buy box. */
+     col 1 row 2, product-info col 2 row 1, pp-tier-cards-block col 2
+     row 2, buy-box col 3) would otherwise try to place things in
+     columns/rows that no longer exist. .pp-faq-card is not a grid item
+     of .product-layout at all (it sits below .details-grid, outside
+     this grid entirely), so it needs no placement reset here. Reset the
+     remaining explicit placements back to plain document-order
+     stacking: gallery, then product info (name/badges/description),
+     then the tier cards, then the purchase panel, then the buy box. */
   .product-gallery,
   .pp-purchase-panel,
   .product-info,
+  .pp-tier-cards-block,
   .buy-box {
     grid-column: 1;
     grid-row: auto;
   }
-  .product-gallery  { order: 1; }
-  .product-info     { order: 2; }
-  .pp-purchase-panel{ order: 3; }
-  .buy-box           { order: 5; }
+  .product-gallery      { order: 1; }
+  .product-info         { order: 2; }
+  .pp-tier-cards-block  { order: 3; }
+  .pp-purchase-panel    { order: 4; }
+  .buy-box              { order: 5; }
   .buy-box {
     max-width: min(480px, 100%);
     /* Sticky only makes sense beside a taller neighbor in the 3-column

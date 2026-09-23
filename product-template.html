@@ -240,30 +240,6 @@
 
       </div>
 
-      <!-- Two FAQs, generated from this product's own real data (case/dozen
-           quantity, weight, dimensions, MOQ) rather than written per-SKU by
-           hand for 110+ products or filled with invented specifics. The
-           two questions were chosen from what buyers in this exact
-           industry (bulk/wholesale janitorial, paper, and chemical supply)
-           actually ask most, per a web search done for this feature:
-           - "how many come in a case / what's the minimum order" -- case
-             quantities and bulk sizing are the #1 question in every wholesale
-             gloves/paper-towel buying guide checked (gloves.com, buygloves.com,
-             Schneider Direct).
-           - "how is this shipped / how much does it weigh" -- carton weight
-             and dimensions are what a facilities buyer needs to plan
-             freight/loading dock/storage before ordering, and this site's
-             own shipping-policy.html already treats that as a first-class
-             question (parcel vs. LTL freight is decided by weight).
-           A third common one -- chemical dilution ratios -- was
-           deliberately NOT added: this site's product data has no
-           per-SKU dilution ratio field, and inventing one for a specific
-           SKU would be a fabricated safety-relevant number, not a
-           reasonable default.
-           Placed here (own grid item, positioned via grid-column/grid-row
-           in style.css, same pattern as .pp-purchase-panel) so it sits
-           beside the purchase panel -- same row, column 2 -- rather than
-           appearing full-width far below the fold where it used to be. -->
       <div class="product-info">
         <p class="brand">Room Ready Supply</p>
 
@@ -298,6 +274,15 @@
           <span>Buying guide: <span class="product-guide-title"></span></span>
         </a>
 
+      </div>
+
+      <!-- Own grid item, placed at row 2 (see .pp-tier-cards-block in
+           style.css) so its top edge lines up with .pp-purchase-panel's
+           top edge -- both start at the same grid row regardless of how
+           tall .product-info's row-1 content (name/badges/description)
+           happens to be, rather than the tier cards trailing wherever
+           .product-info's own content pushed them. -->
+      <div class="pp-tier-cards-block">
         <!-- Tiers are per item, not per cart: 30 cases OF THIS PRODUCT
              earns the best rate, and a mixed cart totalling 30 cases does
              not. The heading says so once, above the cards, so each card
@@ -461,10 +446,27 @@
 
     </div>
 
-    <!-- Sits below Overview/Specifications/Key Features as its own
-         full-width card, not squeezed beside the tier cards -- that grid
-         placement (column 2, row 2, beside .pp-purchase-panel) is what
-         previously caused it to overlap the tier cards above. -->
+    <!-- Two FAQs, generated from this product's own real data (case/dozen
+         quantity, weight, dimensions, MOQ) rather than written per-SKU by
+         hand for 110+ products or filled with invented specifics. The two
+         questions were chosen from what buyers in this exact industry
+         (bulk/wholesale janitorial, paper, and chemical supply) actually
+         ask most, per a web search done for this feature:
+         - "how many come in a case / what's the minimum order" -- case
+           quantities and bulk sizing are the #1 question in every
+           wholesale gloves/paper-towel buying guide checked (gloves.com,
+           buygloves.com, Schneider Direct).
+         - "how is this shipped / how much does it weigh" -- carton weight
+           and dimensions are what a facilities buyer needs to plan
+           freight/loading dock/storage before ordering, and this site's
+           own shipping-policy.html already treats that as a first-class
+           question (parcel vs. LTL freight is decided by weight).
+         A third common one -- chemical dilution ratios -- was
+         deliberately NOT added: this site's product data has no per-SKU
+         dilution ratio field, and inventing one for a specific SKU would
+         be a fabricated safety-relevant number, not a reasonable default.
+         Sits below Overview/Specifications/Key Features as its own
+         full-width card. -->
     <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
       <div class="tabs">
         <h3>Common Questions</h3>
