@@ -1026,28 +1026,52 @@ function familyInStock(variants) {
   return variants.some(v => v.inStock !== false);
 }
 
+// Remembers which SKU was picked to represent each family, keyed by
+// family name, for the lifetime of this page load. There is no component
+// framework here (this is grid.innerHTML = ...), so "once per mount" is
+// approximated as "once per family per page load": typing in the search
+// box or changing a category filter calls renderProductGrid() again and
+// rebuilds every card's HTML from scratch, and without this cache that
+// would re-roll every family's representative variant on every keystroke
+// -- a customer filtering the catalog would see the same family's photo
+// and price jump between sizes for no reason connected to what they did.
+// A real page load/reload gets a fresh module scope (this Map starts
+// empty again), which is exactly the "may pick a different one" case.
+const _representativeVariantCache = new Map();
+
 // Presentation-only: chooses which variant a family card leads with. Never
 // touches the database, never creates or merges anything -- purely which
 // of the EXISTING variant records this render picks to show as the
 // representative image/price/SKU.
 //
-// Picks uniformly at random among in-stock members so the same size/color
-// doesn't always front every family (the customer still reaches every
-// option through the picker regardless of which one is shown first).
-// Falls back to variants[0] only when the whole family is sold out --
-// there is no in-stock option to prefer at that point, and the card's own
-// OUT OF STOCK state (familyInStock() above) is what actually communicates
-// that, not which SKU happens to be shown.
+// Reuses the previous pick for this family (from _representativeVariantCache)
+// as long as it's still one of the in-stock members -- this is what keeps
+// the representative stable across re-renders triggered by unrelated
+// catalog activity (search, filter, sort all re-render every card) without
+// needing any of those call sites to know or care about this logic. Only
+// picks fresh when there is no cached pick yet, or the cached SKU just
+// went out of stock (immediate fallback, never keeps showing a sold-out
+// SKU as the representative) or disappeared from the family entirely.
 //
-// Called once per render and the result is used for that entire card's
-// markup -- nothing re-picks after the fact, so a customer looking at a
-// rendered card never sees it change under them; a fresh pick only
-// happens on the next full render (catalog reload/filter/search), matching
-// "keep stable until the page is refreshed."
+// Picks uniformly at random among in-stock members so the same size/color
+// doesn't always front every family. Falls back to variants[0] only when
+// the whole family is sold out -- there is no in-stock option to prefer at
+// that point, and the card's own OUT OF STOCK state (familyInStock() above)
+// is what actually communicates that, not which SKU happens to be shown.
 function pickRepresentativeVariant(variants) {
   const available = variants.filter(v => v.inStock !== false);
   if (!available.length) return variants[0];
-  return available[Math.floor(Math.random() * available.length)];
+
+  const familyKey = variants[0] && variants[0].productFamily;
+  if (familyKey) {
+    const cachedSku = _representativeVariantCache.get(familyKey);
+    const stillAvailable = cachedSku && available.find(v => v.itemNumber === cachedSku);
+    if (stillAvailable) return stillAvailable;
+  }
+
+  const picked = available[Math.floor(Math.random() * available.length)];
+  if (familyKey) _representativeVariantCache.set(familyKey, picked.itemNumber);
+  return picked;
 }
 
 function renderVariantCard(variants) {
@@ -1232,6 +1256,12 @@ function renderVariantCard(variants) {
 // whichever variant is now current, so the two controls can never drift
 // out of sync with each other.
 function applyVariantToCard(card, v) {
+  // A manual pick outlives the auto-randomized one: if the customer later
+  // triggers a catalog-level re-render (searches, clears the search,
+  // changes a filter), the family should come back showing what they
+  // chose, not silently revert to a fresh random in-stock pick.
+  if (v.productFamily) _representativeVariantCache.set(v.productFamily, v.itemNumber);
+
   const displayPrice = cleanPrice(v.price);
   const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
   const price = displayPrice || cartPrice;
