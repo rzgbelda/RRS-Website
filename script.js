@@ -1455,7 +1455,14 @@ function renderProducts(products) {
 }
 
 function setupProductCardClicks() {
-  document.querySelectorAll(".product-card").forEach(card => {
+  // .hc-card is the homepage "Best Deals"/bestsellers card (hcProductCard)
+  // -- it carries the same data-url as .product-card and was meant to
+  // navigate the same way (renderHomeProducts's own comment says so), but
+  // was never actually selected here, so every homepage product card
+  // click silently did nothing. It has no variant-pill/variant-trigger of
+  // its own, only .add-btn, so the same exclusion logic below already
+  // covers it correctly.
+  document.querySelectorAll(".product-card, .hc-card").forEach(card => {
     card.onclick = e => {
       if (e.target.closest(".add-btn")) return;
       if (e.target.closest(".variant-pill")) return;
