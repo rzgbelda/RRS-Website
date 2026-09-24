@@ -10229,15 +10229,27 @@ function tierPriceForQty(product, qty) {
   const t1 = Number(product.price_tier1) || 0;
   const t2 = Number(product.price_tier2) || 0;
   const t3 = Number(product.price_tier3) || 0;
+  const base = Number(product.price) || 0;
 
   // Sold by the dozen: one flat rate at every quantity. Without this, a
-  // quote for 50 dozen wash cloths would cross the "30+" line and apply a
-  // case volume discount that no longer exists.
-  if (String(product.unit || "").trim().toLowerCase() === "dozen") return t1;
+  // quote for 50 dozen wash cloths would cross a case volume threshold
+  // that no longer exists.
+  if (String(product.unit || "").trim().toLowerCase() === "dozen") return t1 || base;
 
-  if (q >= 30) return t3 || t2 || t1;
-  if (q >= 6)  return t2 || t1;
-  return t1;
+  // Volume breakpoints are per-product (products.tier1_min_qty etc.), not
+  // a fixed 6/30 pair -- distributors honour different thresholds.
+  // Mirrors getTierPrice() in script.js and tierPriceFor() in
+  // api/_lib/price-cart.js. Tiers are ragged: a null threshold means that
+  // tier does not exist for this product, so it's skipped.
+  const t1Min = Number(product.tier1_min_qty) || 0;
+  const t2Min = Number(product.tier2_min_qty) || 0;
+  const t3Min = Number(product.tier3_min_qty) || 0;
+
+  if (t3Min > 0 && q >= t3Min && t3) return t3;
+  if (t2Min > 0 && q >= t2Min && t2) return t2;
+  if (t1Min > 0 && q >= t1Min && t1) return t1;
+
+  return base || t1 || 0;
 }
 
 let _quoteComposerProducts = [];
@@ -10288,7 +10300,7 @@ async function openQuoteComposer() {
 
   const { data: products } = await window.sb
     .from("products")
-    .select("name, price_tier1, price_tier2, price_tier3, unit, moq")
+    .select("name, sku, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, moq")
     .eq("is_active", true);
   _quoteComposerProducts = products || [];
 
