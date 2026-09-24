@@ -5411,10 +5411,17 @@ function updateMiniCart() {
         <span>Send us your list for even better pricing &rsaquo;</span>
       </a>`;
   } else if (topLineQty > 0) {
-    const toNext = topLineQty < 6 ? 6 - topLineQty
-                 : (topLineQty < 30 ? 30 - topLineQty : BULK_VOLUME_MIN_CASES - topLineQty);
-    const nextLabel = topLineQty < 6 ? "6+ case pricing"
-                    : (topLineQty < 30 ? "30+ case pricing" : "extra 50+ case pricing");
+    // Next breakpoint comes from this product's own thresholds (see
+    // getTierPrice); only tiers that actually lower the price count. If the
+    // 50+ bulk offer is closer, or the product has no further tier, point there.
+    const currentRate = getTierPrice(topLine);
+    const nextTierQty = [1, 2, 3]
+      .map(n => ({ min: tierMinQty(topLine, `tier${n}_min_qty`, `tier${n}MinQty`), price: cleanPrice(topLine[`price${n}`]) }))
+      .filter(t => t.min && t.min > topLineQty && t.price && t.price < currentRate)
+      .reduce((lo, t) => Math.min(lo, t.min), Infinity);
+    const target = Math.min(nextTierQty, BULK_VOLUME_MIN_CASES);
+    const toNext = target - topLineQty;
+    const nextLabel = target === nextTierQty ? `${target}+ case pricing` : "extra 50+ case pricing";
     const shortName = escapeMiniCart((topLine.name || "this item").split(",")[0]).slice(0, 38);
     tierNote = `<p class="mc-tier">
         Add <strong>${toNext} more case${toNext === 1 ? "" : "s"}</strong> of
