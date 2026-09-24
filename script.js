@@ -240,7 +240,7 @@ function syncCartPricesToCatalog() {
     );
     if (!match) return;
 
-    ["price", "price1", "price2", "price3", "tier1MinQty", "tier2MinQty", "tier3MinQty", "image", "description"].forEach(field => {
+    ["price", "price1", "price2", "price3", "tier1MinQty", "tier2MinQty", "tier3MinQty", "moqGroup", "image", "description"].forEach(field => {
       if (match[field] !== undefined && item[field] !== match[field]) {
         item[field] = match[field];
         changed = true;
@@ -761,8 +761,26 @@ function qualifiesForBulkVolume(item) {
   return (Number(item.quantity) || 0) >= BULK_VOLUME_MIN_CASES;
 }
 
-function getTierPrice(item) {
-  const qty = Number(item.quantity) || 1;
+// Quantity that decides a line's volume tier. Mix & Match products (moqGroup)
+// pool: every bucket in the group counts toward the tier, so 36 buckets
+// split across 9 SKUs prices the same as 36 of one. Mirrored by
+// price-cart.js and tierPriceForQty() in admin.js.
+function groupCartQty(group, cart) {
+  if (!group) return 0;
+  return (cart || []).reduce((n, l) =>
+    n + (l && l.moqGroup === group && !isSoldByDozen(l) ? Number(l.quantity) || 0 : 0), 0);
+}
+
+function tierQty(item, cart) {
+  const own = Number(item.quantity) || 1;
+  if (!item.moqGroup || isSoldByDozen(item)) return own;
+  const lines = cart || getCart();
+  const inCart = lines.some(l => l === item || (item.itemNumber && l && l.itemNumber === item.itemNumber));
+  return groupCartQty(item.moqGroup, lines) + (inCart ? 0 : own);
+}
+
+function getTierPrice(item, cart) {
+  const qty = tierQty(item, cart);
 
   const tier1 = cleanPrice(item.price1);
   const tier2 = cleanPrice(item.price2);
@@ -2989,10 +3007,15 @@ function setupProductQuantity() {
       unit:   addBtn.dataset.unit,
       moq:    addBtn.dataset.moq,
     };
+    // Mix & Match: the rate after adding is set by the group's cart total
+    // plus this quantity (Add to Cart adds on top of any existing line).
+    if (addBtn.dataset.moqGroup && !isSoldByDozen(item)) {
+      item.quantity = qty + groupCartQty(addBtn.dataset.moqGroup, getCart());
+    }
     // Stays a per-unit rate: the figure is labelled "Per Case" / "Per
     // Dozen" beneath it, so multiplying by quantity here would contradict
     // its own caption.
-    const rate = getTierPrice(item);
+    const rate = getTierPrice(item, []);
     productPriceEl.textContent = `$${rate.toFixed(2)}`;
 
     // Line total for the chosen quantity, plus both purchase-mode prices.
@@ -3102,7 +3125,7 @@ function loadCartPage() {
 
   cart.forEach((item, index) => {
     const qty = Number(item.quantity) || 1;
-    const price = getTierPrice(item);
+    const price = getTierPrice(item, cart);
     const itemTotal = price * qty;
     const reorderValue = item.reorder || "Once";
 
@@ -3385,7 +3408,7 @@ function loadCheckoutProducts() {
 
   checkoutProducts.innerHTML = cart.map(item => {
     const qty = Number(item.quantity) || 1;
-    const price = getTierPrice(item);
+    const price = getTierPrice(item, cart);
     const total = price * qty;
 
     const reorderValue =
@@ -3428,7 +3451,7 @@ function loadCheckoutProducts() {
   if (summaryItems) {
     summaryItems.innerHTML = cart.map(item => {
       const qty = Number(item.quantity) || 1;
-      const price = getTierPrice(item);
+      const price = getTierPrice(item, cart);
       const total = price * qty;
 
       const reorderValue =
@@ -4027,7 +4050,7 @@ function loadPaymentSummary() {
 
   summaryItems.innerHTML = cart.map(item => {
     const qty = Number(item.quantity) || 1;
-    const price = getTierPrice(item);
+    const price = getTierPrice(item, cart);
     const total = price * qty;
 
     subtotal += total;
@@ -5371,7 +5394,7 @@ function updateMiniCart() {
   }
 
   const units = cart.reduce((n, i) => n + (Number(i.quantity) || 0), 0);
-  const subtotal = cart.reduce((s, i) => s + getTierPrice(i) * (Number(i.quantity) || 0), 0);
+  const subtotal = cart.reduce((s, i) => s + getTierPrice(i, cart) * (Number(i.quantity) || 0), 0);
 
   // Volume tiers are PER ITEM, so the messaging below has to be about the
   // single biggest line, never the cart total. It previously summed every
@@ -5381,9 +5404,11 @@ function updateMiniCart() {
   // arrived. Dozen-sold lines are excluded because their quantity counts
   // dozens and they don't use the case tiers at all.
   const caseLines = cart.filter(i => !isSoldByDozen(i));
+  // Mix & Match lines are measured by their pooled group total (tierQty).
   const topLine = caseLines.reduce(
-    (best, i) => ((Number(i.quantity) || 0) > (Number(best && best.quantity) || 0) ? i : best), null);
-  const topLineQty = Number(topLine && topLine.quantity) || 0;
+    (best, i) => (!best || tierQty(i, cart) > tierQty(best, cart) ? i : best), null);
+  const topLineQty = topLine ? tierQty(topLine, cart) : 0;
+  const topIsGroup = !!(topLine && topLine.moqGroup);
 
   // Free shipping is off site-wide (2026-09-22). Must stay in step with
   // FREE_SHIPPING_ENABLED in warp-freight.js, which is what actually
@@ -5405,7 +5430,9 @@ function updateMiniCart() {
   // is an instruction the customer can actually act on and that actually
   // produces the promised price.
   let tierNote = "";
-  if (topLineQty >= BULK_VOLUME_MIN_CASES) {
+  // The 50+ negotiated offer is about cases of one item; pooled groups
+  // have their own tiers, so they're only ever pointed at the next tier.
+  if (!topIsGroup && topLineQty >= BULK_VOLUME_MIN_CASES) {
     tierNote = `<a class="mc-tier mc-tier-bulk" href="/quote">
         <strong>${topLineQty} cases of one item &mdash; you qualify for extra pricing</strong>
         <span>Send us your list for even better pricing &rsaquo;</span>
@@ -5414,19 +5441,25 @@ function updateMiniCart() {
     // Next breakpoint comes from this product's own thresholds (see
     // getTierPrice); only tiers that actually lower the price count. If the
     // 50+ bulk offer is closer, or the product has no further tier, point there.
-    const currentRate = getTierPrice(topLine);
+    const currentRate = getTierPrice(topLine, cart);
     const nextTierQty = [1, 2, 3]
       .map(n => ({ min: tierMinQty(topLine, `tier${n}_min_qty`, `tier${n}MinQty`), price: cleanPrice(topLine[`price${n}`]) }))
       .filter(t => t.min && t.min > topLineQty && t.price && t.price < currentRate)
       .reduce((lo, t) => Math.min(lo, t.min), Infinity);
-    const target = Math.min(nextTierQty, BULK_VOLUME_MIN_CASES);
+    const target = topIsGroup ? nextTierQty : Math.min(nextTierQty, BULK_VOLUME_MIN_CASES);
     const toNext = target - topLineQty;
-    const nextLabel = target === nextTierQty ? `${target}+ case pricing` : "extra 50+ case pricing";
+    const unitWord = topIsGroup ? (topLine.unit || "unit").toLowerCase().replace(/s$/, "") : "case";
+    const nextLabel = target === nextTierQty ? `${target}+ ${unitWord} pricing` : "extra 50+ case pricing";
     const shortName = escapeMiniCart((topLine.name || "this item").split(",")[0]).slice(0, 38);
-    tierNote = `<p class="mc-tier">
-        Add <strong>${toNext} more case${toNext === 1 ? "" : "s"}</strong> of
-        <strong>${shortName}</strong> to reach ${nextLabel}.
-      </p>`;
+    const what = topIsGroup
+      ? `from the <strong>${escapeMiniCart(topLine.moqGroup)}</strong> Mix &amp; Match group`
+      : `of <strong>${shortName}</strong>`;
+    if (Number.isFinite(target)) {
+      tierNote = `<p class="mc-tier">
+          Add <strong>${toNext} more ${unitWord}${toNext === 1 ? "" : "s"}</strong> ${what}
+          to reach ${nextLabel}.
+        </p>`;
+    }
   }
 
   // Reorder saving, when any line is on a schedule -- the mini-cart shows
@@ -5450,7 +5483,7 @@ function updateMiniCart() {
              onerror="this.onerror=null;this.src='/assets/img/product-placeholder.svg'">
         <div class="mc-row-main">
           <p class="mc-row-name">${escapeMiniCart(i.name || "Product")}</p>
-          <p class="mc-row-price">$${getTierPrice(i).toFixed(2)} <span>/ ${unit}</span></p>
+          <p class="mc-row-price">$${getTierPrice(i, cart).toFixed(2)} <span>/ ${unit}</span></p>
         </div>
         <div class="mc-qty">
           <button type="button" aria-label="Decrease quantity"

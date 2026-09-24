@@ -629,7 +629,7 @@
         // price via this same function. Reading item.price here silently
         // reverted to the un-discounted price at the final payment step,
         // both on screen and in what actually got charged/invoiced.
-        var price = getTierPrice(item);
+        var price = getTierPrice(item, cart);
         var qty = parseInt(item.quantity) || 1;
         subtotal += price * qty;
         return '<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:13px;color:#334155;">' +
@@ -808,7 +808,7 @@
           return {
             item_id: i.itemNumber || i.name || 'unknown',
             item_name: i.name || 'Product',
-            price: getTierPrice(i),
+            price: getTierPrice(i, items),
             quantity: Number(i.quantity) || 1,
           };
         }),
@@ -921,7 +921,7 @@
           }
 
           var invItems = (window._orderItems || []).map(function (i) {
-            var p = getTierPrice(i); // not i.price -- see loadSummary() comment above
+            var p = getTierPrice(i, window._orderItems); // not i.price -- see loadSummary() comment above
             var q = parseInt(i.quantity) || 1;
             return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
           });
@@ -1163,7 +1163,7 @@
               return;
             } else {
               var cardItems = (window._orderItems || []).map(function (i) {
-                var p = getTierPrice(i); // not i.price -- see loadSummary() comment above
+                var p = getTierPrice(i, window._orderItems); // not i.price -- see loadSummary() comment above
                 var q = parseInt(i.quantity) || 1;
                 return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
               });

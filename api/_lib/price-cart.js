@@ -146,12 +146,22 @@ async function priceCart(items, state, fulfillmentMethod) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
 
   const bySku = new Map((rows || []).map(r => [r.sku, r]));
+
+  // Mix & Match products pool toward the tier: every unit in the same
+  // moq_group counts. Mirrors tierQty() in script.js.
+  const groupQty = new Map();
+  for (const [sku, qty] of wanted) {
+    const r = bySku.get(sku);
+    if (r && r.moq_group && !isSoldByDozen(r)) {
+      groupQty.set(r.moq_group, (groupQty.get(r.moq_group) || 0) + qty);
+    }
+  }
 
   let subtotal = 0;
   let totalWeightLb = 0;
@@ -166,7 +176,8 @@ async function priceCart(items, state, fulfillmentMethod) {
       return { ok: false, error: 'This item is no longer available: ' + (row.name || sku) };
     }
 
-    const unitPrice = tierPriceFor(row, qty);
+    const tierBasis = row.moq_group && !isSoldByDozen(row) ? groupQty.get(row.moq_group) : qty;
+    const unitPrice = tierPriceFor(row, tierBasis);
     if (!(unitPrice > 0)) {
       return { ok: false, error: 'No price is set for ' + (row.name || sku) + '.' };
     }

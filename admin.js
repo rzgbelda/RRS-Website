@@ -10300,7 +10300,7 @@ async function openQuoteComposer() {
 
   const { data: products } = await window.sb
     .from("products")
-    .select("name, sku, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, moq")
+    .select("name, sku, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, moq, moq_group")
     .eq("is_active", true);
   _quoteComposerProducts = products || [];
 
@@ -10330,7 +10330,32 @@ async function openQuoteComposer() {
     };
   });
 
+  repriceQuoteComposerLines();
   renderQuoteComposerLines();
+}
+
+// Recomputes every auto-priced line. Mix & Match products (moq_group) pool:
+// the tier is set by the group's combined quantity across all lines, so one
+// line's quantity can move another line's price. Mirrors tierQty() in
+// script.js and price-cart.js. Staff overrides are left alone.
+function repriceQuoteComposerLines() {
+  const isDozen = p => String(p.unit || "").trim().toLowerCase() === "dozen";
+  const matches = _quoteComposerLines.map(l =>
+    _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(l.name)));
+  const groupTotals = new Map();
+  matches.forEach((m, i) => {
+    if (m && m.moq_group && !isDozen(m)) {
+      groupTotals.set(m.moq_group, (groupTotals.get(m.moq_group) || 0) + (Number(_quoteComposerLines[i].quantity) || 0));
+    }
+  });
+  _quoteComposerLines.forEach((line, i) => {
+    const m = matches[i];
+    if (!m || line.priceOverridden) return;
+    const basis = m.moq_group && !isDozen(m) ? groupTotals.get(m.moq_group) : line.quantity;
+    line.unit_price = Number(tierPriceForQty(m, basis).toFixed(2));
+    const el = document.getElementById(`ql-price-${i}`);
+    if (el) el.value = line.unit_price.toFixed(2);
+  });
 }
 
 // Full re-render -- only called on add/remove/initial load, never on a
@@ -10389,6 +10414,7 @@ function addQuoteLine() {
 
 function removeQuoteLine(idx) {
   _quoteComposerLines.splice(idx, 1);
+  repriceQuoteComposerLines();
   renderQuoteComposerLines();
 }
 
@@ -10407,7 +10433,7 @@ function onQuoteLineNameInput(idx, value) {
   if (match && !line.priceOverridden) {
     line.moq = parseInt(match.moq) || 1;
     line.quantity = Math.max(line.quantity || 1, line.moq);
-    line.unit_price = Number(tierPriceForQty(match, line.quantity).toFixed(2));
+    repriceQuoteComposerLines();
 
     const qtyEl = document.getElementById(`ql-qty-${idx}`);
     if (qtyEl) { qtyEl.value = line.quantity; qtyEl.min = line.moq; qtyEl.step = line.moq > 1 ? line.moq : 1; }
@@ -10462,14 +10488,7 @@ function onQuoteLineQtyInput(idx, value, commit) {
   }
   line.quantity = qty;
 
-  if (!line.priceOverridden) {
-    const match = _quoteComposerProducts.find(p => normalizeProductName(p.name) === normalizeProductName(line.name));
-    if (match) {
-      line.unit_price = Number(tierPriceForQty(match, line.quantity).toFixed(2));
-      const priceEl = document.getElementById(`ql-price-${idx}`);
-      if (priceEl) priceEl.value = line.unit_price.toFixed(2);
-    }
-  }
+  repriceQuoteComposerLines();
 
   recalcQuoteTotal();
 }
