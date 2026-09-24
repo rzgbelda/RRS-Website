@@ -2244,6 +2244,19 @@ function populateProductPage(product) {
     const prices = [t1, t2, t3];
     let shownCount = 0;
 
+    // Mix & Match groups are sold by the pallet: the group minimum is one
+    // pallet (36 Sasso buckets), so when every threshold is a whole number
+    // of pallets the cards are labelled in pallets rather than pails.
+    const palletQty = product.moqGroup ? Number(product.moqGroupMin) || 0 : 0;
+    const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
+    const unitLower = unitWord.toLowerCase();
+    const headEl = document.querySelector(".tier-cards-head");
+    if (headEl) {
+      headEl.innerHTML = byPallet
+        ? `Price per ${unitLower} &mdash; drops as your <strong>combined Mix &amp; Match order</strong> grows (1 pallet = ${palletQty} ${unitLower}s)`
+        : `Price per ${unitLower} &mdash; drops as you order more <strong>of this item</strong>`;
+    }
+
     [0, 1, 2].forEach(i => {
       const card = document.getElementById(`tier${i + 1}Price`)?.closest(".tier-card");
       const min = mins[i];
@@ -2259,12 +2272,23 @@ function populateProductPage(product) {
       // Upper bound is one below the next existing tier's threshold; the
       // highest tier is open-ended because a larger order still pays it.
       const nextMin = mins.slice(i + 1).find((m, j) => m && prices[i + 1 + j]);
-      const label = nextMin
-        ? `${min}–${nextMin - 1} ${unitWord}s`
-        : `${min}+ ${unitWord}s`;
+      let label;
+      if (byPallet) {
+        const lo = min / palletQty;
+        const hi = nextMin ? nextMin / palletQty - 1 : null;
+        const plural = n => `Pallet${n === 1 ? "" : "s"}`;
+        label = hi == null ? `${lo}+ ${plural(2)}`
+          : hi === lo ? `${lo} ${plural(lo)}`
+          : `${lo}–${hi} ${plural(hi)}`;
+      } else {
+        label = nextMin ? `${min}–${nextMin - 1} ${unitWord}s` : `${min}+ ${unitWord}s`;
+      }
 
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
       setText(`tier${i + 1}Label`, label);
+      setText(`tier${i + 1}Sub`, byPallet
+        ? `Per ${unitLower} · ${nextMin ? `${min}–${nextMin - 1}` : `${min}+`} ${unitLower}s`
+        : ["Standard Pricing", "Volume Discount", `Best Price Per ${unitWord}`][i]);
     });
 
     // With only one real tier there is no "volume discount" to speak of --
