@@ -240,7 +240,7 @@ function syncCartPricesToCatalog() {
     );
     if (!match) return;
 
-    ["price", "price1", "price2", "price3", "image", "description"].forEach(field => {
+    ["price", "price1", "price2", "price3", "tier1MinQty", "tier2MinQty", "tier3MinQty", "image", "description"].forEach(field => {
       if (match[field] !== undefined && item[field] !== match[field]) {
         item[field] = match[field];
         changed = true;
@@ -813,6 +813,15 @@ function getTierPrice(item) {
 // the same product flows through both. 0 and "" are treated as absent --
 // a threshold of 0 would make the tier apply at every quantity, which is
 // never what an empty spreadsheet cell means.
+// data-tier*-min-qty attributes for an add-to-cart button. Without these the
+// cart line has no breakpoints and getTierPrice() falls back to base price.
+function tierMinAttrs(p) {
+  return ["tier1", "tier2", "tier3"].map(t => {
+    const n = tierMinQty(p, t + "_min_qty", t + "MinQty");
+    return `data-${t}-min-qty="${n ?? ""}"`;
+  }).join(" ");
+}
+
 function tierMinQty(item, snake, camel) {
   const raw = item && (item[snake] ?? item[camel]);
   const n = Number(raw);
@@ -1003,6 +1012,7 @@ function renderSingleCard(product) {
             data-price1="${cleanPrice(product.price1)}"
             data-price2="${cleanPrice(product.price2)}"
             data-price3="${cleanPrice(product.price3)}"
+            ${tierMinAttrs(product)}
             data-unit="${product.priceBy || ''}"
             data-moq="${productMoq(product)}"
             data-moq-group="${product.moqGroup || ''}"
@@ -1110,6 +1120,9 @@ function renderVariantCard(variants) {
     price1: vv.price1,
     price2: vv.price2,
     price3: vv.price3,
+    tier1MinQty: vv.tier1MinQty ?? null,
+    tier2MinQty: vv.tier2MinQty ?? null,
+    tier3MinQty: vv.tier3MinQty ?? null,
     priceBy: vv.priceBy || "",
     slug: vv.slug,
     variantLabel: vv.variantLabel || vv.size || "",
@@ -1245,6 +1258,7 @@ function renderVariantCard(variants) {
             data-price1="${cleanPrice(v.price1)}"
             data-price2="${cleanPrice(v.price2)}"
             data-price3="${cleanPrice(v.price3)}"
+            ${tierMinAttrs(v)}
             data-unit="${v.priceBy || ''}"
             data-moq="${productMoq(v)}"
             data-moq-group="${v.moqGroup || ''}"
@@ -1347,6 +1361,9 @@ function applyVariantToCard(card, v) {
     btn.dataset.price1      = cleanPrice(v.price1);
     btn.dataset.price2      = cleanPrice(v.price2);
     btn.dataset.price3      = cleanPrice(v.price3);
+    btn.dataset.tier1MinQty = tierMinQty(v, "tier1_min_qty", "tier1MinQty") ?? "";
+    btn.dataset.tier2MinQty = tierMinQty(v, "tier2_min_qty", "tier2MinQty") ?? "";
+    btn.dataset.tier3MinQty = tierMinQty(v, "tier3_min_qty", "tier3MinQty") ?? "";
     btn.dataset.image       = v.image;
     btn.dataset.unit        = v.priceBy || "";
     btn.dataset.weight      = v.weight  || "";
@@ -2296,6 +2313,9 @@ function populateProductPage(product) {
     addBtn.dataset.price1      = cleanPrice(product.price1);
     addBtn.dataset.price2      = cleanPrice(product.price2);
     addBtn.dataset.price3      = cleanPrice(product.price3);
+    addBtn.dataset.tier1MinQty = tierMinQty(product, "tier1_min_qty", "tier1MinQty") ?? "";
+    addBtn.dataset.tier2MinQty = tierMinQty(product, "tier2_min_qty", "tier2MinQty") ?? "";
+    addBtn.dataset.tier3MinQty = tierMinQty(product, "tier3_min_qty", "tier3MinQty") ?? "";
     // Carried through so the quantity control and the cart can enforce the
     // minimum, and so getTierPrice() knows not to apply case volume tiers.
     addBtn.dataset.unit        = product.priceBy || "";
@@ -2651,6 +2671,9 @@ function setupAddToCartButtons() {
         price1: cleanPrice(button.dataset.price1) || cleanPrice(button.dataset.price),
         price2: cleanPrice(button.dataset.price2) || cleanPrice(button.dataset.price1) || cleanPrice(button.dataset.price),
         price3: cleanPrice(button.dataset.price3) || cleanPrice(button.dataset.price2) || cleanPrice(button.dataset.price1) || cleanPrice(button.dataset.price),
+        tier1MinQty: tierMinQty(button.dataset, "", "tier1MinQty"),
+        tier2MinQty: tierMinQty(button.dataset, "", "tier2MinQty"),
+        tier3MinQty: tierMinQty(button.dataset, "", "tier3MinQty"),
         image: button.dataset.image || "",
         // Stored on the line so the cart can price and validate it without
         // having to look the product up again.
@@ -2687,6 +2710,9 @@ function setupAddToCartButtons() {
         existingProduct.price1 = product.price1;
         existingProduct.price2 = product.price2;
         existingProduct.price3 = product.price3;
+        existingProduct.tier1MinQty = product.tier1MinQty;
+        existingProduct.tier2MinQty = product.tier2MinQty;
+        existingProduct.tier3MinQty = product.tier3MinQty;
         // Choosing Reorder on a product already in the cart upgrades that
         // line rather than silently leaving it one-time.
         if (product.reorder) existingProduct.reorder = product.reorder;
@@ -2957,6 +2983,9 @@ function setupProductQuantity() {
       price1: addBtn.dataset.price1,
       price2: addBtn.dataset.price2,
       price3: addBtn.dataset.price3,
+      tier1MinQty: addBtn.dataset.tier1MinQty,
+      tier2MinQty: addBtn.dataset.tier2MinQty,
+      tier3MinQty: addBtn.dataset.tier3MinQty,
       unit:   addBtn.dataset.unit,
       moq:    addBtn.dataset.moq,
     };
@@ -3888,6 +3917,7 @@ function showFeaturedProducts() {
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
           data-price3="${cleanPrice(product.price3)}"
+          ${tierMinAttrs(product)}
           data-unit="${product.priceBy || ''}"
           data-moq="${productMoq(product)}"
           data-moq-group="${product.moqGroup || ''}"
@@ -5048,6 +5078,7 @@ function hcProductCard(product, badge) {
           data-price1="${cleanPrice(product.price1)}"
           data-price2="${cleanPrice(product.price2)}"
           data-price3="${cleanPrice(product.price3)}"
+          ${tierMinAttrs(product)}
           data-unit="${product.priceBy || ''}"
           data-moq="${productMoq(product)}"
           data-moq-group="${product.moqGroup || ''}"
