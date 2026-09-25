@@ -165,26 +165,9 @@
             </div>
           </div>
 
-          <label class="payment-option" id="achOptionLabel" for="achRadio">
-            <input type="radio" name="paymentMethod" value="ach" id="achRadio">
-            <div class="payment-icon">&#127974;</div>
-            <div class="payment-option-content">
-              <h3>Bank Account (ACH)</h3>
-              <p>Pay directly from your bank account. Settles in 4&ndash;5 business days &mdash; lower fees than a card.</p>
-            </div>
-          </label>
-          <div class="card-fields" id="stripeAchFields" style="display:none;padding:0 16px 16px;margin-top:-8px;">
-            <div class="full">
-              <label for="achAccountName" style="display:block;font-weight:700;font-size:13px;margin-bottom:6px;color:#374151;">Name on Bank Account</label>
-              <input type="text" id="achAccountName" placeholder="Full name or business name on the account" style="width:100%;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;box-sizing:border-box;">
-            </div>
-            <div class="full" style="margin-top:12px;">
-              <label style="display:block;font-weight:700;font-size:13px;margin-bottom:6px;color:#374151;">Bank Account</label>
-              <div id="stripe-ach-element" style="min-height:44px;"></div>
-              <div id="stripe-ach-errors" style="color:#dc2626;font-size:12px;margin-top:6px;min-height:16px;"></div>
-              <p style="font-size:12px;color:#64748b;margin-top:6px;">You'll be asked to securely log into your bank, or enter routing/account numbers directly.</p>
-            </div>
-          </div>
+          <!-- ACH (bank account) removed from cart checkout (2026-09-25):
+               card only here. Bank payment is still offered on invoices
+               sent from admin -- see api/send-invoice.js. -->
 
           <!-- Invoice Me / Purchase Order removed from checkout entirely
                (2026-09-19): they let any customer, unvetted, place a real
@@ -556,60 +539,8 @@
         return;
       }
 
-      // Show/hide card vs. ACH fields on radio change
-      document.querySelectorAll('input[name="paymentMethod"]').forEach(function (r) {
-        r.addEventListener('change', function () {
-          var showCard = document.getElementById('cardRadio').checked;
-          var showAch  = document.getElementById('achRadio').checked;
-          document.getElementById('stripeCardFields').style.display = showCard ? 'block' : 'none';
-          document.getElementById('stripeAchFields').style.display  = showAch  ? 'block' : 'none';
-          if (showCard && !clientSecret) initPaymentIntent();
-          if (showAch  && !achClientSecret) initAchPaymentIntent();
-        });
-      });
-
       loadSummary();
       initPaymentIntent();
-    }
-
-    // ACH gets its own PaymentIntent + Elements group, created lazily only
-    // once the customer actually picks "Bank Account (ACH)" -- see the
-    // comment in api/create-payment-intent.js for why it can't share the
-    // card PaymentIntent.
-    var achElements, achPaymentElement, achClientSecret;
-    function initAchPaymentIntent() {
-      var total = window._orderTotal || 0;
-      if (total < 0.50) return;
-      var checkout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-
-      fetch('/api/create-payment-intent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          // No `amount`: the server prices the cart itself from the
-          // products table. See api/create-payment-intent.js.
-          items: cartLineItems(),
-          state: checkout.state || '',
-          method: 'ach',
-          metadata: {
-            order_number: window._orderNumber || ('RRS-' + Date.now()),
-            customer_email: checkout.email || '',
-          },
-        }),
-      }).then(function (res) { return res.json(); }).then(function (data) {
-        if (data.error) throw new Error(data.error);
-        applyServerTotals(data);
-        achClientSecret = data.clientSecret;
-        achElements = stripe.elements({ clientSecret: achClientSecret });
-        achPaymentElement = achElements.create('payment');
-        achPaymentElement.mount('#stripe-ach-element');
-        achPaymentElement.on('change', function (e) {
-          document.getElementById('stripe-ach-errors').textContent = (e.error ? e.error.message : '');
-        });
-      }).catch(function (err) {
-        console.error('ACH PaymentIntent error:', err);
-        document.getElementById('stripe-ach-errors').textContent = 'Bank payment unavailable right now. Please choose another payment method or try again shortly.';
-      });
     }
 
     if (document.readyState === 'loading') {
@@ -992,61 +923,6 @@
           document.getElementById('submitBtnLoading').style.display = 'none';
           showError('Something went wrong submitting your order (reference ' + orderNum + '). Your cart has not been cleared — please try again, or call (252) 227-0073 for help.');
         }
-        return;
-      }
-
-      if (method === 'ach') {
-        if (!achClientSecret || !achPaymentElement) {
-          showError('Bank payment not ready yet. Please wait a moment and try again.');
-          return;
-        }
-        var achName = document.getElementById('achAccountName') ? document.getElementById('achAccountName').value.trim() : '';
-        if (!achName) { showError('Please enter the name on the bank account.'); return; }
-
-        _submitting = true;
-        btn.disabled = true;
-        document.getElementById('submitBtnText').style.display = 'none';
-        document.getElementById('submitBtnLoading').style.display = 'inline';
-
-        var achCheckout = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-        stripe.confirmPayment({
-          elements: achElements,
-          confirmParams: {
-            return_url: window.location.origin + '/order-confirmation',
-            payment_method_data: {
-              billing_details: {
-                name: achName,
-                email: achCheckout.email || undefined,
-                address: { line1: achCheckout.street || undefined, city: achCheckout.city || undefined, state: achCheckout.state || undefined, postal_code: achCheckout.zip || undefined, country: 'US' }
-              }
-            }
-          },
-          redirect: 'if_required', // most banks confirm in-page (Financial Connections); only an uncommon path needs the return_url above
-        }).then(async function (result) {
-          _submitting = false;
-          btn.disabled = false;
-          document.getElementById('submitBtnText').style.display = 'inline';
-          document.getElementById('submitBtnLoading').style.display = 'none';
-
-          if (result.error) { showError(result.error.message); return; }
-
-          var achPi = result.paymentIntent;
-          // 'processing' is the NORMAL outcome for ACH -- a bank debit
-          // settles in 4-5 business days, not instantly like a card.
-          if (achPi.status === 'succeeded' || achPi.status === 'processing') {
-            await finalizeChargedOrder(achPi, 'ach', achCheckout, btn);
-          } else if (achPi.status === 'requires_action') {
-            showError('Your bank needs one more step to confirm this payment. Please follow the prompt shown, then try submitting again.');
-          } else {
-            showError('We could not start the bank payment (status: ' + achPi.status + '). Please try again or choose another payment method.');
-          }
-        }).catch(function (err) {
-          _submitting = false;
-          btn.disabled = false;
-          document.getElementById('submitBtnText').style.display = 'inline';
-          document.getElementById('submitBtnLoading').style.display = 'none';
-          showError('Something went wrong starting the bank payment: ' + err.message);
-        });
         return;
       }
 
