@@ -5696,8 +5696,6 @@ function ensurePriceModal() {
         <button type="button" class="pm-chat-btn">Chat with us now</button>
         <button type="button" class="pm-later-btn">Maybe later</button>
       </div>
-      <p class="pm-alt">Prefer to talk? Call <a href="tel:+12522270073">(252) 227-0073</a>
-        or email <a href="mailto:sales@roomreadysupply.com">sales@roomreadysupply.com</a>.</p>
     </div>`;
   document.body.appendChild(el);
 
@@ -5736,7 +5734,7 @@ function closePriceModal() {
 // The widget loads lazily (after page load + idle), so a fast click can
 // arrive before it exists: load it now if needed, then wait briefly for
 // GHL's API. If it never appears (blocked by an ad blocker, say), the
-// modal's phone/email line is the fallback.
+// header's phone number and email are still there.
 function openGhlChat() {
   loadGhlChatWidget();
   let tries = 0;

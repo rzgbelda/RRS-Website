@@ -10617,8 +10617,6 @@ html.rrs-quote-only .pp-price-cta {
 .pm-later-btn { border: 1.5px solid #cbd5e1; background: #fff; color: #334155; }
 .pm-later-btn:hover { border-color: #0d2c50; }
 .pm-chat-btn:focus-visible, .pm-later-btn:focus-visible, .pm-close:focus-visible { outline: 3px solid #0d2c50; outline-offset: 2px; }
-.pm-alt { margin: 16px 0 0; font-size: 12.5px; color: #64748b; text-align: center; line-height: 1.5; }
-.pm-alt a { color: #0d2c50; font-weight: 600; }
 
 @media (max-width: 480px) {
   .pm-modal { padding: 28px 20px 20px; }
