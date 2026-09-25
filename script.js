@@ -4422,12 +4422,10 @@ async function submitContactForm(e) {
   const bizType    = val("ciqBizType");
   const locations  = val("ciqLocations");
   const email      = val("ciqEmail");
-  const phone      = val("ciqPhone");
   const city       = val("ciqCity");
   const state      = val("ciqState");
   const zip        = val("ciqZip");
   const volume     = val("ciqVolume");
-  const contact    = val("ciqContactMethod");
   const message    = val("ciqMessage");
 
   const products = Array.from(
@@ -4444,9 +4442,6 @@ async function submitContactForm(e) {
   if (!bizType)   { markErr("ciqBizType");   errors.push("Business type"); }
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     markErr("ciqEmail"); errors.push("Valid email address");
-  }
-  if (!phone || phone.replace(/\D/g, "").length < 10) {
-    markErr("ciqPhone"); errors.push("Valid phone number (10+ digits)");
   }
   if (!city)  { markErr("ciqCity");  errors.push("City"); }
   if (!state) { markErr("ciqState"); errors.push("State"); }
@@ -4488,13 +4483,16 @@ async function submitContactForm(e) {
       business_type:           bizType,
       number_of_locations:     locations || null,
       email,
-      phone,
+      // The form no longer asks for a phone number: GHL's A2P review
+      // rejects pages that collect phone numbers anywhere besides the
+      // GHL chat widget (the site's single SMS opt-in source). The
+      // column is still NOT NULL, so send an empty string.
+      phone:                   "",
       city,
       state,
       zip_code:                zip || null,
       products_interested:     products.length ? products : null,
       monthly_purchase_volume: volume || null,
-      preferred_contact:       contact || null,
       message:                 message || null,
       attachment_url:          attachmentUrl,
       status:                  "new",
