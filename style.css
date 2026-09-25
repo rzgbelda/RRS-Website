@@ -9079,15 +9079,7 @@ input.qty-input:focus {
   .option-card { flex: none; width: 100%; }
 }
 
-/* Floating QR clearance on mobile */
-#catalogQR {
-  bottom: clamp(16px,4vw,24px) !important;
-  right: clamp(12px,3vw,24px) !important;
-}
 
-@media (max-width: 600px) {
-  #catalogQR { bottom: 72px !important; }
-}
 
 .in-stock {
   color: #16a34a;
@@ -10235,13 +10227,13 @@ input.qty-input:focus {
 /* ══════════════════════════════════════════════════════════════════
    PERSISTENT MINI-CART
    Docked bottom-right so the order stays visible while the customer
-   keeps shopping. Sits left of the catalog QR widget (z-index 9998)
+   keeps shopping. Leaves the corner to its right for the GHL chat bubble
    and above the Mix & Match bar, and is suppressed entirely on
    /cart, /checkout and /payment (see miniCartSuppressed()).
    ══════════════════════════════════════════════════════════════════ */
 .mini-cart {
   position: fixed;
-  right: 92px;          /* clears the 54px QR button + its 24px gutter */
+  right: 92px;          /* clears the GHL chat bubble (see loadGhlChatWidget in script.js) */
   bottom: 24px;
   z-index: 9997;
   width: 320px;
@@ -10471,8 +10463,9 @@ a.mc-tier-bulk:hover { background: #dcfce7; }
 @media (max-width: 560px) {
   /* Full-width strip along the bottom on phones: a 320px floating card
      covers too much of a small screen while scrolling the catalog. */
+  /* right: 84px leaves the GHL chat bubble (bottom-right) uncovered. */
   .mini-cart {
-    right: 12px; left: 12px; bottom: 12px;
+    right: 84px; left: 12px; bottom: 12px;
     width: auto; max-width: none;
   }
   .mc-body { max-height: 46vh; }

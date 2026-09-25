@@ -30,6 +30,19 @@
         {
           "key": "Permissions-Policy",
           "value": "geolocation=(), microphone=(), camera=(), payment=(self)"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com https://js.stripe.com https://cdn.sheetjs.com https://connect.facebook.net https://widgets.leadconnectorhq.com https://stcdn.leadconnectorhq.com https://services.leadconnectorhq.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests"
+        }
+      ]
+    },
+    {
+      "source": "/(checkout|payment|order-confirmation|account|login|reset-password|admin)(\\.html)?",
+      "headers": [
+        {
+          "key": "Content-Security-Policy",
+          "value": "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.googletagmanager.com https://js.stripe.com https://cdn.sheetjs.com https://connect.facebook.net; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests"
         }
       ]
     },
