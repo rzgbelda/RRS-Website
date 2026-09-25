@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -28,7 +32,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="articleJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
   <style>
     .article-page { max-width: 760px; margin: 0 auto; padding: 40px 24px 90px; }
     .article-page.apg-loading .article-body-wrap { visibility: hidden; }
@@ -188,7 +192,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
-<script src="script.js?v=20260925b"></script>
+<script src="script.js?v=20260926a"></script>
 <script src="article.js"></script>
 </body>
 </html>

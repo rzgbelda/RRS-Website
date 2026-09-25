@@ -280,7 +280,7 @@ function setScriptContentById(html, id, obj) {
 // picked up reliably from what is present on first fetch -- exactly the
 // gap Day 6 closed for the plain meta tags. This closes it for structured
 // data too, across all ~120 product pages.
-function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
+function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl, quoteOnly = false) {
   const priceVal = cleanPrice(p.price || p.price_tier1);
 
   const offer = {
@@ -332,7 +332,10 @@ function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
     image: optimizeImageUrl(p.image_url) || '',
     sku: p.sku || slugify(p.name),
     brand: { '@type': 'Brand', name: 'Room Ready Supply' },
-    offers: offer,
+    // Quote-only mode (main domain) hides prices on the page, so the
+    // structured data must not publish them either. Mirrors the same
+    // rule in script.js's populateProductPage().
+    ...(quoteOnly ? {} : { offers: offer }),
   };
 }
 
@@ -352,7 +355,7 @@ function buildBreadcrumbJsonLd(p, pageUrl) {
   return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: trail };
 }
 
-function injectMeta(html, p) {
+function injectMeta(html, p, { quoteOnly = false } = {}) {
   const seoTitle = buildSeoTitle(p);
   // Admin's SEO Title override, when set, IS the full <title>/og:title --
   // no " | Room Ready Supply" auto-suffix, since a manually-written title
@@ -394,7 +397,7 @@ function injectMeta(html, p) {
   // when JS takes over.
   out = setTextById(out, 'productDescription',  p.description || '');
   out = setTextById(out, 'overviewDescription', p.overview || p.description || '');
-  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl));
+  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl, quoteOnly));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;
 }
@@ -657,7 +660,11 @@ module.exports = async (req, res) => {
     const product = await lookupProduct(item);
     if (!product) { res.status(200).send(shell); return; }
 
-    res.status(200).send(injectMeta(shell, product));
+    // Same test as the inline snippet in each page's <head>: only the main
+    // domain is quote-only; affiliate subdomains keep their prices.
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase();
+    const quoteOnly = /^(www\.)?roomreadysupply\.com$/.test(host);
+    res.status(200).send(injectMeta(shell, product, { quoteOnly }));
   } catch (err) {
     // Any failure here degrades to exactly the previous behaviour: the
     // unmodified shell, with the browser filling the tags in as before.

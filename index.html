@@ -1,6 +1,10 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -88,7 +92,7 @@
     }
   }
   </script>
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
 </head>
 
 <body>
@@ -1106,7 +1110,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="script.js?v=20260925b"></script>
+<script src="script.js?v=20260926a"></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
 <div id="contactModal" class="ciq-overlay" role="dialog" aria-modal="true" aria-labelledby="ciqTitle" style="display:none">

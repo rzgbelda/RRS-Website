@@ -10470,3 +10470,157 @@ a.mc-tier-bulk:hover { background: #dcfce7; }
   }
   .mc-body { max-height: 46vh; }
 }
+
+/* ══════════════════════════════════════════════════════════════════
+   QUOTE-ONLY MODE (prices hidden)
+   html.rrs-quote-only is set by an inline snippet in each page's <head>
+   on the main domain only (affiliate subdomains keep prices). Prices,
+   quantity pickers and cart controls are hidden; every product shows a
+   "Want to know our prices?" button that opens the pricing modal
+   (openPriceModal() in script.js), which hands off to the GHL chat.
+   Cart/checkout/payment pages are untouched: customers who accept a
+   quote from their account still pay there.
+   ══════════════════════════════════════════════════════════════════ */
+.price-cta-btn,
+.pp-price-cta { display: none; }
+
+html.rrs-quote-only :is(
+  .product-card .price-block,
+  .product-card .price-range,
+  #featured-products .price,
+  .product-card .add-btn,
+  .product-card .quote-add-btn,
+  .hc-price-row,
+  .hc-card .add-btn,
+  .vm-row-price,
+  .cat-card .price,
+  .pp-purchase-panel,
+  .pp-tier-cards-block,
+  .buy-box .pricing-box,
+  .buy-box .qty-section,
+  .product-assurance,
+  .product-badges .pb-item:not(#productSoldByBadge),
+  .bd-card-price-block,
+  .bd-cart-btn,
+  .bd-card-specs li:has(.bd-retail-strike),
+  .wishlist-card-body .price,
+  .wl-add-btn,
+  .cart-container,
+  .mini-cart,
+  .moq-group-bar
+) { display: none !important; }
+html.rrs-quote-only tr:has(#specPrice) { display: none !important; }
+
+html.rrs-quote-only .price-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  margin-top: 12px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  background: #ED7226;
+  color: #fff;
+  font: 700 13px/1.2 'Inter', sans-serif;
+  letter-spacing: .2px;
+  cursor: pointer;
+  transition: background .2s ease, transform .2s ease;
+}
+html.rrs-quote-only .price-cta-btn:hover { background: #d85f18; }
+html.rrs-quote-only .price-cta-btn:focus-visible { outline: 3px solid #0d2c50; outline-offset: 2px; }
+html.rrs-quote-only .price-cta-btn--lg { min-height: 52px; font-size: 16px; border-radius: 10px; }
+
+/* Wishlist puts the CTA beside a small remove button. */
+html.rrs-quote-only .wishlist-card-actions .price-cta-btn { margin-top: 0; flex: 1; }
+/* Best Deals keeps "View Product" next to it. */
+html.rrs-quote-only .bd-actions .price-cta-btn { margin-top: 0; }
+
+/* Product page buy box */
+html.rrs-quote-only .pp-price-cta {
+  display: block;
+  padding: 20px;
+  border: 1.5px solid #fde3d2;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff7f1 0%, #fff 100%);
+}
+.pp-price-cta-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.2px;
+  text-transform: uppercase; color: #ED7226;
+}
+.pp-price-cta-title { margin: 0 0 8px; font-size: 20px; font-weight: 800; color: #0d2c50; line-height: 1.25; }
+.pp-price-cta-text  { margin: 0 0 4px; font-size: 14px; color: #475569; line-height: 1.55; }
+
+/* Pricing modal */
+.pm-overlay {
+  position: fixed; inset: 0; z-index: 10000;
+  background: rgba(13,44,80,.55);
+  backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  overflow-y: auto;
+}
+.pm-overlay[hidden] { display: none; }
+.pm-modal {
+  position: relative;
+  width: 100%; max-width: 480px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 32px 28px 24px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 72px rgba(0,0,0,.22);
+  animation: ciq-fadein .25s ease;
+}
+.pm-close {
+  position: absolute; top: 14px; right: 14px;
+  width: 34px; height: 34px;
+  border: none; border-radius: 50%;
+  background: #f1f5f9; color: #475569;
+  font-size: 20px; line-height: 1; cursor: pointer;
+}
+.pm-close:hover { background: #e2e8f0; }
+.pm-eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px; font-weight: 800; letter-spacing: 1.2px;
+  text-transform: uppercase; color: #ED7226;
+}
+.pm-title { margin: 0 36px 12px 0; font-size: 22px; font-weight: 800; color: #0d2c50; line-height: 1.25; }
+.pm-lead  { margin: 0 0 14px; font-size: 14.5px; color: #475569; line-height: 1.6; }
+.pm-product {
+  margin: 0 0 14px; padding: 10px 12px;
+  border-radius: 8px; background: #f8fafc;
+  font-size: 13px; color: #475569;
+}
+.pm-product strong { color: #0d2c50; }
+.pm-steps { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 10px; }
+.pm-steps li { display: flex; align-items: flex-start; gap: 12px; font-size: 14px; color: #1e293b; line-height: 1.5; }
+.pm-step-num {
+  flex-shrink: 0;
+  width: 26px; height: 26px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #0d2c50; color: #fff; font-size: 13px; font-weight: 700;
+}
+.pm-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.pm-chat-btn, .pm-later-btn {
+  flex: 1 1 160px;
+  min-height: 46px;
+  border-radius: 10px;
+  font: 700 14px/1 'Inter', sans-serif;
+  cursor: pointer;
+}
+.pm-chat-btn { border: none; background: #ED7226; color: #fff; }
+.pm-chat-btn:hover { background: #d85f18; }
+.pm-later-btn { border: 1.5px solid #cbd5e1; background: #fff; color: #334155; }
+.pm-later-btn:hover { border-color: #0d2c50; }
+.pm-chat-btn:focus-visible, .pm-later-btn:focus-visible, .pm-close:focus-visible { outline: 3px solid #0d2c50; outline-offset: 2px; }
+.pm-alt { margin: 16px 0 0; font-size: 12.5px; color: #64748b; text-align: center; line-height: 1.5; }
+.pm-alt a { color: #0d2c50; font-weight: 600; }
+
+@media (max-width: 480px) {
+  .pm-modal { padding: 28px 20px 20px; }
+  .pm-title { font-size: 19px; }
+}

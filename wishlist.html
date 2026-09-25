@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -14,7 +18,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wishlist — Room Ready Supply</title>
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
   <style>
     .wishlist-page { max-width:1100px; margin:60px auto; padding:0 24px; }
     .wishlist-page h1 { font-size:32px; color:#0b2d52; margin-bottom:8px; }
@@ -122,7 +126,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260925b"></script>
+  <script src="script.js?v=20260926a"></script>
   <script>
     let wishlistId = null;
 
@@ -169,6 +173,7 @@
                   <span class="price">$${Number(p.price).toFixed(2)}</span>
                   <div class="wishlist-card-actions">
                     <button class="wl-add-btn" onclick="addToCart('${i.id}','${p.id}','${p.name.replace(/'/g,"\\'").replace(/"/g,'&quot;')}',${p.price},'${p.image_url||'assets/img/product-placeholder.svg'}')">Add to Order</button>
+                    ${typeof priceCtaButton === "function" ? priceCtaButton(p.name) : ''}
                     <button class="wl-remove-btn" onclick="removeWishlistItem('${i.id}')">✕</button>
                   </div>
                 </div>

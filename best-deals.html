@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -20,7 +24,7 @@
   <!-- Marketing-campaign landing page: kept out of search results (it's meant
        to be reached from ads/email/social, not organic search) but links to
        real product pages still get crawled and pass value through. -->
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
 
   <!-- Organization schema -- identifies Room Ready Supply itself to search
        engines. Belongs once per crawlable page, not per-product; this page
@@ -468,7 +472,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260925b"></script>
+  <script src="script.js?v=20260926a"></script>
   <script>
     // Renders whatever the admin "Best Deals" tab currently has active --
     // price, name, and image always come from the live products row, never
@@ -619,6 +623,7 @@
               </div>
               <div class="bd-actions">
                 ${cartBtn}
+                ${typeof priceCtaButton === "function" ? priceCtaButton(p.name) : ''}
                 <a class="bd-buy-btn" href="${buyHref}">View Product <span class="bd-arrow">&rarr;</span></a>
               </div>
             </div>
@@ -633,6 +638,9 @@
     // from (never a hardcoded/stale copy) -- price and stock status can
     // never drift out of sync with what's actually on the page.
     function injectBestDealsSchema(deals, bySku) {
+      // Quote-only mode hides prices, so don't publish them to search
+      // engines here either (see RRS_QUOTE_ONLY in script.js).
+      if (document.documentElement.classList.contains('rrs-quote-only')) return;
       const items = deals
         .map(d => bySku[d.sku])
         .filter(p => p && p.price != null)

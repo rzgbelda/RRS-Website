@@ -2,6 +2,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -17,7 +21,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Account &mdash; Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow">
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
   <style>
     /* ── Page shell ── */
     .acc-page { background:#f4f6fb; min-height:100vh; }
@@ -535,7 +539,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20260925b"></script>
+  <script src="script.js?v=20260926a"></script>
   <script>
     document.addEventListener("DOMContentLoaded", async () => {
       if (typeof window.sb === "undefined") {

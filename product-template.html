@@ -1,6 +1,10 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
   <!-- Google tag (gtag.js) -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
   <script>
@@ -24,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20260925a" />
+  <link rel="stylesheet" href="style.css?v=20260926a" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -334,6 +338,15 @@
       </div>
 
       <aside class="buy-box">
+        <!-- Quote-only mode (html.rrs-quote-only): replaces the price,
+             quantity and Add to Cart below, which style.css hides. Opens
+             openPriceModal() in script.js. Hidden everywhere else. -->
+        <div class="pp-price-cta">
+          <p class="pp-price-cta-eyebrow">Custom pricing</p>
+          <p class="pp-price-cta-title">Pricing made for your business</p>
+          <p class="pp-price-cta-text">We tailor every quote to your volume and how often you restock, so you never pay a one-size-fits-all price.</p>
+          <button type="button" class="price-cta-btn price-cta-btn--lg">Want to know our prices?</button>
+        </div>
 
         <div class="pricing-box">
   <span class="price-label">Starting At</span>
@@ -478,7 +491,7 @@
 
   </section>
 
-  <script src="script.js?v=20260925b"></script>
+  <script src="script.js?v=20260926a"></script>
 
 </body>
 

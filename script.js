@@ -6,6 +6,24 @@ let currentFeaturedIndex = 0;
 let isSliding = false;
 
 /* =========================
+   QUOTE-ONLY MODE (prices hidden)
+========================= */
+// On roomreadysupply.com no product price is shown and nothing can be
+// added to the cart: every product shows "Want to know our prices?",
+// which opens openPriceModal() and hands the visitor to the GHL chat so
+// the team can send them custom pricing. The class is set by an inline
+// snippet in each page's <head> (before first paint, so no price flashes);
+// style.css does the hiding under html.rrs-quote-only.
+//
+// Affiliate subdomains are deliberately NOT in quote-only mode: they sell
+// at listed prices through their own storefront and have no RRS chat
+// widget to send anyone to (see loadGhlChatWidget()).
+//
+// Cart, checkout and payment keep working for customers who accept a
+// quote from their account ("Add to cart at quoted pricing").
+const RRS_QUOTE_ONLY = document.documentElement.classList.contains("rrs-quote-only");
+
+/* =========================
    AFFILIATE SUBDOMAIN ATTRIBUTION
 ========================= */
 // Visiting an affiliate's own subdomain (trustmark.roomreadysupply.com)
@@ -1051,6 +1069,7 @@ function renderSingleCard(product) {
           >
             Get Volume Price
           </button>
+          ${priceCtaButton(product.name)}
         </div>
       </div>
     </div>`;
@@ -1297,6 +1316,7 @@ function renderVariantCard(variants) {
           >
             Get Volume Price
           </button>
+          ${priceCtaButton(v.productFamily || v.name)}
         </div>
       </div>
     </div>`;
@@ -1500,6 +1520,7 @@ function setupProductCardClicks() {
   document.querySelectorAll(".product-card, .hc-card").forEach(card => {
     card.onclick = e => {
       if (e.target.closest(".add-btn")) return;
+      if (e.target.closest(".price-cta-btn")) return;
       if (e.target.closest(".variant-pill")) return;
       // Opens the options modal instead of navigating. Must come before the
       // navigation below, or the card swallows the click and leaves the page.
@@ -2089,7 +2110,10 @@ function populateProductPage(product) {
     image: product.image,
     sku: product.itemNumber || product.slug,
     brand: { "@type": "Brand", name: "Room Ready Supply" },
-    offers: offer
+    // Quote-only mode hides prices on the page, so search results must
+    // not show them either -- no Offer at all rather than one without a
+    // price, which Google treats as invalid.
+    ...(RRS_QUOTE_ONLY ? {} : { offers: offer })
   };
   const ldEl = document.getElementById("productJsonLd");
   if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
@@ -3976,6 +4000,7 @@ function showFeaturedProducts() {
           <img src="assets/img/Cart.png" alt="">
           ${product.inStock === false ? "OUT OF STOCK" : "ADD TO CART"}
         </button>
+        ${priceCtaButton(product.name)}
 
       </div>
     `;
@@ -5134,6 +5159,7 @@ function hcProductCard(product, badge) {
           <img src="assets/img/Cart.png" alt="">
           ADD TO CART
         </button>
+        ${priceCtaButton(product.name)}
       </div>
     </div>
   `;
@@ -5283,6 +5309,7 @@ function fillCategoryTiles() {
 const MINICART_COLLAPSE_KEY = "rrs_minicart_collapsed";
 
 function miniCartSuppressed() {
+  if (RRS_QUOTE_ONLY) return true; // it shows prices
   const p = (location.pathname || "").toLowerCase().replace(/\.html$/, "");
   return p.endsWith("/cart") || p.endsWith("/checkout") || p.endsWith("/payment");
 }
@@ -5623,3 +5650,125 @@ function loadGhlChatWidget() {
   if (document.readyState === "complete") start();
   else window.addEventListener("load", start, { once: true });
 })();
+
+/* =========================
+   "WANT TO KNOW OUR PRICES?" MODAL (quote-only mode)
+========================= */
+// Every product card and the product page carry this button; style.css
+// only shows it under html.rrs-quote-only. Clicking it explains that
+// pricing is tailored and sends the visitor to the GHL chat, which is
+// the site's single place to leave a phone number (see the A2P note in
+// submitContactForm()).
+function priceCtaButton(productName) {
+  return `<button type="button" class="price-cta-btn" data-product="${escAttr(productName || "")}">Want to know our prices?</button>`;
+}
+
+let _pmLastFocus = null;
+
+function ensurePriceModal() {
+  let el = document.getElementById("priceModal");
+  if (el) return el;
+
+  el = document.createElement("div");
+  el.id = "priceModal";
+  el.className = "pm-overlay";
+  el.setAttribute("role", "dialog");
+  el.setAttribute("aria-modal", "true");
+  el.setAttribute("aria-labelledby", "pmTitle");
+  el.hidden = true;
+  el.innerHTML = `
+    <div class="pm-modal">
+      <button type="button" class="pm-close" aria-label="Close">&times;</button>
+      <p class="pm-eyebrow">Custom pricing</p>
+      <h2 class="pm-title" id="pmTitle">Let&rsquo;s build a price that fits your business</h2>
+      <p class="pm-lead">
+        Every property orders differently, so we don&rsquo;t believe in one-size-fits-all
+        price lists. We tailor pricing to your volume and how often you restock,
+        so you save more on every case you order with us.
+      </p>
+      <p class="pm-product" hidden>You asked about: <strong class="pm-product-name"></strong></p>
+      <ol class="pm-steps">
+        <li><span class="pm-step-num">1</span><span>Open the <strong>chat button in the bottom-right corner</strong> of your screen.</span></li>
+        <li><span class="pm-step-num">2</span><span>Leave your name, phone number and the products you need.</span></li>
+        <li><span class="pm-step-num">3</span><span>Our team sends you pricing made for your business.</span></li>
+      </ol>
+      <div class="pm-actions">
+        <button type="button" class="pm-chat-btn">Chat with us now</button>
+        <button type="button" class="pm-later-btn">Maybe later</button>
+      </div>
+      <p class="pm-alt">Prefer to talk? Call <a href="tel:+12522270073">(252) 227-0073</a>
+        or email <a href="mailto:sales@roomreadysupply.com">sales@roomreadysupply.com</a>.</p>
+    </div>`;
+  document.body.appendChild(el);
+
+  el.addEventListener("click", e => { if (e.target === el) closePriceModal(); });
+  el.querySelector(".pm-close").addEventListener("click", closePriceModal);
+  el.querySelector(".pm-later-btn").addEventListener("click", closePriceModal);
+  el.querySelector(".pm-chat-btn").addEventListener("click", () => {
+    closePriceModal();
+    openGhlChat();
+  });
+  return el;
+}
+
+function openPriceModal(productName) {
+  const el = ensurePriceModal();
+  const name = String(productName || "").trim();
+  const nameRow = el.querySelector(".pm-product");
+  nameRow.hidden = !name;
+  el.querySelector(".pm-product-name").textContent = name;
+
+  _pmLastFocus = document.activeElement;
+  el.hidden = false;
+  pushModal(closePriceModal);
+  el.querySelector(".pm-chat-btn").focus();
+  if (typeof gtag === "function") gtag("event", "price_inquiry_open", { product_name: name || undefined });
+}
+
+function closePriceModal() {
+  const el = document.getElementById("priceModal");
+  if (!el || el.hidden) return;
+  el.hidden = true;
+  popModal(closePriceModal);
+  if (_pmLastFocus && typeof _pmLastFocus.focus === "function") _pmLastFocus.focus();
+}
+
+// The widget loads lazily (after page load + idle), so a fast click can
+// arrive before it exists: load it now if needed, then wait briefly for
+// GHL's API. If it never appears (blocked by an ad blocker, say), the
+// modal's phone/email line is the fallback.
+function openGhlChat() {
+  loadGhlChatWidget();
+  let tries = 0;
+  (function attempt() {
+    const cw = window.leadConnector && window.leadConnector.chatWidget;
+    if (cw && typeof cw.openWidget === "function") {
+      try { cw.openWidget(); } catch (e) { console.warn("GHL openWidget failed", e); }
+      return;
+    }
+    if (++tries < 40) setTimeout(attempt, 250);
+  })();
+  if (typeof gtag === "function") gtag("event", "price_inquiry_chat");
+}
+
+document.addEventListener("click", e => {
+  const cta = e.target.closest(".price-cta-btn");
+  if (cta) {
+    e.preventDefault();
+    e.stopPropagation();
+    const name = cta.dataset.product
+      || (document.getElementById("productName") || {}).textContent
+      || "";
+    openPriceModal(name);
+    return;
+  }
+  // Safety net: if any add-to-cart control is still reachable in
+  // quote-only mode (a template this file doesn't own, say), it opens the
+  // pricing modal instead of adding a list-priced item to the cart.
+  if (!RRS_QUOTE_ONLY) return;
+  const add = e.target.closest(".add-btn, .quote-add-btn, .wl-add-btn");
+  if (!add) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  openPriceModal(add.dataset.name || (document.getElementById("productName") || {}).textContent || "");
+}, true);
