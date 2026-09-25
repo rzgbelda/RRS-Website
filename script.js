@@ -2110,13 +2110,14 @@ function populateProductPage(product) {
     image: product.image,
     sku: product.itemNumber || product.slug,
     brand: { "@type": "Brand", name: "Room Ready Supply" },
-    // Quote-only mode hides prices on the page, so search results must
-    // not show them either -- no Offer at all rather than one without a
-    // price, which Google treats as invalid.
-    ...(RRS_QUOTE_ONLY ? {} : { offers: offer })
+    offers: offer
   };
   const ldEl = document.getElementById("productJsonLd");
-  if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
+  // Quote-only mode hides prices, and Google flags a Product without an
+  // Offer as invalid, so the block is removed rather than published
+  // without a price. Same rule server-side in api/product-meta.js.
+  if (ldEl && RRS_QUOTE_ONLY) ldEl.remove();
+  else if (ldEl) ldEl.textContent = JSON.stringify(jsonLd);
 
   // Breadcrumb structured data, so search results can show the
   // Home > Catalog > Category > Product trail instead of a bare URL.

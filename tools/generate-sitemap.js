@@ -22,6 +22,7 @@ const SUPABASE_ANON = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 const STATIC_PAGES = [
   { path: '/',                changefreq: 'weekly',  priority: '1.0' },
   { path: '/catalog',         changefreq: 'weekly',  priority: '0.9' },
+  { path: '/quote',           changefreq: 'weekly',  priority: '0.9' },
   { path: '/blog',            changefreq: 'weekly',  priority: '0.7' },
   { path: '/shipping-policy', changefreq: 'monthly', priority: '0.5' },
   { path: '/terms',           changefreq: 'yearly',  priority: '0.3' },
@@ -38,6 +39,8 @@ const STATIC_PAGES = [
   { path: '/hotel-supplies-north-carolina',   changefreq: 'monthly', priority: '0.9' },
   { path: '/hotel-supplies-virginia',         changefreq: 'monthly', priority: '0.9' },
   { path: '/hotel-supplies-outer-banks',      changefreq: 'monthly', priority: '0.9' },
+  { path: '/hotel-supplies-florida',          changefreq: 'monthly', priority: '0.9' },
+  { path: '/hotel-supplies-georgia',          changefreq: 'monthly', priority: '0.9' },
 ];
 
 function slugify(s) {

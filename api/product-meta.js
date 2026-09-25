@@ -280,7 +280,7 @@ function setScriptContentById(html, id, obj) {
 // picked up reliably from what is present on first fetch -- exactly the
 // gap Day 6 closed for the plain meta tags. This closes it for structured
 // data too, across all ~120 product pages.
-function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl, quoteOnly = false) {
+function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl) {
   const priceVal = cleanPrice(p.price || p.price_tier1);
 
   const offer = {
@@ -332,10 +332,7 @@ function buildProductJsonLd(p, seoTitle, metaDesc, pageUrl, quoteOnly = false) {
     image: optimizeImageUrl(p.image_url) || '',
     sku: p.sku || slugify(p.name),
     brand: { '@type': 'Brand', name: 'Room Ready Supply' },
-    // Quote-only mode (main domain) hides prices on the page, so the
-    // structured data must not publish them either. Mirrors the same
-    // rule in script.js's populateProductPage().
-    ...(quoteOnly ? {} : { offers: offer }),
+    offers: offer,
   };
 }
 
@@ -397,7 +394,14 @@ function injectMeta(html, p, { quoteOnly = false } = {}) {
   // when JS takes over.
   out = setTextById(out, 'productDescription',  p.description || '');
   out = setTextById(out, 'overviewDescription', p.overview || p.description || '');
-  out = setScriptContentById(out, 'productJsonLd',   buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl, quoteOnly));
+  // Quote-only mode (main domain) hides prices, and a Product block
+  // without an Offer is flagged invalid by Google ("Either 'offers',
+  // 'review', or 'aggregateRating' should be specified") while earning no
+  // rich result anyway -- so the block is removed outright. Breadcrumbs
+  // stay. Mirrors populateProductPage() in script.js.
+  out = quoteOnly
+    ? out.replace(/\s*<script[^>]*\bid="productJsonLd"[^>]*>[\s\S]*?<\/script>/i, '')
+    : setScriptContentById(out, 'productJsonLd', buildProductJsonLd(p, seoTitle, buildMetaDesc(p), pageUrl));
   out = setScriptContentById(out, 'breadcrumbJsonLd', buildBreadcrumbJsonLd(p, pageUrl));
   return out;
 }
@@ -658,7 +662,17 @@ module.exports = async (req, res) => {
     if (!item) { res.status(200).send(shell); return; }
 
     const product = await lookupProduct(item);
-    if (!product) { res.status(200).send(shell); return; }
+    if (!product) {
+      // Retired or unknown SKU (e.g. the pre-dropship catalog deactivated
+      // on 2026-09-23). Answering 200 with the empty template made every
+      // one a "soft 404" to Google -- an indexable page titled "Product".
+      // A real 404 plus noindex gets them dropped from the index; the
+      // browser still renders the same "Product not found" message.
+      // Supabase failures throw and fall through to the 200 shell below,
+      // so an outage can never mark real products as missing.
+      res.status(404).send(shell.replace('<head>', '<head>\n  <meta name="robots" content="noindex">'));
+      return;
+    }
 
     // Same test as the inline snippet in each page's <head>: only the main
     // domain is quote-only; affiliate subdomains keep their prices.
