@@ -3894,6 +3894,21 @@ select.crm-filtersel { width: auto; min-width: 150px; }
 }
 .calc-line-remove:hover { background: #fff0f0; border-color: #fecaca; color: #ef4444; }
 
+/* Screenshot / photo drop zone — sales ticket form */
+.calc-screenshot-drop {
+  border: 2px dashed #cbd5e1; border-radius: 10px; padding: 18px 16px;
+  text-align: center; cursor: pointer; transition: border-color .15s, background .15s;
+  background: #f8fafc;
+}
+.calc-screenshot-drop:hover, .calc-screenshot-drop.calc-screenshot-drag {
+  border-color: #f97316; background: #fff7ed;
+}
+.calc-screenshot-drop.calc-screenshot-selected {
+  border-color: #22c55e; background: #f0fdf4;
+}
+.calc-screenshot-label { font-size: 13px; color: #64748b; pointer-events: none; }
+.calc-screenshot-selected .calc-screenshot-label { color: #16a34a; font-weight: 500; }
+
 @media (max-width: 720px) {
   .pt-table th, .pt-table td { padding-left: 12px; padding-right: 12px; }
   .pt-card { overflow-x: auto; }

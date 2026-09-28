@@ -12681,7 +12681,16 @@ async function renderSalesTicketsTab() {
           </div>
         </div>
         <div class="a-form-col-2">
-          <div class="a-field" style="grid-column:1/-1"><label>Description <span class="req">*</span></label><input type="text" id="salesTktDescription" placeholder="What happened, and what did you expect?"></div>
+          <div class="a-field" style="grid-column:1/-1"><label>Description <span class="req">*</span></label><textarea id="salesTktDescription" rows="3" placeholder="What happened, and what did you expect?" class="a-input" style="resize:vertical;min-height:72px"></textarea></div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field" style="grid-column:1/-1">
+            <label>Screenshot / Photo <span style="color:#94a3b8;font-weight:400">(optional)</span></label>
+            <div class="calc-screenshot-drop" id="salesTktDropZone" onclick="document.getElementById('salesTktFile').click()" ondragover="event.preventDefault();this.classList.add('calc-screenshot-drag')" ondragleave="this.classList.remove('calc-screenshot-drag')" ondrop="calcHandleScreenshotDrop(event,'salesTktFile','salesTktFileLabel')">
+              <input type="file" id="salesTktFile" accept="image/*" style="display:none" onchange="calcUpdateScreenshotLabel('salesTktFile','salesTktFileLabel')">
+              <span id="salesTktFileLabel" class="calc-screenshot-label">Click or drag an image here</span>
+            </div>
+          </div>
         </div>
       </div>
       <div id="salesTktErr" style="display:none;color:#ef4444;font-size:13px;margin-top:8px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>
@@ -12717,6 +12726,20 @@ async function submitSalesTicket() {
   if (!title || !description) { errEl.textContent = "Summary and description are required."; errEl.style.display = "block"; return; }
 
   const { data: { user } } = await window.sb.auth.getUser();
+
+  // Upload screenshot if one was attached
+  let screenshotUrl = null;
+  const fileInput = document.getElementById("salesTktFile");
+  const file = fileInput?.files?.[0];
+  if (file) {
+    const ext = file.name.split(".").pop() || "png";
+    const path = `sales/${user.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, file, { upsert: true });
+    if (upErr) { errEl.textContent = "Screenshot upload failed: " + upErr.message; errEl.style.display = "block"; return; }
+    const { data: urlData } = window.sb.storage.from("dev-note-screenshots").getPublicUrl(path);
+    screenshotUrl = urlData?.publicUrl || null;
+  }
+
   const payload = {
     title,
     description,
@@ -12724,11 +12747,32 @@ async function submitSalesTicket() {
     page_url: window.location.href,
     reporter_id: user?.id || null,
     reporter_email: user?.email || null,
+    ...(screenshotUrl ? { screenshot_url: screenshotUrl } : {}),
   };
   const { error } = await window.sb.from("dev_tickets").insert(payload).select().single();
   if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
   showToast("Ticket submitted — thanks!");
   renderSalesTicketsTab();
+}
+
+function calcUpdateScreenshotLabel(inputId, labelId) {
+  const file = document.getElementById(inputId)?.files?.[0];
+  const label = document.getElementById(labelId);
+  if (label) label.textContent = file ? file.name : "Click or drag an image here";
+  const zone = document.getElementById(inputId)?.closest(".calc-screenshot-drop");
+  if (zone) zone.classList.toggle("calc-screenshot-selected", !!file);
+}
+
+function calcHandleScreenshotDrop(event, inputId, labelId) {
+  event.preventDefault();
+  const zone = event.currentTarget;
+  zone.classList.remove("calc-screenshot-drag");
+  const file = event.dataTransfer?.files?.[0];
+  if (!file || !file.type.startsWith("image/")) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  const input = document.getElementById(inputId);
+  if (input) { input.files = dt.files; calcUpdateScreenshotLabel(inputId, labelId); }
 }
 
 // Quote status as the affiliate should read it. Deliberately plain words
