@@ -12823,17 +12823,23 @@ async function renderSalesOrdersTab() {
   }
   const rows = referrals || [];
 
-  wrap.innerHTML = `
-    <div class="pt-head">
-      <div>
-        <h2 class="pt-title">${window._adminRole === 'sales_manager' ? 'Order Overview' : 'My Orders'}</h2>
-        <p class="pt-sub">${window._adminRole === 'sales_manager' ? 'All orders attributed to your sales team — payment status, invoice, and download.' : 'Orders attributed to your sales code — payment status, invoice, and download.'}</p>
-      </div>
-    </div>
+  function getPaymentGroup(status) {
+    if (status === "paid") return "paid";
+    if (status === "failed" || status === "cancelled" || status === "refunded") return "failed";
+    return "pending";
+  }
 
-    <div class="pt-card" style="padding:0">
-      <div class="pt-card-head"><h3>${isManager ? "Team orders" : "Your orders"}</h3><span>${rows.length} total</span></div>
-      ${rows.length ? `
+  function renderOrderRows(filter) {
+    const filtered = filter === "all" ? rows : rows.filter(r => getPaymentGroup((r.orders || {}).payment_status) === filter);
+    const tableWrap = document.getElementById("so-table-wrap");
+    const countEl = document.getElementById("so-count");
+    if (countEl) countEl.textContent = filtered.length + " total";
+    if (!tableWrap) return;
+    if (!filtered.length) {
+      tableWrap.innerHTML = `<div class="pt-empty">No ${filter === "all" ? "" : filter + " "}orders found.</div>`;
+      return;
+    }
+    tableWrap.innerHTML = `
       <table class="pt-table">
         <thead><tr>
           <th>Date</th>
@@ -12846,11 +12852,15 @@ async function renderSalesOrdersTab() {
           <th style="text-align:center">Actions</th>
         </tr></thead>
         <tbody>
-          ${rows.map(r => {
+          ${filtered.map(r => {
             const o = r.orders || {};
             const rep = r.sales_reps || {};
-            const isPaid = o.payment_status === "paid";
-            const isUnpaid = o.payment_status === "pending" || o.payment_status === "pending_invoice" || o.payment_status === "unpaid";
+            const group = getPaymentGroup(o.payment_status);
+            const badgeHtml = group === "paid"
+              ? '<span class="pt-badge-paid">Paid</span>'
+              : group === "failed"
+                ? '<span class="pt-badge-failed">' + escHtml(o.payment_status || "Failed") + '</span>'
+                : '<span class="pt-badge-pending">' + escHtml(o.payment_status || "Pending") + '</span>';
             return `
             <tr>
               <td class="pt-muted">${fmt(r.created_at)}</td>
@@ -12859,27 +12869,51 @@ async function renderSalesOrdersTab() {
               ${isManager ? `<td>${escHtml(rep.full_name || "—")}<br><span class="pt-muted" style="font-size:11px">${escHtml(rep.sales_code || "")}</span></td>` : ""}
               <td class="num">${stMoney(r.order_value)}</td>
               <td class="num pt-strong">${stMoney(r.commission_amount)}</td>
-              <td>${isPaid
-                ? '<span class="pt-badge-paid">Paid</span>'
-                : isUnpaid
-                  ? '<span class="pt-badge-pending">Unpaid</span>'
-                  : `<span class="pt-badge-pending">${escHtml(o.payment_status || "pending")}</span>`}</td>
+              <td>${badgeHtml}</td>
               <td style="text-align:center">
                 <div style="display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:center">
-                  <button class="a-btn-outline" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesDownloadInvoicePdf('${o.id}','${escHtml(o.order_number||"")}')">
-                    ↓ PDF
-                  </button>
-                  ${(isManager && isUnpaid) ? `
-                  <button class="a-btn-primary" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesSendInvoiceEmail('${o.id}','${escHtml(o.customer_email||"")}')">
-                    ✉ Send Invoice
-                  </button>` : ""}
+                  <button class="a-btn-outline" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesDownloadInvoicePdf('${o.id}','${escHtml(o.order_number||"")}')">↓ PDF</button>
+                  ${(isManager && group === "pending") ? `
+                  <button class="a-btn-primary" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesSendInvoiceEmail('${o.id}','${escHtml(o.customer_email||"")}')">✉ Send Invoice</button>` : ""}
                 </div>
               </td>
             </tr>`;
           }).join("")}
         </tbody>
-      </table>` : `<div class="pt-empty">No orders attributed to your sales code yet.</div>`}
+      </table>`;
+  }
+
+  const paidCount    = rows.filter(r => getPaymentGroup((r.orders||{}).payment_status) === "paid").length;
+  const pendingCount = rows.filter(r => getPaymentGroup((r.orders||{}).payment_status) === "pending").length;
+  const failedCount  = rows.filter(r => getPaymentGroup((r.orders||{}).payment_status) === "failed").length;
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">${isManager ? 'Order Overview' : 'My Orders'}</h2>
+        <p class="pt-sub">${isManager ? 'All orders attributed to your sales team — payment status, invoice, and download.' : 'Orders attributed to your sales code — payment status, invoice, and download.'}</p>
+      </div>
+    </div>
+
+    <div class="so-filter-bar">
+      <button class="so-filter-btn so-filter-btn--active" data-filter="all" onclick="soSetFilter(this,'all')">All <span class="so-filter-count">${rows.length}</span></button>
+      <button class="so-filter-btn" data-filter="paid" onclick="soSetFilter(this,'paid')">Paid <span class="so-filter-count so-count-paid">${paidCount}</span></button>
+      <button class="so-filter-btn" data-filter="pending" onclick="soSetFilter(this,'pending')">Pending <span class="so-filter-count so-count-pending">${pendingCount}</span></button>
+      <button class="so-filter-btn" data-filter="failed" onclick="soSetFilter(this,'failed')">Failed <span class="so-filter-count so-count-failed">${failedCount}</span></button>
+    </div>
+
+    <div class="pt-card" style="padding:0">
+      <div class="pt-card-head"><h3>${isManager ? "Team orders" : "Your orders"}</h3><span id="so-count">${rows.length} total</span></div>
+      <div id="so-table-wrap"></div>
     </div>`;
+
+  renderOrderRows("all");
+
+  window.soSetFilter = function(btn, filter) {
+    document.querySelectorAll(".so-filter-btn").forEach(b => b.classList.remove("so-filter-btn--active"));
+    btn.classList.add("so-filter-btn--active");
+    renderOrderRows(filter);
+  };
 }
 
 async function salesDownloadInvoicePdf(orderId, orderNumber) {
