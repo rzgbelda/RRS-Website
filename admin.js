@@ -217,7 +217,7 @@ const AFFILIATE_TABS = ["partner", "partner-products"];
 // allow-list-by-default reasoning as AFFILIATE_TABS above.
 const SALES_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders"];
 // Head of Sales Operations: broader team-wide view + invoice/payment capabilities
-const SALES_MANAGER_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders", "sales-team-overview"];
+const SALES_MANAGER_TABS = ["sales-team-overview", "sales-orders", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator"];
 
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
@@ -12826,8 +12826,8 @@ async function renderSalesOrdersTab() {
   wrap.innerHTML = `
     <div class="pt-head">
       <div>
-        <h2 class="pt-title">My Orders</h2>
-        <p class="pt-sub">Orders attributed to your sales code — payment status, invoice, and download.</p>
+        <h2 class="pt-title">${window._adminRole === 'sales_manager' ? 'Order Overview' : 'My Orders'}</h2>
+        <p class="pt-sub">${window._adminRole === 'sales_manager' ? 'All orders attributed to your sales team — payment status, invoice, and download.' : 'Orders attributed to your sales code — payment status, invoice, and download.'}</p>
       </div>
     </div>
 
