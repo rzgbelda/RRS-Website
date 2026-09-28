@@ -1172,10 +1172,15 @@
         .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
-      // 42P01 = order_shipments table missing (migration not run yet).
-      // Retry without it so the customer's order history still loads
-      // rather than showing "no orders" because of a missing join.
-      if (error && error.code === "42P01") {
+      // order_shipments migration not run yet. PostgREST surfaces this two
+      // different ways depending on exactly what's missing: 42P01 (relation
+      // doesn't exist, from Postgres itself) if the table is gone entirely,
+      // or PGRST200 ("Could not find a relationship... in the schema
+      // cache") if PostgREST's embedded-resource cache doesn't know about
+      // it yet. Both mean the same thing here -- retry without the join so
+      // the customer's order history still loads rather than the whole
+      // query 400ing and showing "no orders" for orders that exist.
+      if (error && (error.code === "42P01" || error.code === "PGRST200")) {
         ({ data: orders, error } = await window.sb
           .from("orders")
           .select("*, order_items(*)")
