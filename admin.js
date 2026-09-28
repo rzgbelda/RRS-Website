@@ -12147,7 +12147,8 @@ function ptFilterProducts() {
     if (show) visible++;
   });
   const countEl = document.getElementById("ptProdCount");
-  if (countEl) countEl.textContent = `${visible} of ${(window._ptGroups || []).length} products`;
+  const total = (window._ptGroups || []).length;
+  if (countEl) countEl.textContent = visible === total ? `${total} products` : `${visible} of ${total} products`;
 }
 
 /* ── Sales rep self-service (role='sales') ────────────────────────
@@ -12412,19 +12413,17 @@ async function renderSalesCatalogTab() {
       </div>
     </div>
 
-    <div class="pt-card" style="padding:14px 18px">
+    <div class="sc-filter-bar">
       <input type="text" id="ptProdSearch" placeholder="Search products&hellip;"
-        class="a-input" style="max-width:320px;display:inline-block;margin-right:10px"
-        oninput="ptFilterProducts()">
-      <select id="ptProdCategory" class="a-input" style="max-width:220px;display:inline-block"
-        onchange="ptFilterProducts()">
+        class="a-input sc-filter-search" oninput="ptFilterProducts()">
+      <select id="ptProdCategory" class="a-input sc-filter-cat" onchange="ptFilterProducts()">
         <option value="">All categories</option>
         ${categories.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("")}
       </select>
     </div>
 
     <div class="pt-card" style="padding:0">
-      <div class="pt-card-head" style="padding:16px 18px"><h3>Products</h3><span id="ptProdCount">${groups.length} product${groups.length === 1 ? "" : "s"} &middot; ${rows.length} option${rows.length === 1 ? "" : "s"}</span></div>
+      <div class="pt-card-head"><h3>Products</h3><span id="ptProdCount">${groups.length} of ${groups.length} products</span></div>
       ${groups.length ? `
       <div id="ptProdList">
         ${groups.map((g, i) => ptGroupRow(g, i)).join("")}
@@ -12467,48 +12466,50 @@ async function renderSalesCalculatorTab() {
     <div class="pt-head">
       <div>
         <h2 class="pt-title">Order Calculator</h2>
-        <p class="pt-sub">Quote a bulk order for a customer. Shipping is entered manually until the UPS rate formula is wired in.</p>
+        <p class="pt-sub">Build a quote for a customer. Add products, pick their state for tax, then enter shipping.</p>
       </div>
     </div>
 
-    <div class="pt-card" style="padding:18px">
+    <div class="pt-card sc-calc-card">
+      <div class="sc-calc-section-label">Products</div>
       <div id="calcLines"></div>
-      <button type="button" class="a-btn-outline" style="width:auto;margin-top:10px" onclick="calcAddLine()">+ Add product</button>
+      <button type="button" class="sc-add-line-btn" onclick="calcAddLine()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Add product
+      </button>
+    </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;max-width:460px">
+    <div class="pt-card sc-calc-card">
+      <div class="sc-calc-section-label">Shipping &amp; Tax</div>
+      <div class="sc-calc-inputs">
         <div class="a-field">
           <label>Customer's state</label>
           <select id="calcState" class="a-input" onchange="calcRecompute()">
             <option value="">Select state&hellip;</option>
             ${Object.keys(window.TAX_RATES || {}).sort().map(code => `<option value="${code}">${code} &mdash; ${((window.TAX_RATES[code] || 0) * 100).toFixed(2)}%</option>`).join("")}
           </select>
+          <span class="a-field-hint">Tax rate auto-calculated from the same table checkout uses.</span>
         </div>
         <div class="a-field">
-          <label>Shipping fee ($) &mdash; manual</label>
+          <label>Shipping fee <span style="font-weight:400;color:#94a3b8">(manual — UPS formula pending)</span></label>
           <input type="number" id="calcShipping" value="0" min="0" step="0.01" class="a-input" oninput="calcRecompute()">
         </div>
       </div>
-      <p class="pt-link-note" style="margin-top:8px">Tax rate is looked up automatically from the state you pick &mdash; same rate table checkout uses.</p>
+    </div>
 
-      <div class="pt-stats" style="margin-top:24px">
-        <div class="pt-stat">
-          <p class="pt-stat-label">Subtotal</p>
-          <p class="pt-stat-value" id="calcSubtotal">$0.00</p>
-        </div>
-        <div class="pt-stat">
-          <p class="pt-stat-label" id="calcTaxLabel">Tax</p>
-          <p class="pt-stat-value" id="calcTax">$0.00</p>
-        </div>
-        <div class="pt-stat">
-          <p class="pt-stat-label">Shipping</p>
-          <p class="pt-stat-value" id="calcShip">$0.00</p>
-        </div>
-        <div class="pt-stat pt-stat--accent">
-          <p class="pt-stat-label">Customer total</p>
-          <p class="pt-stat-value" id="calcTotal">$0.00</p>
-        </div>
+    <div class="pt-card sc-calc-card">
+      <div class="sc-calc-section-label">Quote Summary</div>
+      <div class="sc-calc-summary">
+        <div class="sc-calc-row"><span class="sc-calc-row-label">Subtotal</span><span class="sc-calc-row-val num" id="calcSubtotal">$0.00</span></div>
+        <div class="sc-calc-row"><span class="sc-calc-row-label" id="calcTaxLabel">Tax</span><span class="sc-calc-row-val num" id="calcTax">$0.00</span></div>
+        <div class="sc-calc-row"><span class="sc-calc-row-label">Shipping</span><span class="sc-calc-row-val num" id="calcShip">$0.00</span></div>
+        <div class="sc-calc-row sc-calc-row--total"><span class="sc-calc-row-label">Customer Total</span><span class="sc-calc-row-val num" id="calcTotal">$0.00</span></div>
       </div>
-      <p class="pt-link-note" style="margin-top:14px">Your commission preview on this quote (${rate ? (rate * 100).toFixed(0) + "%" : "—"} of order value, before tax/shipping): <strong id="calcCommission">$0.00</strong></p>
+      <div class="sc-calc-commission">
+        Your commission preview
+        <span style="color:#64748b;font-size:12px">(${rate ? (rate * 100).toFixed(0) + "% of subtotal, excl. tax/shipping" : "— tier not loaded"})</span>
+        <strong class="num" id="calcCommission" style="margin-left:auto;color:#0f2b50">$0.00</strong>
+      </div>
     </div>
   `;
 

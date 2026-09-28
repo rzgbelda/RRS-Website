@@ -3894,6 +3894,52 @@ select.crm-filtersel { width: auto; min-width: 150px; }
 }
 .calc-line-remove:hover { background: #fff0f0; border-color: #fecaca; color: #ef4444; }
 
+/* Sales catalog filter bar */
+.sc-filter-bar {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.sc-filter-search { flex: 1 1 260px; min-width: 0; }
+.sc-filter-cat { flex: 0 0 200px; }
+
+/* Sales Order Calculator */
+.sc-calc-card { padding: 20px 22px; margin-bottom: 14px; }
+.sc-calc-section-label {
+  font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+  color: #94a3b8; margin-bottom: 14px;
+}
+.sc-add-line-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 12px; padding: 8px 16px; border-radius: 8px;
+  border: 1.5px dashed #cbd5e1; background: transparent; cursor: pointer;
+  font-size: 13px; font-weight: 600; color: #334155;
+  transition: border-color .15s, background .15s, color .15s;
+}
+.sc-add-line-btn:hover { border-color: #f97316; background: #fff7ed; color: #ea580c; }
+.sc-calc-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 600px; }
+.sc-calc-summary { border: 1px solid #eef2f7; border-radius: 10px; overflow: hidden; margin-bottom: 14px; }
+.sc-calc-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid #f4f7fa; font-size: 14px;
+}
+.sc-calc-row:last-child { border-bottom: none; }
+.sc-calc-row-label { color: #475569; }
+.sc-calc-row-val { font-weight: 600; color: #0f2b50; }
+.sc-calc-row--total {
+  background: #0f2b50; padding: 14px 16px;
+}
+.sc-calc-row--total .sc-calc-row-label,
+.sc-calc-row--total .sc-calc-row-val { color: #fff; font-size: 16px; font-weight: 800; }
+.sc-calc-commission {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font-size: 13px; color: #334155; padding: 10px 14px;
+  background: #f8fafc; border: 1px solid #eef2f7; border-radius: 8px;
+}
+
+@media (max-width: 600px) {
+  .sc-calc-inputs { grid-template-columns: 1fr; }
+}
+
 /* Screenshot / photo drop zone — sales ticket form */
 .calc-screenshot-drop {
   border: 2px dashed #cbd5e1; border-radius: 10px; padding: 18px 16px;
