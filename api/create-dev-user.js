@@ -37,7 +37,7 @@ function escHtml(s) {
 
 async function sendSalesCredentialsEmail({ email, full_name, password, tier }) {
   const resend = getResend();
-  const loginUrl = 'https://www.roomreadysupply.com/login.html';
+  const loginUrl = 'https://www.roomreadysupply.com/login';
   const html = `
     <div style="font-family:sans-serif;color:#0B1F38;max-width:520px;margin:0 auto;">
       <h2 style="color:#0B1F38;">Welcome to the Room Ready Supply Sales Team</h2>
