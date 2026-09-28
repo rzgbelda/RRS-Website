@@ -12593,24 +12593,42 @@ function calcTieredPrice(p, qty) {
   }
   return base;
 }
-// Returns HTML hint about tier thresholds so the rep knows what to tell the customer
+// Returns HTML for a full tier price table with the active row highlighted
 function calcTierHint(p, qty) {
   const base = Number(p.price) || 0;
   const tiers = [
-    { price: Number(p.price_tier1), min: p.tier1_min_qty },
-    { price: Number(p.price_tier2), min: p.tier2_min_qty },
-    { price: Number(p.price_tier3), min: p.tier3_min_qty },
+    { price: Number(p.price_tier1), min: p.tier1_min_qty, next: p.tier2_min_qty },
+    { price: Number(p.price_tier2), min: p.tier2_min_qty, next: p.tier3_min_qty },
+    { price: Number(p.price_tier3), min: p.tier3_min_qty, next: null },
   ].filter(t => t.price > 0 && t.min != null);
   if (!tiers.length) return "";
-  // Find next tier the customer hasn't hit yet
-  const nextTier = tiers.find(t => qty < t.min);
+
   const currentPrice = calcTieredPrice(p, qty);
-  const savePct = base > 0 && currentPrice < base ? Math.round((1 - currentPrice / base) * 100) : 0;
-  const saveNote = savePct > 0 ? `<span class="calc-save-badge">Saving ${savePct}% vs list</span>` : "";
-  const nextNote = nextTier
-    ? `<span class="calc-tier-hint">Order ${nextTier.min - qty} more → ${stMoney(nextTier.price)}/case</span>`
-    : `<span class="calc-tier-hint calc-tier-hint--best">Best tier price unlocked</span>`;
-  return `${saveNote}${nextNote}`;
+
+  // Always show list price as the first row
+  const allRows = [];
+  const tier1Start = tiers[0].min;
+  if (tier1Start > 1) {
+    const isActive = qty < tier1Start;
+    allRows.push({ label: `1–${tier1Start - 1} cases`, price: base, active: isActive, savePct: 0 });
+  }
+  tiers.forEach((t, i) => {
+    const rangeEnd = t.next != null ? `–${t.next - 1}` : "+";
+    const label = `${t.min}${rangeEnd} cases`;
+    const savePct = base > 0 ? Math.round((1 - t.price / base) * 100) : 0;
+    const isActive = Math.abs(t.price - currentPrice) < 0.001;
+    allRows.push({ label, price: t.price, active: isActive, savePct });
+  });
+
+  const rows = allRows.map(r => `
+    <div class="calc-tier-row${r.active ? " calc-tier-row--active" : ""}">
+      <span class="calc-tier-row-range">${r.label}</span>
+      <span class="calc-tier-row-price num">${stMoney(r.price)}/case</span>
+      ${r.savePct > 0 ? `<span class="calc-tier-row-save">Save ${r.savePct}%</span>` : `<span class="calc-tier-row-list">List</span>`}
+      ${r.active ? `<span class="calc-tier-row-active-dot"></span>` : ""}
+    </div>`).join("");
+
+  return `<div class="calc-tier-table">${rows}</div>`;
 }
 
 function calcAddLine() {
@@ -12628,19 +12646,22 @@ function calcAddLine() {
       <div class="calc-product-dropdown" id="${id}-dropdown" hidden></div>
     </div>
     <div class="calc-line-picked" id="${id}-picked" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
-      <div class="calc-line-info">
-        <span class="calc-line-name"></span>
-        <span class="calc-line-unit"></span>
+      <div class="calc-line-top">
+        <div class="calc-line-info">
+          <span class="calc-line-name"></span>
+          <span class="calc-line-unit"></span>
+        </div>
+        <div class="calc-line-qty">
+          <label>Cases</label>
+          <input type="number" class="a-input calc-qty" value="1" min="1" step="1" oninput="calcRecompute()">
+        </div>
+        <div class="calc-line-total-wrap">
+          <label>Line Total</label>
+          <span class="calc-line-total num">$0.00</span>
+        </div>
+        <button type="button" class="calc-line-remove" title="Remove line" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
       </div>
-      <div class="calc-line-qty">
-        <label>Cases</label>
-        <input type="number" class="a-input calc-qty" value="1" min="1" step="1" oninput="calcRecompute()">
-      </div>
-      <div class="calc-line-total-wrap">
-        <label>Line Total</label>
-        <span class="calc-line-total num">$0.00</span>
-      </div>
-      <button type="button" class="calc-line-remove" title="Remove line" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
+      <div class="calc-line-tier-hint"></div>
     </div>
   `;
   wrap.appendChild(div);
@@ -12690,13 +12711,8 @@ function calcPickProduct(lineId, jsonStr) {
   picked.querySelector(".calc-line-name").textContent = calcProductLabel(p);
   picked.querySelector(".calc-line-unit").textContent = `${stMoney(price)} / case`;
 
-  let hintEl = picked.querySelector(".calc-line-tier-hint");
-  if (!hintEl) {
-    hintEl = document.createElement("div");
-    hintEl.className = "calc-line-tier-hint";
-    picked.querySelector(".calc-line-info").appendChild(hintEl);
-  }
-  hintEl.innerHTML = calcTierHint(p, qty);
+  const hintEl = picked.querySelector(".calc-line-tier-hint");
+  if (hintEl) hintEl.innerHTML = calcTierHint(p, qty);
 
   const dropdown = document.getElementById(`${lineId}-dropdown`);
   if (dropdown) { dropdown.hidden = true; dropdown.innerHTML = ""; }
@@ -12724,7 +12740,7 @@ function calcRecompute() {
         line.dataset.price = price;
         const unitEl = line.querySelector(".calc-line-unit");
         if (unitEl) unitEl.textContent = `${stMoney(price)} / case`;
-        const hintEl = line.querySelector(".calc-line-tier-hint");
+        const hintEl = line.querySelector(".calc-line-picked > .calc-line-tier-hint");
         if (hintEl) hintEl.innerHTML = calcTierHint(p, qty);
       } catch (e) {}
     }
