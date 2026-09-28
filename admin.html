@@ -65,6 +65,30 @@
         Products
       </a>
 
+      <!-- Only ever visible to role='sales' (SALES_TABS in admin.js) --
+           same "hidden from every other role, not just staff" reasoning as
+           the partner nav items above. -->
+      <a href="#" class="a-nav-item" data-tab="sales-dashboard" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>
+        My Dashboard
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-account" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+        My Account
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-catalog" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 7.3 12 12l-8.5-4.7M12 12v9M3.5 7.3v9.4L12 21l8.5-4.3V7.3L12 3z"/></svg>
+        Products
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-calculator" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="6" x2="16" y2="6"/><line x1="8" y1="10" x2="8" y2="10"/><line x1="12" y1="10" x2="12" y2="10"/><line x1="16" y1="10" x2="16" y2="10"/><line x1="8" y1="14" x2="8" y2="14"/><line x1="12" y1="14" x2="12" y2="14"/><line x1="16" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="8" y2="18"/><line x1="12" y1="18" x2="12" y2="18"/><line x1="16" y1="18" x2="16" y2="18"/></svg>
+        Order Calculator
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-tickets" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5"/><path d="M3 12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"/><path d="M3 12v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg>
+        Report an Issue
+      </a>
+
       <span class="a-nav-section admin-only-nav">Catalog</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="products">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><path d="M16 3H8a2 2 0 0 0-2 2v2h12V5a2 2 0 0 0-2-2z"/></svg>
@@ -142,6 +166,10 @@
       <a href="#" class="a-nav-item" data-tab="sub-distributors">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="2"/><circle cx="15" cy="19" r="2"/><circle cx="19" cy="9" r="2"/><path d="M9 7v3l3 2"/><path d="M13 14l3-2v-3"/></svg>
         Affiliates
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-team">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        Sales Team
       </a>
 
       <span class="a-nav-section">System</span>
@@ -1633,6 +1661,36 @@
            anything" scope Eric asked for. -->
     </div><!-- /partner-products tab -->
 
+    <!-- ============ SALES REP TABS ============ -->
+    <div id="tab-sales-dashboard" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesDashboardTab() in admin.js.
+           Visible only to role='sales' logins -- their own commissions and
+           attributed orders, scoped by RLS (20260928_sales_team.sql). -->
+    </div><!-- /sales-dashboard tab -->
+
+    <div id="tab-sales-account" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesAccountTab() in admin.js:
+           sales code, editable name, change-password form. -->
+    </div><!-- /sales-account tab -->
+
+    <div id="tab-sales-catalog" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesCatalogTab() in admin.js.
+           Read-only catalog view, same products_public source and
+           ptGroupProducts() grouping as renderPartnerProductsTab(). -->
+    </div><!-- /sales-catalog tab -->
+
+    <div id="tab-sales-calculator" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesCalculatorTab() in admin.js.
+           Client-side bulk order calculator; shipping fee is a manual
+           override until the UPS distance/weight formula is provided. -->
+    </div><!-- /sales-calculator tab -->
+
+    <div id="tab-sales-tickets" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesTicketsTab() in admin.js.
+           Reporter-only dev ticket view for sales reps (sales_create_own_
+           tickets / sales_read_own_tickets RLS, 20260928_sales_team.sql). -->
+    </div><!-- /sales-tickets tab -->
+
     <!-- ============ DEVELOPER TICKETS TAB ============ -->
     <div id="tab-dev-tickets" class="a-tab" style="display:none">
       <!-- Populated dynamically by renderDevTicketsTab() in admin.js -->
@@ -2491,6 +2549,65 @@
       </div>
 
     </div><!-- /sub-distributors tab -->
+
+    <!-- ============ SALES TEAM TAB (STAFF-FACING) ============ -->
+    <div id="tab-sales-team" class="a-tab" style="display:none">
+
+      <div class="sd-hero">
+        <div class="sd-hero-left">
+          <div class="sd-hero-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div>
+            <h1 class="sd-hero-title">Sales Team</h1>
+            <p class="sd-hero-sub">Manage sales closer accounts, sales codes &amp; commissions</p>
+          </div>
+        </div>
+        <button type="button" class="a-btn-primary sd-hero-btn" onclick="openSalesRepModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add Sales Rep
+        </button>
+      </div>
+
+      <div class="a-card sd-card">
+        <div class="sd-card-header">
+          <div class="sd-card-title-group">
+            <span class="sd-card-dot" style="background:#f97316;"></span>
+            <span class="sd-card-title">Sales Reps</span>
+            <span class="sd-card-count" id="sales-reps-count"></span>
+          </div>
+        </div>
+        <div class="a-table-wrap">
+          <table class="a-table" id="sales-reps-table">
+            <thead><tr>
+              <th>Name</th><th>Email</th><th>Sales Code</th><th>Tier</th><th>Status</th><th>Login</th><th style="text-align:center">Actions</th>
+            </tr></thead>
+            <tbody id="sales-reps-table-body"><tr><td colspan="7" class="a-empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="a-card sd-card">
+        <div class="sd-card-header">
+          <div class="sd-card-title-group">
+            <span class="sd-card-dot" style="background:#22c55e;"></span>
+            <span class="sd-card-title">Monthly Commission Payouts</span>
+          </div>
+        </div>
+        <p style="font-size:12px;color:#64748b;margin:0;padding:0 20px 12px">
+          Flat rate by tier on the rep's own closed sales (order value, before sales tax and freight): Tier 1 = 8%, Tier 2 = 5%. Paid by hand like affiliate payouts &mdash; no bank info is stored here.
+        </p>
+        <div class="a-table-wrap">
+          <table class="a-table" id="sales-payout-table">
+            <thead><tr>
+              <th>Rep</th><th>Month</th><th>Revenue</th><th>Rate</th><th>Commission Due</th><th>Status</th>
+            </tr></thead>
+            <tbody id="sales-payout-table-body"><tr><td colspan="6" class="a-empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /sales-team tab -->
 
   </div><!-- /a-main -->
 

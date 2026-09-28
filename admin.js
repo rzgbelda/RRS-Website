@@ -199,7 +199,7 @@ const MARKETING_TABS = [
 // account-management portal -- Users, Dev Tickets, and the two content
 // sections, nothing else. Full unrestricted access moved to a NEW role,
 // 'owner' (see isTabAllowed below) -- 'admin' no longer means that.
-const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "manage-about"];
+const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "manage-about", "sales-team"];
 
 // An affiliate login (role='sub_distributor') gets exactly one tab: their
 // own commissions/sales/referral-code view. Previously this role had no
@@ -210,12 +210,20 @@ const ADMIN_ROLE_TABS = ["dashboard", "users", "dev-tickets", "manage-hero", "ma
 // so a tab added later is closed to affiliates by default too.
 const AFFILIATE_TABS = ["partner", "partner-products"];
 
+// A sales closer login (role='sales') gets its own five tabs: dashboard,
+// account info (sales code + password/name), read-only catalog, dev
+// tickets (their own only, via the sales_* RLS policies added in
+// 20260928_sales_team.sql), and the bulk-order calculator. Same
+// allow-list-by-default reasoning as AFFILIATE_TABS above.
+const SALES_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator"];
+
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
   if (window._adminRole === "marketing") return MARKETING_TABS.includes(tab);
   if (window._adminRole === "admin") return ADMIN_ROLE_TABS.includes(tab);
   if (window._adminRole === "sub_distributor") return AFFILIATE_TABS.includes(tab);
+  if (window._adminRole === "sales") return SALES_TABS.includes(tab);
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
@@ -241,6 +249,7 @@ function landingTabFor(role) {
   if (role === "marketing") return "crm";
   if (role === "admin") return "users";
   if (role === "sub_distributor") return "partner";
+  if (role === "sales") return "sales-dashboard";
   return "dashboard";
 }
 
@@ -270,12 +279,12 @@ function applyRoleRestrictions(role) {
     // own display:none in admin.html -- and every other role re-hides
     // what it should not see in the branch below; owner returned before
     // reaching it, so these two stayed visible from that reset.
-    document.querySelectorAll('.a-nav-item[data-tab="partner"], .a-nav-item[data-tab="partner-products"]')
+    document.querySelectorAll('.a-nav-item[data-tab="partner"], .a-nav-item[data-tab="partner-products"], .a-nav-item[data-tab="sales-dashboard"], .a-nav-item[data-tab="sales-account"], .a-nav-item[data-tab="sales-catalog"], .a-nav-item[data-tab="sales-calculator"], .a-nav-item[data-tab="sales-tickets"]')
       .forEach(el => { el.style.display = "none"; });
     return;
   }
 
-  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor") {
+  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor" || role === "sales") {
     // Hide every nav item except this role's allow-list, and every section
     // heading that ends up with nothing under it. sub_distributor used to
     // fall through to the plain "hide admin-only-nav" branch below, which
@@ -284,6 +293,7 @@ function applyRoleRestrictions(role) {
     const allowed = role === "developer" ? DEVELOPER_TABS
       : role === "marketing" ? MARKETING_TABS
       : role === "sub_distributor" ? AFFILIATE_TABS
+      : role === "sales" ? SALES_TABS
       : ADMIN_ROLE_TABS;
     document.querySelectorAll(".a-nav-item").forEach(el => {
       if (!allowed.includes(el.dataset.tab)) el.style.display = "none";
@@ -296,7 +306,7 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : "Admin Portal");
+    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : role === "sales" ? "Sales Portal" : "Admin Portal");
     return;
   }
 
@@ -391,6 +401,7 @@ function switchTab(tab) {
   if (tab === "manage-hero")      loadHeroSection();
   if (tab === "manage-about")     loadAboutSection();
   if (tab === "sub-distributors") renderSubDistributorsTab();
+  if (tab === "sales-team")       renderSalesTeamTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
   if (tab === "dev-tickets")      renderDevTicketsTab();
   if (tab === "best-deals")       renderBestDealsTab();
@@ -402,6 +413,11 @@ function switchTab(tab) {
   if (tab === "sales-tax")        renderSalesTaxTab();
   if (tab === "partner")          renderPartnerTab();
   if (tab === "partner-products") renderPartnerProductsTab();
+  if (tab === "sales-dashboard")  renderSalesDashboardTab();
+  if (tab === "sales-account")    renderSalesAccountTab();
+  if (tab === "sales-catalog")    renderSalesCatalogTab();
+  if (tab === "sales-calculator") renderSalesCalculatorTab();
+  if (tab === "sales-tickets")    renderSalesTicketsTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -9386,6 +9402,262 @@ async function deleteSd(id, name) {
   loadSdStats();
 }
 
+// ── Sales Team (staff-facing management) ────────────────────────
+// Owner/Admin-only screen for creating/managing sales closer accounts.
+// Unlike Affiliates, "Save" and "Create Login" are one action here: a
+// sales rep with no login is not useful (there's no separate self-signup
+// flow), and this is also the ONE account-creation flow in the codebase
+// that emails credentials automatically per the CEO's request -- see
+// api/create-dev-user.js's 'create_sales_user' action.
+
+async function renderSalesTeamTab() {
+  await Promise.all([loadSalesRepsTable(), loadSalesPayoutsTable()]);
+}
+
+async function loadSalesRepsTable() {
+  const tbody = document.getElementById('sales-reps-table-body');
+  if (!tbody) return;
+  const { data, error } = await window.sb.from('sales_reps').select('*').order('created_at', { ascending: false });
+  if (error) { tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Error: ${escHtml(error.message)}</td></tr>`; return; }
+
+  const rows = data || [];
+  window._salesReps = rows;
+  const countEl = document.getElementById('sales-reps-count');
+  if (countEl) countEl.textContent = rows.length + (rows.length === 1 ? ' rep' : ' reps');
+
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7" class="a-empty">No sales reps yet.</td></tr>`; return; }
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td class="pt-strong">${escHtml(r.full_name)}</td>
+      <td>${escHtml(r.email)}</td>
+      <td>${escHtml(r.sales_code)}</td>
+      <td>${escHtml(SALES_TIER_LABEL[r.tier] || r.tier)}</td>
+      <td>${r.status === 'active' ? '<span class="pt-badge-paid">Active</span>' : '<span class="pt-badge-pending">Inactive</span>'}</td>
+      <td>${r.user_id ? '<span class="pt-badge-paid">Yes</span>' : '<span class="pt-badge-pending">No</span>'}</td>
+      <td style="text-align:center">
+        <button type="button" class="a-btn-outline" style="width:auto;padding:6px 10px;font-size:12px" onclick='editSalesRep(${JSON.stringify(JSON.stringify(r))})'>Edit</button>
+        <button type="button" class="a-btn-outline a-btn-danger" style="width:auto;padding:6px 10px;font-size:12px" onclick="deleteSalesRep('${r.id}', '${escHtml(r.full_name)}')">Delete</button>
+      </td>
+    </tr>`).join('');
+}
+
+function openSalesRepModal(rep) {
+  let modal = document.getElementById('salesRepModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'salesRepModal';
+    modal.className = 'a-modal-overlay';
+    modal.style.display = 'none';
+    modal.innerHTML = `
+      <div class="a-modal" style="max-width:600px">
+        <div class="a-modal-header">
+          <h3 id="salesRepModalTitle">Add Sales Rep</h3>
+          <button class="a-modal-close" onclick="closeSalesRepModal()">&#x2715;</button>
+        </div>
+        <div class="a-modal-body">
+          <input type="hidden" id="salesRepEditId">
+          <input type="hidden" id="salesRepUserId">
+          <div class="a-form-grid">
+            <div class="a-form-col-2">
+              <div class="a-field"><label>Name <span class="req">*</span></label><input type="text" id="salesRepName" placeholder="Jane Doe"></div>
+              <div class="a-field"><label>Email <span class="req">*</span></label><input type="email" id="salesRepEmail" placeholder="jane@roomreadysupply.com"></div>
+            </div>
+            <div class="a-form-col-2">
+              <div class="a-field"><label>Phone</label><input type="text" id="salesRepPhone" placeholder="(555) 000-0000"></div>
+              <div class="a-field">
+                <label>Sales Code <span class="req">*</span></label>
+                <div style="display:flex;gap:8px">
+                  <input type="text" id="salesRepCode" placeholder="e.g. JANE24" style="flex:1;text-transform:uppercase">
+                  <button type="button" class="a-btn-outline" style="padding:9px 12px;white-space:nowrap;font-size:12px;width:auto" onclick="generateSalesRepCode()">Auto-Generate</button>
+                </div>
+              </div>
+            </div>
+            <div class="a-form-col-2">
+              <div class="a-field">
+                <label>Tier <span class="req">*</span></label>
+                <select id="salesRepTier">
+                  <option value="tier1">Tier 1 (8% commission)</option>
+                  <option value="tier2">Tier 2 (5% commission)</option>
+                </select>
+              </div>
+              <div class="a-field">
+                <label>Status</label>
+                <select id="salesRepStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
+              </div>
+            </div>
+            <div class="a-form-col-2">
+              <div class="a-field" style="grid-column:1/-1"><label>Notes</label><input type="text" id="salesRepNotes" placeholder="Optional notes"></div>
+            </div>
+          </div>
+          <p class="pt-link-note" id="salesRepLoginNote" style="margin:12px 0 0">Saving with no existing login will create one and email the rep their temporary password.</p>
+          <div id="salesRepModalError" style="display:none;color:#ef4444;font-size:13px;margin-top:8px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>
+        </div>
+        <div class="a-modal-footer">
+          <button type="button" class="a-btn-outline" style="width:auto" onclick="closeSalesRepModal()">Cancel</button>
+          <button type="button" class="a-btn-outline" id="btnResetSalesLogin" style="width:auto;display:none;color:#3b5bdb;border-color:#3b5bdb" onclick="resetSalesRepLogin()">Reset Password &amp; Resend Email</button>
+          <button type="button" class="a-btn-primary" onclick="saveSalesRep()">Save &amp; Create Login</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('salesRepModalTitle').textContent = rep ? 'Edit Sales Rep' : 'Add Sales Rep';
+  document.getElementById('salesRepEditId').value = rep ? rep.id : '';
+  document.getElementById('salesRepUserId').value = rep ? (rep.user_id || '') : '';
+  document.getElementById('salesRepName').value = rep ? rep.full_name : '';
+  document.getElementById('salesRepEmail').value = rep ? rep.email : '';
+  document.getElementById('salesRepPhone').value = rep ? (rep.phone || '') : '';
+  document.getElementById('salesRepCode').value = rep ? rep.sales_code : '';
+  document.getElementById('salesRepTier').value = rep ? rep.tier : 'tier1';
+  document.getElementById('salesRepStatus').value = rep ? rep.status : 'active';
+  document.getElementById('salesRepNotes').value = rep ? (rep.notes || '') : '';
+  document.getElementById('salesRepModalError').style.display = 'none';
+  document.getElementById('btnResetSalesLogin').style.display = (rep && rep.user_id) ? 'inline-flex' : 'none';
+  document.getElementById('salesRepLoginNote').style.display = (rep && rep.user_id) ? 'none' : 'block';
+  modal.style.display = 'flex';
+}
+
+function editSalesRep(jsonStr) {
+  try { openSalesRepModal(JSON.parse(jsonStr)); } catch (e) { console.error(e); }
+}
+
+function closeSalesRepModal() {
+  const m = document.getElementById('salesRepModal');
+  if (m) m.style.display = 'none';
+}
+
+function generateSalesRepCode() {
+  const name = document.getElementById('salesRepName').value.trim();
+  const prefix = name ? name.replace(/\s+/g, '').toUpperCase().slice(0, 4) : 'SLS';
+  document.getElementById('salesRepCode').value = prefix + Math.floor(1000 + Math.random() * 9000);
+}
+
+function generateTempPassword() {
+  // Not a security boundary -- this is emailed straight to the rep, who is
+  // told to change it on first login. Just needs to clear the 8-char/mixed
+  // minimum so create-dev-user.js's own validation never rejects it.
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789!@#';
+  let pw = '';
+  for (let i = 0; i < 12; i++) pw += chars[Math.floor(Math.random() * chars.length)];
+  return pw;
+}
+
+async function saveSalesRep() {
+  const id = document.getElementById('salesRepEditId').value;
+  const userId = document.getElementById('salesRepUserId').value;
+  const name = document.getElementById('salesRepName').value.trim();
+  const email = document.getElementById('salesRepEmail').value.trim();
+  const phone = document.getElementById('salesRepPhone').value.trim();
+  const code = document.getElementById('salesRepCode').value.trim().toUpperCase();
+  const tier = document.getElementById('salesRepTier').value;
+  const status = document.getElementById('salesRepStatus').value;
+  const notes = document.getElementById('salesRepNotes').value.trim();
+  const errEl = document.getElementById('salesRepModalError');
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+
+  if (!name) return showErr('Name is required.');
+  if (!email) return showErr('Email is required.');
+  if (!code) return showErr('Sales code is required.');
+
+  // A login already exists: just update the business fields, no email.
+  if (userId) {
+    const result = await window.sb.from('sales_reps').update({
+      full_name: name, email, phone: phone || null, sales_code: code, tier, status, notes: notes || null,
+    }).eq('id', id);
+    if (result.error) {
+      return showErr(result.error.code === '23505' ? 'That sales code is already in use.' : result.error.message);
+    }
+    closeSalesRepModal();
+    showToast('Sales rep updated.');
+    loadSalesRepsTable();
+    return;
+  }
+
+  // No login yet: create one via create-dev-user.js and email credentials.
+  const password = generateTempPassword();
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch('/api/create-dev-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({
+        action: 'create_sales_user',
+        email, password, full_name: name, phone, sales_code: code, tier,
+        sales_rep_id: id || null,
+      }),
+    });
+    const data = await res.json();
+    if (data.error) return showErr(data.error);
+    closeSalesRepModal();
+    showToast(data.warning || `Sales rep created — credentials emailed to ${email}.`);
+    loadSalesRepsTable();
+  } catch (e) {
+    showErr('Failed to create login: ' + e.message);
+  }
+}
+
+async function resetSalesRepLogin() {
+  const email = document.getElementById('salesRepEmail').value.trim();
+  const name = document.getElementById('salesRepName').value.trim();
+  const code = document.getElementById('salesRepCode').value.trim().toUpperCase();
+  const tier = document.getElementById('salesRepTier').value;
+  const id = document.getElementById('salesRepEditId').value;
+  const errEl = document.getElementById('salesRepModalError');
+  function showErr(msg) { errEl.textContent = msg; errEl.style.display = 'block'; }
+  if (!confirm(`Reset ${email}'s password and email them a new one?`)) return;
+
+  const password = generateTempPassword();
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch('/api/create-dev-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
+      body: JSON.stringify({ action: 'create_sales_user', email, password, full_name: name, sales_code: code, tier, sales_rep_id: id || null }),
+    });
+    const data = await res.json();
+    if (data.error) return showErr(data.error);
+    showToast(data.warning || `New password emailed to ${email}.`);
+  } catch (e) {
+    showErr('Failed to reset password: ' + e.message);
+  }
+}
+
+async function deleteSalesRep(id, name) {
+  if (!confirm(`Delete sales rep "${name}"? This does not delete their login -- remove that separately if needed.`)) return;
+  const result = await window.sb.from('sales_reps').delete().eq('id', id);
+  if (result.error) return showToast('Error: ' + result.error.message, 'error');
+  showToast('Sales rep deleted.');
+  loadSalesRepsTable();
+}
+
+// Monthly payouts, same shape/lock semantics as affiliate_payouts. Rate
+// is per-rep tier (flat 8%/5%), not computed from a revenue bracket, so
+// there is no separate "commission function" to call here -- the rows in
+// sales_payouts already carry the snapshotted rate and amount.
+async function loadSalesPayoutsTable() {
+  const tbody = document.getElementById('sales-payout-table-body');
+  if (!tbody) return;
+  const { data, error } = await window.sb
+    .from('sales_payouts')
+    .select('*, sales_reps(full_name)')
+    .order('period_month', { ascending: false });
+  if (error) { tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Error: ${escHtml(error.message)}</td></tr>`; return; }
+
+  const rows = data || [];
+  if (!rows.length) { tbody.innerHTML = `<tr><td colspan="6" class="a-empty">No payouts recorded yet.</td></tr>`; return; }
+
+  tbody.innerHTML = rows.map(p => `
+    <tr>
+      <td class="pt-strong">${escHtml(p.sales_reps?.full_name || '—')}</td>
+      <td>${fmt(p.period_month)}</td>
+      <td class="num">${stMoney(p.referred_revenue)}</td>
+      <td class="num">${(parseFloat(p.commission_rate) * 100).toFixed(0)}%</td>
+      <td class="num pt-strong">${stMoney(p.commission_amount)}</td>
+      <td>${p.status === 'paid' ? '<span class="pt-badge-paid">Paid</span>' : '<span class="pt-badge-pending">Pending</span>'}</td>
+    </tr>`).join('');
+}
+
 // ── Employee Modal ────────────────────────────────────────────
 
 function closeEmpModal() {
@@ -11874,6 +12146,508 @@ function ptFilterProducts() {
   });
   const countEl = document.getElementById("ptProdCount");
   if (countEl) countEl.textContent = `${visible} of ${(window._ptGroups || []).length} products`;
+}
+
+/* ── Sales rep self-service (role='sales') ────────────────────────
+   Cold-calling closers, not affiliates: flat 8%/5% commission by tier
+   (CEO's "Sales Commission Margin Analysis", Sept 2026), tracked in
+   sales_reps/sales_referrals/sales_payouts (20260928_sales_team.sql) --
+   a deliberately separate table set from the affiliate system so neither
+   can break the other. Same real-RLS-boundary approach as the partner
+   tabs above: plain selects, no client-side filter standing in for RLS. */
+
+const SALES_TIER_RATE = { tier1: 0.08, tier2: 0.05 };
+const SALES_TIER_LABEL = { tier1: "Tier 1 (8%)", tier2: "Tier 2 (5%)" };
+
+async function salesLoadMyRep() {
+  const { data, error } = await window.sb.from("sales_reps").select("*").maybeSingle();
+  return { rep: data || null, error };
+}
+
+async function renderSalesDashboardTab() {
+  const wrap = document.getElementById("tab-sales-dashboard");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { rep, error } = await salesLoadMyRep();
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your sales profile: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  if (!rep) {
+    wrap.innerHTML = `
+      <div class="a-empty" style="padding:50px 20px;text-align:center">
+        <p style="font-size:14px;font-weight:700;color:#0f2b50;margin:0 0 6px">Your account isn't linked to a sales profile yet</p>
+        <p style="font-size:13px;color:#94a3b8;margin:0">Contact Room Ready Supply and we'll connect your login to your sales code.</p>
+      </div>`;
+    return;
+  }
+
+  const { data: referrals, error: refErr } = await window.sb
+    .from("sales_referrals")
+    .select("commission_amount, order_value, commission_rate, created_at, orders(order_number, total, payment_status, created_at)")
+    .eq("sales_rep_id", rep.id)
+    .order("created_at", { ascending: false });
+
+  if (refErr) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your sales: ${escHtml(refErr.message)}</div>`;
+    return;
+  }
+
+  const rows = referrals || [];
+  const totalSales = rows.reduce((s, r) => s + (parseFloat(r.order_value) || 0), 0);
+  const totalCommission = rows.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+
+  const { data: payoutRows } = await window.sb
+    .from("sales_payouts")
+    .select("*")
+    .eq("sales_rep_id", rep.id)
+    .order("period_month", { ascending: false });
+  const payouts = payoutRows || [];
+  const pending = payouts.filter(p => p.status === "pending").reduce((s, p) => s + (parseFloat(p.commission_amount) || 0), 0);
+  const paid = payouts.filter(p => p.status === "paid").reduce((s, p) => s + (parseFloat(p.commission_amount) || 0), 0);
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Welcome, ${escHtml(rep.full_name)}</h2>
+        <p class="pt-sub">Your closed sales and commissions with Room Ready Supply.</p>
+      </div>
+    </div>
+
+    <div class="pt-stats">
+      <div class="pt-stat pt-stat--accent">
+        <p class="pt-stat-label">Commission earned</p>
+        <p class="pt-stat-value">${stMoney(totalCommission)}</p>
+        <p class="pt-stat-sub">${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier)} closer</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Total sales closed</p>
+        <p class="pt-stat-value">${stMoney(totalSales)}</p>
+        <p class="pt-stat-sub">${rows.length} order${rows.length === 1 ? "" : "s"}</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Pending payout</p>
+        <p class="pt-stat-value">${stMoney(pending)}</p>
+        <p class="pt-stat-sub">Not yet paid</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Paid to date</p>
+        <p class="pt-stat-value">${stMoney(paid)}</p>
+        <p class="pt-stat-sub">Lifetime</p>
+      </div>
+    </div>
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Your closed orders</h3><span>${rows.length} total</span></div>
+      ${rows.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Date</th><th>Order</th><th>Status</th>
+          <th class="num">Order value</th><th class="num">Rate</th><th class="num">Commission</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            const o = r.orders || {};
+            const paidStatus = o.payment_status === "paid";
+            return `
+            <tr>
+              <td class="pt-muted">${fmt(r.created_at || o.created_at)}</td>
+              <td class="pt-strong">${escHtml(o.order_number || "—")}</td>
+              <td>${paidStatus ? '<span class="pt-badge-paid">Paid</span>' : `<span class="pt-badge-pending">${escHtml(o.payment_status || "pending")}</span>`}</td>
+              <td class="num">${stMoney(r.order_value)}</td>
+              <td class="num">${(parseFloat(r.commission_rate) * 100).toFixed(0)}%</td>
+              <td class="num pt-strong">${stMoney(r.commission_amount)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No closed orders yet. Share your sales code with customers to get started.</div>`}
+    </div>
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Monthly payouts</h3><span>${payouts.length} total</span></div>
+      ${payouts.length ? `
+      <table class="pt-table">
+        <thead><tr><th>Month</th><th class="num">Revenue</th><th class="num">Commission</th><th>Status</th></tr></thead>
+        <tbody>
+          ${payouts.map(p => `
+            <tr>
+              <td class="pt-strong">${fmt(p.period_month)}</td>
+              <td class="num">${stMoney(p.referred_revenue)}</td>
+              <td class="num pt-strong">${stMoney(p.commission_amount)}</td>
+              <td>${p.status === "paid" ? '<span class="pt-badge-paid">Paid</span>' : '<span class="pt-badge-pending">Pending</span>'}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No payouts recorded yet.</div>`}
+    </div>
+  `;
+}
+
+async function renderSalesAccountTab() {
+  const wrap = document.getElementById("tab-sales-account");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { rep, error } = await salesLoadMyRep();
+  if (error || !rep) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your account: ${escHtml(error?.message || "no sales profile linked yet")}</div>`;
+    return;
+  }
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">My Account</h2>
+        <p class="pt-sub">Your sales code, profile, and login settings.</p>
+      </div>
+    </div>
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Your sales code</h3></div>
+      <div style="padding:18px">
+        <p class="pt-stat-value pt-code" style="margin:0 0 6px">${escHtml(rep.sales_code)}</p>
+        <p class="pt-link-note" style="margin:0">Give this code to customers so their orders are automatically attributed to you (${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier)}).</p>
+      </div>
+    </div>
+
+    <div class="a-settings-grid">
+      <div class="a-card">
+        <div class="a-card-header"><h3>Your Name</h3></div>
+        <form id="salesNameForm" class="a-settings-form" style="padding:22px">
+          <div id="salesNameMsg" class="auth-success" style="display:none"></div>
+          <div id="salesNameErr" class="a-error" style="display:none"></div>
+          <label>Full Name</label>
+          <input type="text" id="salesFullName" value="${escHtml(rep.full_name)}" placeholder="Your name" />
+          <button type="submit" class="a-btn-primary" style="margin-top:20px;width:100%">Save Name</button>
+        </form>
+      </div>
+
+      <div class="a-card">
+        <div class="a-card-header"><h3>Change Password</h3></div>
+        <form id="salesPasswordForm" class="a-settings-form" style="padding:22px">
+          <div id="salesPasswordMsg" class="auth-success" style="display:none"></div>
+          <div id="salesPasswordErr" class="a-error" style="display:none"></div>
+          <label>New Password</label>
+          <input type="password" id="salesNewPass" placeholder="New password (min. 8 chars)" />
+          <label>Confirm New Password</label>
+          <input type="password" id="salesConfirmPass" placeholder="Confirm new password" />
+          <button type="submit" class="a-btn-primary" style="margin-top:20px;width:100%">Update Password</button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("salesNameForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const name = document.getElementById("salesFullName").value.trim();
+    const msgEl = document.getElementById("salesNameMsg");
+    const errEl = document.getElementById("salesNameErr");
+    msgEl.style.display = "none"; errEl.style.display = "none";
+    if (!name) { errEl.textContent = "Name is required."; errEl.style.display = "block"; return; }
+
+    const { data: { user } } = await window.sb.auth.getUser();
+    const [{ error: repErr }, { error: profErr }] = await Promise.all([
+      window.sb.from("sales_reps").update({ full_name: name }).eq("id", rep.id),
+      window.sb.from("profiles").update({ contact_name: name }).eq("id", user.id),
+    ]);
+    if (repErr || profErr) { errEl.textContent = (repErr || profErr).message; errEl.style.display = "block"; return; }
+    msgEl.textContent = "Name updated successfully!"; msgEl.style.display = "block";
+    rep.full_name = name;
+  });
+
+  document.getElementById("salesPasswordForm")?.addEventListener("submit", async e => {
+    e.preventDefault();
+    const newPw = document.getElementById("salesNewPass").value;
+    const confPw = document.getElementById("salesConfirmPass").value;
+    const msgEl = document.getElementById("salesPasswordMsg");
+    const errEl = document.getElementById("salesPasswordErr");
+    msgEl.style.display = "none"; errEl.style.display = "none";
+    if (newPw.length < 8) { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = "block"; return; }
+    if (newPw !== confPw) { errEl.textContent = "Passwords do not match."; errEl.style.display = "block"; return; }
+    const { error } = await window.sb.auth.updateUser({ password: newPw });
+    if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+    msgEl.textContent = "Password updated successfully!"; msgEl.style.display = "block";
+    e.target.reset();
+  });
+}
+
+// Read-only catalog for sales reps -- same products_public source and
+// ptGroupProducts()/ptGroupRow()/ptFilterProducts() the affiliate Partner
+// Products tab uses (defined above); sales reps get the identical
+// safe-column, no-cost-no-margin view, just rendered into their own tab.
+async function renderSalesCatalogTab() {
+  const wrap = document.getElementById("tab-sales-catalog");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { data: products, error } = await window.sb
+    .from("products_public")
+    .select(`
+      id, name, sku, description, overview, image_url, category_name,
+      price, sale_price, is_on_sale, case_qty, pack_size, unit,
+      price_tier1, price_tier2, price_tier3, product_tier,
+      product_family, variant_label, moq
+    `)
+    .order("category_name")
+    .order("name");
+
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load products: ${escHtml(error.message)}</div>`;
+    return;
+  }
+
+  const rows = products || [];
+  const groups = ptGroupProducts(rows);
+  const categories = [...new Set(rows.map(p => p.category_name).filter(Boolean))].sort();
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Product catalog</h2>
+        <p class="pt-sub">Our current selling price on every active product &mdash; for your reference when closing deals. Read-only.</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:14px 18px">
+      <input type="text" id="ptProdSearch" placeholder="Search products&hellip;"
+        class="a-input" style="max-width:320px;display:inline-block;margin-right:10px"
+        oninput="ptFilterProducts()">
+      <select id="ptProdCategory" class="a-input" style="max-width:220px;display:inline-block"
+        onchange="ptFilterProducts()">
+        <option value="">All categories</option>
+        ${categories.map(c => `<option value="${escHtml(c)}">${escHtml(c)}</option>`).join("")}
+      </select>
+    </div>
+
+    <div class="pt-card" style="padding:0">
+      <div class="pt-card-head" style="padding:16px 18px"><h3>Products</h3><span id="ptProdCount">${groups.length} product${groups.length === 1 ? "" : "s"} &middot; ${rows.length} option${rows.length === 1 ? "" : "s"}</span></div>
+      ${groups.length ? `
+      <div id="ptProdList">
+        ${groups.map((g, i) => ptGroupRow(g, i)).join("")}
+      </div>` : `<div class="pt-empty">No active products found.</div>`}
+    </div>
+  `;
+
+  window._ptProducts = rows;
+  window._ptGroups = groups;
+  window._salesCatalogRows = rows; // used by the calculator tab's product picker
+}
+
+// Client-side bulk order calculator. Shipping is a manual override for now
+// -- the CEO's UPS distance/weight formula hasn't been confirmed yet, so
+// this deliberately does not guess at one; wiring it in later only needs
+// to replace the manual input's value, nothing structural changes.
+async function renderSalesCalculatorTab() {
+  const wrap = document.getElementById("tab-sales-calculator");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  let rows = window._salesCatalogRows;
+  if (!rows) {
+    const { data, error } = await window.sb
+      .from("products_public")
+      .select("id, name, price, price_tier1, price_tier2, price_tier3, case_qty, product_family, variant_label")
+      .order("name");
+    if (error) {
+      wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load products: ${escHtml(error.message)}</div>`;
+      return;
+    }
+    rows = data || [];
+    window._salesCatalogRows = rows;
+  }
+
+  const { rep } = await salesLoadMyRep();
+  const rate = rep ? (SALES_TIER_RATE[rep.tier] || 0) : 0;
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Order Calculator</h2>
+        <p class="pt-sub">Quote a bulk order for a customer. Shipping is entered manually until the UPS rate formula is wired in.</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:18px">
+      <div id="calcLines"></div>
+      <button type="button" class="a-btn-outline" style="width:auto;margin-top:10px" onclick="calcAddLine()">+ Add product</button>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;max-width:420px">
+        <div class="a-field">
+          <label>Sales tax rate (%)</label>
+          <input type="number" id="calcTaxRate" value="0" min="0" step="0.01" class="a-input" oninput="calcRecompute()">
+        </div>
+        <div class="a-field">
+          <label>Shipping fee ($) &mdash; manual</label>
+          <input type="number" id="calcShipping" value="0" min="0" step="0.01" class="a-input" oninput="calcRecompute()">
+        </div>
+      </div>
+
+      <div class="pt-stats" style="margin-top:24px">
+        <div class="pt-stat">
+          <p class="pt-stat-label">Subtotal</p>
+          <p class="pt-stat-value" id="calcSubtotal">$0.00</p>
+        </div>
+        <div class="pt-stat">
+          <p class="pt-stat-label">Tax</p>
+          <p class="pt-stat-value" id="calcTax">$0.00</p>
+        </div>
+        <div class="pt-stat">
+          <p class="pt-stat-label">Shipping</p>
+          <p class="pt-stat-value" id="calcShip">$0.00</p>
+        </div>
+        <div class="pt-stat pt-stat--accent">
+          <p class="pt-stat-label">Customer total</p>
+          <p class="pt-stat-value" id="calcTotal">$0.00</p>
+        </div>
+      </div>
+      <p class="pt-link-note" style="margin-top:14px">Your commission preview on this quote (${rate ? (rate * 100).toFixed(0) + "%" : "—"} of order value, before tax/shipping): <strong id="calcCommission">$0.00</strong></p>
+    </div>
+  `;
+
+  window._calcRate = rate;
+  window._calcLineId = 0;
+  calcAddLine();
+}
+
+function calcProductOptions() {
+  const rows = window._salesCatalogRows || [];
+  return rows.map(p => {
+    const price = Number(p.price_tier1) > 0 ? p.price_tier1 : p.price;
+    const label = p.variant_label ? `${p.product_family || p.name} — ${p.variant_label}` : p.name;
+    return `<option value="${p.id}" data-price="${price || 0}" data-case-qty="${p.case_qty || 1}">${escHtml(label)}</option>`;
+  }).join("");
+}
+
+function calcAddLine() {
+  const id = "calcLine" + (window._calcLineId++);
+  const wrap = document.getElementById("calcLines");
+  if (!wrap) return;
+  const div = document.createElement("div");
+  div.id = id;
+  div.style.cssText = "display:flex;gap:10px;align-items:center;margin-bottom:10px";
+  div.innerHTML = `
+    <select class="a-input calc-product" style="flex:2" onchange="calcRecompute()">${calcProductOptions()}</select>
+    <input type="number" class="a-input calc-qty" value="1" min="1" step="1" style="flex:0 0 90px" oninput="calcRecompute()" placeholder="Cases">
+    <span class="calc-line-total num pt-strong" style="flex:0 0 90px;text-align:right">$0.00</span>
+    <button type="button" class="a-btn-outline" style="width:auto;padding:6px 10px" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
+  `;
+  wrap.appendChild(div);
+  calcRecompute();
+}
+
+function calcRecompute() {
+  let subtotal = 0;
+  document.querySelectorAll("#calcLines > div").forEach(line => {
+    const sel = line.querySelector(".calc-product");
+    const qty = parseFloat(line.querySelector(".calc-qty")?.value) || 0;
+    const price = parseFloat(sel?.selectedOptions[0]?.dataset.price) || 0;
+    const lineTotal = price * qty;
+    const totalEl = line.querySelector(".calc-line-total");
+    if (totalEl) totalEl.textContent = stMoney(lineTotal);
+    subtotal += lineTotal;
+  });
+
+  const taxRate = (parseFloat(document.getElementById("calcTaxRate")?.value) || 0) / 100;
+  const shipping = parseFloat(document.getElementById("calcShipping")?.value) || 0;
+  const tax = subtotal * taxRate;
+  const total = subtotal + tax + shipping;
+  const commission = subtotal * (window._calcRate || 0);
+
+  document.getElementById("calcSubtotal").textContent = stMoney(subtotal);
+  document.getElementById("calcTax").textContent = stMoney(tax);
+  document.getElementById("calcShip").textContent = stMoney(shipping);
+  document.getElementById("calcTotal").textContent = stMoney(total);
+  document.getElementById("calcCommission").textContent = stMoney(commission);
+}
+
+// Sales reps' own dev tickets -- reporter-only view of the existing
+// dev_tickets system (20260814_dev_tickets.sql), scoped by the
+// sales_create_own_tickets/sales_read_own_tickets RLS policies added in
+// 20260928_sales_team.sql. Deliberately a smaller standalone UI rather
+// than reusing renderDevTicketsTab(), which is a full staff triage board
+// (assignment, status changes, comments) sales reps have no access to.
+async function renderSalesTicketsTab() {
+  const wrap = document.getElementById("tab-sales-tickets");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const { data: tickets, error } = await window.sb
+    .from("dev_tickets")
+    .select("ticket_number, title, description, ticket_type, priority, status, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load your tickets: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  const rows = tickets || [];
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Report an Issue</h2>
+        <p class="pt-sub">Found a bug or have an idea? Let the dev team know.</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:18px">
+      <div class="a-form-grid">
+        <div class="a-form-col-2">
+          <div class="a-field"><label>Summary <span class="req">*</span></label><input type="text" id="salesTktTitle" placeholder="Short summary"></div>
+          <div class="a-field">
+            <label>Type</label>
+            <select id="salesTktType"><option value="bug">Bug</option><option value="error">Error</option><option value="idea">Idea</option></select>
+          </div>
+        </div>
+        <div class="a-form-col-2">
+          <div class="a-field" style="grid-column:1/-1"><label>Description <span class="req">*</span></label><input type="text" id="salesTktDescription" placeholder="What happened, and what did you expect?"></div>
+        </div>
+      </div>
+      <div id="salesTktErr" style="display:none;color:#ef4444;font-size:13px;margin-top:8px;padding:10px 14px;background:#fff0f0;border-radius:8px;border:1px solid #fecaca;"></div>
+      <button type="button" class="a-btn-primary" style="width:auto;margin-top:14px" onclick="submitSalesTicket()">Submit Ticket</button>
+    </div>
+
+    <div class="pt-card">
+      <div class="pt-card-head"><h3>Your tickets</h3><span>${rows.length} total</span></div>
+      ${rows.length ? `
+      <table class="pt-table">
+        <thead><tr><th>Ticket</th><th>Summary</th><th>Type</th><th>Priority</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+          ${rows.map(t => `
+            <tr>
+              <td class="pt-strong">${escHtml(t.ticket_number || "—")}</td>
+              <td>${escHtml(t.title)}</td>
+              <td>${escHtml(t.ticket_type)}</td>
+              <td>${escHtml(t.priority)}</td>
+              <td>${escHtml(TKT_STATUS_LABEL[t.status] || t.status)}</td>
+              <td class="pt-muted">${fmt(t.created_at)}</td>
+            </tr>`).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No tickets filed yet.</div>`}
+    </div>
+  `;
+}
+
+async function submitSalesTicket() {
+  const title = document.getElementById("salesTktTitle").value.trim();
+  const description = document.getElementById("salesTktDescription").value.trim();
+  const errEl = document.getElementById("salesTktErr");
+  errEl.style.display = "none";
+  if (!title || !description) { errEl.textContent = "Summary and description are required."; errEl.style.display = "block"; return; }
+
+  const { data: { user } } = await window.sb.auth.getUser();
+  const payload = {
+    title,
+    description,
+    ticket_type: document.getElementById("salesTktType").value,
+    page_url: window.location.href,
+    reporter_id: user?.id || null,
+    reporter_email: user?.email || null,
+  };
+  const { error } = await window.sb.from("dev_tickets").insert(payload).select().single();
+  if (error) { errEl.textContent = error.message; errEl.style.display = "block"; return; }
+  showToast("Ticket submitted — thanks!");
+  renderSalesTicketsTab();
 }
 
 // Quote status as the affiliate should read it. Deliberately plain words

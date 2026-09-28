@@ -12,7 +12,54 @@
 // request body.
 
 const { createClient } = require('@supabase/supabase-js');
+const { Resend } = require('resend');
 const rateLimit = require('./_lib/rate-limit');
+
+// Sales rep accounts (action: 'create_sales_user') are dispatched from here
+// too, same 12-function-cap reasoning as the header comment above -- and
+// unlike every other account type this file creates, the CEO asked for
+// sales accounts to get their credentials emailed automatically rather
+// than relayed by hand, so this is the one flow here that sends mail.
+const TIER_LABELS = { tier1: 'Tier 1 (8% commission)', tier2: 'Tier 2 (5% commission)' };
+
+let _resend = null;
+function getResend() {
+  if (_resend) return _resend;
+  const key = process.env.RESEND_API_KEY;
+  if (!key) throw new Error('RESEND_API_KEY is not set');
+  _resend = new Resend(key);
+  return _resend;
+}
+
+function escHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+async function sendSalesCredentialsEmail({ email, full_name, password, tier }) {
+  const resend = getResend();
+  const loginUrl = 'https://www.roomreadysupply.com/login.html';
+  const html = `
+    <div style="font-family:sans-serif;color:#0B1F38;max-width:520px;margin:0 auto;">
+      <h2 style="color:#0B1F38;">Welcome to the Room Ready Supply Sales Team</h2>
+      <p>Hi ${escHtml(full_name || email)},</p>
+      <p>An account has been created for you on the RRS Sales Portal as a <strong>${escHtml(TIER_LABELS[tier] || tier)}</strong> closer.</p>
+      <table style="border-collapse:collapse;margin:18px 0;">
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Login URL</td><td><a href="${loginUrl}">${loginUrl}</a></td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Email</td><td>${escHtml(email)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Temporary Password</td><td><strong>${escHtml(password)}</strong></td></tr>
+      </table>
+      <p>For security, please sign in and change your password right away from the Account tab.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962</p>
+    </div>`;
+
+  await resend.emails.send({
+    from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+    reply_to: 'sales@roomreadysupply.com',
+    to: email,
+    subject: 'Your Room Ready Supply Sales Portal login',
+    html,
+  });
+}
 
 // 'owner' = full, unrestricted access (was 'admin' before the CEO/Owner vs
 // Admin role split). 'admin' = the narrower Users/Dev-Tickets/Hero/About
@@ -71,6 +118,91 @@ module.exports = async (req, res) => {
       const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
       if (delErr) return res.status(400).json({ error: delErr.message });
       return res.status(200).json({ success: true });
+    }
+
+    // --- Create/promote a sales rep account, emailing credentials --------
+    if (body.action === 'create_sales_user') {
+      const { email, password, full_name, phone, sales_code, tier, sales_rep_id } = body;
+      const resolvedTier = ['tier1', 'tier2'].includes(tier) ? tier : 'tier1';
+
+      if (!email || !password || !full_name || !sales_code) {
+        return res.status(400).json({ error: 'Name, email, sales code, and password are required.' });
+      }
+      if (String(password).length < 8) {
+        return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+      }
+
+      let userId;
+      let createdNewAuthUser = false;
+      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+      });
+
+      if (createErr) {
+        const alreadyExists = /already.*registered|already.*exists/i.test(createErr.message || '');
+        if (!alreadyExists) return res.status(400).json({ error: createErr.message });
+
+        let match = null;
+        for (let page = 1; page <= 20 && !match; page++) {
+          const { data: pageData, error: listErr } = await admin.auth.admin.listUsers({ page, perPage: 200 });
+          if (listErr) return res.status(400).json({ error: listErr.message });
+          match = (pageData?.users || []).find(u => (u.email || '').toLowerCase() === email.toLowerCase());
+          if (!pageData?.users?.length || pageData.users.length < 200) break;
+        }
+        if (!match) return res.status(400).json({ error: 'A user with this email already exists, but could not be found to promote. Double-check the email address.' });
+
+        const { error: pwErr } = await admin.auth.admin.updateUserById(match.id, { password });
+        if (pwErr) return res.status(400).json({ error: 'Found the existing account but could not reset its password: ' + pwErr.message });
+        userId = match.id;
+      } else {
+        userId = created.user.id;
+        createdNewAuthUser = true;
+      }
+
+      const { error: profileErr } = await admin.from('profiles').upsert({
+        id: userId,
+        email,
+        role: 'sales',
+        contact_name: full_name,
+      });
+
+      if (profileErr) {
+        if (createdNewAuthUser) await admin.auth.admin.deleteUser(userId).catch(() => {});
+        return res.status(400).json({ error: profileErr.message });
+      }
+
+      const repRow = {
+        user_id: userId,
+        full_name,
+        email,
+        phone: phone || null,
+        sales_code,
+        tier: resolvedTier,
+        status: 'active',
+      };
+      let repErr;
+      if (sales_rep_id) {
+        ({ error: repErr } = await admin.from('sales_reps').update(repRow).eq('id', sales_rep_id));
+      } else {
+        ({ error: repErr } = await admin.from('sales_reps').insert(repRow));
+      }
+
+      if (repErr) {
+        if (createdNewAuthUser) await admin.auth.admin.deleteUser(userId).catch(() => {});
+        return res.status(400).json({ error: repErr.message });
+      }
+
+      let emailWarning = null;
+      try {
+        await sendSalesCredentialsEmail({ email, full_name, password, tier: resolvedTier });
+      } catch (e) {
+        console.error('create-dev-user (sales): credentials email failed:', e.message);
+        emailWarning = 'Account created, but the credentials email failed to send: ' + e.message;
+      }
+
+      return res.status(200).json({ success: true, user_id: userId, email, promoted: !createdNewAuthUser, warning: emailWarning });
     }
 
     // --- Create a staff account, OR promote an existing one --------------
