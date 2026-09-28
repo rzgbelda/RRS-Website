@@ -890,7 +890,13 @@
         document.getElementById("profileEmail").value         = biz.is_default ? window._acctEmail : (biz.email || "");
       } else {
         label.textContent = "All Businesses";
-        overviewCard.style.display = (window._bizList || []).length ? "block" : "none";
+        // Always show the overview card here, even with zero businesses --
+        // it's the only place the "+ Add New Business" button lives. Hiding
+        // it for an empty list (as before) left an account with no business
+        // rows and no profiles.business_name (e.g. a staff/developer login
+        // with no customer data) looking at a permanently blank Profile
+        // panel with no way to add one.
+        overviewCard.style.display = "block";
         formCard.style.display = "none";
         renderBizOverview();
       }
