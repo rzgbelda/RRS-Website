@@ -12071,9 +12071,19 @@ function ptGroupRow(g, idx) {
   const tierBadges = tiers.map(t => `<span class="a-badge a-badge-gray" style="margin-left:6px">${escHtml(t)}</span>`).join("");
   const rowId = "ptGroup" + idx;
 
+  // Find the best (lowest) tier price across all variants for a "from" hint
+  const bestTierPrice = g.variants.reduce((best, v) => {
+    const tp = [v.price_tier1, v.price_tier2, v.price_tier3].map(Number).filter(n => n > 0);
+    return tp.length ? Math.min(best, ...tp) : best;
+  }, Infinity);
+  const hasTierPricing = isFinite(bestTierPrice);
+  const baseMin = g.minPrice;
+  const savePct = hasTierPricing && baseMin > 0 ? Math.round((1 - bestTierPrice / baseMin) * 100) : 0;
+  const saveBadge = savePct > 0 ? `<span class="pt-save-badge">Save up to ${savePct}%</span>` : "";
+
   const priceCell = g.minPrice === g.maxPrice
-    ? stMoney(g.minPrice)
-    : `${stMoney(g.minPrice)}&ndash;${stMoney(g.maxPrice)}`;
+    ? `${stMoney(g.minPrice)}${saveBadge}`
+    : `${stMoney(g.minPrice)}&ndash;${stMoney(g.maxPrice)}${saveBadge}`;
 
   const chevron = hasVariants ? `
     <svg class="pt-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;transition:transform .15s">
@@ -12097,21 +12107,41 @@ function ptGroupRow(g, idx) {
 
   const childRows = g.variants.map(v => {
     const label = v.variant_label || v.name;
-    const tierPrices = [v.price_tier1, v.price_tier2, v.price_tier3].map(Number).filter(n => n > 0);
-    let vPrice;
-    if (tierPrices.length) {
-      const min = Math.min(...tierPrices), max = Math.max(...tierPrices);
-      vPrice = min === max ? stMoney(min) : `${stMoney(min)}&ndash;${stMoney(max)}`;
+    const basePrice = Number(v.price) || 0;
+
+    // Build tiered price rows if this product has tier pricing
+    const tiers = [
+      { price: Number(v.price_tier1), min: v.tier1_min_qty, next: v.tier2_min_qty },
+      { price: Number(v.price_tier2), min: v.tier2_min_qty, next: v.tier3_min_qty },
+      { price: Number(v.price_tier3), min: v.tier3_min_qty, next: null },
+    ].filter(t => t.price > 0 && t.min != null);
+
+    let priceCell;
+    if (tiers.length) {
+      const lowestTier = Math.min(...tiers.map(t => t.price));
+      const savePct = basePrice > 0 ? Math.round((1 - lowestTier / basePrice) * 100) : 0;
+      const tierRows = tiers.map((t, i) => {
+        const rangeLabel = t.next != null ? `${t.min}–${t.next - 1} cases` : `${t.min}+ cases`;
+        const save = basePrice > 0 && t.price < basePrice
+          ? `<span class="pt-tier-save">Save ${Math.round((1 - t.price / basePrice) * 100)}%</span>` : "";
+        return `<div class="pt-tier-row"><span class="pt-tier-range">${rangeLabel}</span><span class="pt-tier-price num">${stMoney(t.price)}</span>${save}</div>`;
+      });
+      // Prepend the base (list) price row if there's a gap before tier1
+      const baseRow = tiers[0].min > 1
+        ? `<div class="pt-tier-row pt-tier-row--base"><span class="pt-tier-range">1–${tiers[0].min - 1} cases</span><span class="pt-tier-price num">${stMoney(basePrice)}</span><span class="pt-tier-save pt-tier-save--list">List</span></div>`
+        : "";
+      priceCell = `<div class="pt-tier-table">${baseRow}${tierRows.join("")}</div>`;
     } else if (v.is_on_sale && v.sale_price) {
-      vPrice = `<span class="pt-muted" style="text-decoration:line-through">${stMoney(v.price)}</span> ${stMoney(v.sale_price)}`;
+      priceCell = `<span class="pt-muted" style="text-decoration:line-through">${stMoney(basePrice)}</span> <strong>${stMoney(v.sale_price)}</strong>`;
     } else {
-      vPrice = stMoney(v.price);
+      priceCell = stMoney(basePrice);
     }
+
     return `
-      <div class="pt-vrow">
+      <div class="pt-vrow pt-vrow--tiered">
         <span class="pt-vrow-label">${escHtml(label)}</span>
         <span class="pt-vrow-case">${v.case_qty || 1} / ${v.pack_size || 1} ${escHtml(v.unit || "Case")}</span>
-        <span class="pt-vrow-price num">${vPrice}</span>
+        <div class="pt-vrow-price">${priceCell}</div>
       </div>`;
   }).join("");
 
@@ -12391,6 +12421,7 @@ async function renderSalesCatalogTab() {
       id, name, sku, description, overview, image_url, category_name,
       price, sale_price, is_on_sale, case_qty, pack_size, unit,
       price_tier1, price_tier2, price_tier3, product_tier,
+      tier1_min_qty, tier2_min_qty, tier3_min_qty,
       product_family, variant_label, moq
     `)
     .order("category_name")
@@ -12449,7 +12480,7 @@ async function renderSalesCalculatorTab() {
   if (!rows) {
     const { data, error } = await window.sb
       .from("products_public")
-      .select("id, name, price, price_tier1, price_tier2, price_tier3, case_qty, product_family, variant_label")
+      .select("id, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, case_qty, product_family, variant_label")
       .order("name");
     if (error) {
       wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load products: ${escHtml(error.message)}</div>`;
@@ -12532,6 +12563,38 @@ function calcProductLabel(p) {
 function calcProductPrice(p) {
   return Number(p.price_tier1) > 0 ? p.price_tier1 : (Number(p.price) || 0);
 }
+// Returns the per-case price for a given qty, respecting tier thresholds
+function calcTieredPrice(p, qty) {
+  const base = Number(p.price) || 0;
+  const tiers = [
+    { price: Number(p.price_tier1), min: p.tier1_min_qty },
+    { price: Number(p.price_tier2), min: p.tier2_min_qty },
+    { price: Number(p.price_tier3), min: p.tier3_min_qty },
+  ].filter(t => t.price > 0 && t.min != null).reverse(); // highest threshold first
+  for (const t of tiers) {
+    if (qty >= t.min) return t.price;
+  }
+  return base;
+}
+// Returns HTML hint about tier thresholds so the rep knows what to tell the customer
+function calcTierHint(p, qty) {
+  const base = Number(p.price) || 0;
+  const tiers = [
+    { price: Number(p.price_tier1), min: p.tier1_min_qty },
+    { price: Number(p.price_tier2), min: p.tier2_min_qty },
+    { price: Number(p.price_tier3), min: p.tier3_min_qty },
+  ].filter(t => t.price > 0 && t.min != null);
+  if (!tiers.length) return "";
+  // Find next tier the customer hasn't hit yet
+  const nextTier = tiers.find(t => qty < t.min);
+  const currentPrice = calcTieredPrice(p, qty);
+  const savePct = base > 0 && currentPrice < base ? Math.round((1 - currentPrice / base) * 100) : 0;
+  const saveNote = savePct > 0 ? `<span class="calc-save-badge">Saving ${savePct}% vs list</span>` : "";
+  const nextNote = nextTier
+    ? `<span class="calc-tier-hint">Order ${nextTier.min - qty} more → ${stMoney(nextTier.price)}/case</span>`
+    : `<span class="calc-tier-hint calc-tier-hint--best">Best tier price unlocked</span>`;
+  return `${saveNote}${nextNote}`;
+}
 
 function calcAddLine() {
   const id = "calcLine" + (window._calcLineId++);
@@ -12596,14 +12659,27 @@ function calcPickProduct(lineId, jsonStr) {
   if (!line) return;
 
   line.dataset.productId = p.id;
-  line.dataset.price = calcProductPrice(p);
+  line.dataset.productJson = jsonStr; // store for tier recalc on qty change
 
   const searchWrap = line.querySelector(".calc-line-search");
   const picked = line.querySelector(".calc-line-picked");
   searchWrap.hidden = true;
   picked.hidden = false;
+
+  const qty = parseInt(picked.querySelector(".calc-qty")?.value) || 1;
+  const price = calcTieredPrice(p, qty);
+  line.dataset.price = price;
+
   picked.querySelector(".calc-line-name").textContent = calcProductLabel(p);
-  picked.querySelector(".calc-line-unit").textContent = `${stMoney(calcProductPrice(p))} / case`;
+  picked.querySelector(".calc-line-unit").textContent = `${stMoney(price)} / case`;
+
+  let hintEl = picked.querySelector(".calc-line-tier-hint");
+  if (!hintEl) {
+    hintEl = document.createElement("div");
+    hintEl.className = "calc-line-tier-hint";
+    picked.querySelector(".calc-line-info").appendChild(hintEl);
+  }
+  hintEl.innerHTML = calcTierHint(p, qty);
 
   const dropdown = document.getElementById(`${lineId}-dropdown`);
   if (dropdown) { dropdown.hidden = true; dropdown.innerHTML = ""; }
@@ -12620,8 +12696,22 @@ document.addEventListener("click", e => {
 function calcRecompute() {
   let subtotal = 0;
   document.querySelectorAll("#calcLines .calc-line").forEach(line => {
-    const price = parseFloat(line.dataset.price) || 0;
     const qty = parseFloat(line.querySelector(".calc-qty")?.value) || 0;
+
+    // Re-resolve tier price on every recompute so qty changes update the rate
+    let price = parseFloat(line.dataset.price) || 0;
+    if (line.dataset.productJson && qty > 0) {
+      try {
+        const p = JSON.parse(line.dataset.productJson);
+        price = calcTieredPrice(p, qty);
+        line.dataset.price = price;
+        const unitEl = line.querySelector(".calc-line-unit");
+        if (unitEl) unitEl.textContent = `${stMoney(price)} / case`;
+        const hintEl = line.querySelector(".calc-line-tier-hint");
+        if (hintEl) hintEl.innerHTML = calcTierHint(p, qty);
+      } catch (e) {}
+    }
+
     const lineTotal = price * qty;
     const totalEl = line.querySelector(".calc-line-total");
     if (totalEl) totalEl.textContent = stMoney(lineTotal);
