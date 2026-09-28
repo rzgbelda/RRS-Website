@@ -12513,13 +12513,19 @@ async function renderSalesCalculatorTab() {
   calcAddLine();
 }
 
-function calcProductOptions() {
-  const rows = window._salesCatalogRows || [];
-  return rows.map(p => {
-    const price = Number(p.price_tier1) > 0 ? p.price_tier1 : p.price;
-    const label = p.variant_label ? `${p.product_family || p.name} — ${p.variant_label}` : p.name;
-    return `<option value="${p.id}" data-price="${price || 0}" data-case-qty="${p.case_qty || 1}">${escHtml(label)}</option>`;
-  }).join("");
+// calcProductOptions() (plain <select> full of hundreds of long option
+// strings) was unusable -- no way to search, and the chosen product's
+// price/case size were invisible until after picking. Replaced with a
+// type-to-search combobox per line: typing filters a dropdown of matches,
+// picking one locks in a clearly-labeled product card with its own price
+// and a proper quantity stepper, so a rep can find an item and see exactly
+// what they're pricing without hunting through an alphabetical dropdown.
+
+function calcProductLabel(p) {
+  return p.variant_label ? `${p.product_family || p.name} — ${p.variant_label}` : p.name;
+}
+function calcProductPrice(p) {
+  return Number(p.price_tier1) > 0 ? p.price_tier1 : (Number(p.price) || 0);
 }
 
 function calcAddLine() {
@@ -12528,27 +12534,91 @@ function calcAddLine() {
   if (!wrap) return;
   const div = document.createElement("div");
   div.id = id;
-  div.style.cssText = "display:flex;gap:10px;align-items:center;margin-bottom:10px";
+  div.className = "calc-line";
+  div.dataset.productId = "";
   div.innerHTML = `
-    <select class="a-input calc-product" style="flex:2" onchange="calcRecompute()">${calcProductOptions()}</select>
-    <input type="number" class="a-input calc-qty" value="1" min="1" step="1" style="flex:0 0 90px" oninput="calcRecompute()" placeholder="Cases">
-    <span class="calc-line-total num pt-strong" style="flex:0 0 90px;text-align:right">$0.00</span>
-    <button type="button" class="a-btn-outline" style="width:auto;padding:6px 10px" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
+    <div class="calc-line-search">
+      <input type="text" class="a-input calc-product-search" placeholder="Search products by name&hellip;"
+        oninput="calcSearchProducts('${id}', this.value)" onfocus="calcSearchProducts('${id}', this.value)">
+      <div class="calc-product-dropdown" id="${id}-dropdown" hidden></div>
+    </div>
+    <div class="calc-line-picked" id="${id}-picked" hidden>
+      <div class="calc-line-info">
+        <span class="calc-line-name pt-strong"></span>
+        <span class="calc-line-unit pt-muted"></span>
+      </div>
+      <div class="calc-line-qty">
+        <label>Cases</label>
+        <input type="number" class="a-input calc-qty" value="1" min="1" step="1" oninput="calcRecompute()">
+      </div>
+      <div class="calc-line-total-wrap">
+        <label>Line total</label>
+        <span class="calc-line-total num pt-strong">$0.00</span>
+      </div>
+      <button type="button" class="calc-line-remove" title="Remove" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
+    </div>
   `;
   wrap.appendChild(div);
+}
+
+function calcSearchProducts(lineId, query) {
+  const dropdown = document.getElementById(`${lineId}-dropdown`);
+  if (!dropdown) return;
+  const q = (query || "").trim().toLowerCase();
+  const rows = window._salesCatalogRows || [];
+  if (!q) { dropdown.hidden = true; dropdown.innerHTML = ""; return; }
+
+  const matches = rows.filter(p => calcProductLabel(p).toLowerCase().includes(q)).slice(0, 25);
+  if (!matches.length) {
+    dropdown.innerHTML = `<div class="calc-dd-empty">No products match "${escHtml(query)}"</div>`;
+    dropdown.hidden = false;
+    return;
+  }
+  dropdown.innerHTML = matches.map(p => `
+    <div class="calc-dd-row" onclick='calcPickProduct("${lineId}", ${JSON.stringify(JSON.stringify(p))})'>
+      <span class="calc-dd-name">${escHtml(calcProductLabel(p))}</span>
+      <span class="calc-dd-price num">${stMoney(calcProductPrice(p))}</span>
+    </div>`).join("");
+  dropdown.hidden = false;
+}
+
+function calcPickProduct(lineId, jsonStr) {
+  let p;
+  try { p = JSON.parse(jsonStr); } catch (e) { return; }
+  const line = document.getElementById(lineId);
+  if (!line) return;
+
+  line.dataset.productId = p.id;
+  line.dataset.price = calcProductPrice(p);
+
+  const searchWrap = line.querySelector(".calc-line-search");
+  const picked = line.querySelector(".calc-line-picked");
+  searchWrap.hidden = true;
+  picked.hidden = false;
+  picked.querySelector(".calc-line-name").textContent = calcProductLabel(p);
+  picked.querySelector(".calc-line-unit").textContent = `${stMoney(calcProductPrice(p))} / case`;
+
+  const dropdown = document.getElementById(`${lineId}-dropdown`);
+  if (dropdown) { dropdown.hidden = true; dropdown.innerHTML = ""; }
+
   calcRecompute();
 }
 
+document.addEventListener("click", e => {
+  if (!e.target.closest(".calc-line-search")) {
+    document.querySelectorAll(".calc-product-dropdown").forEach(d => { d.hidden = true; });
+  }
+});
+
 function calcRecompute() {
   let subtotal = 0;
-  document.querySelectorAll("#calcLines > div").forEach(line => {
-    const sel = line.querySelector(".calc-product");
+  document.querySelectorAll("#calcLines .calc-line").forEach(line => {
+    const price = parseFloat(line.dataset.price) || 0;
     const qty = parseFloat(line.querySelector(".calc-qty")?.value) || 0;
-    const price = parseFloat(sel?.selectedOptions[0]?.dataset.price) || 0;
     const lineTotal = price * qty;
     const totalEl = line.querySelector(".calc-line-total");
     if (totalEl) totalEl.textContent = stMoney(lineTotal);
-    subtotal += lineTotal;
+    if (line.dataset.productId) subtotal += lineTotal;
   });
 
   const taxRate = (parseFloat(document.getElementById("calcTaxRate")?.value) || 0) / 100;
