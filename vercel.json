@@ -350,16 +350,6 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/index.html",
-      "has": [{ "type": "host", "value": "(?!admin\\.).*" }]
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/admin.html",
-      "has": [{ "type": "host", "value": "admin\\.roomreadysupply\\.com" }]
-    },
-    {
-      "source": "/",
       "destination": "/index.html"
     },
     {
