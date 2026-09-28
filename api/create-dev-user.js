@@ -122,8 +122,9 @@ module.exports = async (req, res) => {
 
     // --- Create/promote a sales rep account, emailing credentials --------
     if (body.action === 'create_sales_user') {
-      const { email, password, full_name, phone, sales_code, tier, sales_rep_id } = body;
+      const { email, password, full_name, phone, sales_code, tier, sales_rep_id, role: requestedRole } = body;
       const resolvedTier = ['tier1', 'tier2'].includes(tier) ? tier : 'tier1';
+      const resolvedRole = requestedRole === 'sales_manager' ? 'sales_manager' : 'sales';
 
       if (!email || !password || !full_name || !sales_code) {
         return res.status(400).json({ error: 'Name, email, sales code, and password are required.' });
@@ -164,7 +165,7 @@ module.exports = async (req, res) => {
       const { error: profileErr } = await admin.from('profiles').upsert({
         id: userId,
         email,
-        role: 'sales',
+        role: resolvedRole,
         contact_name: full_name,
       });
 

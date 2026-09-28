@@ -88,6 +88,14 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v5"/><path d="M3 12a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2"/><path d="M3 12v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/></svg>
         Report an Issue
       </a>
+      <a href="#" class="a-nav-item" data-tab="sales-orders" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        My Orders
+      </a>
+      <a href="#" class="a-nav-item" data-tab="sales-team-overview" style="display:none">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        Team Overview
+      </a>
 
       <span class="a-nav-section admin-only-nav">Catalog</span>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="products">
@@ -1690,6 +1698,18 @@
            Reporter-only dev ticket view for sales reps (sales_create_own_
            tickets / sales_read_own_tickets RLS, 20260928_sales_team.sql). -->
     </div><!-- /sales-tickets tab -->
+
+    <div id="tab-sales-orders" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesOrdersTab() in admin.js.
+           Shows referred orders with payment status, invoice email, and PDF
+           download for both sales reps and sales_manager. -->
+    </div><!-- /sales-orders tab -->
+
+    <div id="tab-sales-team-overview" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderSalesTeamOverviewTab() in admin.js.
+           Head of Sales Operations view: all reps, their individual commissions,
+           and team-wide totals. Only visible to sales_manager role. -->
+    </div><!-- /sales-team-overview tab -->
 
     <!-- ============ DEVELOPER TICKETS TAB ============ -->
     <div id="tab-dev-tickets" class="a-tab" style="display:none">

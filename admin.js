@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Allow "admin" full access, "sub_distributor" limited access,
   // and "developer" the ticket board only
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales" && role !== "sales_manager") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
@@ -66,7 +66,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales" && role !== "sales_manager") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
@@ -215,7 +215,9 @@ const AFFILIATE_TABS = ["partner", "partner-products"];
 // tickets (their own only, via the sales_* RLS policies added in
 // 20260928_sales_team.sql), and the bulk-order calculator. Same
 // allow-list-by-default reasoning as AFFILIATE_TABS above.
-const SALES_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator"];
+const SALES_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders"];
+// Head of Sales Operations: broader team-wide view + invoice/payment capabilities
+const SALES_MANAGER_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders", "sales-team-overview"];
 
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
@@ -224,6 +226,7 @@ function isTabAllowed(tab) {
   if (window._adminRole === "admin") return ADMIN_ROLE_TABS.includes(tab);
   if (window._adminRole === "sub_distributor") return AFFILIATE_TABS.includes(tab);
   if (window._adminRole === "sales") return SALES_TABS.includes(tab);
+  if (window._adminRole === "sales_manager") return SALES_MANAGER_TABS.includes(tab);
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
@@ -250,6 +253,7 @@ function landingTabFor(role) {
   if (role === "admin") return "users";
   if (role === "sub_distributor") return "partner";
   if (role === "sales") return "sales-dashboard";
+  if (role === "sales_manager") return "sales-team-overview";
   return "dashboard";
 }
 
@@ -279,12 +283,12 @@ function applyRoleRestrictions(role) {
     // own display:none in admin.html -- and every other role re-hides
     // what it should not see in the branch below; owner returned before
     // reaching it, so these two stayed visible from that reset.
-    document.querySelectorAll('.a-nav-item[data-tab="partner"], .a-nav-item[data-tab="partner-products"], .a-nav-item[data-tab="sales-dashboard"], .a-nav-item[data-tab="sales-account"], .a-nav-item[data-tab="sales-catalog"], .a-nav-item[data-tab="sales-calculator"], .a-nav-item[data-tab="sales-tickets"]')
+    document.querySelectorAll('.a-nav-item[data-tab="partner"], .a-nav-item[data-tab="partner-products"], .a-nav-item[data-tab="sales-dashboard"], .a-nav-item[data-tab="sales-account"], .a-nav-item[data-tab="sales-catalog"], .a-nav-item[data-tab="sales-calculator"], .a-nav-item[data-tab="sales-tickets"], .a-nav-item[data-tab="sales-orders"], .a-nav-item[data-tab="sales-team-overview"]')
       .forEach(el => { el.style.display = "none"; });
     return;
   }
 
-  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor" || role === "sales") {
+  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor" || role === "sales" || role === "sales_manager") {
     // Hide every nav item except this role's allow-list, and every section
     // heading that ends up with nothing under it. sub_distributor used to
     // fall through to the plain "hide admin-only-nav" branch below, which
@@ -294,6 +298,7 @@ function applyRoleRestrictions(role) {
       : role === "marketing" ? MARKETING_TABS
       : role === "sub_distributor" ? AFFILIATE_TABS
       : role === "sales" ? SALES_TABS
+      : role === "sales_manager" ? SALES_MANAGER_TABS
       : ADMIN_ROLE_TABS;
     document.querySelectorAll(".a-nav-item").forEach(el => {
       if (!allowed.includes(el.dataset.tab)) el.style.display = "none";
@@ -306,7 +311,7 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : role === "sales" ? "Sales Portal" : "Admin Portal");
+    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : role === "sales" ? "Sales Portal" : role === "sales_manager" ? "Sales Operations" : "Admin Portal");
     return;
   }
 
@@ -413,11 +418,13 @@ function switchTab(tab) {
   if (tab === "sales-tax")        renderSalesTaxTab();
   if (tab === "partner")          renderPartnerTab();
   if (tab === "partner-products") renderPartnerProductsTab();
-  if (tab === "sales-dashboard")  renderSalesDashboardTab();
-  if (tab === "sales-account")    renderSalesAccountTab();
-  if (tab === "sales-catalog")    renderSalesCatalogTab();
-  if (tab === "sales-calculator") renderSalesCalculatorTab();
-  if (tab === "sales-tickets")    renderSalesTicketsTab();
+  if (tab === "sales-dashboard")      renderSalesDashboardTab();
+  if (tab === "sales-account")        renderSalesAccountTab();
+  if (tab === "sales-catalog")        renderSalesCatalogTab();
+  if (tab === "sales-calculator")     renderSalesCalculatorTab();
+  if (tab === "sales-tickets")        renderSalesTicketsTab();
+  if (tab === "sales-orders")         renderSalesOrdersTab();
+  if (tab === "sales-team-overview")  renderSalesTeamOverviewTab();
 }
 
 document.querySelectorAll(".a-nav-item").forEach(el => {
@@ -9417,22 +9424,33 @@ async function renderSalesTeamTab() {
 async function loadSalesRepsTable() {
   const tbody = document.getElementById('sales-reps-table-body');
   if (!tbody) return;
-  const { data, error } = await window.sb.from('sales_reps').select('*').order('created_at', { ascending: false });
+  const { data, error } = await window.sb.from('sales_reps')
+    .select('*')
+    .order('created_at', { ascending: false });
   if (error) { tbody.innerHTML = `<tr><td colspan="7" class="a-empty">Error: ${escHtml(error.message)}</td></tr>`; return; }
 
-  const rows = data || [];
+  // Fetch profile roles for reps that have a linked user_id
+  const userIds = (data || []).map(r => r.user_id).filter(Boolean);
+  let profileRoles = {};
+  if (userIds.length) {
+    const { data: profiles } = await window.sb.from('profiles').select('id, role').in('id', userIds);
+    (profiles || []).forEach(p => { profileRoles[p.id] = p.role; });
+  }
+  const rows = (data || []).map(r => ({ ...r, _profile_role: r.user_id ? (profileRoles[r.user_id] || 'sales') : 'sales' }));
   window._salesReps = rows;
   const countEl = document.getElementById('sales-reps-count');
   if (countEl) countEl.textContent = rows.length + (rows.length === 1 ? ' rep' : ' reps');
 
   if (!rows.length) { tbody.innerHTML = `<tr><td colspan="7" class="a-empty">No sales reps yet.</td></tr>`; return; }
 
+  const roleLabel = role => role === 'sales_manager' ? 'Mgr' : 'Closer';
+
   tbody.innerHTML = rows.map(r => `
     <tr>
       <td class="pt-strong">${escHtml(r.full_name)}</td>
       <td>${escHtml(r.email)}</td>
-      <td>${escHtml(r.sales_code)}</td>
-      <td>${escHtml(SALES_TIER_LABEL[r.tier] || r.tier)}</td>
+      <td>${escHtml(r.sales_code || '—')}</td>
+      <td>${r._profile_role === 'sales_manager' ? '<span class="pt-badge-paid" style="background:#7c3aed20;color:#7c3aed">Manager</span>' : escHtml(SALES_TIER_LABEL[r.tier] || r.tier)}</td>
       <td>${r.status === 'active' ? '<span class="pt-badge-paid">Active</span>' : '<span class="pt-badge-pending">Inactive</span>'}</td>
       <td>${r.user_id ? '<span class="pt-badge-paid">Yes</span>' : '<span class="pt-badge-pending">No</span>'}</td>
       <td style="text-align:center">
@@ -9477,16 +9495,26 @@ function openSalesRepModal(rep) {
             </div>
             <div class="a-form-col-2">
               <div class="a-field">
-                <label>Tier <span class="req">*</span></label>
-                <select id="salesRepTier">
-                  <option value="tier1">Tier 1 (8% commission)</option>
-                  <option value="tier2">Tier 2 (5% commission)</option>
+                <label>Role <span class="req">*</span></label>
+                <select id="salesRepRole" onchange="document.getElementById('salesRepTierWrap').style.display=this.value==='sales_manager'?'none':''">
+                  <option value="sales">Sales Closer</option>
+                  <option value="sales_manager">Head of Sales Operations</option>
                 </select>
               </div>
               <div class="a-field">
                 <label>Status</label>
                 <select id="salesRepStatus"><option value="active">Active</option><option value="inactive">Inactive</option></select>
               </div>
+            </div>
+            <div class="a-form-col-2" id="salesRepTierWrap">
+              <div class="a-field">
+                <label>Commission Tier <span class="req">*</span></label>
+                <select id="salesRepTier">
+                  <option value="tier1">Tier 1 (8% commission)</option>
+                  <option value="tier2">Tier 2 (5% commission)</option>
+                </select>
+              </div>
+              <div></div>
             </div>
             <div class="a-form-col-2">
               <div class="a-field" style="grid-column:1/-1"><label>Notes</label><input type="text" id="salesRepNotes" placeholder="Optional notes"></div>
@@ -9511,6 +9539,9 @@ function openSalesRepModal(rep) {
   document.getElementById('salesRepEmail').value = rep ? rep.email : '';
   document.getElementById('salesRepPhone').value = rep ? (rep.phone || '') : '';
   document.getElementById('salesRepCode').value = rep ? rep.sales_code : '';
+  const repRole = rep ? (rep._profile_role || 'sales') : 'sales';
+  document.getElementById('salesRepRole').value = repRole;
+  document.getElementById('salesRepTierWrap').style.display = repRole === 'sales_manager' ? 'none' : '';
   document.getElementById('salesRepTier').value = rep ? rep.tier : 'tier1';
   document.getElementById('salesRepStatus').value = rep ? rep.status : 'active';
   document.getElementById('salesRepNotes').value = rep ? (rep.notes || '') : '';
@@ -9552,6 +9583,7 @@ async function saveSalesRep() {
   const email = document.getElementById('salesRepEmail').value.trim();
   const phone = document.getElementById('salesRepPhone').value.trim();
   const code = document.getElementById('salesRepCode').value.trim().toUpperCase();
+  const role = document.getElementById('salesRepRole').value || 'sales';
   const tier = document.getElementById('salesRepTier').value;
   const status = document.getElementById('salesRepStatus').value;
   const notes = document.getElementById('salesRepNotes').value.trim();
@@ -9560,12 +9592,12 @@ async function saveSalesRep() {
 
   if (!name) return showErr('Name is required.');
   if (!email) return showErr('Email is required.');
-  if (!code) return showErr('Sales code is required.');
+  if (role === 'sales' && !code) return showErr('Sales code is required for Sales Closers.');
 
   // A login already exists: just update the business fields, no email.
   if (userId) {
     const result = await window.sb.from('sales_reps').update({
-      full_name: name, email, phone: phone || null, sales_code: code, tier, status, notes: notes || null,
+      full_name: name, email, phone: phone || null, sales_code: code || null, tier, status, notes: notes || null,
     }).eq('id', id);
     if (result.error) {
       return showErr(result.error.code === '23505' ? 'That sales code is already in use.' : result.error.message);
@@ -9585,7 +9617,7 @@ async function saveSalesRep() {
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (session?.access_token || '') },
       body: JSON.stringify({
         action: 'create_sales_user',
-        email, password, full_name: name, phone, sales_code: code, tier,
+        email, password, full_name: name, phone, sales_code: code || null, tier, role,
         sales_rep_id: id || null,
       }),
     });
@@ -12765,6 +12797,232 @@ function calcRecompute() {
   document.getElementById("calcShip").textContent = stMoney(shipping);
   document.getElementById("calcTotal").textContent = stMoney(total);
   document.getElementById("calcCommission").textContent = stMoney(commission);
+}
+
+// ── Sales Orders tab (sales + sales_manager) ────────────────────
+// Shows referred orders with payment status, invoice email action,
+// and PDF download. The RLS on public.orders (sales_read_referred_orders /
+// sales_manager_read_referred_orders) limits rows to what this role can see.
+async function renderSalesOrdersTab() {
+  const wrap = document.getElementById("tab-sales-orders");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const isManager = window._adminRole === "sales_manager";
+
+  // Load referrals with order + rep info
+  let query = window.sb
+    .from("sales_referrals")
+    .select("id, commission_amount, order_value, commission_rate, created_at, sales_rep_id, orders(id, order_number, customer_name, customer_email, payment_status, total, created_at), sales_reps(full_name, sales_code)")
+    .order("created_at", { ascending: false });
+
+  const { data: referrals, error } = await query;
+  if (error) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load orders: ${escHtml(error.message)}</div>`;
+    return;
+  }
+  const rows = referrals || [];
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">My Orders</h2>
+        <p class="pt-sub">Orders attributed to your sales code — payment status, invoice, and download.</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:0">
+      <div class="pt-card-head"><h3>${isManager ? "Team orders" : "Your orders"}</h3><span>${rows.length} total</span></div>
+      ${rows.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Date</th>
+          <th>Order #</th>
+          <th>Customer</th>
+          ${isManager ? "<th>Rep</th>" : ""}
+          <th>Order Value</th>
+          <th>Commission</th>
+          <th>Payment</th>
+          <th style="text-align:center">Actions</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(r => {
+            const o = r.orders || {};
+            const rep = r.sales_reps || {};
+            const isPaid = o.payment_status === "paid";
+            const isUnpaid = o.payment_status === "pending" || o.payment_status === "pending_invoice" || o.payment_status === "unpaid";
+            return `
+            <tr>
+              <td class="pt-muted">${fmt(r.created_at)}</td>
+              <td class="pt-strong">${escHtml(o.order_number || "—")}</td>
+              <td>${escHtml(o.customer_name || o.customer_email || "—")}</td>
+              ${isManager ? `<td>${escHtml(rep.full_name || "—")}<br><span class="pt-muted" style="font-size:11px">${escHtml(rep.sales_code || "")}</span></td>` : ""}
+              <td class="num">${stMoney(r.order_value)}</td>
+              <td class="num pt-strong">${stMoney(r.commission_amount)}</td>
+              <td>${isPaid
+                ? '<span class="pt-badge-paid">Paid</span>'
+                : isUnpaid
+                  ? '<span class="pt-badge-pending">Unpaid</span>'
+                  : `<span class="pt-badge-pending">${escHtml(o.payment_status || "pending")}</span>`}</td>
+              <td style="text-align:center">
+                <div style="display:inline-flex;gap:6px;flex-wrap:wrap;justify-content:center">
+                  <button class="a-btn-outline" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesDownloadInvoicePdf('${o.id}','${escHtml(o.order_number||"")}')">
+                    ↓ PDF
+                  </button>
+                  ${(isManager && isUnpaid) ? `
+                  <button class="a-btn-primary" style="padding:5px 10px;font-size:12px;width:auto" onclick="salesSendInvoiceEmail('${o.id}','${escHtml(o.customer_email||"")}')">
+                    ✉ Send Invoice
+                  </button>` : ""}
+                </div>
+              </td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No orders attributed to your sales code yet.</div>`}
+    </div>`;
+}
+
+async function salesDownloadInvoicePdf(orderId, orderNumber) {
+  try {
+    showToast("Generating PDF…");
+    // send-invoice with preview_only:true returns { html } for the invoice;
+    // we then print that HTML to a blob via the browser's print-to-PDF path.
+    // This reuses the same server-side invoice rendering already used by the
+    // staff invoice-preview overlay, with no new API surface needed.
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId, preview_only: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    // Open in a new window and trigger print (browser prints to PDF natively)
+    const win = window.open("", "_blank");
+    if (!win) throw new Error("Pop-up was blocked. Please allow pop-ups for this site.");
+    win.document.write(data.html);
+    win.document.close();
+    win.onload = () => { win.focus(); win.print(); };
+  } catch (e) {
+    showToast("PDF failed: " + e.message, "error");
+  }
+}
+
+async function salesSendInvoiceEmail(orderId, customerEmail) {
+  if (!confirm(`Email invoice + payment link to ${customerEmail}?\n\nThey can pay directly from the email.`)) return;
+  try {
+    showToast("Sending…");
+    const res = await fetch("/api/send-invoice", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order_id: orderId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Send failed");
+    showToast(`Invoice emailed to ${customerEmail}.`);
+    renderSalesOrdersTab();
+  } catch (e) {
+    showToast("Send failed: " + e.message, "error");
+  }
+}
+
+// ── Sales Team Overview (sales_manager only) ─────────────────────
+async function renderSalesTeamOverviewTab() {
+  const wrap = document.getElementById("tab-sales-team-overview");
+  if (!wrap) return;
+  wrap.innerHTML = `<div class="a-empty" style="padding:40px">Loading&hellip;</div>`;
+
+  const [{ data: reps, error: repsErr }, { data: referrals, error: refErr }, { data: payouts, error: payErr }] = await Promise.all([
+    window.sb.from("sales_reps").select("id, full_name, email, sales_code, tier, status").order("full_name"),
+    window.sb.from("sales_referrals").select("sales_rep_id, commission_amount, order_value, commission_rate, orders(payment_status)"),
+    window.sb.from("sales_payouts").select("sales_rep_id, commission_amount, status"),
+  ]);
+
+  if (repsErr || refErr) {
+    wrap.innerHTML = `<div class="a-empty" style="padding:40px">Could not load team data: ${escHtml((repsErr || refErr).message)}</div>`;
+    return;
+  }
+
+  const repsList = reps || [];
+  const refList = referrals || [];
+  const payList = payouts || [];
+
+  // Aggregate per rep
+  const byRep = {};
+  repsList.forEach(r => { byRep[r.id] = { rep: r, orders: 0, revenue: 0, commission: 0, paid: 0, pending: 0 }; });
+  refList.forEach(r => {
+    if (!byRep[r.sales_rep_id]) return;
+    byRep[r.sales_rep_id].orders++;
+    byRep[r.sales_rep_id].revenue += parseFloat(r.order_value) || 0;
+    byRep[r.sales_rep_id].commission += parseFloat(r.commission_amount) || 0;
+  });
+  payList.forEach(p => {
+    if (!byRep[p.sales_rep_id]) return;
+    if (p.status === "paid") byRep[p.sales_rep_id].paid += parseFloat(p.commission_amount) || 0;
+    else byRep[p.sales_rep_id].pending += parseFloat(p.commission_amount) || 0;
+  });
+
+  const teamRevenue = refList.reduce((s, r) => s + (parseFloat(r.order_value) || 0), 0);
+  const teamCommission = refList.reduce((s, r) => s + (parseFloat(r.commission_amount) || 0), 0);
+  const teamPaid = payList.filter(p => p.status === "paid").reduce((s, p) => s + (parseFloat(p.commission_amount) || 0), 0);
+  const teamPending = payList.filter(p => p.status !== "paid").reduce((s, p) => s + (parseFloat(p.commission_amount) || 0), 0);
+
+  wrap.innerHTML = `
+    <div class="pt-head">
+      <div>
+        <h2 class="pt-title">Team Overview</h2>
+        <p class="pt-sub">Commission and revenue summary for all sales reps.</p>
+      </div>
+    </div>
+
+    <div class="pt-stats">
+      <div class="pt-stat pt-stat--accent">
+        <p class="pt-stat-label">Team Revenue</p>
+        <p class="pt-stat-value">${stMoney(teamRevenue)}</p>
+        <p class="pt-stat-sub">${refList.length} attributed orders</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Total Commission</p>
+        <p class="pt-stat-value">${stMoney(teamCommission)}</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Pending Payout</p>
+        <p class="pt-stat-value">${stMoney(teamPending)}</p>
+      </div>
+      <div class="pt-stat">
+        <p class="pt-stat-label">Paid to Date</p>
+        <p class="pt-stat-value">${stMoney(teamPaid)}</p>
+      </div>
+    </div>
+
+    <div class="pt-card" style="padding:0">
+      <div class="pt-card-head"><h3>Individual performance</h3><span>${repsList.length} reps</span></div>
+      ${repsList.length ? `
+      <table class="pt-table">
+        <thead><tr>
+          <th>Name</th><th>Code</th><th>Tier</th><th>Status</th>
+          <th class="num">Orders</th><th class="num">Revenue</th>
+          <th class="num">Commission</th><th class="num">Paid</th><th class="num">Pending</th>
+        </tr></thead>
+        <tbody>
+          ${repsList.map(rep => {
+            const d = byRep[rep.id] || {};
+            return `
+            <tr>
+              <td class="pt-strong">${escHtml(rep.full_name)}</td>
+              <td class="pt-muted">${escHtml(rep.sales_code || "—")}</td>
+              <td>${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier || "—")}</td>
+              <td>${rep.status === "active" ? '<span class="pt-badge-paid">Active</span>' : '<span class="pt-badge-pending">Inactive</span>'}</td>
+              <td class="num">${d.orders || 0}</td>
+              <td class="num">${stMoney(d.revenue)}</td>
+              <td class="num pt-strong">${stMoney(d.commission)}</td>
+              <td class="num">${stMoney(d.paid)}</td>
+              <td class="num">${stMoney(d.pending)}</td>
+            </tr>`;
+          }).join("")}
+        </tbody>
+      </table>` : `<div class="pt-empty">No sales reps on the team yet.</div>`}
+    </div>`;
 }
 
 // Sales reps' own dev tickets -- reporter-only view of the existing
