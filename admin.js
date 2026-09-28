@@ -12467,6 +12467,19 @@ async function renderSalesCatalogTab() {
   window._salesCatalogRows = rows; // used by the calculator tab's product picker
 }
 
+const CALC_STATE_NAMES = {
+  AL:"Alabama", AK:"Alaska", AZ:"Arizona", AR:"Arkansas", CA:"California",
+  CO:"Colorado", CT:"Connecticut", DE:"Delaware", FL:"Florida", GA:"Georgia",
+  HI:"Hawaii", ID:"Idaho", IL:"Illinois", IN:"Indiana", IA:"Iowa",
+  KS:"Kansas", KY:"Kentucky", LA:"Louisiana", ME:"Maine", MD:"Maryland",
+  MA:"Massachusetts", MI:"Michigan", MN:"Minnesota", MS:"Mississippi", MO:"Missouri",
+  MT:"Montana", NE:"Nebraska", NV:"Nevada", NH:"New Hampshire", NJ:"New Jersey",
+  NM:"New Mexico", NY:"New York", NC:"North Carolina", ND:"North Dakota", OH:"Ohio",
+  OK:"Oklahoma", OR:"Oregon", PA:"Pennsylvania", RI:"Rhode Island", SC:"South Carolina",
+  SD:"South Dakota", TN:"Tennessee", TX:"Texas", UT:"Utah", VT:"Vermont",
+  VA:"Virginia", WA:"Washington", WV:"West Virginia", WI:"Wisconsin", WY:"Wyoming",
+};
+
 // Client-side bulk order calculator. Shipping is a manual override for now
 // -- the CEO's UPS distance/weight formula hasn't been confirmed yet, so
 // this deliberately does not guess at one; wiring it in later only needs
@@ -12517,7 +12530,11 @@ async function renderSalesCalculatorTab() {
           <label>Customer's state</label>
           <select id="calcState" class="a-input" onchange="calcRecompute()">
             <option value="">Select state&hellip;</option>
-            ${Object.keys(window.TAX_RATES || {}).sort().map(code => `<option value="${code}">${code} &mdash; ${((window.TAX_RATES[code] || 0) * 100).toFixed(2)}%</option>`).join("")}
+            ${Object.keys(window.TAX_RATES || {}).sort().map(code => {
+              const name = CALC_STATE_NAMES[code] || code;
+              const rate = ((window.TAX_RATES[code] || 0) * 100).toFixed(2);
+              return `<option value="${code}">${name} &mdash; ${rate}%</option>`;
+            }).join("")}
           </select>
           <span class="a-field-hint">Tax rate auto-calculated from the same table checkout uses.</span>
         </div>
