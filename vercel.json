@@ -350,11 +350,6 @@
   "rewrites": [
     {
       "source": "/",
-      "destination": "/admin.html",
-      "has": [{ "type": "host", "value": "admin.roomreadysupply.com" }]
-    },
-    {
-      "source": "/",
       "destination": "/index.html"
     },
     {
