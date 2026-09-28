@@ -12297,6 +12297,7 @@ async function renderSalesAccountTab() {
   }
 
   wrap.innerHTML = `
+    <div class="pt-content-narrow">
     <div class="pt-head">
       <div>
         <h2 class="pt-title">My Account</h2>
@@ -12304,38 +12305,39 @@ async function renderSalesAccountTab() {
       </div>
     </div>
 
-    <div class="pt-card">
-      <div class="pt-card-head"><h3>Your sales code</h3></div>
-      <div style="padding:18px">
-        <p class="pt-stat-value pt-code" style="margin:0 0 6px">${escHtml(rep.sales_code)}</p>
-        <p class="pt-link-note" style="margin:0">Give this code to customers so their orders are automatically attributed to you (${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier)}).</p>
+    <div class="pt-card pt-code-card" style="margin-bottom:22px">
+      <div>
+        <p class="pt-code-label">Your sales code</p>
+        <p class="pt-stat-value pt-code" style="margin:0">${escHtml(rep.sales_code)}</p>
+        <p class="pt-code-note">Give this code to customers so their orders are automatically attributed to you (${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier)}).</p>
       </div>
     </div>
 
     <div class="a-settings-grid">
       <div class="a-card">
         <div class="a-card-header"><h3>Your Name</h3></div>
-        <form id="salesNameForm" class="a-settings-form" style="padding:22px">
+        <form id="salesNameForm" class="a-settings-form" style="padding:20px">
           <div id="salesNameMsg" class="auth-success" style="display:none"></div>
           <div id="salesNameErr" class="a-error" style="display:none"></div>
           <label>Full Name</label>
           <input type="text" id="salesFullName" value="${escHtml(rep.full_name)}" placeholder="Your name" />
-          <button type="submit" class="a-btn-primary" style="margin-top:20px;width:100%">Save Name</button>
+          <button type="submit" class="a-btn-primary" style="margin-top:18px;width:100%">Save Name</button>
         </form>
       </div>
 
       <div class="a-card">
         <div class="a-card-header"><h3>Change Password</h3></div>
-        <form id="salesPasswordForm" class="a-settings-form" style="padding:22px">
+        <form id="salesPasswordForm" class="a-settings-form" style="padding:20px">
           <div id="salesPasswordMsg" class="auth-success" style="display:none"></div>
           <div id="salesPasswordErr" class="a-error" style="display:none"></div>
           <label>New Password</label>
           <input type="password" id="salesNewPass" placeholder="New password (min. 8 chars)" />
           <label>Confirm New Password</label>
           <input type="password" id="salesConfirmPass" placeholder="Confirm new password" />
-          <button type="submit" class="a-btn-primary" style="margin-top:20px;width:100%">Update Password</button>
+          <button type="submit" class="a-btn-primary" style="margin-top:18px;width:100%">Update Password</button>
         </form>
       </div>
+    </div>
     </div>
   `;
 
