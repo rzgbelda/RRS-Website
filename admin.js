@@ -18,7 +18,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Allow "admin" full access, "sub_distributor" limited access,
   // and "developer" the ticket board only
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales") {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
@@ -66,7 +66,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing") {
+  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales") {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
