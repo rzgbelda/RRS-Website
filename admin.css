@@ -3866,8 +3866,14 @@ select.crm-filtersel { width: auto; min-width: 150px; }
   position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
   background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
   box-shadow: 0 12px 32px rgba(15,43,80,.14);
-  max-height: 300px; overflow-y: auto;
+  max-height: 300px; overflow-y: scroll;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
 }
+.calc-product-dropdown::-webkit-scrollbar { width: 6px; }
+.calc-product-dropdown::-webkit-scrollbar-track { background: transparent; border-radius: 0 12px 12px 0; }
+.calc-product-dropdown::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+.calc-product-dropdown::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 .calc-dd-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 11px 16px; font-size: 13px; color: #334155; cursor: pointer;
