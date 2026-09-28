@@ -9436,8 +9436,10 @@ async function loadSalesRepsTable() {
       <td>${r.status === 'active' ? '<span class="pt-badge-paid">Active</span>' : '<span class="pt-badge-pending">Inactive</span>'}</td>
       <td>${r.user_id ? '<span class="pt-badge-paid">Yes</span>' : '<span class="pt-badge-pending">No</span>'}</td>
       <td style="text-align:center">
-        <button type="button" class="a-btn-outline" style="width:auto;padding:6px 10px;font-size:12px" onclick='editSalesRep(${JSON.stringify(JSON.stringify(r))})'>Edit</button>
-        <button type="button" class="a-btn-outline a-btn-danger" style="width:auto;padding:6px 10px;font-size:12px" onclick="deleteSalesRep('${r.id}', '${escHtml(r.full_name)}')">Delete</button>
+        <div style="display:inline-flex;gap:8px;white-space:nowrap">
+          <button type="button" class="a-btn-outline" style="width:auto;padding:6px 10px;font-size:12px" onclick='editSalesRep(${JSON.stringify(JSON.stringify(r))})'>Edit</button>
+          <button type="button" class="a-btn-outline a-btn-danger" style="width:auto;padding:6px 10px;font-size:12px" onclick="deleteSalesRep('${r.id}', '${escHtml(r.full_name)}')">Delete</button>
+        </div>
       </td>
     </tr>`).join('');
 }
