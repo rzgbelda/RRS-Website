@@ -3850,46 +3850,57 @@ select.crm-filtersel { width: auto; min-width: 150px; }
    option strings with no search and no visible price until after
    picking. */
 .calc-line {
-  border: 1px solid #e8edf3; border-radius: 10px;
-  padding: 12px 14px; margin-bottom: 10px; background: #fafbfd;
+  border: 1px solid #e2e8f0; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 10px; background: #fff;
+  box-shadow: 0 1px 4px rgba(0,0,0,.04);
+  transition: box-shadow .15s, border-color .15s;
 }
+.calc-line:focus-within { box-shadow: 0 0 0 3px rgba(249,115,22,.12); border-color: #f97316; }
 .calc-line-search { position: relative; }
-.calc-line-search .a-input { width: 100%; }
+.calc-line-search .a-input {
+  width: 100%; border-radius: 9px; padding-left: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='15' height='15' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cline x1='21' y1='21' x2='16.65' y2='16.65'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: 12px center; background-size: 15px;
+}
 .calc-product-dropdown {
-  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: 20;
-  background: #fff; border: 1px solid #e2e8f0; border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(15,43,80,.12);
-  max-height: 280px; overflow-y: auto;
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 30;
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15,43,80,.14);
+  max-height: 300px; overflow-y: auto;
 }
 .calc-dd-row {
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 10px 14px; font-size: 13px; color: #334155; cursor: pointer;
-  border-bottom: 1px solid #f4f7fa;
+  padding: 11px 16px; font-size: 13px; color: #334155; cursor: pointer;
+  border-bottom: 1px solid #f4f7fa; transition: background .1s;
 }
-.calc-dd-row:last-child { border-bottom: none; }
+.calc-dd-row:first-child { border-radius: 12px 12px 0 0; }
+.calc-dd-row:last-child { border-bottom: none; border-radius: 0 0 12px 12px; }
 .calc-dd-row:hover { background: #fff7ed; }
-.calc-dd-name { flex: 1; }
-.calc-dd-price { color: #0f2b50; font-weight: 700; white-space: nowrap; }
-.calc-dd-empty { padding: 14px; font-size: 12.5px; color: #94a3b8; text-align: center; }
+.calc-dd-row:hover .calc-dd-name { color: #ea580c; }
+.calc-dd-name { flex: 1; line-height: 1.4; }
+.calc-dd-price { color: #0f2b50; font-weight: 700; white-space: nowrap; font-size: 13px; }
+.calc-dd-empty { padding: 16px; font-size: 13px; color: #94a3b8; text-align: center; }
 
 .calc-line-picked {
-  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
 }
-.calc-line-info { flex: 1 1 240px; min-width: 180px; display: flex; flex-direction: column; gap: 2px; }
-.calc-line-name { font-size: 13.5px; }
-.calc-line-unit { font-size: 12px; }
+.calc-line-info { flex: 1 1 240px; min-width: 180px; display: flex; flex-direction: column; gap: 3px; }
+.calc-line-name { font-size: 13.5px; font-weight: 600; color: #0f2b50; }
+.calc-line-unit { font-size: 12px; color: #64748b; }
 .calc-line-qty, .calc-line-total-wrap {
-  display: flex; flex-direction: column; gap: 4px;
+  display: flex; flex-direction: column; gap: 5px;
 }
 .calc-line-qty label, .calc-line-total-wrap label {
-  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: #94a3b8;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; color: #94a3b8;
 }
+.calc-line-total-wrap label { color: #f97316; } /* orange — quick visual anchor for the total column */
 .calc-line-qty input { width: 84px; height: 38px; }
-.calc-line-total-wrap { min-width: 90px; align-items: flex-end; }
-.calc-line-total-wrap .calc-line-total { font-size: 14px; }
+.calc-line-total-wrap { min-width: 100px; align-items: flex-end; }
+.calc-line-total-wrap .calc-line-total { font-size: 15px; font-weight: 700; color: #0f2b50; }
 .calc-line-remove {
-  width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e2e8f0; background: #fff;
-  color: #94a3b8; font-size: 16px; line-height: 1; cursor: pointer; flex-shrink: 0;
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid #e2e8f0; background: #f8fafc;
+  color: #94a3b8; font-size: 18px; line-height: 1; cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
   transition: .15s;
 }
 .calc-line-remove:hover { background: #fff0f0; border-color: #fecaca; color: #ef4444; }

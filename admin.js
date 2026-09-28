@@ -12547,20 +12547,20 @@ function calcAddLine() {
         oninput="calcSearchProducts('${id}', this.value)" onfocus="calcSearchProducts('${id}', this.value)">
       <div class="calc-product-dropdown" id="${id}-dropdown" hidden></div>
     </div>
-    <div class="calc-line-picked" id="${id}-picked" hidden>
+    <div class="calc-line-picked" id="${id}-picked" hidden style="margin-top:10px;padding-top:10px;border-top:1px solid #f1f5f9">
       <div class="calc-line-info">
-        <span class="calc-line-name pt-strong"></span>
-        <span class="calc-line-unit pt-muted"></span>
+        <span class="calc-line-name"></span>
+        <span class="calc-line-unit"></span>
       </div>
       <div class="calc-line-qty">
         <label>Cases</label>
         <input type="number" class="a-input calc-qty" value="1" min="1" step="1" oninput="calcRecompute()">
       </div>
       <div class="calc-line-total-wrap">
-        <label>Line total</label>
-        <span class="calc-line-total num pt-strong">$0.00</span>
+        <label>Line Total</label>
+        <span class="calc-line-total num">$0.00</span>
       </div>
-      <button type="button" class="calc-line-remove" title="Remove" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
+      <button type="button" class="calc-line-remove" title="Remove line" onclick="document.getElementById('${id}').remove();calcRecompute()">&times;</button>
     </div>
   `;
   wrap.appendChild(div);
@@ -12571,9 +12571,11 @@ function calcSearchProducts(lineId, query) {
   if (!dropdown) return;
   const q = (query || "").trim().toLowerCase();
   const rows = window._salesCatalogRows || [];
-  if (!q) { dropdown.hidden = true; dropdown.innerHTML = ""; return; }
 
-  const matches = rows.filter(p => calcProductLabel(p).toLowerCase().includes(q)).slice(0, 25);
+  const matches = q
+    ? rows.filter(p => calcProductLabel(p).toLowerCase().includes(q)).slice(0, 25)
+    : rows.slice(0, 25); // show first 25 on focus before typing
+
   if (!matches.length) {
     dropdown.innerHTML = `<div class="calc-dd-empty">No products match "${escHtml(query)}"</div>`;
     dropdown.hidden = false;
