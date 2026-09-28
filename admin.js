@@ -12475,16 +12475,20 @@ async function renderSalesCalculatorTab() {
       <div id="calcLines"></div>
       <button type="button" class="a-btn-outline" style="width:auto;margin-top:10px" onclick="calcAddLine()">+ Add product</button>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;max-width:420px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px;max-width:460px">
         <div class="a-field">
-          <label>Sales tax rate (%)</label>
-          <input type="number" id="calcTaxRate" value="0" min="0" step="0.01" class="a-input" oninput="calcRecompute()">
+          <label>Customer's state</label>
+          <select id="calcState" class="a-input" onchange="calcRecompute()">
+            <option value="">Select state&hellip;</option>
+            ${Object.keys(window.TAX_RATES || {}).sort().map(code => `<option value="${code}">${code} &mdash; ${((window.TAX_RATES[code] || 0) * 100).toFixed(2)}%</option>`).join("")}
+          </select>
         </div>
         <div class="a-field">
           <label>Shipping fee ($) &mdash; manual</label>
           <input type="number" id="calcShipping" value="0" min="0" step="0.01" class="a-input" oninput="calcRecompute()">
         </div>
       </div>
+      <p class="pt-link-note" style="margin-top:8px">Tax rate is looked up automatically from the state you pick &mdash; same rate table checkout uses.</p>
 
       <div class="pt-stats" style="margin-top:24px">
         <div class="pt-stat">
@@ -12492,7 +12496,7 @@ async function renderSalesCalculatorTab() {
           <p class="pt-stat-value" id="calcSubtotal">$0.00</p>
         </div>
         <div class="pt-stat">
-          <p class="pt-stat-label">Tax</p>
+          <p class="pt-stat-label" id="calcTaxLabel">Tax</p>
           <p class="pt-stat-value" id="calcTax">$0.00</p>
         </div>
         <div class="pt-stat">
@@ -12621,7 +12625,8 @@ function calcRecompute() {
     if (line.dataset.productId) subtotal += lineTotal;
   });
 
-  const taxRate = (parseFloat(document.getElementById("calcTaxRate")?.value) || 0) / 100;
+  const state = document.getElementById("calcState")?.value || "";
+  const taxRate = state ? (window.getTaxRate?.(state) || 0) : 0;
   const shipping = parseFloat(document.getElementById("calcShipping")?.value) || 0;
   const tax = subtotal * taxRate;
   const total = subtotal + tax + shipping;
@@ -12629,6 +12634,8 @@ function calcRecompute() {
 
   document.getElementById("calcSubtotal").textContent = stMoney(subtotal);
   document.getElementById("calcTax").textContent = stMoney(tax);
+  const taxLabelEl = document.getElementById("calcTaxLabel");
+  if (taxLabelEl) taxLabelEl.textContent = state ? `Tax (${state} · ${(taxRate * 100).toFixed(2)}%)` : "Tax";
   document.getElementById("calcShip").textContent = stMoney(shipping);
   document.getElementById("calcTotal").textContent = stMoney(total);
   document.getElementById("calcCommission").textContent = stMoney(commission);
