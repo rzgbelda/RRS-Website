@@ -90,6 +90,10 @@ module.exports = async (req, res) => {
     return cancelReorder(supabase, b, res);
   }
 
+  if (b.action === 'update_reorder') {
+    return updateReorder(supabase, b, res);
+  }
+
   // Only the fields payment.html actually sends -- no arbitrary columns
   // accepted from the client into a service-role write.
   const orderData = {
@@ -587,6 +591,326 @@ async function runDueOrderPurge(supabase) {
       purged.map(p => p.purged_order_number).join(', '));
   }
   return { purged: purged.length };
+}
+
+const REORDER_FREQUENCIES = ['weekly', 'every_2_weeks', 'monthly', '45_days', '60_days', 'custom'];
+
+/**
+ * Resolves the unit price for a quantity from a product's tier ladder.
+ *
+ * Mirrors the client-side ladder in script.js, but this is the copy that
+ * decides what a customer is actually charged on every future reorder --
+ * the browser's number is only ever a preview. A tier applies once the
+ * line quantity reaches its min_qty; the highest satisfied tier wins.
+ * Tiers with no threshold or no price are skipped rather than treated as
+ * reachable at qty 0, which would hand out the deepest discount for free.
+ */
+function tierPriceFor(p, qty) {
+  const base = Number(p.price) || 0;
+  const ladder = [
+    { price: Number(p.price_tier3), min: p.tier3_min_qty },
+    { price: Number(p.price_tier2), min: p.tier2_min_qty },
+    { price: Number(p.price_tier1), min: p.tier1_min_qty },
+  ];
+  for (const t of ladder) {
+    if (t.price > 0 && t.min != null && qty >= Number(t.min)) return t.price;
+  }
+  return base;
+}
+
+/**
+ * Customer-triggered edit of an active reorder schedule: line items,
+ * frequency, and next date.
+ *
+ * Security model, in order of what would go wrong without it:
+ *
+ *  1. Prices are NEVER read from the request. The client sends only
+ *     {product_id, quantity}; every price is re-derived here from
+ *     products_public via tierPriceFor(). A schedule is a standing
+ *     instruction to charge a card on a recurring basis, so trusting a
+ *     browser-supplied price would let a customer set their own recurring
+ *     price to $0.01 in perpetuity -- and it would look legitimate in
+ *     every downstream invoice, because by then it IS the stored price.
+ *
+ *  2. Only schedule-holding rows (reorder_active = true) are editable.
+ *     The clones the sweep generates carry reorder_active = false and are
+ *     real pending invoices that have already been emailed to the
+ *     customer; rewriting one's line items after the fact would leave the
+ *     invoice in their inbox disagreeing with the order in the database.
+ *
+ *  3. Same ownership check as cancelReorder above -- requester_email must
+ *     match the order's customer_email. Deliberately the identical rule
+ *     rather than a second, subtly different one.
+ *
+ *  4. MOQ is enforced server-side, including mix-and-match groups, whose
+ *     minimum is combined ACROSS the group rather than per line (see
+ *     script.js's productMoq notes). A client-only check would be bypassed
+ *     by anyone posting to this endpoint directly.
+ *
+ * Money is recomputed whole (subtotal -> tax -> total) rather than patched
+ * incrementally, so an edit can't drift the total away from the sum of its
+ * lines. tax_rate is preserved from the order: it was snapshotted from the
+ * shipping destination at checkout and the destination isn't changing here.
+ */
+async function updateReorder(supabase, b, res) {
+  const { order_id, requester_email, items, reorder_frequency, reorder_next_date, reorder_custom_dates } = b;
+  if (!order_id) return res.status(400).json({ error: 'order_id is required' });
+
+  const { data: o, error } = await supabase
+    .from('orders')
+    .select('id, customer_email, customer_name, order_number, reorder_active, tax_rate, freight_fee, in_house_delivery_fee, sales_rep_id')
+    .eq('id', order_id)
+    .single();
+  if (error || !o) return res.status(404).json({ error: 'Order not found' });
+
+  if (requester_email && o.customer_email && requester_email.toLowerCase() !== o.customer_email.toLowerCase()) {
+    return res.status(403).json({ error: 'Not authorized to edit this order.' });
+  }
+  if (!o.reorder_active) {
+    return res.status(400).json({ error: 'This reorder schedule is no longer active.' });
+  }
+
+  // ── Schedule fields ────────────────────────────────────────────────
+  const patch = {};
+  if (reorder_frequency !== undefined) {
+    if (!REORDER_FREQUENCIES.includes(reorder_frequency)) {
+      return res.status(400).json({ error: 'Invalid reorder frequency.' });
+    }
+    patch.reorder_frequency = reorder_frequency;
+  }
+  if (reorder_next_date !== undefined) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(reorder_next_date || ''))) {
+      return res.status(400).json({ error: 'Invalid next order date.' });
+    }
+    // A date in the past would make the very next sweep fire immediately,
+    // turning a scheduling tweak into an unexpected charge the same day.
+    if (reorder_next_date < new Date().toISOString().slice(0, 10)) {
+      return res.status(400).json({ error: 'Next order date must be today or later.' });
+    }
+    patch.reorder_next_date = reorder_next_date;
+  }
+  if (reorder_custom_dates !== undefined) {
+    const dates = Array.isArray(reorder_custom_dates) ? reorder_custom_dates.filter(d => /^\d{4}-\d{2}-\d{2}$/.test(String(d))) : [];
+    patch.reorder_custom_dates = dates.sort();
+    if ((patch.reorder_frequency || reorder_frequency) === 'custom') {
+      if (!dates.length) return res.status(400).json({ error: 'Pick at least one date for a custom schedule.' });
+      patch.reorder_next_date = dates[0];
+    }
+  }
+
+  // ── Line items (optional: omit `items` to only change the schedule) ─
+  let newItems = null;
+  let money = null;
+  if (items !== undefined) {
+    if (!Array.isArray(items) || !items.length) {
+      return res.status(400).json({ error: 'A reorder must contain at least one product.' });
+    }
+    if (items.length > 100) {
+      return res.status(400).json({ error: 'Too many line items.' });
+    }
+
+    // Lines are identified by product_id when the client has one, and by
+    // product_name otherwise.
+    //
+    // The name path is not a convenience: order_items rows written by
+    // checkout carry product_name but NO product_id (payment.html builds
+    // them from the cart, which keys on SKU, never on the catalog UUID).
+    // Every reorder placed before this feature therefore has null
+    // product_id, and an id-only lookup would make exactly the schedules
+    // customers already depend on the ones they cannot edit. Resolving by
+    // name repairs those in place, and because the name is matched against
+    // products_public rather than trusted, it grants no more authority
+    // than an id would.
+    const wanted = new Map(); // key -> { id?, name?, qty }
+    for (const raw of items) {
+      const pid = String((raw && raw.product_id) || '').trim();
+      const pname = String((raw && raw.product_name) || '').trim();
+      const qty = Math.floor(Number(raw && raw.quantity));
+      if (!pid && !pname) return res.status(400).json({ error: 'Every line needs a product.' });
+      if (!Number.isFinite(qty) || qty < 1) return res.status(400).json({ error: 'Quantity must be at least 1.' });
+      // Collapse duplicates so a repeated line can't slip under a per-line
+      // MOQ while still shipping the combined amount.
+      const key = pid || ('name:' + pname.toLowerCase());
+      const prev = wanted.get(key);
+      wanted.set(key, { id: pid || null, name: pname || null, qty: (prev ? prev.qty : 0) + qty });
+    }
+
+    const ids = [...wanted.values()].filter(w => w.id).map(w => w.id);
+    const names = [...wanted.values()].filter(w => !w.id && w.name).map(w => w.name);
+
+    const PROD_COLS = 'id, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, moq, moq_group, moq_group_min, in_stock';
+    const found = [];
+    if (ids.length) {
+      const { data, error: e1 } = await supabase.from('products_public').select(PROD_COLS).in('id', ids);
+      if (e1) return res.status(500).json({ error: e1.message });
+      found.push(...(data || []));
+    }
+    if (names.length) {
+      const { data, error: e2 } = await supabase.from('products_public').select(PROD_COLS).in('name', names);
+      if (e2) return res.status(500).json({ error: e2.message });
+      found.push(...(data || []));
+
+      // Postgres `in` is case-sensitive, but product_name on an old order
+      // row is a snapshot that may not match the catalog's current casing.
+      // Anything still unresolved gets one case-insensitive lookup rather
+      // than telling the customer their own product no longer exists.
+      const got = new Set((data || []).map(p => String(p.name).toLowerCase()));
+      const missing = names.filter(n => !got.has(n.toLowerCase()));
+      for (const n of missing) {
+        const { data: ci } = await supabase.from('products_public').select(PROD_COLS).ilike('name', n).limit(1);
+        if (ci && ci.length) found.push(ci[0]);
+      }
+    }
+
+    const byId = new Map(found.map(p => [p.id, p]));
+    const byName = new Map(found.map(p => [String(p.name).toLowerCase(), p]));
+
+    // Resolve every requested line to a real catalog row. Anything that
+    // doesn't resolve fails loudly -- silently dropping it would quietly
+    // shrink a customer's standing order.
+    const resolved = []; // { product, qty }
+    for (const w of wanted.values()) {
+      const p = w.id ? byId.get(w.id) : byName.get(String(w.name).toLowerCase());
+      if (!p) {
+        return res.status(400).json({ error: `"${w.name || w.id}" is no longer available. Remove it to save your changes.` });
+      }
+      resolved.push({ product: p, qty: w.qty });
+    }
+    // Two lines can resolve to the same catalog row (one by id, one by
+    // name); merge them so MOQ sees the true combined quantity.
+    const merged = new Map();
+    for (const r of resolved) {
+      merged.set(r.product.id, { product: r.product, qty: (merged.get(r.product.id)?.qty || 0) + r.qty });
+    }
+    const finalLines = [...merged.values()];
+
+    const groupTotals = new Map();
+    for (const { product: p, qty } of finalLines) {
+      if (p.in_stock === false) {
+        return res.status(400).json({ error: `${p.name} is out of stock and can't be added to a reorder.` });
+      }
+      const moq = Math.max(1, Number(p.moq) || 1);
+      if (qty < moq) {
+        return res.status(400).json({ error: `${p.name} has a minimum order of ${moq}.` });
+      }
+      if (p.moq_group) groupTotals.set(p.moq_group, (groupTotals.get(p.moq_group) || 0) + qty);
+    }
+    // Mix & Match: the minimum is the combined quantity across every
+    // product carrying the same moq_group tag, not each line on its own.
+    for (const [group, total] of groupTotals) {
+      const mins = finalLines.filter(l => l.product.moq_group === group).map(l => Number(l.product.moq_group_min) || 0);
+      const min = mins.length ? Math.max(...mins) : 0;
+      if (min > 0 && total < min) {
+        return res.status(400).json({ error: `Mix & Match group requires a combined minimum of ${min} units (you have ${total}).` });
+      }
+    }
+
+    // product_id is backfilled here even for lines that arrived by name,
+    // so an order edited once stops depending on name matching afterwards.
+    newItems = finalLines.map(({ product: p, qty }) => ({
+      order_id, product_id: p.id, product_name: p.name,
+      price_per_case: tierPriceFor(p, qty), quantity: qty,
+    }));
+
+    const subtotal = newItems.reduce((s, i) => s + i.price_per_case * i.quantity, 0);
+    const taxRate = Number(o.tax_rate) || 0;
+    const fees = (Number(o.freight_fee) || 0) + (Number(o.in_house_delivery_fee) || 0);
+    const taxAmount = round2(subtotal * taxRate);
+    money = { subtotal: round2(subtotal), tax_amount: taxAmount, total: round2(subtotal + taxAmount + fees) };
+  }
+
+  // ── Persist ────────────────────────────────────────────────────────
+  // Items are replaced before the order row is updated so a failure here
+  // leaves the order's money matching its OLD items rather than its new
+  // ones. The reverse order would leave a total that no line item sums to.
+  if (newItems) {
+    const { error: delErr } = await supabase.from('order_items').delete().eq('order_id', order_id);
+    if (delErr) return res.status(500).json({ error: delErr.message });
+    const { error: insErr } = await supabase.from('order_items').insert(newItems);
+    if (insErr) return res.status(500).json({ error: insErr.message });
+    Object.assign(patch, money);
+  }
+
+  if (Object.keys(patch).length) {
+    const { error: updErr } = await supabase.from('orders').update(patch).eq('id', order_id);
+    if (updErr) return res.status(500).json({ error: updErr.message });
+  }
+
+  // Notification is best-effort: the edit is already committed, and
+  // failing the request here would tell the customer their change didn't
+  // save when it did.
+  try {
+    await notifyReorderEdited(supabase, { order: o, patch, items: newItems, money });
+  } catch (e) {
+    console.error('[create-order] reorder edit notification failed:', e.message);
+  }
+
+  return res.status(200).json({ success: true, ...(money || {}) });
+}
+
+function round2(n) { return Math.round((Number(n) || 0) * 100) / 100; }
+
+const FREQ_LABEL = {
+  weekly: 'Every week', every_2_weeks: 'Every 2 weeks', monthly: 'Every month',
+  '45_days': 'Every 45 days', '60_days': 'Every 60 days', custom: 'Custom dates',
+};
+
+/**
+ * Confirms an edit to the customer and tells the attributed sales rep,
+ * whose commission tracks the recurring value that just changed.
+ */
+async function notifyReorderEdited(supabase, { order, patch, items, money }) {
+  if (!process.env.RESEND_API_KEY) return;
+  const resend = new Resend(process.env.RESEND_API_KEY);
+
+  const lines = (items || []).map(i =>
+    `<tr><td style="padding:4px 12px 4px 0">${escapeHtml(i.product_name)}</td>` +
+    `<td style="padding:4px 0;text-align:right">${i.quantity} &times; $${i.price_per_case.toFixed(2)}</td></tr>`
+  ).join('');
+
+  const summary = [
+    items ? `<p style="margin:14px 0 4px;font-weight:600">Products</p><table style="border-collapse:collapse">${lines}</table>` : '',
+    money ? `<p style="margin:10px 0 0">New recurring total: <strong>$${money.total.toFixed(2)}</strong></p>` : '',
+    patch.reorder_frequency ? `<p style="margin:10px 0 0">Frequency: <strong>${FREQ_LABEL[patch.reorder_frequency] || patch.reorder_frequency}</strong></p>` : '',
+    patch.reorder_next_date ? `<p style="margin:6px 0 0">Next order date: <strong>${patch.reorder_next_date}</strong></p>` : '',
+  ].join('');
+
+  if (order.customer_email) {
+    await resend.emails.send({
+      from: 'Room Ready Supply <orders@roomreadysupply.com>',
+      reply_to: 'sales@roomreadysupply.com',
+      to: order.customer_email,
+      subject: `Your reorder schedule was updated (${order.order_number})`,
+      html: `<div style="font-family:sans-serif;color:#0B1F38;max-width:520px;margin:0 auto">
+        <h2>Reorder schedule updated</h2>
+        <p>Hi ${escapeHtml(order.customer_name || 'there')}, your recurring order <strong>${escapeHtml(order.order_number)}</strong> has been updated.</p>
+        ${summary}
+        <p style="margin-top:16px">No charge has been made. We'll email you a payment link before each scheduled order.</p>
+        <p style="font-size:12px;color:#94a3b8;margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962</p>
+      </div>`,
+    });
+  }
+
+  if (!order.sales_rep_id) return;
+  const { data: rep } = await supabase
+    .from('sales_reps').select('email, full_name').eq('id', order.sales_rep_id).single();
+  if (!rep || !rep.email) return;
+
+  await resend.emails.send({
+    from: 'Room Ready Supply <orders@roomreadysupply.com>',
+    to: rep.email,
+    subject: `Reorder updated: ${order.order_number}`,
+    html: `<div style="font-family:sans-serif;color:#0B1F38;max-width:520px;margin:0 auto">
+      <h2>A customer updated their reorder</h2>
+      <p>${escapeHtml(order.customer_name || order.customer_email || 'A customer')} changed recurring order <strong>${escapeHtml(order.order_number)}</strong>.</p>
+      ${summary}
+      <p style="margin-top:14px">Your commission follows the new recurring value on the next scheduled order.</p>
+    </div>`,
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 /**

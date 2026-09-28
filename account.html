@@ -222,6 +222,128 @@
       .acc-avatar { width:60px; height:60px; font-size:20px; }
       .acc-hero-info h1 { font-size:20px; }
     }
+
+    /* ===== Reorder Program ===== */
+    .ro-panel {
+      margin-top:10px; padding:12px 14px; border-radius:10px;
+      background:#fff7f2; border:1px solid #ffd9c2;
+    }
+    .ro-head { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+    .ro-badge { font-size:12px; font-weight:800; color:#b4531a; }
+    .ro-next  { font-size:12px; font-weight:700; color:#0b2d52; }
+    .ro-freq  { font-size:11.5px; color:#8a6a55; margin-top:4px; }
+    .ro-actions { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .ro-btn {
+      border-radius:7px; padding:6px 12px; font-size:11.5px;
+      font-weight:700; cursor:pointer; border:1px solid transparent;
+    }
+    .ro-btn-edit   { background:#ED7226; color:#fff; }
+    .ro-btn-edit:hover { background:#d6621c; }
+    .ro-btn-cancel { background:#fff; color:#dc2626; border-color:#fca5a5; }
+    .ro-btn-cancel:hover { background:#fef2f2; }
+    .ro-btn-ghost  { background:#fff; color:#64748b; border-color:#e2e8f0; }
+    .ro-btn-save   { background:#ED7226; color:#fff; padding:9px 20px; font-size:13px; }
+    .ro-btn-save:hover { background:#d6621c; }
+    .ro-btn-save:disabled { opacity:.6; cursor:default; }
+
+    /* Editor modal */
+    .ro-modal {
+      display:none; position:fixed; inset:0; z-index:999;
+      background:rgba(11,45,82,.45); align-items:center; justify-content:center;
+      padding:16px;
+    }
+    .ro-modal-box {
+      background:#fff; border-radius:14px; width:100%; max-width:560px;
+      max-height:90vh; display:flex; flex-direction:column;
+      box-shadow:0 20px 60px rgba(11,45,82,.3);
+    }
+    .ro-modal-head {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:18px 22px; border-bottom:1px solid #eef2f7;
+    }
+    .ro-modal-head h3 { margin:0; font-size:16px; color:#0b2d52; }
+    .ro-close {
+      border:none; background:none; font-size:24px; line-height:1;
+      color:#94a3b8; cursor:pointer; padding:0 4px;
+    }
+    .ro-close:hover { color:#0b2d52; }
+    .ro-modal-body { padding:18px 22px; overflow-y:auto; }
+    .ro-modal-foot {
+      display:flex; justify-content:flex-end; gap:10px;
+      padding:16px 22px; border-top:1px solid #eef2f7;
+    }
+    .ro-section-label {
+      font-size:11px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.06em; color:#94a3b8; margin-bottom:10px;
+    }
+    .ro-item {
+      display:grid; grid-template-columns:1fr auto auto auto;
+      align-items:center; gap:10px; padding:10px 0;
+      border-bottom:1px solid #f4f6fa;
+    }
+    .ro-item-name  { font-size:13px; font-weight:600; color:#0b2d52; }
+    .ro-item-price { display:block; font-size:11px; font-weight:500; color:#8a9ab0; margin-top:2px; }
+    .ro-item-total { font-size:13px; font-weight:800; color:#0b2d52; min-width:64px; text-align:right; }
+    .ro-qty { display:flex; align-items:center; border:1px solid #e2e8f0; border-radius:7px; overflow:hidden; }
+    .ro-qty button {
+      border:none; background:#f8fafc; width:26px; height:28px;
+      font-size:15px; color:#475569; cursor:pointer;
+    }
+    .ro-qty button:hover { background:#eef2f7; }
+    .ro-qty input {
+      width:48px; border:none; text-align:center; font-size:13px;
+      font-weight:700; color:#0b2d52; -moz-appearance:textfield;
+    }
+    .ro-qty input::-webkit-outer-spin-button,
+    .ro-qty input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+    .ro-remove {
+      border:none; background:none; color:#cbd5e1; font-size:19px;
+      cursor:pointer; line-height:1; padding:0 2px;
+    }
+    .ro-remove:hover { color:#dc2626; }
+    .ro-empty-items { font-size:13px; color:#94a3b8; padding:14px 0; text-align:center; }
+    .ro-add-select {
+      width:100%; margin-top:12px; padding:9px 12px; font-size:13px;
+      border:1.5px dashed #cbd5e1; border-radius:8px; color:#475569;
+      background:#fff; cursor:pointer;
+    }
+    .ro-add-select:hover { border-color:#ED7226; color:#ED7226; }
+    .ro-subtotal-row {
+      display:flex; justify-content:space-between; align-items:center;
+      margin-top:16px; padding-top:12px; border-top:1.5px solid #eef2f7;
+      font-size:13px; color:#475569;
+    }
+    .ro-subtotal-row strong { font-size:16px; color:#0b2d52; }
+    .ro-hint { font-size:11px; color:#94a3b8; margin-top:4px; }
+    .ro-field { display:block; margin-top:12px; }
+    .ro-field span {
+      display:block; font-size:12px; font-weight:700;
+      color:#475569; margin-bottom:5px;
+    }
+    .ro-field select, .ro-field input {
+      width:100%; padding:9px 12px; font-size:13px;
+      border:1.5px solid #e2e8f0; border-radius:8px; color:#0b2d52;
+    }
+    .ro-field select:focus, .ro-field input:focus {
+      outline:none; border-color:#ED7226;
+    }
+    .ro-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+    .ro-chip {
+      display:inline-flex; align-items:center; gap:5px;
+      background:#f1f5f9; border-radius:20px; padding:4px 6px 4px 11px;
+      font-size:12px; font-weight:600; color:#0b2d52;
+    }
+    .ro-chip button {
+      border:none; background:none; color:#94a3b8;
+      cursor:pointer; font-size:15px; line-height:1; padding:0 2px;
+    }
+    .ro-chip button:hover { color:#dc2626; }
+
+    @media (max-width:560px) {
+      .ro-item { grid-template-columns:1fr auto; row-gap:6px; }
+      .ro-item-total { grid-column:1; text-align:left; }
+      .ro-remove { grid-column:2; justify-self:end; }
+    }
   </style>
 </head>
 <body class="acc-page">
@@ -535,6 +657,63 @@
     <h2 style="color:#0b2d52;margin-bottom:8px">Please sign in to view your account</h2>
     <p style="color:#8a9ab0;margin:0 0 28px">You need to be logged in to access your account page.</p>
     <a href="/login" class="acc-btn-primary" style="display:inline-block;text-decoration:none">Sign In</a>
+  </div>
+
+  <!-- Reorder editor. Hidden until openReorderEditor() fills it; the draft
+       lives in JS and nothing persists until Save. -->
+  <div class="ro-modal" id="reorderModal" role="dialog" aria-modal="true" aria-labelledby="roModalTitle">
+    <div class="ro-modal-box">
+      <div class="ro-modal-head">
+        <h3 id="roModalTitle">Edit Reorder</h3>
+        <button type="button" class="ro-close" onclick="closeReorderEditor()" aria-label="Close">×</button>
+      </div>
+
+      <div class="ro-modal-body">
+        <div class="ro-section-label">Products in this reorder</div>
+        <div id="roItems"></div>
+
+        <select id="roAddSelect" class="ro-add-select" onchange="roAddProduct(this)">
+          <option value="">Loading products…</option>
+        </select>
+
+        <div class="ro-subtotal-row">
+          <span>Subtotal per order</span>
+          <strong id="roSubtotal">$0.00</strong>
+        </div>
+        <div class="ro-hint">Tax and shipping are calculated at checkout on each order.</div>
+
+        <div class="ro-section-label" style="margin-top:20px">Schedule</div>
+        <label class="ro-field">
+          <span>How often</span>
+          <select id="roFrequency" onchange="roSetFrequency(this.value)">
+            <option value="weekly">Every week</option>
+            <option value="every_2_weeks">Every 2 weeks</option>
+            <option value="monthly">Every month</option>
+            <option value="45_days">Every 45 days</option>
+            <option value="60_days">Every 60 days</option>
+            <option value="custom">Custom dates</option>
+          </select>
+        </label>
+
+        <label class="ro-field" id="roNextDateWrap">
+          <span>Next order date</span>
+          <input type="date" id="roNextDate" onchange="roSetNextDate(this.value)">
+        </label>
+
+        <div id="roCustomWrap" style="display:none">
+          <label class="ro-field">
+            <span>Add a date</span>
+            <input type="date" onchange="roAddDate(this)">
+          </label>
+          <div id="roCustomList" class="ro-chips"></div>
+        </div>
+      </div>
+
+      <div class="ro-modal-foot">
+        <button type="button" class="ro-btn ro-btn-ghost" onclick="closeReorderEditor()">Cancel</button>
+        <button type="button" class="ro-btn ro-btn-save" onclick="saveReorderEdit(this)">Save Changes</button>
+      </div>
+    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -966,6 +1145,11 @@
         </div>`;
     }
 
+    const REORDER_FREQ_LABEL = {
+      weekly: "Every week", every_2_weeks: "Every 2 weeks", monthly: "Every month",
+      "45_days": "Every 45 days", "60_days": "Every 60 days", custom: "Custom dates",
+    };
+
     async function loadOrders(userId, userEmail) {
       const list = document.getElementById("orderList");
       list.innerHTML = `<div class="acc-loading">Loading orders&hellip;</div>`;
@@ -1013,12 +1197,16 @@
             <div class="order-num">${o.order_number}</div>
             <div class="order-meta">${new Date(o.created_at).toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"})} · ${o.order_items?.length || 0} item(s) · ${o.order_type === "reorder" ? "Reorder" : "One-Time"}</div>
             ${o.reorder_active ? `
-              <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12px;color:#1e3a8a">
-                <span>🔁 Next reorder ${o.reorder_next_date ? "on " + new Date(o.reorder_next_date + "T00:00:00").toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}) : "soon"} — we'll email you a link to review and pay.</span>
-                <button onclick="cancelMyReorderSchedule('${o.id}', this)"
-                  style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
-                  Cancel Schedule
-                </button>
+              <div class="ro-panel">
+                <div class="ro-head">
+                  <span class="ro-badge">🔁 Reorder Program</span>
+                  <span class="ro-next">${o.reorder_next_date ? "Next order " + new Date(o.reorder_next_date + "T00:00:00").toLocaleDateString("en-US",{month:"long",day:"numeric",year:"numeric"}) : "Next order soon"}</span>
+                </div>
+                <div class="ro-freq">${REORDER_FREQ_LABEL[o.reorder_frequency] || "Recurring"} · ${o.order_items?.length || 0} product(s) · we'll email a payment link before each order</div>
+                <div class="ro-actions">
+                  <button class="ro-btn ro-btn-edit" onclick="openReorderEditor('${o.id}')">Edit Reorder</button>
+                  <button class="ro-btn ro-btn-cancel" onclick="cancelMyReorderSchedule('${o.id}', this)">Cancel Program</button>
+                </div>
               </div>` : ""}
             ${renderShipmentTracking(o)}
             <button onclick="downloadOrderPdf('${o.id}', this)"
@@ -1034,12 +1222,243 @@
         </div>`).join("");
     }
 
+    // Working copy of the reorder being edited. The modal mutates this, and
+    // nothing is persisted until Save -- so closing the modal discards the
+    // edit rather than half-applying it.
+    let _roDraft = null;
+    let _roCatalog = null;
+
+    /** Opens the reorder editor for one schedule-holding order. */
+    window.openReorderEditor = async function (orderId) {
+      const order = (window._acctOrders || []).find(o => o.id === orderId);
+      if (!order) return;
+
+      _roDraft = {
+        id: order.id,
+        order_number: order.order_number,
+        frequency: order.reorder_frequency || "monthly",
+        next_date: order.reorder_next_date || "",
+        custom_dates: Array.isArray(order.reorder_custom_dates) ? [...order.reorder_custom_dates] : [],
+        items: (order.order_items || []).map(i => ({
+          product_id: i.product_id,
+          name: i.product_name || i.name || "Product",
+          price: Number(i.price_per_case ?? i.price ?? 0),
+          quantity: Number(i.quantity) || 1,
+        })),
+      };
+
+      document.getElementById("reorderModal").style.display = "flex";
+      renderReorderEditor();
+
+      // Catalog is fetched once per session and only when the editor is
+      // actually opened -- it is only needed for the "add product" picker.
+      if (!_roCatalog) {
+        const { data } = await window.sb
+          .from("products_public")
+          .select("id, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, moq, in_stock")
+          .eq("in_stock", true)
+          .order("name");
+        _roCatalog = data || [];
+        renderReorderEditor();
+      }
+    };
+
+    window.closeReorderEditor = function () {
+      document.getElementById("reorderModal").style.display = "none";
+      _roDraft = null;
+    };
+
+    /** Finds the catalog row for a reorder line.
+     *
+     *  Falls back to a name match because order_items rows written by
+     *  checkout carry product_name but no product_id -- so on any existing
+     *  reorder, an id-only lookup finds nothing and the line would show no
+     *  price and no MOQ. Mirrors the same fallback the server does on save. */
+    function roFindProduct(it) {
+      const cat = _roCatalog || [];
+      if (it.product_id) {
+        const byId = cat.find(x => x.id === it.product_id);
+        if (byId) return byId;
+      }
+      const n = String(it.name || "").toLowerCase();
+      return cat.find(x => String(x.name).toLowerCase() === n) || null;
+    }
+
+    /** Client-side preview of the tier ladder. The server re-derives every
+     *  price on save (see updateReorder in api/create-order.js) -- this is
+     *  only so the customer sees their volume discount as they change
+     *  quantities, never what they are actually charged. */
+    function roTierPrice(p, qty) {
+      const ladder = [
+        { price: Number(p.price_tier3), min: p.tier3_min_qty },
+        { price: Number(p.price_tier2), min: p.tier2_min_qty },
+        { price: Number(p.price_tier1), min: p.tier1_min_qty },
+      ];
+      for (const t of ladder) {
+        if (t.price > 0 && t.min != null && qty >= Number(t.min)) return t.price;
+      }
+      return Number(p.price) || 0;
+    }
+
+    function renderReorderEditor() {
+      if (!_roDraft) return;
+      const d = _roDraft;
+
+      // Reprice every line against the live catalog so the total the
+      // customer sees matches what the server will compute on save.
+      d.items.forEach(it => {
+        const p = roFindProduct(it);
+        if (p) it.price = roTierPrice(p, it.quantity);
+      });
+
+      const subtotal = d.items.reduce((s, i) => s + i.price * i.quantity, 0);
+
+      document.getElementById("roModalTitle").textContent = "Edit Reorder — " + d.order_number;
+
+      document.getElementById("roItems").innerHTML = d.items.length ? d.items.map((it, idx) => {
+        const p = roFindProduct(it);
+        const moq = Math.max(1, Number(p && p.moq) || 1);
+        return `
+        <div class="ro-item">
+          <div class="ro-item-name">
+            ${escapeHtml(it.name)}
+            <span class="ro-item-price">$${it.price.toFixed(2)} each${moq > 1 ? ` · min ${moq}` : ""}</span>
+          </div>
+          <div class="ro-qty">
+            <button type="button" onclick="roChangeQty(${idx}, -1)" aria-label="Decrease">−</button>
+            <input type="number" min="1" value="${it.quantity}" onchange="roSetQty(${idx}, this.value)" aria-label="Quantity for ${escapeHtml(it.name)}">
+            <button type="button" onclick="roChangeQty(${idx}, 1)" aria-label="Increase">+</button>
+          </div>
+          <div class="ro-item-total">$${(it.price * it.quantity).toFixed(2)}</div>
+          <button type="button" class="ro-remove" onclick="roRemoveItem(${idx})" aria-label="Remove ${escapeHtml(it.name)}">×</button>
+        </div>`;
+      }).join("") : `<div class="ro-empty-items">No products yet — add at least one below.</div>`;
+
+      document.getElementById("roSubtotal").textContent = "$" + subtotal.toFixed(2);
+
+      const freqSel = document.getElementById("roFrequency");
+      if (freqSel.value !== d.frequency) freqSel.value = d.frequency;
+      document.getElementById("roNextDateWrap").style.display = d.frequency === "custom" ? "none" : "";
+      document.getElementById("roCustomWrap").style.display = d.frequency === "custom" ? "" : "none";
+      document.getElementById("roNextDate").value = d.next_date || "";
+      document.getElementById("roCustomList").innerHTML = d.custom_dates.length
+        ? d.custom_dates.map((dt, i) => `<span class="ro-chip">${dt}<button type="button" onclick="roRemoveDate(${i})" aria-label="Remove ${dt}">×</button></span>`).join("")
+        : `<span class="ro-hint">No dates picked yet.</span>`;
+
+      const picker = document.getElementById("roAddSelect");
+      if (_roCatalog && picker.options.length <= 1) {
+        picker.innerHTML = `<option value="">+ Add a product…</option>` +
+          _roCatalog.map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`).join("");
+      }
+    }
+
+    window.roChangeQty = function (idx, delta) {
+      const it = _roDraft.items[idx];
+      const p = roFindProduct(it);
+      const moq = Math.max(1, Number(p && p.moq) || 1);
+      // Step by MOQ so a product sold in multiples never lands on an
+      // invalid quantity the server would have to reject.
+      it.quantity = Math.max(moq, it.quantity + delta * moq);
+      renderReorderEditor();
+    };
+
+    window.roSetQty = function (idx, val) {
+      const it = _roDraft.items[idx];
+      const p = roFindProduct(it);
+      const moq = Math.max(1, Number(p && p.moq) || 1);
+      const n = Math.floor(Number(val));
+      it.quantity = Number.isFinite(n) && n >= moq ? n : moq;
+      renderReorderEditor();
+    };
+
+    window.roRemoveItem = function (idx) {
+      _roDraft.items.splice(idx, 1);
+      renderReorderEditor();
+    };
+
+    window.roAddProduct = function (sel) {
+      const id = sel.value;
+      sel.value = "";
+      if (!id) return;
+      if (_roDraft.items.some(i => i.product_id === id)) {
+        alert("That product is already in this reorder — change its quantity instead.");
+        return;
+      }
+      const p = (_roCatalog || []).find(x => x.id === id);
+      if (!p) return;
+      const moq = Math.max(1, Number(p.moq) || 1);
+      _roDraft.items.push({ product_id: p.id, name: p.name, price: roTierPrice(p, moq), quantity: moq });
+      renderReorderEditor();
+    };
+
+    window.roSetFrequency = function (val) {
+      _roDraft.frequency = val;
+      renderReorderEditor();
+    };
+
+    window.roSetNextDate = function (val) { _roDraft.next_date = val; };
+
+    window.roAddDate = function (input) {
+      const v = input.value;
+      input.value = "";
+      if (!v || _roDraft.custom_dates.includes(v)) return;
+      _roDraft.custom_dates = [..._roDraft.custom_dates, v].sort();
+      renderReorderEditor();
+    };
+
+    window.roRemoveDate = function (i) {
+      _roDraft.custom_dates.splice(i, 1);
+      renderReorderEditor();
+    };
+
+    /** Saves the edit. Sends only {product_id, quantity} per line -- prices
+     *  are deliberately NOT sent, because the server recomputes them from
+     *  the catalog. */
+    window.saveReorderEdit = async function (btn) {
+      const d = _roDraft;
+      if (!d) return;
+      if (!d.items.length) { alert("A reorder needs at least one product."); return; }
+      if (d.frequency === "custom" && !d.custom_dates.length) { alert("Pick at least one date for a custom schedule."); return; }
+      if (d.frequency !== "custom" && !d.next_date) { alert("Pick the next order date."); return; }
+
+      const original = btn.textContent;
+      btn.disabled = true; btn.textContent = "Saving…";
+      try {
+        const { data: { user } } = await window.sb.auth.getUser();
+        const res = await fetch("/api/create-order", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "update_reorder",
+            order_id: d.id,
+            requester_email: user?.email || "",
+            // product_id is null on any order placed before checkout
+            // started recording it, so the name goes along as the fallback
+            // the server resolves against the catalog. Prices are
+            // deliberately absent -- the server derives them.
+            items: d.items.map(i => ({ product_id: i.product_id || null, product_name: i.name, quantity: i.quantity })),
+            reorder_frequency: d.frequency,
+            reorder_next_date: d.frequency === "custom" ? undefined : d.next_date,
+            reorder_custom_dates: d.frequency === "custom" ? d.custom_dates : undefined,
+          }),
+        });
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
+        closeReorderEditor();
+        showAcctToast("Reorder updated. We've emailed you a confirmation.");
+        if (user) loadOrders(user.id, user.email);
+      } catch (err) {
+        alert("Couldn't save: " + err.message);
+        btn.disabled = false; btn.textContent = original;
+      }
+    };
+
     /** Cancels a customer's own active reorder schedule. Routed through the
      *  service-role endpoint (not a direct window.sb update) so the check
      *  that this is really her order happens server-side, not just trusted
      *  from whatever's in this page's memory. */
     window.cancelMyReorderSchedule = async function (orderId, btn) {
-      if (!confirm("Cancel this reorder schedule? No further automatic reorders will be generated.")) return;
+      if (!confirm("Cancel this reorder program? No further automatic reorders will be generated.")) return;
       const original = btn.textContent;
       btn.disabled = true; btn.textContent = "Cancelling…";
       try {
