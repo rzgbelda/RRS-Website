@@ -2594,13 +2594,37 @@ function injectProductVariantSelector(variants, activeProduct) {
   // but are greyed out and inert: no onclick at all, rather than an
   // onclick that's expected to no-op, so there is no path by which
   // clicking one could still switch the page onto an unbuyable SKU.
-  const pillsHtml = sizeVariants.map(v => {
+  const pillFor = v => {
     const out = v.inStock === false;
     return `<button type="button" class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}${out ? " is-out" : ""}"
              data-slug="${v.slug}"
              ${out ? `disabled aria-disabled="true" title="${(v.variantLabel || v.size || v.name)} — Out of Stock"` : `onclick="switchProductVariant('${v.slug}')"`}
      >${v.variantLabel || v.size || v.name}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
-  }).join("");
+  };
+
+  // Grouped by tier when the family actually spans more than one -- same
+  // rule and tier order as the catalog card's openVariantModal (script.js),
+  // so a family shows the same Economy/Premium/Luxury/Ultra Luxury
+  // sections here as it does from the catalog. Without this, a multi-tier
+  // family's product detail page showed every tier's sizes flattened into
+  // one pill row with no way to tell "20 x 30 in." (Premium) apart from a
+  // same-labeled "20 x 30 in." (a different tier) -- confirmed on the live
+  // Bath Mat page, which showed two identical "20 x 30 in." pills.
+  const sizeTiers = [...new Set(sizeVariants.map(v => v.productTier).filter(Boolean))];
+  let pillsHtml;
+  if (sizeTiers.length > 1) {
+    const order = ["Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
+    const sorted = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    pillsHtml = sorted.map(t => `
+      <div class="variant-tier-group">
+        <p class="variant-tier-label">${t}</p>
+        <div class="variant-selector">${sizeVariants.filter(v => v.productTier === t).map(pillFor).join("")}</div>
+      </div>`).join("");
+    const untiered = sizeVariants.filter(v => !v.productTier);
+    if (untiered.length) pillsHtml += `<div class="variant-selector">${untiered.map(pillFor).join("")}</div>`;
+  } else {
+    pillsHtml = sizeVariants.map(pillFor).join("");
+  }
 
   // Color pills – find siblings with same colorGroup
   let colorHtml = "";
@@ -2621,11 +2645,16 @@ function injectProductVariantSelector(variants, activeProduct) {
     }
   }
 
+  // pillsHtml is already wrapped in its own .variant-selector/.variant-tier-group
+  // divs when grouped by tier (sizeTiers.length > 1 above); only wrap it here
+  // for the plain single-tier/no-tier case.
+  const sizeHtml = sizeTiers.length > 1 ? pillsHtml : `<div class="variant-selector">${pillsHtml}</div>`;
+
   const selector = document.createElement("div");
   selector.id = "product-variant-selector";
   selector.innerHTML = `
     <div class="variant-option-label">Select Option</div>
-    <div class="variant-selector">${pillsHtml}</div>
+    ${sizeHtml}
     ${colorHtml}
   `;
 
