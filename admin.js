@@ -3238,9 +3238,16 @@ function parseMoneyCell(raw) {
 // fields (weight in lbs, dimensions in inches) that aren't currency --
 // no $/comma stripping, since "$41 lbs" isn't a formatting convention
 // anyone actually uses here and stripping it would hide real typos.
+// Placeholder text a supplier sheet uses for "not applicable" on a numeric
+// dimension -- Starlinen's Height column uses an em dash for flat items
+// (towels, sheets) that have no meaningful height. Treated as empty/null,
+// not invalid: an em dash isn't a malformed number, it's the absence of one,
+// and treating it as invalid was skipping the ENTIRE row (not just the
+// height field) on every towel/sheet import.
+const NUM_CELL_BLANK_RE = /^[-–—]$|^n\/?a$/i;
 function parseNumCell(raw) {
   const s = String(raw == null ? "" : raw).trim();
-  if (!s) return { value: 0, empty: true, invalid: false };
+  if (!s || NUM_CELL_BLANK_RE.test(s)) return { value: 0, empty: true, invalid: false };
   const n = parseFloat(s);
   if (isNaN(n)) return { value: 0, empty: false, invalid: true };
   return { value: n, empty: false, invalid: false };
