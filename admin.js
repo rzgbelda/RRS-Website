@@ -4913,7 +4913,13 @@ async function renderOrderShipmentsPanel(o) {
           : '<span style="color:#94a3b8">—</span>'}
         ${s.carrier ? `<span style="color:#94a3b8;font-size:11px;"> (${escHtml(s.carrier)})</span>` : ""}
       </td>
-      <td style="padding:8px 10px;text-align:right;">
+      <td style="padding:8px 10px;text-align:right;white-space:nowrap;">
+        ${(s.carrier || "").trim().toUpperCase() === "UPS" && s.tracking_number
+          ? `<button onclick="refreshUpsTracking('${s.id}', '${o.id}')"
+              style="border:1px solid #93c5fd;background:#fff;color:#1d4ed8;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer;margin-right:6px">
+              Refresh
+            </button>`
+          : ""}
         <button onclick="deleteOrderShipment('${s.id}', '${o.id}')"
           style="border:1px solid #fca5a5;background:#fff;color:#dc2626;border-radius:7px;padding:4px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
           Remove
@@ -5014,6 +5020,23 @@ async function deleteOrderShipment(shipmentId, orderId) {
   const { error } = await window.sb.from("order_shipments").delete().eq("id", shipmentId);
   if (error) { alert("Could not remove the shipment: " + (error.message || "unknown error")); return; }
   openOrderModal(orderId);
+}
+
+async function refreshUpsTracking(shipmentId, orderId) {
+  const { data: { session } } = await window.sb.auth.getSession();
+  try {
+    const resp = await fetch("/api/ups-tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({ shipmentId }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { alert("Could not refresh tracking: " + (data.error || "unknown error")); return; }
+    showToast(`UPS status: ${data.upsDescription || data.status}`);
+    openOrderModal(orderId);
+  } catch (err) {
+    alert("Could not refresh tracking: " + err.message);
+  }
 }
 
 // Groups this order's line items by vendor (via products.vendor_id) and
