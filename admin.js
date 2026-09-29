@@ -2368,6 +2368,39 @@ function cvtDeriveVariant(name) {
       repeat rows, and counting a repeat could manufacture a two-option
       dropdown out of a single real product. The importer upserts by SKU, so
       the repeat never becomes a second product anyway. */
+// Known product-type nouns, checked as a trailing match against an
+// auto-derived family name so the SAME product type at different tiers
+// groups into one family regardless of what tier/material words sit in
+// front of it.
+//
+// Why this exists over just stripping a leading tier word: Starlinen bakes
+// the fabric/material into the name differently PER TIER, not just the
+// tier word itself -- "Economy White Cotton Wash Cloth" vs. "Ultra Luxury
+// White Long-Staple Cotton Wash Cloth" differ in both the tier word AND
+// the material phrase ("Cotton" vs "Long-Staple Cotton"). Stripping only
+// the tier prefix left "White Cotton Wash Cloth" and "White Long-Staple
+// Cotton Wash Cloth" as two different family strings -- still two cards.
+// Matching the trailing product-type noun instead ignores everything
+// before it, tier and material alike.
+//
+// Longest phrase first so "Full Fitted Sheet" matches before the bare
+// "Fitted Sheet" would swallow only part of it, and multi-word types are
+// listed whole rather than assembled from Size Label + Product Type
+// combinations, since not every supplier's sheet line uses "Full"/"Queen"/
+// "King" as a separate word positioned the same way.
+const CVT_PRODUCT_TYPE_NOUNS = [
+  "Full XL Flat Sheet", "Full Fitted Sheet", "Full Flat Sheet",
+  "Queen XL Flat Sheet", "Queen Fitted Sheet", "Queen Flat Sheet",
+  "King XL Flat Sheet", "King Fitted Sheet", "King Flat Sheet",
+  "Standard Pillowcase", "King Pillowcase",
+  "Wash Cloth", "Hand Towel", "Bath Towel", "Bath Mat",
+  "Flat Sheet", "Fitted Sheet", "Pillowcase",
+].sort((a, b) => b.length - a.length);
+const CVT_PRODUCT_TYPE_RE = new RegExp(
+  "(" + CVT_PRODUCT_TYPE_NOUNS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\s*$",
+  "i"
+);
+
 // Strips a leading tier word off an auto-derived family name and returns
 // it separately, so "Ultra Luxury White Long-Staple Cotton Wash Cloth"
 // groups under the same family as "Economy White Cotton Wash Cloth"
@@ -2388,7 +2421,21 @@ function cvtStripTierPrefix(family) {
   const m = family.match(CVT_TIER_PREFIX_RE);
   if (!m) return { family, tier: "" };
   const tier = PRODUCT_TIERS.find(t => t.toLowerCase() === m[1].toLowerCase()) || "";
-  return { family: family.slice(m[0].length).trim(), tier };
+
+  // Prefer matching a known trailing product-type noun over the plain
+  // tier-stripped remainder: it ignores the material phrase too ("White
+  // Long-Staple Cotton Wash Cloth" -> "Wash Cloth"), not just the tier
+  // word, so different tiers of the same product type converge on one
+  // family string. Falls back to the tier-stripped remainder for any
+  // product type not in CVT_PRODUCT_TYPE_NOUNS (non-towel/linen items),
+  // so this never makes an unrecognized product WORSE than before.
+  const stripped = family.slice(m[0].length).trim();
+  const typeMatch = stripped.match(CVT_PRODUCT_TYPE_RE);
+  const resolvedFamily = typeMatch
+    ? CVT_PRODUCT_TYPE_NOUNS.find(t => t.toLowerCase() === typeMatch[1].toLowerCase().trim()) || stripped
+    : stripped;
+
+  return { family: resolvedFamily, tier };
 }
 
 function cvtGroupVariants(rows, nameCol, skuCol) {
