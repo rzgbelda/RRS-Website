@@ -337,6 +337,10 @@ function mapDbProductToLegacyShape(row) {
     price3: row.price_tier3 != null ? String(row.price_tier3) : "",
 
     productFamily: row.product_family || "",
+    // Stable grouping key (slug) -- see 20260930_family_key_and_ultra_luxury_tier.sql.
+    // Falls back to product_family itself for any row saved before this
+    // column was backfilled, so an old row never becomes ungroupable.
+    familyKey: row.family_key || row.product_family || "",
     variantLabel: row.variant_label || "",
     colorGroup: row.color_group || "",
     colorLabel: row.color_label || "",
@@ -1128,7 +1132,7 @@ function pickRepresentativeVariant(variants) {
   const available = variants.filter(v => v.inStock !== false);
   if (!available.length) return variants[0];
 
-  const familyKey = variants[0] && variants[0].productFamily;
+  const familyKey = variants[0] && variants[0].familyKey;
   if (familyKey) {
     const cachedSku = _representativeVariantCache.get(familyKey);
     const stillAvailable = cachedSku && available.find(v => v.itemNumber === cachedSku);
@@ -1170,6 +1174,7 @@ function renderVariantCard(variants) {
     // rewrote data-moq/data-moq-group from fields that were never in here,
     // so switching size silently kept the previous variant's minimum.
     productFamily: vv.productFamily || "",
+    familyKey:     vv.familyKey     || "",
     productTier:   vv.productTier   || "",
     moq:           productMoq(vv),
     moqGroup:      vv.moqGroup    || "",
@@ -1331,7 +1336,7 @@ function applyVariantToCard(card, v) {
   // triggers a catalog-level re-render (searches, clears the search,
   // changes a filter), the family should come back showing what they
   // chose, not silently revert to a fresh random in-stock pick.
-  if (v.productFamily) _representativeVariantCache.set(v.productFamily, v.itemNumber);
+  if (v.familyKey) _representativeVariantCache.set(v.familyKey, v.itemNumber);
 
   const displayPrice = cleanPrice(v.price);
   const cartPrice = cleanPrice(v.price1) || cleanPrice(v.price);
@@ -1478,13 +1483,17 @@ function renderProductGrid(products, grid) {
   const order = [];
   let soloIdx = 0;
 
+  // Grouped by familyKey (a stable slug), not the free-text productFamily
+  // display name -- see 20260930_family_key_and_ultra_luxury_tier.sql. Two
+  // rows can carry different productFamily strings (e.g. a tier-qualified
+  // name predating family_key) and still belong on the same catalog card.
   priced.forEach(p => {
-    if (p.productFamily) {
-      if (!familyGroups.has(p.productFamily)) {
-        familyGroups.set(p.productFamily, []);
-        order.push(p.productFamily);
+    if (p.familyKey) {
+      if (!familyGroups.has(p.familyKey)) {
+        familyGroups.set(p.familyKey, []);
+        order.push(p.familyKey);
       }
-      familyGroups.get(p.productFamily).push(p);
+      familyGroups.get(p.familyKey).push(p);
     } else {
       const key = "__solo_" + soloIdx++;
       familyGroups.set(key, [p]);
@@ -2635,7 +2644,7 @@ function switchProductVariant(slug) {
   if (currentActive && currentActive.colorLabel && product.colorGroup !== currentActive.colorGroup) {
     // User clicked a size pill – find the same color in the target size's colorGroup
     const sameColorMatch = allProducts.find(p =>
-      p.productFamily === product.productFamily &&
+      p.familyKey === product.familyKey &&
       p.variantLabel === product.variantLabel &&
       p.colorLabel === currentActive.colorLabel
     );
@@ -2682,8 +2691,8 @@ function loadProductPage() {
     return;
   }
 
-  if (product.productFamily) {
-    const siblings = allProducts.filter(p => p.productFamily === product.productFamily);
+  if (product.familyKey) {
+    const siblings = allProducts.filter(p => p.familyKey === product.familyKey);
     if (siblings.length > 1) {
       injectProductVariantSelector(siblings, product);
     }

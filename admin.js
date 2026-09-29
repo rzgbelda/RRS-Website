@@ -958,7 +958,8 @@ async function deleteMoqGroup() {
    leave a card whose option button has nothing to name. ────────────────── */
 
 let _famRows = [];          // every active product, as the storefront sees them
-let _famEditing = null;     // family name being edited, or null when creating
+let _famEditing = null;     // family DISPLAY NAME being edited, or null when creating
+let _famEditingKey = null;  // that family's stable family_key -- what membership is actually compared against
 let _famDraft = [];         // member product ids while the modal is open
 
 async function renderFamiliesTab() {
@@ -971,7 +972,7 @@ async function renderFamiliesTab() {
     // what a customer will actually see on the card.
     const { data, error } = await window.sb
       .from("products")
-      .select("id, sku, name, product_family, variant_label, category_name, price, in_stock, case_qty, pack_size, moq, unit, image_url")
+      .select("id, sku, name, product_family, variant_label, product_tier, family_key, category_name, price, in_stock, case_qty, pack_size, moq, unit, image_url")
       .eq("is_active", true)
       .order("name");
     if (error) { list.innerHTML = `<div class="a-empty">Error: ${famEsc(error.message)}</div>`; return; }
@@ -980,14 +981,22 @@ async function renderFamiliesTab() {
 
   const q = (document.getElementById("famSearch")?.value || "").trim().toLowerCase();
 
+  // Grouped by family_key (stable slug), not the free-text product_family
+  // display name -- two rows can carry different product_family strings
+  // (e.g. a tier-specific name predating family_key) and still be the same
+  // catalog card. Falls back to product_family for any row saved before
+  // family_key existed (20260930_family_key_and_ultra_luxury_tier.sql's
+  // backfill should leave none, but a row inserted between migration and
+  // deploy could).
   const families = new Map();
   _famRows.forEach(r => {
-    if (!r.product_family) return;
-    if (!families.has(r.product_family)) families.set(r.product_family, []);
-    families.get(r.product_family).push(r);
+    const key = r.family_key || r.product_family;
+    if (!key) return;
+    if (!families.has(key)) families.set(key, []);
+    families.get(key).push(r);
   });
 
-  const solo = _famRows.filter(r => !r.product_family);
+  const solo = _famRows.filter(r => !r.family_key && !r.product_family);
 
   document.getElementById("famStats").innerHTML = [
     ["Families", families.size],
@@ -1000,23 +1009,40 @@ async function renderFamiliesTab() {
       <div class="fam-stat-label">${label}</div>
     </div>`).join("");
 
-  const matches = (fam, members) => {
+  // The Map key is the stable family_key (a slug); the customer/staff-facing
+  // name is whichever product_family string is most common among the
+  // group's members (ties broken by shortest, then alphabetically), since a
+  // multi-tier family can carry a few differently-worded display names
+  // (e.g. leftover tier-qualified names from before this SKU was grouped).
+  const displayNameFor = members => {
+    const counts = new Map();
+    members.forEach(m => {
+      const name = m.product_family || "";
+      if (!name) return;
+      counts.set(name, (counts.get(name) || 0) + 1);
+    });
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].length - b[0].length || a[0].localeCompare(b[0]))[0]?.[0] || "";
+  };
+
+  const matches = (name, members) => {
     if (!q) return true;
-    if (fam.toLowerCase().includes(q)) return true;
+    if (name.toLowerCase().includes(q)) return true;
     return members.some(m =>
       (m.name || "").toLowerCase().includes(q) || (m.sku || "").toLowerCase().includes(q));
   };
 
   const shown = [...families.entries()]
-    .filter(([fam, members]) => matches(fam, members))
-    .sort((a, b) => a[0].localeCompare(b[0]));
+    .map(([key, members]) => [key, members, displayNameFor(members)])
+    .filter(([, members, name]) => matches(name, members))
+    .sort((a, b) => a[2].localeCompare(b[2]));
 
   if (!shown.length) {
     list.innerHTML = `<div class="a-empty">${q ? "No families match that search." : "No product families yet. Create one to group sibling SKUs into a single catalog card."}</div>`;
     return;
   }
 
-  list.innerHTML = shown.map(([fam, members]) => {
+  list.innerHTML = shown.map(([famKey, members, fam]) => {
     // Surfaced rather than silently tolerated: two members sharing a label
     // render as two identical-looking rows in the customer's option picker.
     const labels = members.map(m => m.variant_label || "");
@@ -1050,7 +1076,7 @@ async function renderFamiliesTab() {
             <span class="fam-variant-count">${members.length} variant${members.length === 1 ? "" : "s"}</span>
             ${flags.join("")}
           </div>
-          <button class="a-btn-sm" onclick="openFamilyModal(${famAttr(fam)})">Edit</button>
+          <button class="a-btn-sm" onclick="openFamilyModal(${famAttr(fam)}, ${famAttr(famKey)})">Edit</button>
         </div>
         <div class="a-table-wrap">
           <table class="a-table">
@@ -1207,7 +1233,7 @@ function famApplyProposal(base) {
   if (!proposal) { famRenderProposals(); return; }
   if (proposal.confidence !== "HIGH") { alert("Only high-confidence groupings can be applied directly."); return; }
 
-  if (_famRows.some(r => r.product_family === proposal.base)) {
+  if (_famRows.some(r => (r.family_key || slugifyFamilyKey(r.product_family || "")) === slugifyFamilyKey(proposal.base))) {
     alert(`A family named "${proposal.base}" already exists.`);
     return;
   }
@@ -1250,14 +1276,16 @@ async function famApplyProposalConfirmed(base) {
   if (!proposal || proposal.confidence !== "HIGH") { document.getElementById("famPreviewModal").style.display = "none"; return; }
 
   const stamp = new Date().toISOString();
+  const key = slugifyFamilyKey(proposal.base);
   for (const m of proposal.members) {
     const label = cvtCleanLabel(m.tail);
     if (!label) { alert(`${m.row.sku} has no usable variant label — skipping this grouping. Use "Review & group manually" instead.`); return; }
     const { error } = await window.sb.from("products")
-      .update({ product_family: proposal.base, variant_label: label, updated_at: stamp })
+      .update({ product_family: proposal.base, family_key: key, variant_label: label, updated_at: stamp })
       .eq("id", m.row.id);
     if (error) { alert("Error applying grouping: " + error.message); return; }
     m.row.product_family = proposal.base;
+    m.row.family_key = key;
     m.row.variant_label = label;
   }
 
@@ -1302,9 +1330,10 @@ function famAttr(s) {
   return famEsc(JSON.stringify(String(s == null ? "" : s)));
 }
 
-function openFamilyModal(familyName) {
+function openFamilyModal(familyName, familyKey) {
   _famEditing = familyName || null;
-  _famDraft = _famRows.filter(r => familyName && r.product_family === familyName).map(r => r.id);
+  _famEditingKey = familyKey || (familyName ? slugifyFamilyKey(familyName) : null);
+  _famDraft = _famRows.filter(r => _famEditingKey && (r.family_key || slugifyFamilyKey(r.product_family || "")) === _famEditingKey).map(r => r.id);
 
   document.getElementById("familyModalTitle").textContent =
     familyName ? "Edit Family" : "New Family";
@@ -1336,9 +1365,19 @@ function famRenderMembers() {
   // move: it leaves this family's draft immediately and is written to that
   // target family (not this one) on save, same as re-doing it through two
   // separate edits would, but in one action from the SKU's current row.
-  const otherFamilies = [...new Set(_famRows.map(r => r.product_family).filter(f => f && f !== _famEditing))].sort();
+  // Deduped by family_key so a family with multiple display-name spellings
+  // shows one move target, not one per spelling. The value carried on each
+  // <option> is "key||name" -- moveMember needs both (key for comparison,
+  // name for the product_family value written on the moved row).
+  const otherByKey = new Map();
+  _famRows.forEach(r => {
+    const key = r.family_key || slugifyFamilyKey(r.product_family || "");
+    if (!key || key === _famEditingKey) return;
+    if (!otherByKey.has(key)) otherByKey.set(key, r.product_family || key);
+  });
+  const otherFamilies = [...otherByKey.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const moveOptions = `<option value="">Move to…</option>` +
-    otherFamilies.map(f => `<option value="${famEsc(f)}">${famEsc(f)}</option>`).join("");
+    otherFamilies.map(([key, name]) => `<option value="${famEsc(key)}|||${famEsc(name)}">${famEsc(name)}</option>`).join("");
 
   wrap.innerHTML = members.map(m => `
     <div style="display:flex;gap:10px;align-items:center;padding:9px 12px;border:1px solid #e5e9f0;border-radius:9px;margin-bottom:7px;flex-wrap:wrap">
@@ -1357,7 +1396,7 @@ function famRenderMembers() {
              placeholder="Option label, e.g. Brown / 800 ft"
              style="padding:7px 10px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12.5px;min-width:180px;flex:1">
       ${otherFamilies.length ? `
-      <select onchange="if(this.value)moveMember(${famAttr(m.id)},this.value)"
+      <select onchange="if(this.value){const [k,n]=this.value.split('|||');moveMember(${famAttr(m.id)},k,n);}"
               style="padding:7px 8px;border:1.5px solid #d0d7e0;border-radius:7px;font-size:12px;max-width:150px">
         ${moveOptions}
       </select>` : ""}
@@ -1374,23 +1413,24 @@ function famRenderMembers() {
 // clear its label (the target family's own labels won't match it), write
 // product_family + variant_label directly, then drop it from this draft
 // so the current family's editor reflects the move immediately.
-async function moveMember(id, targetFamily) {
+async function moveMember(id, targetFamilyKey, targetFamilyName) {
   const row = _famRows.find(r => r.id === id);
   if (!row) return;
-  const label = prompt(`Variant label for "${row.name}" inside "${targetFamily}":`, row.variant_label || "");
+  const label = prompt(`Variant label for "${row.name}" inside "${targetFamilyName}":`, row.variant_label || "");
   if (label === null) { famRenderMembers(); return; } // cancelled -- undo the select's value
   if (!label.trim()) { alert("A variant label is required."); famRenderMembers(); return; }
 
   const { error } = await window.sb.from("products")
-    .update({ product_family: targetFamily, variant_label: label.trim(), updated_at: new Date().toISOString() })
+    .update({ product_family: targetFamilyName, family_key: targetFamilyKey, variant_label: label.trim(), updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) { alert("Error moving SKU: " + error.message); return; }
 
-  row.product_family = targetFamily;
+  row.product_family = targetFamilyName;
+  row.family_key = targetFamilyKey;
   row.variant_label = label.trim();
   _famDraft = _famDraft.filter(x => x !== id);
   famRenderMembers();
-  showToast(`Moved to "${targetFamily}".`);
+  showToast(`Moved to "${targetFamilyName}".`);
 }
 
 // Splits the checked subset of the CURRENT family's members into a brand
@@ -1406,7 +1446,8 @@ async function splitFamily() {
 
   const newName = (document.getElementById("famSplitName")?.value || "").trim();
   if (!newName) { alert("Enter a name for the new family."); return; }
-  if (_famRows.some(r => r.product_family === newName)) {
+  const newKey = slugifyFamilyKey(newName);
+  if (_famRows.some(r => (r.family_key || slugifyFamilyKey(r.product_family || "")) === newKey)) {
     alert(`A family named "${newName}" already exists. Choose a different name, or move these SKUs to it individually instead.`);
     return;
   }
@@ -1415,10 +1456,10 @@ async function splitFamily() {
   for (const id of checked) {
     const row = _famRows.find(r => r.id === id);
     const { error } = await window.sb.from("products")
-      .update({ product_family: newName, updated_at: stamp })
+      .update({ product_family: newName, family_key: newKey, updated_at: stamp })
       .eq("id", id);
     if (error) { alert("Error splitting family: " + error.message); return; }
-    if (row) row.product_family = newName;
+    if (row) { row.product_family = newName; row.family_key = newKey; }
   }
 
   _famDraft = _famDraft.filter(id => !checked.includes(id));
@@ -1463,7 +1504,7 @@ function famRenderAddResults() {
   // up in two places.
   let pool = _famRows.filter(r =>
     !_famDraft.includes(r.id) &&
-    (!r.product_family || r.product_family === _famEditing));
+    (!r.product_family || (r.family_key || slugifyFamilyKey(r.product_family || "")) === _famEditingKey));
 
   if (q) pool = pool.filter(r =>
     (r.name || "").toLowerCase().includes(q) || (r.sku || "").toLowerCase().includes(q));
@@ -1502,10 +1543,13 @@ function famRemove(id) {
 async function saveFamily() {
   const name = (document.getElementById("famName")?.value || "").trim();
   if (!name) { alert("Enter a family display name."); return; }
+  const key = slugifyFamilyKey(name);
 
   // Creating a family under a name already in use would merge the two
   // silently, which is the one grouping mistake that is tedious to undo.
-  if (!_famEditing && _famRows.some(r => r.product_family === name)) {
+  // Compared by family_key, not the raw name, so "Wash Cloth" and "wash
+  // cloth " (whitespace/case only) are correctly treated as the same family.
+  if (!_famEditing && _famRows.some(r => (r.family_key || slugifyFamilyKey(r.product_family || "")) === key)) {
     alert(`A family named "${name}" already exists. Edit that family instead.`);
     return;
   }
@@ -1536,22 +1580,22 @@ async function saveFamily() {
   // handful, not a bulk job.
   for (const id of _famDraft) {
     const { error } = await window.sb.from("products")
-      .update({ product_family: name, variant_label: labels[id], updated_at: stamp })
+      .update({ product_family: name, family_key: key, variant_label: labels[id], updated_at: stamp })
       .eq("id", id);
     if (error) { alert("Error saving: " + error.message); return; }
   }
 
-  // Anyone dropped from the family goes back to being its own card. Both
-  // columns are cleared together so no SKU is left with a label but no
-  // family (which the storefront would ignore, and the importer treats as
-  // invalid).
-  if (_famEditing) {
+  // Anyone dropped from the family goes back to being its own card. All
+  // three columns are cleared together so no SKU is left with a label or
+  // key but no family (which the storefront would ignore, and the importer
+  // treats as invalid).
+  if (_famEditingKey) {
     const removed = _famRows
-      .filter(r => r.product_family === _famEditing && !_famDraft.includes(r.id))
+      .filter(r => (r.family_key || slugifyFamilyKey(r.product_family || "")) === _famEditingKey && !_famDraft.includes(r.id))
       .map(r => r.id);
     if (removed.length) {
       const { error } = await window.sb.from("products")
-        .update({ product_family: null, variant_label: null, updated_at: stamp })
+        .update({ product_family: null, family_key: null, variant_label: null, updated_at: stamp })
         .in("id", removed);
       if (error) { alert("Error releasing removed SKUs: " + error.message); return; }
     }
@@ -1940,8 +1984,10 @@ async function openDeleteProduct(id) {
 let _csvRows    = [];
 let _csvRunning = false;
 
-/* The closed vocabulary products.product_tier accepts (20260915c). */
-const PRODUCT_TIERS = ["Economy","Premium","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free"];
+/* The closed vocabulary products.product_tier accepts (20260915c, plus
+   Ultra Luxury added in 20260930_family_key_and_ultra_luxury_tier for the
+   Starlinen towel line). */
+const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free"];
 
 /* Maps a spreadsheet cell to a valid product_tier, or null.
    Anything unrecognized becomes null rather than being passed through: the
@@ -1954,6 +2000,18 @@ function normalizeProductTier(raw) {
   if (!s) return null;
   const norm = s.toLowerCase().replace(/[\s_-]+/g, "");
   return PRODUCT_TIERS.find(t => t.toLowerCase().replace(/[\s_-]+/g, "") === norm) || null;
+}
+
+// Stable grouping key for a product_family display name. Mirrors the SQL
+// backfill in 20260930_family_key_and_ultra_luxury_tier.sql exactly
+// (lowercase, strip to alnum/space/hyphen, collapse whitespace to hyphens)
+// so a family created here groups with rows already backfilled in the DB.
+function slugifyFamilyKey(name) {
+  return String(name || "").toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 /* ============================================================
@@ -2310,6 +2368,29 @@ function cvtDeriveVariant(name) {
       repeat rows, and counting a repeat could manufacture a two-option
       dropdown out of a single real product. The importer upserts by SKU, so
       the repeat never becomes a second product anyway. */
+// Strips a leading tier word off an auto-derived family name and returns
+// it separately, so "Ultra Luxury White Long-Staple Cotton Wash Cloth"
+// groups under the same family as "Economy White Cotton Wash Cloth"
+// instead of forking into its own tier-specific card.
+//
+// Without this, Starlinen's four-tier towel line (each tier is a distinct
+// leading word in the product name, per its own naming convention) would
+// produce four separate "families" per product type -- exactly the
+// duplicate-catalog-card problem family_key/product_tier exist to solve.
+// Longest tier name first, same reasoning as PRODUCT_TIERS' own ordering:
+// "Ultra Luxury" must be tried before "Luxury" so it isn't half-stripped.
+const CVT_TIER_PREFIX_RE = new RegExp(
+  "^(" + [...PRODUCT_TIERS].sort((a, b) => b.length - a.length)
+    .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") +
+  ")\\s+", "i"
+);
+function cvtStripTierPrefix(family) {
+  const m = family.match(CVT_TIER_PREFIX_RE);
+  if (!m) return { family, tier: "" };
+  const tier = PRODUCT_TIERS.find(t => t.toLowerCase() === m[1].toLowerCase()) || "";
+  return { family: family.slice(m[0].length).trim(), tier };
+}
+
 function cvtGroupVariants(rows, nameCol, skuCol) {
   const derived = new Map();
   if (!nameCol) return derived;
@@ -2317,7 +2398,9 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   const famCount = {};
   const seenSku = new Set();
   for (const r of rows) {
-    const d = cvtDeriveVariant(r[nameCol]);
+    const raw = cvtDeriveVariant(r[nameCol]);
+    const { family, tier } = raw.family ? cvtStripTierPrefix(raw.family) : { family: raw.family, tier: "" };
+    const d = { family, label: raw.label, tier };
     derived.set(r, d);
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
     if (sku && seenSku.has(sku)) continue;
@@ -2326,7 +2409,7 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   }
   for (const [r, d] of derived) {
     if (!d.family || !d.label || famCount[d.family] < 2) {
-      derived.set(r, { family: "", label: "" });
+      derived.set(r, { family: "", label: "", tier: "" });
     }
   }
   return derived;
@@ -2864,6 +2947,11 @@ function cvtBuildAndDownload() {
   const derived = autoVariants
     ? cvtGroupVariants(_cvtSourceRows, _cvtMapping.name, _cvtMapping.sku)
     : new Map();
+  // product_tier is auto-filled from the same derivation, independently of
+  // whether product_family/variant_label were auto-derived too -- a vendor
+  // file can supply its own family/label mapping and still need the tier
+  // word stripped out of the name for badging/grouping.
+  const autoTier = !_cvtMapping.product_tier;
 
   for (const srcRow of _cvtSourceRows) {
     const vals = headers.map(h => {
@@ -2872,6 +2960,9 @@ function cvtBuildAndDownload() {
       if (!srcCol && autoVariants && (h === "product_family" || h === "variant_label")) {
         const d = derived.get(srcRow) || { family: "", label: "" };
         v = h === "product_family" ? d.family : d.label;
+      }
+      if (!srcCol && autoTier && h === "product_tier") {
+        v = (derived.get(srcRow) || {}).tier || "";
       }
       v = cvtNormalizeValue(h, v, srcRow);
       return `"${v.replace(/"/g,'""')}"`;
@@ -3478,6 +3569,12 @@ async function runCsvImport() {
     // all-or-nothing rather than half-applied.
     product_family: (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.product_family.trim() : null,
     variant_label : (r.product_family || "").trim() && (r.variant_label || "").trim() ? r.variant_label.trim()  : null,
+    // Stable grouping key, independent of the display name in
+    // product_family -- see 20260930_family_key_and_ultra_luxury_tier.sql.
+    // Keys off the same trimmed family value used above, so it's null
+    // exactly when product_family is null.
+    family_key    : (r.product_family || "").trim() && (r.variant_label || "").trim()
+                      ? slugifyFamilyKey(r.product_family) : null,
     product_tier  : normalizeProductTier(r.product_tier),
     updated_at   : now,
   });
