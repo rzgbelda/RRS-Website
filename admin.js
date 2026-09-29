@@ -2249,6 +2249,32 @@ function cvtAutoMap(cols) {
   // looser test.
   const claimed = new Set();
 
+  // Pass -1: Sasso/Starlinen/Wraptite bake the tier's own breakpoint
+  // number straight into the price column's header -- "Tier1 1-5", "Tier2
+  // 6-29", "Tier 3 9+" -- rather than providing a separate threshold
+  // column the way OfficeCrave does. Every exact/substring alias below
+  // expects EITHER a bare "Tier1"-style header (-> tier1_min_qty) OR a
+  // "Tier1 Selling Price"/"Price 1-5"-style header (-> price_tier1), and
+  // "Tier1 1-5" matches neither cleanly: normalized to "tier115", it isn't
+  // equal to any alias, and the only substring hit is tier1_min_qty's bare
+  // "tier1" -- which wrongly claims the PRICE column as if it were a
+  // quantity column, leaving price_tier1 unmapped and the card's price
+  // stuck at null. Confirmed on a live Starlinen import where
+  // price_tier1/2/3 AND tier1_min_qty/2/3 all landed null on the same row.
+  //
+  // Detected here first, before any alias pass, by requiring the header to
+  // start with "tierN" followed immediately by a digit (the breakpoint),
+  // which only this header style produces -- a bare "Tier1" (OfficeCrave)
+  // has no digit right after "tier1", and "Tier1 Selling Price" has
+  // letters, not a digit, right after it.
+  const TIER_HEADER_RE = /^tier\s*([123])\s*(\d.*)$/;
+  for (const col of cols) {
+    const m = norm(col).match(TIER_HEADER_RE);
+    if (!m) continue;
+    const priceKey = "price_tier" + m[1];
+    if (!mapping[priceKey]) { mapping[priceKey] = col; claimed.add(col); }
+  }
+
   // Pass 0: preferred exact headers. A target whose FIRST alias matches a
   // header exactly claims it before any other target can, even if that
   // other target also matches exactly.
@@ -2837,6 +2863,38 @@ function cvtProposeCommaGroupings(rows) {
  */
 const CVT_TIER_DEFAULT_MIN = { tier1_min_qty: 1, tier2_min_qty: 6, tier3_min_qty: 30 };
 
+/* Extracts a tier's minimum quantity from the SOURCE COLUMN HEADER text
+ * itself, e.g. "Tier1 1-5" -> 1, "Tier2 6-29" -> 6, "Tier 3 9+" -> 9.
+ *
+ * Different suppliers use different breakpoints for the same three-tier
+ * scheme -- Sasso ships "Tier1 1-3 / Tier2 4-9 / Tier 3 9+", Starlinen and
+ * Wraptite ship "Tier1 1-5 / Tier2 6-29(or 5-29) / Tier3 30+" -- and NONE
+ * of them provide a separate minimum-quantity column the way OfficeCrave
+ * does. The old fallback (CVT_TIER_DEFAULT_MIN, a flat 1/6/30) happened to
+ * match Starlinen by coincidence but silently mislabeled Sasso's tiers
+ * (importing them as 1/6/30 when the file actually means 1/4/9), which
+ * would have shown price breaks at the wrong order sizes on every Sasso
+ * product's pricing cards.
+ *
+ * Reads the header of whichever source column is mapped to price_tierN --
+ * that's the column whose header text carries the breakpoint number for
+ * this supplier's file -- and takes the FIRST number in it, since every
+ * observed format ("Tier1 1-5", "Tier 3 9+", "Price: 1-5 Cases") leads
+ * with the tier's own minimum rather than its upper bound.
+ */
+function cvtHeaderTierMin(key) {
+  const priceKey = "price_tier" + key.charAt(4);
+  const priceCol = _cvtMapping[priceKey];
+  if (!priceCol) return null;
+  // The first \d+ in the RAW header is the tier's own index ("Tier2 6-29"
+  // -> matching "2" before ever reaching "6-29"), not the breakpoint --
+  // strip the leading "Tier N" (optionally space/dash-joined) off first so
+  // the match lands on the number that actually follows it.
+  const withoutTierPrefix = String(priceCol).replace(/^\s*tier\s*\d+\s*[:.\-]?\s*/i, "");
+  const m = withoutTierPrefix.match(/(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
 /* Known-bad figures in a supplier feed, corrected on import.
  *
  * Deliberately a short, explicit, per-SKU list rather than a rule that
@@ -2921,7 +2979,12 @@ function cvtNormalizeValue(key, value, srcRow) {
     if (!hasPrice) return "";
 
     if (v) return String(parseInt(v.replace(/[^0-9]/g, ""), 10) || "");
-    // No threshold column in this feed: fall back to the fixed scheme.
+    // No threshold column in this feed: read the breakpoint out of the
+    // price column's own header text (e.g. "Tier1 1-5" -> 1) before
+    // falling back to the fixed 1/6/30 scheme, since suppliers disagree on
+    // where tier 2 and tier 3 actually start.
+    const headerMin = cvtHeaderTierMin(key);
+    if (headerMin != null) return String(headerMin);
     return String(CVT_TIER_DEFAULT_MIN[key]);
   }
 
