@@ -228,10 +228,7 @@ function buildPage(cat) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
-       keep them). Set here, before first paint, so no price ever flashes.
-       See RRS_QUOTE_ONLY in script.js. -->
-  <script>if(/^(www\\.)?roomreadysupply\\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only');</script>
+  <script>/* Quote-only mode disabled for launch -- prices now show on the main domain. To re-enable, uncomment: if(/^(www\\.)?roomreadysupply\\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only'); */</script>
 ${GTAG}
 
   <meta charset="UTF-8" />
