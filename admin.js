@@ -11447,10 +11447,10 @@ async function previewTermsAgreement() {
 
   try {
     const { data: { session } } = await window.sb.auth.getSession();
-    const res = await fetch("/api/send-terms-agreement", {
+    const res = await fetch("/api/terms-agreement", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
-      body: JSON.stringify({ ...payload, preview_only: true }),
+      body: JSON.stringify({ ...payload, action: "send", preview_only: true }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Preview failed");
@@ -11476,10 +11476,10 @@ async function sendTermsAgreementFromPreview() {
 
   try {
     const { data: { session } } = await window.sb.auth.getSession();
-    const res = await fetch("/api/send-terms-agreement", {
+    const res = await fetch("/api/terms-agreement", {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload, action: "send" }),
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || "Send failed");
