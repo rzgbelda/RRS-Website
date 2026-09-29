@@ -1986,8 +1986,14 @@ let _csvRunning = false;
 
 /* The closed vocabulary products.product_tier accepts (20260915c, plus
    Ultra Luxury added in 20260930_family_key_and_ultra_luxury_tier for the
-   Starlinen towel line). */
-const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free"];
+   Starlinen towel line, plus 180/200/250 added in the same migration for
+   Starlinen's sheet line -- thread count isn't a quality-tier WORD like the
+   others, but reuses this column/UI rather than a second dimension: a
+   sheet family (e.g. "Flat Sheet") is picked by thread count the same way
+   a towel family is picked by quality tier, and the existing tier-grouped
+   selector (both the catalog card's modal and the product page's two-step
+   Tier-then-Size picker) already does exactly that grouping for free. */
+const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250"];
 
 /* Maps a spreadsheet cell to a valid product_tier, or null.
    Anything unrecognized becomes null rather than being passed through: the
@@ -2383,16 +2389,22 @@ function cvtDeriveVariant(name) {
 // Matching the trailing product-type noun instead ignores everything
 // before it, tier and material alike.
 //
-// Longest phrase first so "Full Fitted Sheet" matches before the bare
-// "Fitted Sheet" would swallow only part of it, and multi-word types are
-// listed whole rather than assembled from Size Label + Product Type
-// combinations, since not every supplier's sheet line uses "Full"/"Queen"/
-// "King" as a separate word positioned the same way.
+// Bed size ("Full XL", "Queen", "King", "Standard") sits between the tier/
+// material phrase and the product-type noun in Starlinen's sheet names
+// ("T200 White Cotton Blend QUEEN Fitted Sheet"). It is deliberately
+// treated as a SIZE variant, not part of the family: a Full/Queen/King
+// Flat Sheet is one "Flat Sheet" family, with bed size and thread count as
+// its two picker dimensions (thread count reuses product_tier; bed size
+// becomes variant_label, same slot a towel's inches-size normally fills).
+// Longest first so "Full XL" matches before the bare "Full" would only
+// grab part of it.
+const CVT_BED_SIZE_RE = /\b(Full XL|Queen XL|King XL|Full|Queen|King|Standard)\s+/i;
+
+// Product-type nouns, checked as a trailing match against the family
+// remainder AFTER bed size has already been stripped out above -- so this
+// list only ever needs the bare type ("Flat Sheet"), never a sized
+// variant ("Queen Flat Sheet"), unlike an earlier version of this list.
 const CVT_PRODUCT_TYPE_NOUNS = [
-  "Full XL Flat Sheet", "Full Fitted Sheet", "Full Flat Sheet",
-  "Queen XL Flat Sheet", "Queen Fitted Sheet", "Queen Flat Sheet",
-  "King XL Flat Sheet", "King Fitted Sheet", "King Flat Sheet",
-  "Standard Pillowcase", "King Pillowcase",
   "Wash Cloth", "Hand Towel", "Bath Towel", "Bath Mat",
   "Flat Sheet", "Fitted Sheet", "Pillowcase",
 ].sort((a, b) => b.length - a.length);
@@ -2417,10 +2429,41 @@ const CVT_TIER_PREFIX_RE = new RegExp(
     .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") +
   ")\\s+", "i"
 );
+// "T180"/"T200"/"T250" (Starlinen's thread-count prefix) map to the "180"/
+// "200"/"250" product_tier values -- not a plain word match against
+// PRODUCT_TIERS, since the name carries a "T" the stored tier value
+// doesn't.
+const CVT_THREAD_COUNT_PREFIX_RE = /^T(180|200|250)\s+/i;
+
 function cvtStripTierPrefix(family) {
-  const m = family.match(CVT_TIER_PREFIX_RE);
-  if (!m) return { family, tier: "" };
-  const tier = PRODUCT_TIERS.find(t => t.toLowerCase() === m[1].toLowerCase()) || "";
+  let tier = "";
+  let rest = family;
+
+  const threadMatch = family.match(CVT_THREAD_COUNT_PREFIX_RE);
+  if (threadMatch) {
+    tier = threadMatch[1];
+    rest = family.slice(threadMatch[0].length).trim();
+  } else {
+    const m = family.match(CVT_TIER_PREFIX_RE);
+    if (m) {
+      tier = PRODUCT_TIERS.find(t => t.toLowerCase() === m[1].toLowerCase()) || "";
+      rest = family.slice(m[0].length).trim();
+    }
+  }
+  if (!tier) return { family, tier: "", bedSize: "" };
+
+  // Bed size ("Queen", "King", "Full XL", ...) sits between the
+  // tier/material phrase and the product-type noun in a sheet name -- pull
+  // it out as its own value (folded into the variant label, not the
+  // family) rather than leaving it stuck to whatever material words
+  // precede it.
+  let bedSize = "";
+  const bedMatch = rest.match(CVT_BED_SIZE_RE);
+  if (bedMatch) {
+    bedSize = bedMatch[1].replace(/\s+/g, " ").trim();
+    rest = rest.slice(0, bedMatch.index) + rest.slice(bedMatch.index + bedMatch[0].length);
+    rest = rest.trim();
+  }
 
   // Prefer matching a known trailing product-type noun over the plain
   // tier-stripped remainder: it ignores the material phrase too ("White
@@ -2429,13 +2472,12 @@ function cvtStripTierPrefix(family) {
   // family string. Falls back to the tier-stripped remainder for any
   // product type not in CVT_PRODUCT_TYPE_NOUNS (non-towel/linen items),
   // so this never makes an unrecognized product WORSE than before.
-  const stripped = family.slice(m[0].length).trim();
-  const typeMatch = stripped.match(CVT_PRODUCT_TYPE_RE);
+  const typeMatch = rest.match(CVT_PRODUCT_TYPE_RE);
   const resolvedFamily = typeMatch
-    ? CVT_PRODUCT_TYPE_NOUNS.find(t => t.toLowerCase() === typeMatch[1].toLowerCase().trim()) || stripped
-    : stripped;
+    ? CVT_PRODUCT_TYPE_NOUNS.find(t => t.toLowerCase() === typeMatch[1].toLowerCase().trim()) || rest
+    : rest;
 
-  return { family: resolvedFamily, tier };
+  return { family: resolvedFamily, tier, bedSize };
 }
 
 function cvtGroupVariants(rows, nameCol, skuCol) {
@@ -2446,8 +2488,14 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   const seenSku = new Set();
   for (const r of rows) {
     const raw = cvtDeriveVariant(r[nameCol]);
-    const { family, tier } = raw.family ? cvtStripTierPrefix(raw.family) : { family: raw.family, tier: "" };
-    const d = { family, label: raw.label, tier };
+    const { family, tier, bedSize } = raw.family
+      ? cvtStripTierPrefix(raw.family) : { family: raw.family, tier: "", bedSize: "" };
+    // Bed size folded into the label so "81 x 108 in." (ambiguous on its
+    // own -- Full XL and Queen are both roughly that range) reads as
+    // "Full XL - 81 x 108 in." the same way a pack size gets folded in
+    // above in cvtDeriveVariant.
+    const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
+    const d = { family, label, tier };
     derived.set(r, d);
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
     if (sku && seenSku.has(sku)) continue;

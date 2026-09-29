@@ -872,6 +872,17 @@ function tierMinQty(item, snake, camel) {
    CATALOG PRODUCTS
 ========================= */
 
+// product_tier stores a bare thread-count number ("180"/"200"/"250") for
+// Starlinen's sheet line, reusing the quality-tier column/UI rather than a
+// second dimension (see 20260930b_thread_count_tier.sql). Displayed as
+// "T180" etc. to match how thread count is written in the bedding industry
+// and in the supplier's own product names -- the stored value stays a
+// plain number so PRODUCT_TIERS-style exact-match logic elsewhere is
+// unaffected.
+function tierDisplayLabel(tier) {
+  return /^\d+$/.test(tier) ? "T" + tier : tier;
+}
+
 function injectVariantCSS() {
   if (document.getElementById('variant-css')) return;
   const style = document.createElement('style');
@@ -1023,7 +1034,7 @@ function renderSingleCard(product) {
         <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
-        ${product.productTier ? `<span class="tier-badge">${product.productTier}</span>` : ""}
+        ${product.productTier ? `<span class="tier-badge">${tierDisplayLabel(product.productTier)}</span>` : ""}
         <h3>${product.name}</h3>
         <p class="product-description">${product.description || ""}</p>
         <div class="product-details">
@@ -1239,7 +1250,7 @@ function renderVariantCard(variants) {
   // any single badge, so it shows none and the modal groups by tier instead.
   const famTiers = [...new Set(variants.map(vv => vv.productTier).filter(Boolean))];
   const tierHtml = famTiers.length === 1
-    ? `<span class="tier-badge">${famTiers[0]}</span>` : "";
+    ? `<span class="tier-badge">${tierDisplayLabel(famTiers[0])}</span>` : "";
 
   // Color pills: show unique colors (using first size's color variants as reference)
   let colorPillsHtml = "";
@@ -1664,11 +1675,17 @@ function openVariantModal(card) {
 
   let body;
   if (grouped) {
-    const order = ["Economy", "Premium", "Suites", "Ringspun", "Luxury", "Hospitality", "Wrinkle-Free"];
+    // Bug fix: this list was missing "Ultra Luxury" (added to the tier
+    // vocabulary in 20260930_family_key_and_ultra_luxury_tier) and never
+    // had thread counts, so a family grouped by either sorted to the end
+    // via indexOf's -1 fallback instead of its intended position -- for
+    // Ultra Luxury that meant sorting after Wrinkle-Free, for thread
+    // counts it meant an undefined order among 180/200/250.
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
     const sorted = [...tiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     body = sorted.map(t => `
       <div class="vm-group">
-        <p class="vm-group-label">${vmEsc(t)}</p>
+        <p class="vm-group-label">${vmEsc(tierDisplayLabel(t))}</p>
         ${variants.filter(v => v.productTier === t).map(rowFor).join("")}
       </div>`).join("");
     const untiered = variants.filter(v => !v.productTier);
@@ -2177,7 +2194,7 @@ function populateProductPage(product) {
   // meta line no longer repeats them.
   const tierBadge = document.getElementById("productTierBadge");
   if (tierBadge) {
-    tierBadge.textContent = product.productTier || "";
+    tierBadge.textContent = product.productTier ? tierDisplayLabel(product.productTier) : "";
     tierBadge.style.display = product.productTier ? "" : "none";
   }
 
@@ -2612,7 +2629,7 @@ function injectProductVariantSelector(variants, activeProduct) {
   let tierHtml = "";
   let pillsHtml;
   if (sizeTiers.length > 1) {
-    const order = ["Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
     const sortedTiers = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     // Active tier is whichever the current product belongs to, so a size
     // switch within a tier (switchProductVariant) never silently jumps the
@@ -2622,10 +2639,11 @@ function injectProductVariantSelector(variants, activeProduct) {
 
     const tierPillFor = t => {
       const tierOut = !sizeVariants.some(v => v.productTier === t && v.inStock !== false);
+      const label = tierDisplayLabel(t);
       return `<button type="button" class="variant-pill${t === activeTier ? " active" : ""}${tierOut ? " is-out" : ""}"
                data-tier="${escAttr(t)}"
-               ${tierOut ? `disabled aria-disabled="true" title="${t} — Out of Stock"` : `onclick="selectVariantTier(this,'${escAttr(t)}')"`}
-       >${t}${tierOut ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
+               ${tierOut ? `disabled aria-disabled="true" title="${label} — Out of Stock"` : `onclick="selectVariantTier(this,'${escAttr(t)}')"`}
+       >${label}${tierOut ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
     };
     tierHtml = `
       <div class="variant-option-label">Select Tier</div>
