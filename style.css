@@ -7776,19 +7776,6 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding-bottom: 6px; border-bottom: 1px solid #fde8d6;
 }
 
-/* Product detail page's own size-pill selector, grouped by tier the same
-   way the catalog card's variant modal (.vm-group above) is -- see
-   injectProductVariantSelector in script.js. Kept as separate classes
-   rather than reusing .vm-group since this sits inline on the page, not
-   inside the modal's dialog chrome. */
-.variant-tier-group + .variant-tier-group { margin-top: 14px; }
-.variant-tier-label {
-  margin: 0 0 6px;
-  font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase;
-  color: #ED7226;
-  padding-bottom: 4px; border-bottom: 1px solid #fde8d6;
-}
-
 .vm-row {
   width: 100%;
   display: flex; align-items: center; gap: 12px;

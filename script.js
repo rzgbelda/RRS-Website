@@ -2602,23 +2602,40 @@ function injectProductVariantSelector(variants, activeProduct) {
      >${v.variantLabel || v.size || v.name}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
   };
 
-  // Grouped by tier when the family actually spans more than one -- same
-  // rule and tier order as the catalog card's openVariantModal (script.js),
-  // so a family shows the same Economy/Premium/Luxury/Ultra Luxury
-  // sections here as it does from the catalog. Without this, a multi-tier
-  // family's product detail page showed every tier's sizes flattened into
-  // one pill row with no way to tell "20 x 30 in." (Premium) apart from a
-  // same-labeled "20 x 30 in." (a different tier) -- confirmed on the live
-  // Bath Mat page, which showed two identical "20 x 30 in." pills.
+  // Two independent choices when the family actually spans more than one
+  // tier: a Tier row (Economy/Premium/Luxury/Ultra Luxury) picked first,
+  // then a Sizes row showing ONLY that tier's sizes -- not one long list
+  // with tier headings. Switching tier re-renders just the size row (via
+  // selectVariantTier below) rather than navigating away, so picking a
+  // tier alone never jumps the page to some arbitrary size in it.
   const sizeTiers = [...new Set(sizeVariants.map(v => v.productTier).filter(Boolean))];
+  let tierHtml = "";
   let pillsHtml;
   if (sizeTiers.length > 1) {
     const order = ["Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
-    const sorted = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
-    pillsHtml = sorted.map(t => `
-      <div class="variant-tier-group">
-        <p class="variant-tier-label">${t}</p>
-        <div class="variant-selector">${sizeVariants.filter(v => v.productTier === t).map(pillFor).join("")}</div>
+    const sortedTiers = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
+    // Active tier is whichever the current product belongs to, so a size
+    // switch within a tier (switchProductVariant) never silently jumps the
+    // tier selection to a different one.
+    const activeTier = activeProduct.productTier && sortedTiers.includes(activeProduct.productTier)
+      ? activeProduct.productTier : sortedTiers[0];
+
+    const tierPillFor = t => {
+      const tierOut = !sizeVariants.some(v => v.productTier === t && v.inStock !== false);
+      return `<button type="button" class="variant-pill${t === activeTier ? " active" : ""}${tierOut ? " is-out" : ""}"
+               data-tier="${escAttr(t)}"
+               ${tierOut ? `disabled aria-disabled="true" title="${t} — Out of Stock"` : `onclick="selectVariantTier(this,'${escAttr(t)}')"`}
+       >${t}${tierOut ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
+    };
+    tierHtml = `
+      <div class="variant-option-label">Select Tier</div>
+      <div class="variant-selector">${sortedTiers.map(tierPillFor).join("")}</div>`;
+
+    // Each tier's size row is pre-rendered and toggled by CSS/JS (see
+    // selectVariantTier), not re-fetched, so switching tiers is instant.
+    pillsHtml = sortedTiers.map(t => `
+      <div class="variant-selector variant-size-group" data-tier-sizes="${escAttr(t)}"${t === activeTier ? "" : ' style="display:none"'}>
+        ${sizeVariants.filter(v => v.productTier === t).map(pillFor).join("")}
       </div>`).join("");
     const untiered = sizeVariants.filter(v => !v.productTier);
     if (untiered.length) pillsHtml += `<div class="variant-selector">${untiered.map(pillFor).join("")}</div>`;
@@ -2645,21 +2662,37 @@ function injectProductVariantSelector(variants, activeProduct) {
     }
   }
 
-  // pillsHtml is already wrapped in its own .variant-selector/.variant-tier-group
-  // divs when grouped by tier (sizeTiers.length > 1 above); only wrap it here
-  // for the plain single-tier/no-tier case.
+  // pillsHtml is already wrapped in its own .variant-selector/.variant-size-group
+  // divs when grouped by tier (sizeTiers.length > 1 above, one row per
+  // tier, only the active one visible); only wrap it here for the plain
+  // single-tier/no-tier case, which has just one size row to begin with.
   const sizeHtml = sizeTiers.length > 1 ? pillsHtml : `<div class="variant-selector">${pillsHtml}</div>`;
+  const sizeLabel = sizeTiers.length > 1 ? "Select Size" : "Select Option";
 
   const selector = document.createElement("div");
   selector.id = "product-variant-selector";
   selector.innerHTML = `
-    <div class="variant-option-label">Select Option</div>
+    ${tierHtml}
+    <div class="variant-option-label"${tierHtml ? ' style="margin-top:12px;"' : ""}>${sizeLabel}</div>
     ${sizeHtml}
     ${colorHtml}
   `;
 
   const descEl = document.getElementById("productDescription");
   if (descEl) descEl.parentNode.insertBefore(selector, descEl);
+}
+
+// Switches which tier's size row is visible WITHOUT navigating -- picking a
+// tier is its own choice, independent of size, so it must not jump the page
+// to some arbitrary size within that tier. The actual navigation happens
+// only when the customer then clicks a size pill (switchProductVariant).
+function selectVariantTier(btn, tier) {
+  const wrap = document.getElementById("product-variant-selector");
+  if (!wrap) return;
+  wrap.querySelectorAll('.variant-selector .variant-pill[data-tier]').forEach(p => p.classList.toggle("active", p === btn));
+  wrap.querySelectorAll('.variant-size-group').forEach(g => {
+    g.style.display = g.dataset.tierSizes === tier ? "" : "none";
+  });
 }
 
 function switchProductVariant(slug) {
@@ -2682,9 +2715,24 @@ function switchProductVariant(slug) {
 
   history.pushState(null, "", "/product?item=" + encodeURIComponent(product.slug || product.itemNumber));
 
-  document.querySelectorAll("#product-variant-selector .variant-pill").forEach(p => {
+  document.querySelectorAll("#product-variant-selector .variant-pill[data-slug]").forEach(p => {
     p.classList.toggle("active", p.dataset.slug === (product.slug || product.itemNumber));
   });
+
+  // Size pills are only ever clicked from within the currently-selected
+  // tier's own row (the other tiers' rows are display:none via
+  // selectVariantTier), so the tier pill itself never needs to change here
+  // -- but if this ever fires from something other than a visible size
+  // pill (e.g. a future deep link), keep the tier row's active state
+  // truthful to the product actually shown rather than stale.
+  if (product.productTier) {
+    document.querySelectorAll('#product-variant-selector .variant-pill[data-tier]').forEach(p => {
+      p.classList.toggle("active", p.dataset.tier === product.productTier);
+    });
+    document.querySelectorAll('#product-variant-selector .variant-size-group').forEach(g => {
+      g.style.display = g.dataset.tierSizes === product.productTier ? "" : "none";
+    });
+  }
 
   populateProductPage(product);
 }
