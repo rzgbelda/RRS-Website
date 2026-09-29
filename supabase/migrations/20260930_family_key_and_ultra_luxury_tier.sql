@@ -49,6 +49,13 @@ where family_key is null and product_family is not null;
 -- family_key appended -- reusing an older revision here would have silently
 -- dropped is_fast_ship/tier*_min_qty/in_stock (added in 20260921 and
 -- 20260923b) back out of the view.
+--
+-- family_key is appended at the END of the select list, not inlined next to
+-- product_family/variant_label where it reads more naturally: Postgres's
+-- `create or replace view` only allows ADDING columns at the end of the
+-- existing list, never inserting one in the middle -- doing that errors
+-- with 42P16 ("cannot change name of view column ... to ...") because it
+-- reads as renaming every column after the insertion point.
 create or replace view public.products_public as
 select
   id, name, sku, description, overview, image_url, images,
@@ -56,7 +63,7 @@ select
   price, sale_price, is_on_sale,
   case_qty, pack_size, unit, sell_by_each,
   price_tier1, price_tier2, price_tier3, product_tier,
-  product_family, family_key, variant_label, color_group, color_label,
+  product_family, variant_label, color_group, color_label,
   moq, moq_group, moq_group_min,
   weight, length, width, height,
   feature1, feature2, feature3, feature4,
@@ -64,7 +71,8 @@ select
   is_featured, is_active, created_at, updated_at,
   is_fast_ship,
   tier1_min_qty, tier2_min_qty, tier3_min_qty,
-  in_stock
+  in_stock,
+  family_key
   -- Deliberately excluded: cost_per_case, landed_cost, truckload_qty,
   -- tier1_cost, tier2_cost, tier3_cost (margin data), vendor_id and
   -- distributor (internal supplier links).
