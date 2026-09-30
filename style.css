@@ -7669,18 +7669,6 @@ button, a, [role="button"] { touch-action: manipulation; }
 /* A quiet caption directly above the price it qualifies: the span the
    family covers, then the price of the option currently chosen. Never
    rewritten by applyVariantToCard, so it survives a selection. */
-/* Names the cheapest option in a family. Sits beside the price; hidden by
-   applyVariantToCard as soon as a pricier option is selected. */
-.lowest-tag {
-  display: inline-block;
-  margin-left: 6px; padding: 2px 7px;
-  border-radius: 999px;
-  background: #e7f6ee; color: #13703a;
-  font-size: 10px; font-weight: 800; letter-spacing: .05em;
-  text-transform: uppercase; vertical-align: middle; white-space: nowrap;
-}
-.lowest-tag[hidden] { display: none; }
-
 .price-range {
   display: block;
   margin-bottom: 1px;

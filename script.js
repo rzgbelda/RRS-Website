@@ -205,8 +205,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     .then(products => {
       allProducts = products.filter(isSellable);
 
-      const prioritized = sortCatalogDefault(allProducts);
-      renderProducts(prioritized);
+      // First paint of the catalog grid uses the same per-page-load shuffle as
+      // applyFilters(), so the very first render is already randomised (and the
+      // first filter change keeps the same order). Only #products-grid is
+      // affected; the homepage builds its own lists.
+      renderProducts(shuffleCatalog(allProducts));
       loadProductPage();
       loadFeaturedProducts();
       renderHomeProducts();
@@ -1301,13 +1304,6 @@ function renderVariantCard(variants) {
   // Price span across the family. Shown only when the ends actually differ:
   // "$10.08 - $14.30" is information, "$10.08 - $10.08" is noise.
   const range = variantPriceRange(variants);
-  // Tag naming the cheapest option. Only when prices actually differ, and
-  // only while the option on show IS the cheapest (applyVariantToCard hides
-  // it once the buyer picks a pricier one).
-  const showLowestTag = range.min !== range.max;
-  const isLowestShown = showLowestTag && Math.abs(price - range.min) < 0.005;
-  const lowestTagHtml = showLowestTag
-    ? `<span class="lowest-tag"${isLowestShown ? "" : " hidden"}>Lowest price</span>` : "";
   const rangeHtml = range.min !== range.max
     ? `<span class="price-range">$${range.min.toFixed(2)} &ndash; $${range.max.toFixed(2)}</span>`
     : "";
@@ -1352,7 +1348,6 @@ function renderVariantCard(variants) {
   return `
     <div class="product-card"
          data-url="/product?item=${encodeURIComponent(v.slug)}"
-         data-min-price="${showLowestTag ? range.min : ""}"
          data-variants="${escapedJson}">
       <div class="product-image">
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
@@ -1381,7 +1376,6 @@ function renderVariantCard(variants) {
             <div class="price-row">
               <span class="price">${price.toFixed(2)}</span>
               <span class="unit">/ ${v.priceBy || "Case"}</span>
-              ${lowestTagHtml}
             </div>
           </div>
           <button
@@ -1440,14 +1434,6 @@ function applyVariantToCard(card, v) {
 
   const unitEl = card.querySelector(".unit");
   if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
-
-  // "Lowest price" tag: shown only while the selected option is the
-  // family's cheapest (data-min-price, set at render when prices differ).
-  const lowestTag = card.querySelector(".lowest-tag");
-  if (lowestTag) {
-    const minPrice = Number(card.dataset.minPrice);
-    lowestTag.hidden = !(minPrice > 0 && Math.abs(price - minPrice) < 0.005);
-  }
 
   const img = card.querySelector(".product-image img");
   if (img) img.src = v.image;
