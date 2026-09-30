@@ -3653,6 +3653,7 @@ async function runCsvImport() {
   };
   setProgress(0);
 
+  const fileHasMoq = rows.some(r => String(r.moq ?? "").trim() !== "");
   const buildPayload = (r, now) => ({
     name         : r.name,
     sku          : r.sku  || null,
@@ -3733,12 +3734,12 @@ async function runCsvImport() {
     moq_group     : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? r.moq_group.trim() : null,
     moq_group_min : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? parseInt(r.moq_group_min) : null,
     // Per-product minimum order (in the product's own unit -- cases for
-    // NPS, whose minimum is one pallet). Only written when the file HAS a
-    // moq column, so importing a feed without one never resets a minimum
-    // that was set by hand or by an earlier import.
-    ...(Object.prototype.hasOwnProperty.call(r, "moq")
-      ? { moq: Math.max(1, parseInt(r.moq) || 1) }
-      : {}),
+    // NPS, whose minimum is one pallet). Only written when at least one row
+    // in this file carries a value: the converter always emits a moq column
+    // (blank when the source had none), so checking for the column alone
+    // would reset every existing minimum -- e.g. Starlinen's dozen minimums
+    // -- to 1 on any import that lacks MOQ data.
+    ...(fileHasMoq ? { moq: Math.max(1, parseInt(r.moq) || 1) } : {}),
     // Size/variant grouping. Rows sharing a product_family collapse into one
     // storefront card with a size dropdown (renderVariantCard in script.js),
     // and variant_label is what that dropdown shows for each row. Both are
