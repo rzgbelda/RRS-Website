@@ -10622,3 +10622,11 @@ html.rrs-quote-only .pp-price-cta {
   .pm-modal { padding: 28px 20px 20px; }
   .pm-title { font-size: 19px; }
 }
+
+/* Legal footer under the homepage contact strip: terms/privacy links and the
+   business address (both required by the GHL A2P website check). */
+.site-legal-footer { background: #fff; border-top: 1px solid #e4e9f0; padding: 18px 16px; text-align: center; font-size: 13px; color: #5b6472; }
+.site-legal-footer nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 22px; margin-bottom: 8px; }
+.site-legal-footer a { color: #ED7226; font-weight: 600; text-decoration: none; }
+.site-legal-footer a:hover { text-decoration: underline; }
+.site-legal-footer p { margin: 0; }
