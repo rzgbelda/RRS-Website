@@ -3101,9 +3101,12 @@ textarea:focus {
 /* Flags a product that only counts toward checkout once combined with
    others sharing its Mix & Match group -- see cartMoqGroupTotals() in
    script.js for the enforcement this promises. */
+/* Bottom-left of the image. It used to sit top-left, where its long text
+   ("MIX & MATCH MOQ: 36") ran into the In Stock / Fast Ship badges at top
+   right on a narrow card. Nothing else is placed at the bottom. */
 .moq-group-badge {
   position: absolute;
-  top: 10px;
+  bottom: 10px;
   left: 10px;
   z-index: 2;
   background: #0d2c50;
@@ -3119,8 +3122,8 @@ textarea:focus {
 
 /* RRS-31: manually flagged per product in Admin -> Products
    (products.is_fast_ship) -- never inferred from stock or category.
-   Top-right so it never overlaps .moq-group-badge (top-left); a product
-   could carry both. */
+   Top-right; .moq-group-badge sits bottom-left, so a product could carry
+   both without overlap. */
 .fast-ship-badge {
   position: absolute;
   top: 10px;
