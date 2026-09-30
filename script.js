@@ -17,7 +17,7 @@ let isSliding = false;
 //
 // Affiliate subdomains are deliberately NOT in quote-only mode: they sell
 // at listed prices through their own storefront and have no RRS chat
-// widget to send anyone to (see loadGhlChatWidget()).
+// widget to send anyone to (see ghl-chat.js).
 //
 // Cart, checkout and payment keep working for customers who accept a
 // quote from their account ("Add to cart at quoted pricing").
@@ -5755,59 +5755,6 @@ function escapeMiniCart(str) {
 }
 
 /* =========================
-   GHL CHAT WIDGET
-========================= */
-// GoHighLevel web chat, routed to the RRS GHL inbox. Loaded from here so
-// every page that includes script.js gets it from one place, and three
-// deliberate limits apply:
-//
-//  1. Main domain only. Affiliate subdomains share this file, but a chat
-//     there would land in RRS's inbox as if RRS were the seller -- the
-//     affiliate sites must present RRS as supplier only. Vercel preview
-//     URLs and localhost are skipped too.
-//  2. Not on pages that handle payment, login or account data. Any
-//     third-party script runs with full access to the page it is on, so
-//     it stays off the pages where that access matters most. vercel.json
-//     backs this up: the CSP on those pages does not allow
-//     leadconnectorhq.com scripts at all, so even a stray include there
-//     would be blocked by the browser.
-//  3. Loaded after the page has finished loading and gone idle, so the
-//     widget never competes with the page's own content for bandwidth.
-const GHL_CHAT_WIDGET_ID = "6ab6950950fc24ace644cf46";
-const GHL_CHAT_HOSTS = ["roomreadysupply.com", "www.roomreadysupply.com"];
-const GHL_CHAT_EXCLUDED_PATHS = [
-  "/checkout", "/payment", "/order-confirmation", "/quote",
-  "/account", "/login", "/reset-password", "/admin",
-];
-
-function ghlChatAllowedHere() {
-  if (!GHL_CHAT_HOSTS.includes(location.hostname)) return false;
-  const p = (location.pathname || "/").toLowerCase().replace(/\.html$/, "").replace(/\/+$/, "");
-  return !GHL_CHAT_EXCLUDED_PATHS.includes(p);
-}
-
-function loadGhlChatWidget() {
-  if (!ghlChatAllowedHere()) return;
-  if (document.querySelector('script[data-widget-id="' + GHL_CHAT_WIDGET_ID + '"]')) return;
-  const s = document.createElement("script");
-  s.src = "https://widgets.leadconnectorhq.com/loader.js";
-  s.setAttribute("data-resources-url", "https://widgets.leadconnectorhq.com/chat-widget/loader.js");
-  s.setAttribute("data-widget-id", GHL_CHAT_WIDGET_ID);
-  s.setAttribute("data-source", "WEB_USER");
-  s.async = true;
-  s.referrerPolicy = "strict-origin-when-cross-origin";
-  document.body.appendChild(s);
-}
-
-(function scheduleGhlChatWidget() {
-  const start = () => ("requestIdleCallback" in window)
-    ? requestIdleCallback(loadGhlChatWidget, { timeout: 4000 })
-    : setTimeout(loadGhlChatWidget, 1500);
-  if (document.readyState === "complete") start();
-  else window.addEventListener("load", start, { once: true });
-})();
-
-/* =========================
    "WANT TO KNOW OUR PRICES?" MODAL (quote-only mode)
 ========================= */
 // Every product card and the product page carry this button; style.css
@@ -5860,7 +5807,8 @@ function ensurePriceModal() {
   el.querySelector(".pm-later-btn").addEventListener("click", closePriceModal);
   el.querySelector(".pm-chat-btn").addEventListener("click", () => {
     closePriceModal();
-    openGhlChat();
+    if (typeof openGhlChat === "function") openGhlChat();
+    else location.href = "/quote";
   });
   return el;
 }
@@ -5885,24 +5833,6 @@ function closePriceModal() {
   el.hidden = true;
   popModal(closePriceModal);
   if (_pmLastFocus && typeof _pmLastFocus.focus === "function") _pmLastFocus.focus();
-}
-
-// The widget loads lazily (after page load + idle), so a fast click can
-// arrive before it exists: load it now if needed, then wait briefly for
-// GHL's API. If it never appears (blocked by an ad blocker, say), the
-// header's phone number and email are still there.
-function openGhlChat() {
-  loadGhlChatWidget();
-  let tries = 0;
-  (function attempt() {
-    const cw = window.leadConnector && window.leadConnector.chatWidget;
-    if (cw && typeof cw.openWidget === "function") {
-      try { cw.openWidget(); } catch (e) { console.warn("GHL openWidget failed", e); }
-      return;
-    }
-    if (++tries < 40) setTimeout(attempt, 250);
-  })();
-  if (typeof gtag === "function") gtag("event", "price_inquiry_chat");
 }
 
 document.addEventListener("click", e => {
