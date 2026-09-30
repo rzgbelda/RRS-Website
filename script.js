@@ -2375,7 +2375,7 @@ function populateProductPage(product) {
     // price arrives with NO tier 1 -- and its first card vanished. The base
     // price IS the tier 1 price from the minimum order (1 pallet), so the
     // card is rebuilt from it.
-    if (palletQty > 1 && !product.moqGroup && !mins[0] && cleanPrice(product.price)) {
+    if (palletQty > 1 && !mins[0] && cleanPrice(product.price)) {
       mins[0] = palletQty;
       prices[0] = cleanPrice(product.price);
     }

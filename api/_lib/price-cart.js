@@ -146,7 +146,7 @@ async function priceCart(items, state, fulfillmentMethod) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group, moq')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group, moq_group_min, moq')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -160,6 +160,38 @@ async function priceCart(items, state, fulfillmentMethod) {
     const r = bySku.get(sku);
     if (r && r.moq_group && !isSoldByDozen(r)) {
       groupQty.set(r.moq_group, (groupQty.get(r.moq_group) || 0) + qty);
+    }
+  }
+
+  // Mix & Match minimum: every product tagged with the same moq_group
+  // counts toward ONE combined minimum (Sasso: any mix of products, 36
+  // pails = 1 pallet), and the combined quantity must be a whole multiple of
+  // it (36, 72, 108...). script.js enforces this in the cart
+  // (cartMoqGroupShortfalls), but only in the browser -- a stale cart or a
+  // hand-built request could otherwise pay for a partial pallet, so it is
+  // checked here too, before any PaymentIntent exists.
+  const groupMin = new Map();
+  const groupUnit = new Map();
+  for (const [sku] of wanted) {
+    const r = bySku.get(sku);
+    if (r && r.moq_group && !isSoldByDozen(r)) {
+      groupMin.set(r.moq_group, Math.max(groupMin.get(r.moq_group) || 0, Math.floor(Number(r.moq_group_min) || 0)));
+      if (!groupUnit.has(r.moq_group)) groupUnit.set(r.moq_group, String(r.unit || 'case').trim().toLowerCase());
+    }
+  }
+  for (const [group, have] of groupQty) {
+    const min = groupMin.get(group) || 0;
+    if (min > 1 && have % min !== 0) {
+      const unit = groupUnit.get(group) || 'case';
+      const plural = n => unit + (n === 1 ? '' : 's');
+      const next = Math.ceil(have / min) * min;
+      const need = next - have;
+      return {
+        ok: false,
+        error: 'Almost there! These items are sold in full pallets of ' + min + ' ' + plural(min) +
+               ' \u2014 mix and match any products from the same group. You have ' + have + '; add ' + need + ' more ' +
+               plural(need) + ' to reach ' + next + ' and check out with wholesale pricing.',
+      };
     }
   }
 
