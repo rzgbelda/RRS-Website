@@ -1186,38 +1186,31 @@ function familyInStock(variants) {
   return variants.some(v => v.inStock !== false);
 }
 
-// Remembers which SKU was picked to represent each family, keyed by
-// family name, for the lifetime of this page load. There is no component
-// framework here (this is grid.innerHTML = ...), so "once per mount" is
-// approximated as "once per family per page load": typing in the search
-// box or changing a category filter calls renderProductGrid() again and
-// rebuilds every card's HTML from scratch, and without this cache that
-// would re-roll every family's representative variant on every keystroke
-// -- a customer filtering the catalog would see the same family's photo
-// and price jump between sizes for no reason connected to what they did.
-// A real page load/reload gets a fresh module scope (this Map starts
-// empty again), which is exactly the "may pick a different one" case.
+// Remembers a family's representative SKU across re-renders, for the
+// lifetime of this page load. There is no component framework here
+// (grid.innerHTML = ...), so typing in the search box or changing a filter
+// rebuilds every card from scratch; this keeps a customer's own pick from
+// being undone by that. It is written ONLY by a manual selection (see
+// applyVariantToCard) -- the default lead option below is deterministic and
+// needs no memory.
 const _representativeVariantCache = new Map();
 
+// The price a card shows for one option: the same figure renderVariantCard
+// puts in .price.
+function variantUnitPrice(v) {
+  return cleanPrice(v.price) || cleanPrice(v.price1) || 0;
+}
+
 // Presentation-only: chooses which variant a family card leads with. Never
-// touches the database, never creates or merges anything -- purely which
-// of the EXISTING variant records this render picks to show as the
-// representative image/price/SKU.
+// touches the database -- purely which of the EXISTING variant records this
+// render shows as the representative image/price/SKU.
 //
-// Reuses the previous pick for this family (from _representativeVariantCache)
-// as long as it's still one of the in-stock members -- this is what keeps
-// the representative stable across re-renders triggered by unrelated
-// catalog activity (search, filter, sort all re-render every card) without
-// needing any of those call sites to know or care about this logic. Only
-// picks fresh when there is no cached pick yet, or the cached SKU just
-// went out of stock (immediate fallback, never keeps showing a sold-out
-// SKU as the representative) or disappeared from the family entirely.
-//
-// Picks uniformly at random among in-stock members so the same size/color
-// doesn't always front every family. Falls back to variants[0] only when
-// the whole family is sold out -- there is no in-stock option to prefer at
-// that point, and the card's own OUT OF STOCK state (familyInStock() above)
-// is what actually communicates that, not which SKU happens to be shown.
+// The card leads with the CHEAPEST in-stock option (it used to be a random
+// one, which could front a family with its priciest size), so the price a
+// buyer sees first is the "from" price and Add to Order adds that option.
+// Ties go to the first in catalog order. A customer's own earlier pick wins
+// while it is still in stock; if the whole family is sold out it falls back
+// to variants[0] and the card's OUT OF STOCK state says so.
 function pickRepresentativeVariant(variants) {
   const available = variants.filter(v => v.inStock !== false);
   if (!available.length) return variants[0];
@@ -1229,9 +1222,10 @@ function pickRepresentativeVariant(variants) {
     if (stillAvailable) return stillAvailable;
   }
 
-  const picked = available[Math.floor(Math.random() * available.length)];
-  if (familyKey) _representativeVariantCache.set(familyKey, picked.itemNumber);
-  return picked;
+  const priced = available.filter(v => variantUnitPrice(v) > 0);
+  const pool = priced.length ? priced : available;
+  return pool.reduce((best, v) =>
+    (priced.length && variantUnitPrice(v) < variantUnitPrice(best)) ? v : best, pool[0]);
 }
 
 function renderVariantCard(variants) {
@@ -1307,6 +1301,13 @@ function renderVariantCard(variants) {
   // Price span across the family. Shown only when the ends actually differ:
   // "$10.08 - $14.30" is information, "$10.08 - $10.08" is noise.
   const range = variantPriceRange(variants);
+  // Tag naming the cheapest option. Only when prices actually differ, and
+  // only while the option on show IS the cheapest (applyVariantToCard hides
+  // it once the buyer picks a pricier one).
+  const showLowestTag = range.min !== range.max;
+  const isLowestShown = showLowestTag && Math.abs(price - range.min) < 0.005;
+  const lowestTagHtml = showLowestTag
+    ? `<span class="lowest-tag"${isLowestShown ? "" : " hidden"}>Lowest price</span>` : "";
   const rangeHtml = range.min !== range.max
     ? `<span class="price-range">$${range.min.toFixed(2)} &ndash; $${range.max.toFixed(2)}</span>`
     : "";
@@ -1351,6 +1352,7 @@ function renderVariantCard(variants) {
   return `
     <div class="product-card"
          data-url="/product?item=${encodeURIComponent(v.slug)}"
+         data-min-price="${showLowestTag ? range.min : ""}"
          data-variants="${escapedJson}">
       <div class="product-image">
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
@@ -1377,8 +1379,9 @@ function renderVariantCard(variants) {
           <div class="price-block">
             ${rangeHtml}
             <div class="price-row">
-              <span class="price">$${price.toFixed(2)}</span>
+              <span class="price">${price.toFixed(2)}</span>
               <span class="unit">/ ${v.priceBy || "Case"}</span>
+              ${lowestTagHtml}
             </div>
           </div>
           <button
@@ -1437,6 +1440,14 @@ function applyVariantToCard(card, v) {
 
   const unitEl = card.querySelector(".unit");
   if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
+
+  // "Lowest price" tag: shown only while the selected option is the
+  // family's cheapest (data-min-price, set at render when prices differ).
+  const lowestTag = card.querySelector(".lowest-tag");
+  if (lowestTag) {
+    const minPrice = Number(card.dataset.minPrice);
+    lowestTag.hidden = !(minPrice > 0 && Math.abs(price - minPrice) < 0.005);
+  }
 
   const img = card.querySelector(".product-image img");
   if (img) img.src = v.image;
@@ -1892,6 +1903,21 @@ const CATEGORY_ARTICLE_MAP = {
   "cleaning-chemicals": { slug: "epa-registered-disinfectants-what-hotels-need", title: "EPA-Registered Disinfectants: What Hotels Actually Need to Stock" },
 };
 
+// Catalog order is shuffled on every page load so the same products don't
+// always lead. Each product gets one random key the first time it is seen
+// and keeps it for the rest of the page load, so typing in the search box
+// or ticking a category re-renders in a STABLE order (cards don't jump
+// around while a customer is browsing); a refresh draws fresh keys.
+const _catalogShuffleKeys = new Map();
+function shuffleCatalog(products) {
+  const keyOf = p => {
+    const id = p.itemNumber || p.slug || p.name || "";
+    if (!_catalogShuffleKeys.has(id)) _catalogShuffleKeys.set(id, Math.random());
+    return _catalogShuffleKeys.get(id);
+  };
+  return products.slice().sort((a, b) => keyOf(a) - keyOf(b));
+}
+
 function getActiveCategories() {
   return Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
 }
@@ -1932,10 +1958,11 @@ function applyFilters() {
   if (sortAZ) {
     filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
   } else if (catFilters.length === 0 && !keyword) {
-    // Default view: pin paper towels/tissues first, then category ->
-    // family -> tier -> name so related products (e.g. every 600
-    // Wrinkle-Free sheet family) sit together instead of database order.
-    filtered = sortCatalogDefault(filtered);
+    // Default view: shuffled per page load (see shuffleCatalog). Related
+    // sizes already share one card via familyKey grouping, so a random
+    // family order doesn't separate them. The homepage still uses
+    // sortCatalogDefault (paper-first, then category/family/tier/name).
+    filtered = shuffleCatalog(filtered);
   } else if (catFilters.length > 0) {
     // One or more categories checked (these are checkboxes -- more than
     // one can be active at once). Still worth grouping by family/tier
@@ -1943,11 +1970,9 @@ function applyFilters() {
     // checked, so this has the same "no unrelated product between two
     // sizes of the same sheet" fix as the default view, at whatever
     // scope the customer is currently browsing.
-    filtered = filtered.slice().sort((a, b) => {
-      const cat = (a.category || '').localeCompare(b.category || '');
-      if (cat !== 0) return cat;
-      return compareCatalogFamily(a, b);
-    });
+    // Same shuffle inside a category filter: a random family order per
+    // page load, stable while the customer keeps filtering.
+    filtered = shuffleCatalog(filtered);
   }
 
   renderProducts(filtered);
@@ -3108,6 +3133,13 @@ function showVpToast(msg, type) {
     document.body.appendChild(toast);
   }
   toast.className = "vp-toast" + (type === "warn" ? " vp-toast--warn" : "");
+  // The Mix & Match progress bar (#moqGroupBar) is fixed to the same spot
+  // at the bottom centre, and this toast sits above it in the stack, so it
+  // used to cover the bar. Rest the toast just above the bar instead,
+  // measured each time because the bar grows with the number of groups.
+  const bar = document.getElementById("moqGroupBar");
+  const barShown = bar && bar.offsetHeight > 0 && getComputedStyle(bar).display !== "none";
+  toast.style.bottom = barShown ? (bar.offsetHeight + 18 + 12) + "px" : "";
   toast.textContent = msg;
   toast.classList.add("vp-toast--visible");
   clearTimeout(toast._t);
