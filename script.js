@@ -5776,7 +5776,7 @@ function escapeMiniCart(str) {
 const GHL_CHAT_WIDGET_ID = "6ab6950950fc24ace644cf46";
 const GHL_CHAT_HOSTS = ["roomreadysupply.com", "www.roomreadysupply.com"];
 const GHL_CHAT_EXCLUDED_PATHS = [
-  "/checkout", "/payment", "/order-confirmation",
+  "/checkout", "/payment", "/order-confirmation", "/quote",
   "/account", "/login", "/reset-password", "/admin",
 ];
 
