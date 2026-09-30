@@ -2361,13 +2361,23 @@ function populateProductPage(product) {
     // Mix & Match groups are sold by the pallet: the group minimum is one
     // pallet (36 Sasso buckets), so when every threshold is a whole number
     // of pallets the cards are labelled in pallets rather than pails.
-    const palletQty = product.moqGroup ? Number(product.moqGroupMin) || 0 : 0;
+    //
+    // The same goes for a product with its own minimum order (NPS: 30, 60,
+    // 90... cases, i.e. whole pallets): its tiers start at N pallets, and
+    // "180-269 Cases" reads as a huge order where "6-8 Pallets" does not.
+    // Prices stay per case; only the wording changes. If any threshold is
+    // not a whole number of pallets the cards fall back to case counts.
+    const palletQty = product.moqGroup
+      ? Number(product.moqGroupMin) || 0
+      : (productMoq(product) > 1 ? productMoq(product) : 0);
     const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
     const unitLower = unitWord.toLowerCase();
     const headEl = document.querySelector(".tier-cards-head");
     if (headEl) {
       headEl.innerHTML = byPallet
-        ? `Price per ${unitLower} &mdash; drops as your <strong>combined Mix &amp; Match order</strong> grows (1 pallet = ${palletQty} ${unitLower}s)`
+        ? (product.moqGroup
+            ? `Price per ${unitLower} &mdash; drops as your <strong>combined Mix &amp; Match order</strong> grows (1 pallet = ${palletQty} ${unitLower}s)`
+            : `Price per ${unitLower} &mdash; drops as you order more <strong>pallets</strong> (1 pallet = ${palletQty} ${unitLower}s)`)
         : `Price per ${unitLower} &mdash; drops as you order more <strong>of this item</strong>`;
     }
 
@@ -2387,8 +2397,14 @@ function populateProductPage(product) {
       // highest tier is open-ended because a larger order still pays it.
       const nextMin = mins.slice(i + 1).find((m, j) => m && prices[i + 1 + j]);
       let label;
+      // Below the first tier's threshold a buyer pays the base price; when
+      // that equals this tier's price (NPS: tier 1 = base) the card really
+      // covers everything from the minimum order, so it starts at 1 pallet
+      // rather than implying 1-2 pallets cost something else.
+      const coversFromMinimum = byPallet && i === 0 && cleanPrice(product.price) === price;
+      const startQty = coversFromMinimum ? palletQty : min;
       if (byPallet) {
-        const lo = min / palletQty;
+        const lo = startQty / palletQty;
         const hi = nextMin ? nextMin / palletQty - 1 : null;
         const plural = n => `Pallet${n === 1 ? "" : "s"}`;
         label = hi == null ? `${lo}+ ${plural(2)}`
@@ -2401,7 +2417,7 @@ function populateProductPage(product) {
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
-        ? `Per ${unitLower} · ${nextMin ? `${min}–${nextMin - 1}` : `${min}+`} ${unitLower}s`
+        ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitLower}s`
         : ["Standard Pricing", "Volume Discount", `Best Price Per ${unitWord}`][i]);
     });
 
