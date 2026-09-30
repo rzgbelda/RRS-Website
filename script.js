@@ -186,6 +186,7 @@ async function renderAffiliateDisclaimer() {
 
 document.addEventListener("DOMContentLoaded", async () => {
   await loadSiteHeader();
+  applySiteContact();
   renderAffiliateDisclaimer();
   setupMobileNav();
   updateCartBadge();
@@ -286,6 +287,56 @@ function syncCartPricesToCatalog() {
 
 const PRODUCTS_SUPABASE_URL = "https://giprkvlyouwfzjlaibkq.supabase.co";
 const PRODUCTS_SUPABASE_ANON = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
+
+/* Site contact info (Admin > Settings > Site Contact Info, table site_contact).
+ *
+ * The HTML on every page carries the original phone/email as static text,
+ * which is what crawlers and the JSON-LD see. When staff save a different
+ * value in admin, this swaps the visible text and tel:/mailto: links to it
+ * after load. If the fetch fails or nothing changed, the page is untouched.
+ *
+ * Deliberately NOT applied: the address (never hidden or blanked here -- see
+ * 20260930d_site_contact.sql), JSON-LD, meta tags, and server-built emails/
+ * PDFs, which still carry the static value.
+ */
+const SITE_CONTACT_DEFAULT_PHONE = "(252) 227-0073";
+const SITE_CONTACT_DEFAULT_EMAIL = "sales@roomreadysupply.com";
+
+async function applySiteContact() {
+  try {
+    const res = await fetch(`${PRODUCTS_SUPABASE_URL}/rest/v1/site_contact?select=phone,email&id=eq.1`, {
+      headers: { apikey: PRODUCTS_SUPABASE_ANON, Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}` },
+    });
+    if (!res.ok) return;
+    const row = (await res.json())[0];
+    if (!row) return;
+
+    const swaps = [];
+    if (row.phone && row.phone !== SITE_CONTACT_DEFAULT_PHONE) {
+      swaps.push([SITE_CONTACT_DEFAULT_PHONE, row.phone]);
+      swaps.push(["tel:2522270073", "tel:" + row.phone.replace(/\D/g, "")]);
+    }
+    if (row.email && row.email !== SITE_CONTACT_DEFAULT_EMAIL) {
+      swaps.push([SITE_CONTACT_DEFAULT_EMAIL, row.email]);
+    }
+    if (!swaps.length) return;
+
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const n of nodes) {
+      if (n.parentElement && /^(SCRIPT|STYLE|NOSCRIPT)$/.test(n.parentElement.tagName)) continue;
+      let t = n.nodeValue;
+      for (const [from, to] of swaps) if (t.includes(from)) t = t.split(from).join(to);
+      if (t !== n.nodeValue) n.nodeValue = t;
+    }
+    document.querySelectorAll('a[href^="tel:"], a[href^="mailto:"]').forEach(a => {
+      let h = a.getAttribute("href");
+      for (const [from, to] of swaps) if (h.includes(from)) h = h.split(from).join(to);
+      a.setAttribute("href", h);
+    });
+  } catch (_) { /* leave the static contact info in place */ }
+}
 
 // SEO Day 14: ~98% of live product photos are hosted on Cloudinary
 // (res.cloudinary.com/ddx3g4yse/...), which supports serving a

@@ -7651,8 +7651,30 @@ function setupSettings(userId) {
     e.target.reset();
   });
 
-  document.getElementById("siteInfoForm")?.addEventListener("submit", e => {
+  // Site Contact Info -- one row in site_contact (20260930d). Loaded into
+  // the form here; the public pages read the same row (applySiteContact in
+  // script.js), so a save is live on the next page load.
+  (async () => {
+    const { data } = await window.sb.from("site_contact").select("phone,email,address").eq("id", 1).maybeSingle();
+    if (!data) return;
+    document.getElementById("sitePhone").value   = data.phone   || "";
+    document.getElementById("siteEmail").value   = data.email   || "";
+    document.getElementById("siteAddress").value = data.address || "";
+  })();
+
+  document.getElementById("siteInfoForm")?.addEventListener("submit", async e => {
     e.preventDefault();
+    const phone   = document.getElementById("sitePhone").value.trim();
+    const email   = document.getElementById("siteEmail").value.trim();
+    const address = document.getElementById("siteAddress").value.trim();
+    if (phone && phone.replace(/\D/g, "").length !== 10) { showToast("Phone must be a 10-digit US number."); return; }
+    if (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { showToast("Enter a valid email address."); return; }
+
+    const { error } = await window.sb.from("site_contact").upsert({
+      id: 1, phone: phone || null, email: email || null, address: address || null,
+      updated_at: new Date().toISOString(),
+    });
+    if (error) { showToast("Couldn't save: " + error.message); return; }
     showToast("Site info saved.");
   });
 }
