@@ -1,7 +1,7 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Quote-only mode: prices hidden on the main domain (affiliate subdomains
+  <!-- Quote-only mode: prices hidden on the main domain (other subdomains
        keep them). Set here, before first paint, so no price ever flashes.
        See RRS_QUOTE_ONLY in script.js. -->
   <script>/* Quote-only mode disabled for launch -- prices now show on the main domain. To re-enable, uncomment: if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only'); */</script>
@@ -969,10 +969,10 @@
           marketing_opt_in: document.getElementById('qMarketingOptIn')?.checked ?? false,
           requested_items:  allItems,
           user_id:          session.user.id,
-          // Which affiliate storefront this was requested from, so the quote
+          // Which partner storefront this was requested from, so the quote
           // is attributed the same way an order placed here would be. The
-          // function resolves this to an affiliate id server-side -- sending
-          // the id from here would let a caller credit any affiliate.
+          // function resolves this to a partner id server-side -- sending
+          // the id from here would let a caller credit any partner.
           affiliate_subdomain: (typeof getAffiliateSubdomain === 'function' ? getAffiliateSubdomain() : null),
           file_url,
           file_name,
