@@ -10860,6 +10860,16 @@ function quoteItemsTotal(r) {
 // Mirrors getTierPrice()/isSoldByDozen() in script.js. The storefront and
 // this composer must agree exactly: if they disagree, a customer is
 // quoted one price and charged another.
+// Mirrors dozenHasTiers() in script.js / api/_lib/price-cart.js: a dozen
+// product is flat unless tier 2 or 3 has a threshold AND a strictly lower price.
+function dozenHasTiers(product) {
+  const first = Number(product.price_tier1) || Number(product.price) || 0;
+  if (!first) return false;
+  const t2 = Number(product.tier2_min_qty) || 0, t3 = Number(product.tier3_min_qty) || 0;
+  const p2 = Number(product.price_tier2) || 0, p3 = Number(product.price_tier3) || 0;
+  return !!((t2 && p2 && p2 < first) || (t3 && p3 && p3 < first));
+}
+
 function tierPriceForQty(product, qty) {
   const q = Number(qty) || 1;
   const t1 = Number(product.price_tier1) || 0;
@@ -10870,7 +10880,7 @@ function tierPriceForQty(product, qty) {
   // Sold by the dozen: one flat rate at every quantity. Without this, a
   // quote for 50 dozen wash cloths would cross a case volume threshold
   // that no longer exists.
-  if (String(product.unit || "").trim().toLowerCase() === "dozen") return t1 || base;
+  if (String(product.unit || "").trim().toLowerCase() === "dozen" && !dozenHasTiers(product)) return t1 || base;
 
   // Volume breakpoints are per-product (products.tier1_min_qty etc.), not
   // a fixed 6/30 pair -- distributors honour different thresholds.

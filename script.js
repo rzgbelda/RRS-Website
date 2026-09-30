@@ -864,6 +864,22 @@ function tierQty(item, cart) {
   return groupCartQty(item.moqGroup, lines) + (inCart ? 0 : own);
 }
 
+// A dozen-sold product normally has ONE flat rate, but a distributor can
+// price dozens on a real volume schedule counted in cases (Starlinen: 1-5,
+// 6-29, 30+ cases, where 1 case = 10 dozen wash cloths, 5 dozen towels...).
+// "Real" means tier 2 or tier 3 has a threshold AND a price strictly below
+// the first-tier/base price. Legacy dozen products carry the same figure in
+// every tier field, so they stay flat exactly as before. Mirrored by
+// dozenHasTiers() in api/_lib/price-cart.js and admin.js.
+function dozenHasTiers(item) {
+  const first = cleanPrice(item.price1) || cleanPrice(item.price);
+  if (!first) return false;
+  const t2 = tierMinQty(item, "tier2_min_qty", "tier2MinQty");
+  const t3 = tierMinQty(item, "tier3_min_qty", "tier3MinQty");
+  const p2 = cleanPrice(item.price2), p3 = cleanPrice(item.price3);
+  return !!((t2 && p2 && p2 < first) || (t3 && p3 && p3 < first));
+}
+
 function getTierPrice(item, cart) {
   const qty = tierQty(item, cart);
 
@@ -878,7 +894,7 @@ function getTierPrice(item, cart) {
   // charged a volume price that no longer exists. The reseed writes the
   // same figure into all three tier fields, so this is belt and braces --
   // but the two must never disagree.
-  if (isSoldByDozen(item)) {
+  if (isSoldByDozen(item) && !dozenHasTiers(item)) {
     return tier1 || base || 0;
   }
 
@@ -2320,7 +2336,7 @@ function populateProductPage(product) {
   // "some linens say cases when it should say dozens".
   setText("productSoldByBadge", isSoldByDozen(product) ? "Sold by the dozen" : "Sold by the case");
 
-  if (isSoldByDozen(product)) {
+  if (isSoldByDozen(product) && !dozenHasTiers(product)) {
     // Sold by the dozen: one flat rate, no volume discount. The three
     // cards show order sizes stepping up from the minimum, not price
     // breaks -- so they deliberately avoid "VOLUME"/"BEST VALUE" wording,
@@ -2381,12 +2397,16 @@ function populateProductPage(product) {
     }
     const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
     const unitLower = unitWord.toLowerCase();
+    // What the tiers count: whole pallets for a case-priced pallet product
+    // (NPS), whole cases for a dozen-priced one (Starlinen).
+    const orderWord = isSoldByDozen(product) ? "Case" : "Pallet";
+    const unitsLower = isSoldByDozen(product) ? unitLower : unitLower + "s";
     const headEl = document.querySelector(".tier-cards-head");
     if (headEl) {
       headEl.innerHTML = byPallet
         ? (product.moqGroup
             ? `Price per ${unitLower} &mdash; drops as your <strong>combined Mix &amp; Match order</strong> grows (1 pallet = ${palletQty} ${unitLower}s)`
-            : `Price per ${unitLower} &mdash; drops as you order more <strong>pallets</strong> (1 pallet = ${palletQty} ${unitLower}s)`)
+            : `Price per ${unitLower} &mdash; drops as you order more <strong>${orderWord.toLowerCase()}s</strong> (1 ${orderWord.toLowerCase()} = ${palletQty} ${unitsLower})`)
         : `Price per ${unitLower} &mdash; drops as you order more <strong>of this item</strong>`;
     }
 
@@ -2415,7 +2435,7 @@ function populateProductPage(product) {
       if (byPallet) {
         const lo = startQty / palletQty;
         const hi = nextMin ? nextMin / palletQty - 1 : null;
-        const plural = n => `Pallet${n === 1 ? "" : "s"}`;
+        const plural = n => `${orderWord}${n === 1 ? "" : "s"}`;
         label = hi == null ? `${lo}+ ${plural(2)}`
           : hi === lo ? `${lo} ${plural(lo)}`
           : `${lo}–${hi} ${plural(hi)}`;
@@ -2426,7 +2446,7 @@ function populateProductPage(product) {
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
-        ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitLower}s`
+        ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitsLower}`
         : ["Standard Pricing", "Volume Discount", `Best Price Per ${unitWord}`][i]);
     });
 

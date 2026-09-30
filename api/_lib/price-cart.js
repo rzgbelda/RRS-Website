@@ -51,13 +51,26 @@ function tierMinQty(raw) {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+// A dozen-sold product normally has one flat rate; a distributor (Starlinen)
+// can price dozens on a real volume schedule counted in cases. "Real" = tier
+// 2 or 3 has a threshold AND a price strictly below the first-tier/base
+// price, so legacy dozen rows with the same figure in every tier stay flat.
+// Mirrors dozenHasTiers() in script.js and admin.js.
+function dozenHasTiers(row) {
+  const first = cleanPrice(row.price_tier1) || cleanPrice(row.price);
+  if (!first) return false;
+  const t2 = tierMinQty(row.tier2_min_qty), t3 = tierMinQty(row.tier3_min_qty);
+  const p2 = cleanPrice(row.price_tier2), p3 = cleanPrice(row.price_tier3);
+  return !!((t2 && p2 && p2 < first) || (t3 && p3 && p3 < first));
+}
+
 function tierPriceFor(row, qty) {
   const tier1 = cleanPrice(row.price_tier1);
   const tier2 = cleanPrice(row.price_tier2);
   const tier3 = cleanPrice(row.price_tier3);
   const base  = cleanPrice(row.price);
 
-  if (isSoldByDozen(row)) return tier1 || base || 0;
+  if (isSoldByDozen(row) && !dozenHasTiers(row)) return tier1 || base || 0;
 
   const t1Min = tierMinQty(row.tier1_min_qty);
   const t2Min = tierMinQty(row.tier2_min_qty);
