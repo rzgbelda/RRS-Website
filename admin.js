@@ -2069,6 +2069,7 @@ const CVT_COLS = [
   { key:"stock_status",  label:"Stock Status" },
   { key:"moq_group",     label:"Mix & Match Group" },
   { key:"moq_group_min", label:"Mix & Match Group Minimum" },
+  { key:"moq",           label:"Minimum Order Qty (per product, e.g. NPS pallet minimum in cases)" },
   { key:"product_family",label:"Product Family (groups sizes into one card)" },
   { key:"variant_label", label:"Variant Label (the dropdown option)" },
   { key:"product_tier",  label:"Product Tier (Economy / Premium / Luxury — optional)" },
@@ -2233,6 +2234,11 @@ function cvtAutoMap(cols) {
     stock_status:  ["stockstatus","availability","instock","availabilitystatus"],
     moq_group:     ["moqgroup","mixmatchgroup","mixandmatchgroup","moqtag"],
     moq_group_min: ["moqgroupmin","moqminimum","mixmatchminimum","moqgroupminimum","combinedminimum"],
+    // Per-product minimum (NPS ships by the pallet: "MOQ" = cases in one
+    // pallet). Listed AFTER moq_group/moq_group_min so Sasso's "MOQ Group"
+    // and "MOQ Minimum" headers are claimed by those first and this only
+    // picks up a bare "MOQ" / "Minimum Order Quantity" column.
+    moq:           ["moq","minimumorderquantity","minorderqty","minimumorder"],
     images:        ["images","galleryimages","additionalimages","photos","extraimages"],
     product_family:["productfamily","family","variantgroup","groupname","parentproduct"],
     variant_label: ["variantlabel","variant","option","optionlabel","sizelabel","variantname"],
@@ -3044,7 +3050,7 @@ function cvtNormalizeValue(key, value, srcRow) {
   // sits in one InnStyle 30+ price), and letting that reach the importer
   // writes a junk price onto a live product. Empty is the honest value --
   // an absent tier price just means that tier doesn't exist.
-  if (/^(price|sale_price|retail_price|price_tier[123]|cost_per_case|tier[123]_cost|weight|length|width|height|moq_group_min|case_qty)$/.test(key)) {
+  if (/^(price|sale_price|retail_price|price_tier[123]|cost_per_case|tier[123]_cost|weight|length|width|height|moq_group_min|moq|case_qty)$/.test(key)) {
     if (!v) return "";
     const cleaned = v.replace(/[$,\s]/g, "");
     if (!/^-?\d*\.?\d+$/.test(cleaned)) return "";
@@ -3726,6 +3732,13 @@ async function runCsvImport() {
     // with no minimum (or vice versa) can't be enforced, so it doesn't count.
     moq_group     : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? r.moq_group.trim() : null,
     moq_group_min : (r.moq_group || "").trim() && parseInt(r.moq_group_min) ? parseInt(r.moq_group_min) : null,
+    // Per-product minimum order (in the product's own unit -- cases for
+    // NPS, whose minimum is one pallet). Only written when the file HAS a
+    // moq column, so importing a feed without one never resets a minimum
+    // that was set by hand or by an earlier import.
+    ...(Object.prototype.hasOwnProperty.call(r, "moq")
+      ? { moq: Math.max(1, parseInt(r.moq) || 1) }
+      : {}),
     // Size/variant grouping. Rows sharing a product_family collapse into one
     // storefront card with a size dropdown (renderVariantCard in script.js),
     // and variant_label is what that dropdown shows for each row. Both are
