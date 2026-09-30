@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { getTaxRate } = require('../../tax-rates');
+const { computeShipping } = require('./shipping');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -118,7 +119,35 @@ const SHIPPING_MIN_CHARGE = 10.99;
  * or { ok: false, error } -- the caller turns a failure into a 400 rather
  * than falling back to a client-supplied figure.
  */
-async function priceCart(items, state, fulfillmentMethod) {
+// Customer address -> { street, city, state, zip } or null. Accepts the
+// object or the JSON string checkout puts in metadata.shipping_address.
+function parseDestination(d) {
+  try {
+    const o = typeof d === 'string' ? JSON.parse(d) : d;
+    const zip = String((o && o.zip) || '').trim().slice(0, 5);
+    if (!o || !/^\d{5}$/.test(zip)) return null;
+    return {
+      street: String(o.street || ''), city: String(o.city || ''),
+      state: String(o.state || '').toUpperCase().slice(0, 2), zip,
+    };
+  } catch (_) { return null; }
+}
+
+// Vendors keyed by slug (products.distributor -> vendors.slug), with their
+// warehouse ship-from address. Any error (e.g. the slug migration not run
+// yet) yields an empty map: every group then falls back to the estimate.
+async function loadVendors(supabase, shipLines) {
+  const slugs = [...new Set(shipLines.map(l => String(l.distributor || '').trim().toLowerCase()).filter(Boolean))];
+  const map = new Map();
+  if (!slugs.length) return map;
+  const { data, error } = await supabase.from('vendors')
+    .select('slug, name, ship_from_street, ship_from_city, ship_from_state, ship_from_zip').in('slug', slugs);
+  if (error) { console.warn('[shipping] vendor lookup failed:', error.message); return map; }
+  for (const v of data || []) if (v.slug) map.set(String(v.slug).toLowerCase(), v);
+  return map;
+}
+
+async function priceCart(items, state, fulfillmentMethod, destination) {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, error: 'Cart is empty.' };
   }
@@ -159,7 +188,7 @@ async function priceCart(items, state, fulfillmentMethod) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group, moq_group_min, moq')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, length, width, height, distributor, moq_group, moq_group_min, moq')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -211,6 +240,8 @@ async function priceCart(items, state, fulfillmentMethod) {
   let subtotal = 0;
   let totalWeightLb = 0;
   const lines = [];
+  // One entry per cart line, for per-distributor shipping (_lib/shipping.js).
+  const shipLines = [];
   for (const [sku, qty] of wanted) {
     const row = bySku.get(sku);
     // A SKU that isn't in the catalog, or has been deactivated (e.g. the
@@ -252,9 +283,9 @@ async function priceCart(items, state, fulfillmentMethod) {
     // hit a dead end on a real product because its weight hasn't been
     // filled in yet. The shortfall is absorbed until the data is fixed.
     const unitWeight = Number(row.weight);
-    if (Number.isFinite(unitWeight) && unitWeight > 0) {
-      totalWeightLb += unitWeight * qty;
-    }
+    const lineWeight = Number.isFinite(unitWeight) && unitWeight > 0 ? unitWeight * qty : 0;
+    totalWeightLb += lineWeight;
+    shipLines.push({ distributor: row.distributor || null, weightLb: lineWeight, length: row.length, width: row.width, height: row.height });
 
     lines.push({ sku, name: row.name, quantity: qty, unitPrice });
   }
@@ -290,9 +321,24 @@ async function priceCart(items, state, fulfillmentMethod) {
   // pickup is not shipped.
   const isPickup = String(fulfillmentMethod || '').trim().toLowerCase() === 'pickup';
   const byWeight = Math.round(totalWeightLb * SHIPPING_RATE_PER_LB * 100) / 100;
-  const shipping = isPickup
-    ? 0
-    : Math.max(byWeight, SHIPPING_MIN_CHARGE);
+  let shipping = isPickup ? 0 : Math.max(byWeight, SHIPPING_MIN_CHARGE);
+
+  // Per-distributor shipping. RRS dropships, so each distributor ships from
+  // its OWN warehouse: group the cart by distributor, decide parcel vs
+  // freight per group, rate each group from its own address to the
+  // customer, and sum. Off unless UPS_RATING_ENABLED=true AND the customer
+  // gave a ZIP; in every other case the flat formula above stands, so
+  // deploying this changes nothing until it is switched on.
+  const dest = parseDestination(destination);
+  if (!isPickup && dest && String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true') {
+    const vendorsBySlug = await loadVendors(supabase, shipLines);
+    const carrier = { rateParcel: a => require('./ups').rateParcelCheapest(a) };
+    const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier });
+    shipping = r.total;
+    // Function logs only. Distributor names are internal and never go back
+    // to the customer.
+    console.log('[shipping]', JSON.stringify(r.shipments));
+  }
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 

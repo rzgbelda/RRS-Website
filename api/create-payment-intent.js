@@ -96,7 +96,9 @@ module.exports = async (req, res) => {
     // fulfillment_method is read for one reason only: a warehouse pickup
     // carries no shipping allowance. It rides in metadata (that's where
     // checkout already puts it) rather than as its own body field.
-    const priced = await priceCart(items, state, metadata.fulfillment_method);
+    // The customer's address rides in metadata.shipping_address (JSON):
+    // per-distributor shipping is rated from each warehouse to this ZIP.
+    const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address);
     if (!priced.ok) return res.status(400).json({ error: priced.error });
     if (priced.amountCents < 50) {
       return res.status(400).json({ error: 'Order total is below the $0.50 minimum.' });
