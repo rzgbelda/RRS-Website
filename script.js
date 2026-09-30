@@ -652,6 +652,24 @@ function productMoq(p) {
 // trigger -- but a cart persists in localStorage across visits, and a
 // minimum can change after an item was added, so the check has to live
 // where the order is actually placed rather than only where it is built.
+// Positive, specific wording for a line that is under (or off) its minimum.
+// "Case" products with a minimum are the pallet-only lines: the quantity
+// must be a whole multiple of it (30, 60, 90...), same rule as dozen lines
+// and Mix & Match groups. Mirrored server-side in api/_lib/price-cart.js,
+// which is what actually stops the payment.
+function moqShortfallText(i, short) {
+  const moq = productMoq(i);
+  const qty = Number(i.quantity) || 0;
+  const unit = isSoldByDozen(i) ? "dozen" : "case";
+  const plural = n => (unit === "dozen" ? unit : unit + (n === 1 ? "" : "s"));
+  const next = qty < moq ? moq : Math.ceil(qty / moq) * moq;
+  const need = next - qty;
+  const core = `add ${need} more ${plural(need)} to reach ${next} ${plural(next)}`;
+  if (short) return `<strong>${i.name}</strong> &mdash; ${core}`;
+  return `Almost there! <strong>${i.name}</strong> is sold in bulk, in multiples of ${moq} ${plural(moq)} (${moq}, ${moq * 2}, ${moq * 3}&hellip;). ` +
+         `Just ${core} to check out with wholesale pricing.`;
+}
+
 function enforceCartMinimums(cart) {
   const btn = document.getElementById("cartCheckoutBtn");
   const warn = document.getElementById("cartMoqWarning");
@@ -662,8 +680,8 @@ function enforceCartMinimums(cart) {
   // check existed (or a minimum that changed since) has to be caught here,
   // not just prevented at the +/- buttons.
   const below = (cart || []).filter(i => {
-    if (!isSoldByDozen(i)) return false;
     const moq = productMoq(i);
+    if (moq <= 1) return false;
     const qty = Number(i.quantity) || 0;
     return qty < moq || qty % moq !== 0;
   });
@@ -676,16 +694,10 @@ function enforceCartMinimums(cart) {
     if (hasAny) {
       const lines = [];
       if (below.length) {
-        const describe = i => {
-          const moq = productMoq(i);
-          const qty = Number(i.quantity) || 0;
-          return qty < moq
-            ? `${i.name} &mdash; must order at least ${moq} dozen`
-            : `${i.name} &mdash; must be a whole multiple of ${moq} dozen (currently ${qty})`;
-        };
         lines.push(below.length === 1
-          ? `<strong>${below[0].name}</strong> ${describe(below[0]).split(' &mdash; ')[1]}. Please adjust the quantity to continue.`
-          : `${below.length} items need adjusting:<br>` + below.map(i => `&bull; ${describe(i)}`).join("<br>"));
+          ? moqShortfallText(below[0])
+          : `Almost there! ${below.length} items just need a quantity adjustment:<br>` +
+            below.map(i => `&bull; ${moqShortfallText(i, true)}`).join("<br>"));
       }
       groupShortfalls.forEach(g => {
         const msg = g.have < g.min
@@ -2490,7 +2502,7 @@ function populateProductPage(product) {
   // quantity box starts there and steps by it rather than by 1.
   const qtyBox = document.getElementById("qtyValue");
   if (qtyBox) {
-    const moq = isSoldByDozen(product) ? productMoq(product) : 1;
+    const moq = productMoq(product);
     qtyBox.min = String(moq);
     qtyBox.step = String(moq);
     qtyBox.value = String(moq);
@@ -2498,9 +2510,13 @@ function populateProductPage(product) {
   const moqNote = document.getElementById("moqNote");
   if (moqNote) {
     const moq = productMoq(product);
-    const show = isSoldByDozen(product) && moq > 1;
+    const show = moq > 1;
     moqNote.style.display = show ? "" : "none";
-    if (show) moqNote.textContent = `Minimum order: ${moq} dozen`;
+    if (show) {
+      moqNote.textContent = isSoldByDozen(product)
+        ? `Minimum order: ${moq} dozen`
+        : `Bulk pricing: order in multiples of ${moq} cases (${moq}, ${moq * 2}, ${moq * 3}\u2026)`;
+    }
   }
 
   trackEcommerce("view_item", {
@@ -3430,7 +3446,7 @@ function setupCartButtons() {
 
       if (!cart[index]) return;
 
-      const step = isSoldByDozen(cart[index]) ? productMoq(cart[index]) : 1;
+      const step = productMoq(cart[index]);
       cart[index].quantity = (Number(cart[index].quantity) || step) + step;
 
       saveCart(cart);
@@ -3448,7 +3464,7 @@ function setupCartButtons() {
 
       // Dozen-sold items step (and floor) by their case minimum -- e.g. a
       // 50-dozen-minimum wash cloth can't sit at 49, only 0/50/100/...
-      const step = isSoldByDozen(cart[index]) ? productMoq(cart[index]) : 1;
+      const step = productMoq(cart[index]);
       const floor = step;
       if ((Number(cart[index].quantity) || step) > floor) {
         cart[index].quantity -= step;
@@ -3477,7 +3493,7 @@ function setupCartButtons() {
       // Dozen-sold items must land on a whole multiple of their case
       // minimum (e.g. 50, 100, 150 dozen -- never 51) so a typed number
       // can't slip in a partial case. Round up to the nearest valid one.
-      if (isSoldByDozen(cart[index])) {
+      {
         const step = productMoq(cart[index]);
         if (step > 1) qty = Math.max(step, Math.ceil(qty / step) * step);
       }
@@ -5499,7 +5515,7 @@ function miniCartSetQty(itemNumber, delta) {
   const item = cart.find(i => String(i.itemNumber) === String(itemNumber));
   if (!item) return;
 
-  const step = isSoldByDozen(item) ? (productMoq(item) || 1) : 1;
+  const step = productMoq(item) || 1;
   const next = (Number(item.quantity) || 0) + (delta * step);
 
   const remaining = next > 0
@@ -5545,7 +5561,7 @@ function miniCartTypeQty(itemNumber, rawValue, commit) {
 
   // Dozen-sold lines must be a whole multiple of their minimum; everything
   // else (case- and each-sold) steps by 1 and needs no rounding.
-  const step = isSoldByDozen(item) ? (productMoq(item) || 1) : 1;
+  const step = productMoq(item) || 1;
   const snapped = step > 1 ? Math.max(step, Math.round(typed / step) * step) : typed;
 
   saveCart(cart.map(i =>

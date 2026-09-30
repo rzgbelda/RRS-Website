@@ -146,7 +146,7 @@ async function priceCart(items, state, fulfillmentMethod) {
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group')
+    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, moq_group, moq')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -174,6 +174,24 @@ async function priceCart(items, state, fulfillmentMethod) {
     if (!row) return { ok: false, error: 'This item is no longer available: ' + sku };
     if (row.is_active === false) {
       return { ok: false, error: 'This item is no longer available: ' + (row.name || sku) };
+    }
+
+    // Per-product minimum (e.g. NPS ships by the pallet: 30 cases, then
+    // 60, 90...). Enforced HERE, before a PaymentIntent exists, because the
+    // cart-page check in script.js only runs in the browser and a stale or
+    // hand-built request would otherwise pay for a partial pallet. Mirrors
+    // enforceCartMinimums()/moqShortfallText() in script.js.
+    const moq = Math.max(1, Math.floor(Number(row.moq) || 1));
+    if (moq > 1 && (qty < moq || qty % moq !== 0)) {
+      const unit = isSoldByDozen(row) ? 'dozen' : 'case';
+      const plural = n => (unit === 'dozen' ? unit : unit + (n === 1 ? '' : 's'));
+      const next = qty < moq ? moq : Math.ceil(qty / moq) * moq;
+      const need = next - qty;
+      return {
+        ok: false,
+        error: 'Almost there! ' + (row.name || sku) + ' is sold in bulk, in multiples of ' + moq + ' ' + plural(moq) +
+               '. Add ' + need + ' more ' + plural(need) + ' to reach ' + next + ' and check out with wholesale pricing.',
+      };
     }
 
     const tierBasis = row.moq_group && !isSoldByDozen(row) ? groupQty.get(row.moq_group) : qty;
