@@ -2404,6 +2404,15 @@
             <input id="vndShipDays" type="number" min="1" value="3" class="a-input">
           </div>
           <div class="cms-form-group">
+            <label class="cms-label">Warehouse Address <span class="cms-label-hint">shipping is rated from here to the customer</span></label>
+            <input id="vndShipStreet" type="text" class="a-input" placeholder="Street" style="margin-bottom:6px">
+            <div style="display:flex;gap:6px">
+              <input id="vndShipCity" type="text" class="a-input" placeholder="City" style="flex:2">
+              <input id="vndShipState" type="text" class="a-input" placeholder="ST" maxlength="2" style="flex:1">
+              <input id="vndShipZip" type="text" class="a-input" placeholder="ZIP" maxlength="10" style="flex:1">
+            </div>
+          </div>
+          <div class="cms-form-group">
             <label class="cms-label">Notes <span class="cms-label-hint">optional</span></label>
             <textarea id="vndNotes" class="a-input" rows="2" style="resize:vertical"></textarea>
           </div>

@@ -9133,6 +9133,7 @@ function openAddVendor() {
   document.getElementById("vndContactPhone").value = "";
   document.getElementById("vndContactEmail").value = "";
   document.getElementById("vndShipDays").value = "3";
+  ["Street","City","State","Zip"].forEach(f => { document.getElementById("vndShip" + f).value = ""; });
   document.getElementById("vndNotes").value = "";
   document.getElementById("vndActive").value = "true";
   openModal("vendorModal");
@@ -9149,6 +9150,10 @@ async function editVendor(id) {
   document.getElementById("vndContactPhone").value = v.contact_phone || "";
   document.getElementById("vndContactEmail").value = v.contact_email;
   document.getElementById("vndShipDays").value = v.estimated_ship_days;
+  document.getElementById("vndShipStreet").value = v.ship_from_street || "";
+  document.getElementById("vndShipCity").value = v.ship_from_city || "";
+  document.getElementById("vndShipState").value = v.ship_from_state || "";
+  document.getElementById("vndShipZip").value = v.ship_from_zip || "";
   document.getElementById("vndNotes").value = v.notes || "";
   document.getElementById("vndActive").value = String(v.is_active);
   openModal("vendorModal");
@@ -9172,6 +9177,10 @@ async function saveVendor() {
     contact_phone: document.getElementById("vndContactPhone").value.trim() || null,
     contact_email: contactEmail,
     estimated_ship_days: parseInt(document.getElementById("vndShipDays").value) || 3,
+    ship_from_street: document.getElementById("vndShipStreet").value.trim() || null,
+    ship_from_city:   document.getElementById("vndShipCity").value.trim() || null,
+    ship_from_state:  document.getElementById("vndShipState").value.trim().toUpperCase() || null,
+    ship_from_zip:    document.getElementById("vndShipZip").value.trim() || null,
     notes: document.getElementById("vndNotes").value.trim() || null,
     is_active: document.getElementById("vndActive").value === "true",
   };
