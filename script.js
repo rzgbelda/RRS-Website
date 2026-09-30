@@ -10,14 +10,14 @@ let isSliding = false;
 ========================= */
 // On roomreadysupply.com no product price is shown and nothing can be
 // added to the cart: every product shows "Want to know our prices?",
-// which opens openPriceModal() and hands the visitor to the quote page so
+// which opens openPriceModal() and hands the visitor to the GHL chat so
 // the team can send them custom pricing. The class is set by an inline
 // snippet in each page's <head> (before first paint, so no price flashes);
 // style.css does the hiding under html.rrs-quote-only.
 //
 // Affiliate subdomains are deliberately NOT in quote-only mode: they sell
 // at listed prices through their own storefront and have no RRS chat
-// widget to send anyone to.
+// widget to send anyone to (see loadGhlChatWidget()).
 //
 // Cart, checkout and payment keep working for customers who accept a
 // quote from their account ("Add to cart at quoted pricing").
@@ -4666,7 +4666,7 @@ async function submitContactForm(e) {
       email,
       // The form no longer asks for a phone number: GHL's A2P review
       // rejects pages that collect phone numbers anywhere besides the
-      // GHL chat widget (removed 2026-09-30; see git history). The
+      // GHL chat widget (the site's single SMS opt-in source). The
       // column is still NOT NULL, so send an empty string.
       phone:                   "",
       city,
@@ -5755,11 +5755,66 @@ function escapeMiniCart(str) {
 }
 
 /* =========================
+   GHL CHAT WIDGET
+========================= */
+// GoHighLevel web chat, routed to the RRS GHL inbox. Loaded from here so
+// every page that includes script.js gets it from one place, and three
+// deliberate limits apply:
+//
+//  1. Main domain only. Affiliate subdomains share this file, but a chat
+//     there would land in RRS's inbox as if RRS were the seller -- the
+//     affiliate sites must present RRS as supplier only. Vercel preview
+//     URLs and localhost are skipped too.
+//  2. Not on pages that handle payment, login or account data. Any
+//     third-party script runs with full access to the page it is on, so
+//     it stays off the pages where that access matters most. vercel.json
+//     backs this up: the CSP on those pages does not allow
+//     leadconnectorhq.com scripts at all, so even a stray include there
+//     would be blocked by the browser.
+//  3. Loaded after the page has finished loading and gone idle, so the
+//     widget never competes with the page's own content for bandwidth.
+const GHL_CHAT_WIDGET_ID = "6ab6950950fc24ace644cf46";
+const GHL_CHAT_HOSTS = ["roomreadysupply.com", "www.roomreadysupply.com"];
+const GHL_CHAT_EXCLUDED_PATHS = [
+  "/checkout", "/payment", "/order-confirmation",
+  "/account", "/login", "/reset-password", "/admin",
+];
+
+function ghlChatAllowedHere() {
+  if (!GHL_CHAT_HOSTS.includes(location.hostname)) return false;
+  const p = (location.pathname || "/").toLowerCase().replace(/\.html$/, "").replace(/\/+$/, "");
+  return !GHL_CHAT_EXCLUDED_PATHS.includes(p);
+}
+
+function loadGhlChatWidget() {
+  if (!ghlChatAllowedHere()) return;
+  if (document.querySelector('script[data-widget-id="' + GHL_CHAT_WIDGET_ID + '"]')) return;
+  const s = document.createElement("script");
+  s.src = "https://widgets.leadconnectorhq.com/loader.js";
+  s.setAttribute("data-resources-url", "https://widgets.leadconnectorhq.com/chat-widget/loader.js");
+  s.setAttribute("data-widget-id", GHL_CHAT_WIDGET_ID);
+  s.setAttribute("data-source", "WEB_USER");
+  s.async = true;
+  s.referrerPolicy = "strict-origin-when-cross-origin";
+  document.body.appendChild(s);
+}
+
+(function scheduleGhlChatWidget() {
+  const start = () => ("requestIdleCallback" in window)
+    ? requestIdleCallback(loadGhlChatWidget, { timeout: 4000 })
+    : setTimeout(loadGhlChatWidget, 1500);
+  if (document.readyState === "complete") start();
+  else window.addEventListener("load", start, { once: true });
+})();
+
+/* =========================
    "WANT TO KNOW OUR PRICES?" MODAL (quote-only mode)
 ========================= */
 // Every product card and the product page carry this button; style.css
 // only shows it under html.rrs-quote-only. Clicking it explains that
-// pricing is tailored and sends the visitor to the quote request page.
+// pricing is tailored and sends the visitor to the GHL chat, which is
+// the site's single place to leave a phone number (see the A2P note in
+// submitContactForm()).
 function priceCtaButton(productName) {
   return `<button type="button" class="price-cta-btn" data-product="${escAttr(productName || "")}">Want to know our prices?</button>`;
 }
@@ -5789,12 +5844,12 @@ function ensurePriceModal() {
       </p>
       <p class="pm-product" hidden>You asked about: <strong class="pm-product-name"></strong></p>
       <ol class="pm-steps">
-        <li><span class="pm-step-num">1</span><span>Open the <strong>quote request</strong> page.</span></li>
-        <li><span class="pm-step-num">2</span><span>Tell us your business and the products you need.</span></li>
+        <li><span class="pm-step-num">1</span><span>Open the <strong>chat button in the bottom-right corner</strong> of your screen.</span></li>
+        <li><span class="pm-step-num">2</span><span>Leave your name, phone number and the products you need.</span></li>
         <li><span class="pm-step-num">3</span><span>Our team sends you pricing made for your business.</span></li>
       </ol>
       <div class="pm-actions">
-        <button type="button" class="pm-chat-btn">Request a quote</button>
+        <button type="button" class="pm-chat-btn">Chat with us now</button>
         <button type="button" class="pm-later-btn">Maybe later</button>
       </div>
     </div>`;
@@ -5805,8 +5860,7 @@ function ensurePriceModal() {
   el.querySelector(".pm-later-btn").addEventListener("click", closePriceModal);
   el.querySelector(".pm-chat-btn").addEventListener("click", () => {
     closePriceModal();
-    if (typeof gtag === "function") gtag("event", "price_inquiry_quote");
-    location.href = "/quote";
+    openGhlChat();
   });
   return el;
 }
@@ -5831,6 +5885,24 @@ function closePriceModal() {
   el.hidden = true;
   popModal(closePriceModal);
   if (_pmLastFocus && typeof _pmLastFocus.focus === "function") _pmLastFocus.focus();
+}
+
+// The widget loads lazily (after page load + idle), so a fast click can
+// arrive before it exists: load it now if needed, then wait briefly for
+// GHL's API. If it never appears (blocked by an ad blocker, say), the
+// header's phone number and email are still there.
+function openGhlChat() {
+  loadGhlChatWidget();
+  let tries = 0;
+  (function attempt() {
+    const cw = window.leadConnector && window.leadConnector.chatWidget;
+    if (cw && typeof cw.openWidget === "function") {
+      try { cw.openWidget(); } catch (e) { console.warn("GHL openWidget failed", e); }
+      return;
+    }
+    if (++tries < 40) setTimeout(attempt, 250);
+  })();
+  if (typeof gtag === "function") gtag("event", "price_inquiry_chat");
 }
 
 document.addEventListener("click", e => {
