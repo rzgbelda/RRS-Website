@@ -9170,6 +9170,7 @@ function openAddVendor() {
   document.getElementById("vndContactEmail").value = "";
   document.getElementById("vndShipDays").value = "3";
   ["Street","City","State","Zip"].forEach(f => { document.getElementById("vndShip" + f).value = ""; });
+  { const ex = document.getElementById("vndExtraWarehouses"); ex.value = ""; ex.dataset.loaded = ""; }
   document.getElementById("vndNotes").value = "";
   document.getElementById("vndActive").value = "true";
   openModal("vendorModal");
@@ -9190,6 +9191,12 @@ async function editVendor(id) {
   document.getElementById("vndShipCity").value = v.ship_from_city || "";
   document.getElementById("vndShipState").value = v.ship_from_state || "";
   document.getElementById("vndShipZip").value = v.ship_from_zip || "";
+  {
+    const ex = document.getElementById("vndExtraWarehouses");
+    const text = (Array.isArray(v.extra_warehouses) ? v.extra_warehouses : [])
+      .map(w => [w.street, w.city, w.state, w.zip].join(", ")).join("\n");
+    ex.value = text; ex.dataset.loaded = text;
+  }
   document.getElementById("vndNotes").value = v.notes || "";
   document.getElementById("vndActive").value = String(v.is_active);
   openModal("vendorModal");
@@ -9220,6 +9227,23 @@ async function saveVendor() {
     notes: document.getElementById("vndNotes").value.trim() || null,
     is_active: document.getElementById("vndActive").value === "true",
   };
+  // Additional warehouses. Written only when the text actually changed, so
+  // saving a vendor never touches (or needs) the column unless someone edits it.
+  const exEl = document.getElementById("vndExtraWarehouses");
+  if (exEl.value.trim() !== (exEl.dataset.loaded || "").trim()) {
+    const parsed = [];
+    for (const line of exEl.value.split("\n").map(l => l.trim()).filter(Boolean)) {
+      const parts = line.split(",").map(p => p.trim());
+      const [street, city, state, zip] = parts;
+      if (parts.length !== 4 || !street || !city || !/^[A-Za-z]{2}$/.test(state) || !/^\d{5}$/.test(zip)) {
+        btn.disabled = false; btn.textContent = "Save Vendor";
+        showToast("Warehouse line needs: Street, City, ST, ZIP (5 digits) \u2014 \"" + line + "\"");
+        return;
+      }
+      parsed.push({ street, city, state: state.toUpperCase(), zip });
+    }
+    payload.extra_warehouses = parsed;
+  }
   const { error } = id
     ? await window.sb.from("vendors").update(payload).eq("id", id)
     : await window.sb.from("vendors").insert(payload);

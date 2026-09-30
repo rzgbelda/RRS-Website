@@ -140,8 +140,13 @@ async function loadVendors(supabase, shipLines) {
   const slugs = [...new Set(shipLines.map(l => String(l.distributor || '').trim().toLowerCase()).filter(Boolean))];
   const map = new Map();
   if (!slugs.length) return map;
-  const { data, error } = await supabase.from('vendors')
-    .select('slug, name, ship_from_street, ship_from_city, ship_from_state, ship_from_zip').in('slug', slugs);
+  const cols = 'slug, name, ship_from_street, ship_from_city, ship_from_state, ship_from_zip';
+  // extra_warehouses (20261001b) holds a vendor's additional warehouses. If
+  // that migration has not been run yet the column does not exist and the
+  // whole select would fail -- retry without it so shipping keeps working
+  // from the primary address.
+  let { data, error } = await supabase.from('vendors').select(cols + ', extra_warehouses').in('slug', slugs);
+  if (error) ({ data, error } = await supabase.from('vendors').select(cols).in('slug', slugs));
   if (error) { console.warn('[shipping] vendor lookup failed:', error.message); return map; }
   for (const v of data || []) if (v.slug) map.set(String(v.slug).toLowerCase(), v);
   return map;
