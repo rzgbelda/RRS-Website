@@ -25,7 +25,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -160,9 +160,17 @@ function computeTitleParts(p) {
   return { prefix, cleanName };
 }
 
+// "Bulk Pallet" when sold by the pallet (own minimum above 1, or a Mix &
+// Match pallet group), otherwise "Bulk Case". Mirrors script.js bulkLead().
+function bulkLead(p) {
+  const moq = Number(p && p.moq);
+  const pallet = (Number.isFinite(moq) && moq > 1) || !!(p && p.moq_group);
+  return pallet ? 'Bulk Pallet ' : 'Bulk Case ';
+}
+
 function buildSeoTitle(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  return `Wholesale ${prefix}${cleanName}`;
+  return `${bulkLead(p)}${prefix}${cleanName}`;
 }
 
 function detectLeadingSizeToken(name) {
@@ -181,7 +189,7 @@ function detectLeadingSizeToken(name) {
 
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  const lead = 'Wholesale ';
+  const lead = bulkLead(p);
 
   let effectivePrefix = prefix;
   let effectiveName = cleanName;

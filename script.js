@@ -2088,9 +2088,18 @@ function computeTitleParts(p) {
 // untruncated -- this is what actually identifies the product, so it's
 // used everywhere except the <title> element itself (see
 // buildSeoTitleTag below).
+// "Bulk Pallet" when sold by the pallet (own minimum above 1, or a Mix &
+// Match pallet group), otherwise "Bulk Case". Mirrored in
+// api/product-meta.js.
+function bulkLead(p) {
+  const moq = Number(p && p.moq);
+  const pallet = (Number.isFinite(moq) && moq > 1) || !!(p && (p.moqGroup || p.moq_group));
+  return pallet ? "Bulk Pallet " : "Bulk Case ";
+}
+
 function buildSeoTitle(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  return `Wholesale ${prefix}${cleanName}`;
+  return `${bulkLead(p)}${prefix}${cleanName}`;
 }
 
 // The <title> element specifically. Google displays only ~60 chars of it
@@ -2126,7 +2135,7 @@ function detectLeadingSizeToken(name) {
 
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  const lead = "Wholesale ";
+  const lead = bulkLead(p);
 
   let effectivePrefix = prefix;
   let effectiveName = cleanName;
