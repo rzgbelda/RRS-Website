@@ -3867,6 +3867,10 @@ function loadCheckoutProducts() {
   if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
+  // The formula above is only the first paint. With a full ZIP, swap in the
+  // carrier rate the server will actually charge.
+  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping: shipping });
+
   // Recalculate tax live as the customer picks/changes their state. Bound
   // once (not on every loadCheckoutProducts() call, which would stack a
   // new listener each time and re-fire it that many times per change).
@@ -3875,6 +3879,71 @@ function loadCheckoutProducts() {
     stateEl.dataset.taxListenerBound = '1';
     stateEl.addEventListener('change', loadCheckoutProducts);
   }
+  // Same for the ZIP: the carrier rate depends on it. Debounced so typing
+  // five digits makes one lookup, not five.
+  const zipEl = document.getElementById('checkout-zip');
+  if (zipEl && !zipEl.dataset.shipListenerBound) {
+    zipEl.dataset.shipListenerBound = '1';
+    let t;
+    zipEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(loadCheckoutProducts, 500); });
+  }
+}
+
+// Real delivery fee for the checkout summary: asks the server (the same
+// pricing pass that charges the card) for the cart's total at the entered
+// ZIP, then overwrites the Delivery and Estimated Total rows. Cached per
+// cart+ZIP so re-renders don't re-hit the carriers, and any failure leaves
+// the formula preview in place.
+const _shipQuoteCache = {};
+let _shipQuoteSeq = 0;
+function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping }) {
+  const zip = (document.getElementById('checkout-zip')?.value || '').trim();
+  if (!/^\d{5}$/.test(zip)) return;
+  const oneTime = checkoutOrderType === 'one-time';
+  const cart = getCart();
+  const items = cart.map(i => ({
+    sku: i.itemNumber || '',
+    quantity: parseInt(i.quantity) || 1,
+    reorder: oneTime ? 'Once' : (i.reorder || ''),
+  })).filter(i => i.sku);
+  if (!items.length) return;
+
+  const state = document.getElementById('checkout-state')?.value || '';
+  const addr = {
+    street: document.getElementById('checkout-street')?.value || '',
+    city: document.getElementById('checkout-city')?.value || '',
+    state, zip,
+  };
+  const key = JSON.stringify([items, state, zip]);
+
+  const apply = shipping => {
+    const el = document.getElementById('summary-shipping');
+    if (el) el.textContent = `$${shipping.toFixed(2)}`;
+    const totalEl = document.getElementById('summary-total');
+    if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
+  };
+
+  if (_shipQuoteCache[key] != null) { apply(_shipQuoteCache[key]); return; }
+
+  const seq = ++_shipQuoteSeq;
+  fetch('/api/create-payment-intent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      quote_only: true,
+      items,
+      state,
+      metadata: { fulfillment_method: 'ship', shipping_address: JSON.stringify(addr) },
+    }),
+  })
+    .then(r => r.json())
+    .then(d => {
+      if (typeof d.shipping !== 'number') return;
+      _shipQuoteCache[key] = d.shipping;
+      // A newer request (another keystroke) supersedes this one.
+      if (seq === _shipQuoteSeq) apply(d.shipping);
+    })
+    .catch(() => {});
 }
 
 function setupCheckoutOrderTypeToggle() {

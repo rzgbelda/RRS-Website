@@ -76,6 +76,26 @@ module.exports = async (req, res) => {
     return res.status(403).json({ error: 'Origin not allowed' });
   }
 
+  // Quote only: prices the cart (including the carrier shipping rate for the
+  // ZIP) and returns the totals WITHOUT creating a PaymentIntent. Lets the
+  // checkout page show the real delivery fee as soon as a ZIP is entered,
+  // instead of the weight-formula preview. Its own throttle -- it calls the
+  // carriers -- and it lives here because the project is at Vercel's
+  // 12-function limit.
+  try {
+    const qb = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    if (qb && qb.quote_only === true) {
+      if (!rateLimit(req, res, { bucket: 'quote', limit: 30, windowMs: 60000 })) return;
+      const md = qb.metadata || {};
+      const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address);
+      if (!q.ok) return res.status(400).json({ error: q.error });
+      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal });
+    }
+  } catch (err) {
+    console.error('[quote]', err && err.message);
+    return res.status(500).json({ error: 'Could not price the order.' });
+  }
+
   // Creating a PaymentIntent is unauthenticated by necessity (guests check
   // out), so this is the one throttle standing between a loop and a pile
   // of Stripe objects plus burnt function quota. See _lib/rate-limit.js
