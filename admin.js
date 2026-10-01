@@ -2998,7 +2998,20 @@ function cvtNormalizeValue(key, value, srcRow) {
     const hasPrice = cvtNormalizeValue(priceKey, rawPrice, srcRow) !== "";
     if (!hasPrice) return "";
 
-    if (v) return String(parseInt(v.replace(/[^0-9]/g, ""), 10) || "");
+    if (v) {
+      const n = parseInt(v.replace(/[^0-9]/g, ""), 10) || "";
+      // Wraptite's quantity block holds each range's UPPER end for tiers 1
+      // and 2 (5 / 29) and the START of tier 3 (30): 1-5, 6-29, 30+. A tier 2
+      // value sitting exactly one below tier 3 can only be that upper end
+      // (a range starting at 29 would be one case wide), so tier 2 starts
+      // one above tier 1's end instead.
+      if (key === "tier2_min_qty" && n) {
+        const num = k => parseInt(String(srcRow[_cvtMapping[k]] ?? "").replace(/[^0-9]/g, ""), 10);
+        const t1 = num("tier1_min_qty"), t3 = num("tier3_min_qty");
+        if (t3 && n === t3 - 1 && t1 && t1 < n) return String(t1 + 1);
+      }
+      return String(n);
+    }
     // No threshold column in this feed: read the breakpoint out of the
     // price column's own header text (e.g. "Tier1 1-5" -> 1) before
     // falling back to the fixed 1/6/30 scheme, since suppliers disagree on
