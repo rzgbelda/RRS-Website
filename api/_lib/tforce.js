@@ -13,8 +13,9 @@
 //   TFORCE_TOKEN_URL                         token endpoint from the portal's
 //                                            integration guide
 //   TFORCE_SCOPE                             scope from the same guide
-//   TFORCE_SUBSCRIPTION_KEY                  Ocp-Apim-Subscription-Key
 // Optional:
+//   TFORCE_SUBSCRIPTION_KEY    Ocp-Apim-Subscription-Key, only if TForce
+//                              issues one (the OAuth token alone may suffice)
 //   TFORCE_BASE_URL            default https://api.tforcefreight.com
 //   TFORCE_SERVICE_CODE        default 349 (Standard LTL); 308 = LTL
 //   TFORCE_BILLING_CODE        default 10 (prepaid by RRS)
@@ -83,8 +84,10 @@ function palletDims() {
 // One rate for `weightLb` of palletised freight from `origin` to `dest`.
 // Returns { amount, service, transitDays } or throws.
 async function rateFreight({ origin, dest, weightLb }) {
+  // The portal lists an Ocp-Apim-Subscription-Key header, but TForce's
+  // integration guide only describes OAuth and a fresh developer profile has
+  // no subscription to take a key from -- so it is sent only when set.
   const key = process.env.TFORCE_SUBSCRIPTION_KEY;
-  if (!key) throw new Error('TFORCE_SUBSCRIPTION_KEY not configured');
   const token = await getToken();
 
   const maxPallet = Number(process.env.TFORCE_PALLET_MAX_LB) || 2000;
@@ -144,7 +147,7 @@ async function rateFreight({ origin, dest, weightLb }) {
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
-      'Ocp-Apim-Subscription-Key': key,
+      ...(key ? { 'Ocp-Apim-Subscription-Key': key } : {}),
     },
     body: JSON.stringify(body),
   });
