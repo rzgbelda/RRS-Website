@@ -2,12 +2,14 @@
 
 Removed from the live pages on 2026-09-30 for the GHL A2P compliance review, which requires no affiliate mentions on the site. The CEO requires this wording (see affiliate disclaimer requirement), so it must go back.
 
-## Terms of Service, section 14
+## Terms of Service, section 15
 
-Restore in terms.html, between sections 13 and 15:
+Section 14 is now SMS / Text Messaging (added 2026-10-02 for the A2P review).
+Restore in terms.html between "14. SMS / Text Messaging Terms" and Contact,
+followed by an `<hr class="policy-divider">`, and renumber Contact from 15 to 16:
 
 ```html
-    <h2>14. Affiliates &amp; Independent Resellers</h2>
+    <h2>15. Affiliates &amp; Independent Resellers</h2>
     <p>Room Ready Supply works with independent affiliates who may operate their own storefronts, including storefronts hosted on a Room Ready Supply subdomain. <strong>Each affiliate is an independent business, not an agent, employee, partner, or representative of Room Ready Supply.</strong></p>
     <p>Room Ready Supply's role is limited to supplying products. Room Ready Supply does not control, direct, or supervise an affiliate's business practices, pricing presentation, service commitments, communications, staffing, scheduling, or any services the affiliate performs for its own customers, and is not responsible or liable for them.</p>
     <p>Where an affiliate's storefront displays Room Ready Supply branding, that branding indicates the source of the products only. Any agreement a customer forms through an affiliate's storefront is with that affiliate, except for the sale of Room Ready Supply products, which remains subject to these Terms.</p>
