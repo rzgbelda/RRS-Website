@@ -335,9 +335,16 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   // gave a ZIP; in every other case the flat formula above stands, so
   // deploying this changes nothing until it is switched on.
   const dest = parseDestination(destination);
-  if (!isPickup && dest && String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true') {
+  // UPS rates parcel shipments; TForce rates freight (over 150 lb). Each has
+  // its own switch, and a shipment whose carrier is off or fails keeps the
+  // weight estimate.
+  const upsOn = String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true';
+  const tforceOn = String(process.env.TFORCE_RATING_ENABLED || '').toLowerCase() === 'true';
+  if (!isPickup && dest && (upsOn || tforceOn)) {
     const vendorsBySlug = await loadVendors(supabase, shipLines);
-    const carrier = { rateParcel: a => require('./ups').rateParcelCheapest(a) };
+    const carrier = {};
+    if (upsOn) carrier.rateParcel = a => require('./ups').rateParcelCheapest(a);
+    if (tforceOn) carrier.rateFreight = a => require('./tforce').rateFreight(a);
     const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier });
     shipping = r.total;
     // Function logs only. Distributor names are internal and never go back

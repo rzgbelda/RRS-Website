@@ -135,7 +135,7 @@ async function computeShipping({ lines, vendorsBySlug, destination, carrier }) {
       if (best) { amount = best.amount; method = 'ups-parcel'; from = `${best.origin.city} ${best.origin.state}`; }
     } else if (canRate && mode === 'freight' && carrier.rateFreight) {
       const best = await cheapestAcrossOrigins(origins, carrier.rateFreight, { dest: destination, weightLb: g.weightLb, lines: g.lines });
-      if (best) { amount = best.amount; method = 'ups-freight'; from = `${best.origin.city} ${best.origin.state}`; }
+      if (best) { amount = best.amount; method = 'freight'; from = `${best.origin.city} ${best.origin.state}`; }
     }
 
     if (amount == null) {
