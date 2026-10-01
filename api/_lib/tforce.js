@@ -171,7 +171,8 @@ async function rateFreight({ origin, dest, weightLb }) {
     return {
       amount,
       service: d.service && d.service.code,
-      transitDays: d.timeInTransit && d.timeInTransit.value,
+      // The live API returns timeInTransit.timeInTransit; the spec says .value.
+      transitDays: d.timeInTransit && (d.timeInTransit.timeInTransit || d.timeInTransit.value),
     };
   }).filter(r => Number.isFinite(r.amount) && r.amount > 0);
   if (!priced.length) {
