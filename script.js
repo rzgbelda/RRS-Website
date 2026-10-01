@@ -2071,7 +2071,10 @@ function trimTitleKeepingEnds(name, maxLen) {
 function computeTitleParts(p) {
   const desc = p.description || "";
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
-  const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
+  let sizeStr     = sizeMatch ? sizeMatch[1].trim() : (p.size || "");
+  // A bare number is a pack count (pack_size "1"), not a size -- it led
+  // titles like "Bulk Pallet 1 Retain™ ...".
+  if (/^\d+$/.test(sizeStr)) sizeStr = "";
   // Strip any dash variant (en dash, em dash, or plain hyphen) that
   // precedes "Wholesale Pricing" in the raw supplier name.
   const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();

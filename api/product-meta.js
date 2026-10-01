@@ -131,7 +131,9 @@ function trimTitleKeepingEnds(name, maxLen) {
 function computeTitleParts(p) {
   const desc = p.description || '';
   const sizeMatch = desc.match(/Size:\s*([^|]+)/);
-  const sizeStr   = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
+  let sizeStr     = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
+  // A bare number is a pack count, not a size. Mirrors script.js.
+  if (/^\d+$/.test(sizeStr)) sizeStr = '';
   const cleanName = String(p.name || '').replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, '').trim();
   // Dimensions get written two ways across the catalog -- a size field of
   // `27" × 54"` versus a name containing `27x54` -- so the separator has to
