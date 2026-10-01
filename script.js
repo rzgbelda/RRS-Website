@@ -2096,7 +2096,10 @@ function computeTitleParts(p) {
 // api/product-meta.js.
 function bulkLead(p) {
   const moq = Number(p && p.moq);
-  const pallet = (Number.isFinite(moq) && moq > 1) || !!(p && (p.moqGroup || p.moq_group));
+  // A dozen-priced product's minimum (Starlinen: 6 dozen) is one CASE, not
+  // a pallet.
+  const dozen = String(p && (p.priceBy || p.unit) || "").trim().toLowerCase() === "dozen";
+  const pallet = !dozen && ((Number.isFinite(moq) && moq > 1) || !!(p && (p.moqGroup || p.moq_group)));
   return pallet ? "Bulk Pallet " : "Bulk Case ";
 }
 

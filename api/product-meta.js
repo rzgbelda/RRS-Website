@@ -25,7 +25,7 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -166,7 +166,10 @@ function computeTitleParts(p) {
 // Match pallet group), otherwise "Bulk Case". Mirrors script.js bulkLead().
 function bulkLead(p) {
   const moq = Number(p && p.moq);
-  const pallet = (Number.isFinite(moq) && moq > 1) || !!(p && p.moq_group);
+  // A dozen-priced product's minimum (Starlinen: 6 dozen) is one case, not
+  // a pallet.
+  const dozen = String(p && p.unit || '').trim().toLowerCase() === 'dozen';
+  const pallet = !dozen && ((Number.isFinite(moq) && moq > 1) || !!(p && p.moq_group));
   return pallet ? 'Bulk Pallet ' : 'Bulk Case ';
 }
 
