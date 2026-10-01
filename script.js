@@ -2406,6 +2406,15 @@ function populateProductPage(product) {
       mins[0] = palletQty;
       prices[0] = cleanPrice(product.price);
     }
+    // Same for a plain per-case product (Wraptite, Starlinen): the importer
+    // drops a tier 1 that equals the base price, leaving "6-29" and "30+"
+    // with no card for the 1-5 range the buyer actually starts in. Rebuilt
+    // from the base price, from 1 case, whenever a later tier exists.
+    if (!(palletQty > 1) && !mins[0] && cleanPrice(product.price) &&
+        mins.slice(1).some((m, j) => m && prices[j + 1])) {
+      mins[0] = 1;
+      prices[0] = cleanPrice(product.price);
+    }
     const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
     const unitLower = unitWord.toLowerCase();
     // What the tiers count: whole pallets for a case-priced pallet product
