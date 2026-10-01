@@ -44,7 +44,11 @@ async function fetchWithTimeout(url, opts) {
 
 async function getToken() {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 30000) return cachedToken.token;
-  const { TFORCE_CLIENT_ID: id, TFORCE_CLIENT_SECRET: secret, TFORCE_TOKEN_URL: url, TFORCE_SCOPE: scope } = process.env;
+  // Trimmed: a pasted value with a trailing space or newline is a common
+  // reason Microsoft answers 400.
+  const env = k => String(process.env[k] || '').trim();
+  const id = env('TFORCE_CLIENT_ID'), secret = env('TFORCE_CLIENT_SECRET');
+  const url = env('TFORCE_TOKEN_URL'), scope = env('TFORCE_SCOPE');
   if (!id || !secret || !url || !scope) {
     throw new Error('TFORCE_CLIENT_ID / TFORCE_CLIENT_SECRET / TFORCE_TOKEN_URL / TFORCE_SCOPE not configured');
   }
@@ -54,7 +58,13 @@ async function getToken() {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: body.toString(),
   });
-  if (!resp.ok) throw new Error(`TForce token request failed (${resp.status})`);
+  if (!resp.ok) {
+    // Microsoft's error text (AADSTS code + reason) names the bad value; it
+    // never echoes the secret. Logged so a 400 is diagnosable.
+    let why = '';
+    try { const e = await resp.json(); why = ` - ${e.error || ''}: ${String(e.error_description || '').split('\r')[0].slice(0, 200)}`; } catch (_) {}
+    throw new Error(`TForce token request failed (${resp.status})${why}`);
+  }
   const data = await resp.json();
   cachedToken = { token: data.access_token, expiresAt: Date.now() + Number(data.expires_in || 3600) * 1000 };
   return cachedToken.token;
