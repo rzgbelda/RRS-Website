@@ -2274,6 +2274,20 @@ function cvtAutoMap(cols) {
   // has no digit right after "tier1", and "Tier1 Selling Price" has
   // letters, not a digit, right after it.
   const TIER_HEADER_RE = /^tier\s*([123])\s*(\d.*)$/;
+
+  // Wraptite carries BOTH a quantity block ("Tier 1/2/3", cols M-O) and a
+  // price block ("Tier1/2/3", cols P-R) whose headers normalize to the same
+  // string. The first alias pass gave the quantity slot to whichever came
+  // first and left the other unmapped, so price_tier1/2/3 stayed null and the
+  // product page showed no tier cards. When a bare tierN header appears
+  // twice, the left one is the threshold and the right one the price.
+  for (const n of [1, 2, 3]) {
+    const dupes = cols.filter(c => norm(c) === `tier${n}`);
+    if (dupes.length < 2) continue;
+    if (!mapping[`tier${n}_min_qty`]) { mapping[`tier${n}_min_qty`] = dupes[0]; claimed.add(dupes[0]); }
+    if (!mapping[`price_tier${n}`])   { mapping[`price_tier${n}`]   = dupes[1]; claimed.add(dupes[1]); }
+  }
+
   for (const col of cols) {
     const m = norm(col).match(TIER_HEADER_RE);
     if (!m) continue;
