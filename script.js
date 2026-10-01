@@ -2594,8 +2594,8 @@ function populateProductPage(product) {
     moqNote.style.display = show ? "" : "none";
     if (show) {
       moqNote.textContent = isSoldByDozen(product)
-        ? `Minimum order: ${moq} dozen`
-        : `Bulk pricing: order in multiples of ${moq} cases (${moq}, ${moq * 2}, ${moq * 3}\u2026)`;
+        ? `Sold by the case — ${moq} dozen per case (${moq}, ${moq * 2}, ${moq * 3}…)`
+        : `Pallet pricing: ${moq} cases per pallet (${moq}, ${moq * 2}, ${moq * 3}\u2026)`;
     }
   }
 
@@ -2663,15 +2663,15 @@ function renderProductFaq(product) {
       + `combine it with other products in the same group to reach the group's combined minimum of `
       + `${product.moqGroupMin} units. Volume pricing applies automatically as the group's total grows.`;
   } else if (dozen && moq > 1) {
-    q1Answer = `This item is sold by the dozen, with a minimum order of ${moq} dozen.`;
+    q1Answer = `This item is sold by the case, with ${moq} dozen in each case &mdash; a convenient bulk quantity for restocking. Volume pricing applies automatically as you order more cases.`;
   } else if (isEach) {
-    q1Answer = `This item is sold individually (each) rather than by the case. There's no minimum order beyond 1, `
-      + `and volume pricing applies automatically as you order more of this item.`;
+    q1Answer = `This item is sold individually, so you can order exactly what you need &mdash; starting from just 1. `
+      + `Volume pricing applies automatically as you order more of this item.`;
   } else if (caseQty && caseQty !== "1") {
     q1Answer = `Each ${unitRaw} contains ${caseQty}${product.size && product.size !== caseQty ? ` (${product.size})` : ""}. `
-      + `There's no minimum beyond 1 ${unitRaw}, and volume pricing applies automatically as you order more of this item.`;
+      + `Order as few as 1 ${unitRaw}, and volume pricing applies automatically as you order more of this item.`;
   } else {
-    q1Answer = `This item ships as a single unit per ${unitRaw}. There's no minimum order beyond 1, and volume pricing applies automatically as you order more of this item.`;
+    q1Answer = `This item ships as a single unit per ${unitRaw}. Order as few as 1, and volume pricing applies automatically as you order more of this item.`;
   }
   const q1 = {
     q: isEach
@@ -2691,16 +2691,16 @@ function renderProductFaq(product) {
   let q2Answer;
   if (product.weight && dims.length === 3) {
     q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs and ships in a carton measuring `
-      + `${dims.join('" × ')}". Orders are processed within 1&ndash;2 business days, then shipped as standard `
-      + `parcel or palletized freight depending on order size &mdash; see our `
+      + `${dims.join('" × ')}". We process orders within 1&ndash;2 business days, then ship them as parcel or `
+      + `palletized freight, whichever suits your order size &mdash; see our `
       + `<a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else if (product.weight) {
-    q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs. Orders are processed within `
-      + `1&ndash;2 business days, then shipped as standard parcel or palletized freight depending on order size `
+    q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs. We process orders within `
+      + `1&ndash;2 business days, then ship them as parcel or palletized freight, whichever suits your order size `
       + `&mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else {
-    q2Answer = `Orders are processed within 1&ndash;2 business days, then shipped as standard parcel or `
-      + `palletized freight depending on order size &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
+    q2Answer = `We process orders within 1&ndash;2 business days, then ship them as parcel or `
+      + `palletized freight, whichever suits your order size &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   }
   const q2 = {
     q: `How much does this weigh, and how is it shipped?`,
