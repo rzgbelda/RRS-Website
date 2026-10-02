@@ -2452,8 +2452,8 @@ function populateProductPage(product) {
       headEl.innerHTML = byPallet
         ? (product.moqGroup
             ? `Price per ${unitLower} &mdash; drops as your <strong>combined Mix &amp; Match order</strong> grows (1 pallet = ${palletQty} ${unitLower}s)`
-            : `Price per ${unitLower} &mdash; drops as you order more <strong>${orderWord.toLowerCase()}s</strong> (1 ${orderWord.toLowerCase()} = ${palletQty} ${unitsLower})`)
-        : `Price per ${unitLower} &mdash; drops as you order more <strong>of this item</strong>`;
+            : `Price per ${unitLower} &mdash; buy more <strong>${orderWord.toLowerCase()}s</strong>, pay less (1 ${orderWord.toLowerCase()} = ${palletQty} ${unitsLower})`)
+        : `Price per ${unitLower} &mdash; buy more <strong>of this item</strong>, pay less`;
     }
 
     [0, 1, 2].forEach(i => {
