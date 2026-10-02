@@ -2889,7 +2889,12 @@ function switchProductVariant(slug) {
     if (sameColorMatch) product = sameColorMatch;
   }
 
-  history.pushState(null, "", "/product?item=" + encodeURIComponent(product.slug || product.itemNumber));
+  // replaceState, not pushState: each option click used to add a history
+  // entry, and Back then only rewound the URL -- nothing listened for it,
+  // so the page kept showing the option last picked. Swapping the URL in
+  // place keeps it shareable/correct on refresh, and Back leaves the
+  // product page (to the catalog) the way shoppers expect.
+  history.replaceState(null, "", "/product?item=" + encodeURIComponent(product.slug || product.itemNumber));
 
   document.querySelectorAll("#product-variant-selector .variant-pill[data-slug]").forEach(p => {
     p.classList.toggle("active", p.dataset.slug === (product.slug || product.itemNumber));
