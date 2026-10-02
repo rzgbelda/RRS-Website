@@ -1982,8 +1982,19 @@ function applyCatalogSearchParam() {
     if (box) { box.checked = true; changed = true; }
   }
 
-  if (changed) applyFilters();
+  // Coming Back to the catalog, the browser restores the checkboxes and the
+  // search box to how they were left, but the grid above was rendered
+  // unfiltered -- so a ticked "Cleaning Chemicals" sat beside gloves and
+  // towels. Apply whatever filter state is already on the page, not just
+  // the URL's.
+  if (changed || input.value.trim() || getActiveCategories().length) applyFilters();
 }
+
+// Same for a page restored from the back/forward cache: the DOM (ticked
+// boxes) can come back without the grid matching it.
+window.addEventListener('pageshow', e => {
+  if (e.persisted && document.getElementById('search-input') && allProducts.length) applyFilters();
+});
 
 // Replace old search listener with unified filter handler
 document.addEventListener('input', e => {
