@@ -2141,6 +2141,57 @@ function showCvtStep(n) {
   });
 }
 
+/* Text-only product update.
+ *
+ * The bulk importer upserts whole rows, so re-importing a file just to
+ * change copy would also rewrite (or blank) prices, tiers, costs and
+ * images. This reads a CSV with an `sku` column plus any of description /
+ * overview / feature1-4, and updates ONLY those columns, matched by SKU.
+ * A blank cell leaves that field as it is. Shows a summary and asks for
+ * confirmation before writing anything.
+ */
+const TEXT_UPDATE_COLS = ["description", "overview", "feature1", "feature2", "feature3", "feature4"];
+async function runProductTextUpdate(file) {
+  if (!file) return;
+  const raw = parseCsvRows(stripBom(await file.text()));
+  const headers = (raw[0] || []).map(h => h.trim().toLowerCase().replace(/[\s_-]+/g, ""));
+  const skuIdx = headers.indexOf("sku");
+  if (skuIdx < 0) { alert("The file needs an 'sku' column."); return; }
+  const colIdx = {};
+  for (const c of TEXT_UPDATE_COLS) { const i = headers.indexOf(c); if (i >= 0) colIdx[c] = i; }
+  if (!Object.keys(colIdx).length) { alert("No text columns found. Expected: " + TEXT_UPDATE_COLS.join(", ")); return; }
+
+  const updates = [];
+  for (let r = 1; r < raw.length; r++) {
+    const row = raw[r];
+    const sku = String(row[skuIdx] || "").trim();
+    if (!sku) continue;
+    const payload = {};
+    for (const [c, i] of Object.entries(colIdx)) {
+      const v = String(row[i] ?? "").trim();
+      if (v) payload[c] = v;
+    }
+    if (Object.keys(payload).length) updates.push({ sku, payload });
+  }
+  if (!updates.length) { alert("Nothing to update -- every text cell is blank."); return; }
+  if (!confirm(`Update ${Object.keys(colIdx).join(", ")} on ${updates.length} products (matched by SKU)?\n\nPrices, tiers, images and every other field stay as they are.`)) return;
+
+  let ok = 0; const missing = [], failed = [];
+  for (const { sku, payload } of updates) {
+    const { data, error } = await window.sb.from("products")
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq("sku", sku).select("id");
+    if (error) failed.push(`${sku}: ${error.message}`);
+    else if (!data || !data.length) missing.push(sku);
+    else ok++;
+  }
+  let msg = `Updated ${ok} of ${updates.length} products.`;
+  if (missing.length) msg += `\n\nNo product with these SKUs (${missing.length}): ${missing.slice(0, 20).join(", ")}`;
+  if (failed.length) msg += `\n\nFailed (${failed.length}):\n${failed.slice(0, 10).join("\n")}`;
+  alert(msg);
+  renderProductsTable(document.getElementById("productSearch")?.value.trim() || "");
+}
+
 function cvtHandleFile(file) {
   const name = file.name.toLowerCase();
   const isXlsx = name.endsWith(".xlsx") || name.endsWith(".xls");
