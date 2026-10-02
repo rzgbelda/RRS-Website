@@ -2012,6 +2012,24 @@ function normalizeProductTier(raw) {
 // backfill in 20260930_family_key_and_ultra_luxury_tier.sql exactly
 // (lowercase, strip to alnum/space/hyphen, collapse whitespace to hyphens)
 // so a family created here groups with rows already backfilled in the DB.
+// products.distributor must equal a vendors.slug (20261001_vendor_slug.sql)
+// or per-warehouse shipping can't find the ship-from address. The CSV's
+// distributor column carries a display name ("Imperial Brady", "The
+// Restaurant Store"), which plain lowercasing turned into "imperial brady"
+// -- never matching the 'imperial-brady' slug. Known suppliers map to their
+// exact slug; anything else is slugified the same way.
+const DISTRIBUTOR_SLUGS = [
+  [/star\s*linen/, "starlinen"], [/wraptite/, "wraptite"], [/sasso/, "sasso"],
+  [/^nps\b|nps holdings/, "nps"], [/imperial/, "imperial-brady"],
+  [/restaurant\s*store/, "restaurant-store"],
+];
+function distributorSlug(raw) {
+  const s = String(raw || "").trim().toLowerCase();
+  if (!s) return null;
+  for (const [re, slug] of DISTRIBUTOR_SLUGS) if (re.test(s)) return slug;
+  return s.replace(/^the\s+/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || null;
+}
+
 function slugifyFamilyKey(name) {
   return String(name || "").toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
@@ -3734,7 +3752,7 @@ async function runCsvImport() {
     tier3_cost   : parseMoneyCell(r.tier3_cost).empty ? null : parseMoneyCell(r.tier3_cost).value,
 
     // Which distributor dropships this. Internal.
-    distributor  : (r.distributor || "").trim().toLowerCase() || null,
+    distributor  : distributorSlug(r.distributor),
 
     // Defaults TRUE when the column is absent or unrecognised: a feed that
     // carries no stock data must leave products sellable rather than
