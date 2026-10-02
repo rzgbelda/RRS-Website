@@ -2146,11 +2146,15 @@ function showCvtStep(n) {
  * The bulk importer upserts whole rows, so re-importing a file just to
  * change copy would also rewrite (or blank) prices, tiers, costs and
  * images. This reads a CSV with an `sku` column plus any of description /
- * overview / feature1-4, and updates ONLY those columns, matched by SKU.
+ * overview / feature1-4 / product_family / variant_label / case_qty, and
+ * updates ONLY those columns, matched by SKU.
  * A blank cell leaves that field as it is. Shows a summary and asks for
  * confirmation before writing anything.
  */
-const TEXT_UPDATE_COLS = ["description", "overview", "feature1", "feature2", "feature3", "feature4"];
+// product_family / variant_label regroup options into one card (family_key
+// is derived from the family name, same as the importer); case_qty fixes
+// the "each case contains" count. None of these touch pricing.
+const TEXT_UPDATE_COLS = ["description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "case_qty"];
 async function runProductTextUpdate(file) {
   if (!file) return;
   const raw = parseCsvRows(stripBom(await file.text()));
@@ -2171,6 +2175,7 @@ async function runProductTextUpdate(file) {
       const v = String(row[i] ?? "").trim();
       if (v) payload[c] = v;
     }
+    if (payload.product_family) payload.family_key = slugifyFamilyKey(payload.product_family);
     if (Object.keys(payload).length) updates.push({ sku, payload });
   }
   if (!updates.length) { alert("Nothing to update -- every text cell is blank."); return; }
