@@ -359,6 +359,16 @@ function optimizeImageUrl(url) {
   return url.replace("/upload/", "/upload/c_pad,w_800,h_800,b_white,f_auto,q_auto/");
 }
 
+// Smaller copy of a product photo for cards and cart thumbnails. The 800px
+// padded image (optimizeImageUrl) is right for the product page and Google
+// Merchant, but catalog cards display ~250px and cart rows ~80px, so they
+// were downloading 4-10x the pixels they show. Same white-padded look,
+// just sized for where it's drawn.
+function cardImageUrl(url, px) {
+  if (!url || !/res\.cloudinary\.com/.test(url)) return url;
+  return url.replace(/c_pad,w_\d+,h_\d+,b_white/, `c_pad,w_${px},h_${px},b_white`);
+}
+
 function mapDbProductToLegacyShape(row) {
   const itemNumber = row.sku || "";
   const name = row.name || "";
@@ -453,6 +463,34 @@ function mapDbProductToLegacyShape(row) {
 // startup fetch instead of pulling all 120 products down twice.
 let _catalogProductsPromise = null;
 
+// Exactly the columns mapDbProductToLegacyShape() reads. Add a column here
+// when that function starts using a new one.
+const CATALOG_COLUMNS = [
+  "sku","name","description","overview","feature1","feature2","feature3","feature4",
+  "price","price_tier1","price_tier2","price_tier3","tier1_min_qty","tier2_min_qty","tier3_min_qty",
+  "category_name","case_qty","pack_size","unit","sell_by_each","in_stock","is_fast_ship",
+  "image_url","images","weight","length","width","height","moq","moq_group","moq_group_min",
+  "product_family","family_key","variant_label","product_tier","color_group","color_label",
+  "meta_title","meta_description",
+].join(",");
+
+// 5 minutes: long enough that browsing (catalog -> product -> cart) reuses
+// one download, short enough that admin edits show up quickly. Add
+// ?fresh to any URL to bypass it (handy right after editing a product).
+const CATALOG_CACHE_KEY = "rrs_catalog_cache_v1";
+const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
+function readCatalogCache() {
+  try {
+    if (/[?&]fresh/.test(location.search)) return null;
+    const c = JSON.parse(localStorage.getItem(CATALOG_CACHE_KEY) || "null");
+    if (!c || !Array.isArray(c.rows) || Date.now() - c.t > CATALOG_CACHE_TTL_MS) return null;
+    return c.rows;
+  } catch { return null; }
+}
+function writeCatalogCache(rows) {
+  try { localStorage.setItem(CATALOG_CACHE_KEY, JSON.stringify({ t: Date.now(), rows })); } catch { /* quota/private mode: just skip caching */ }
+}
+
 async function fetchCatalogProducts() {
   if (_catalogProductsPromise) return _catalogProductsPromise;
 
@@ -463,7 +501,17 @@ async function fetchCatalogProducts() {
     // tools open could read RRS's cost and margin on every product.
     // Same columns the storefront actually uses, none of the internal
     // ones; is_active filtering already happens inside the view.
-    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=*`;
+    //
+    // Performance: every page view used to download the whole catalog
+    // (select=*, ~320 KB, ~0.8 s) before anything product-related could
+    // render. Two changes: only the columns mapDbProductToLegacyShape()
+    // reads (drops ids, timestamps and flags nothing uses), and a short
+    // browser cache so moving between pages reuses the last download.
+    // Prices are re-checked server-side at checkout, so a few minutes of
+    // staleness can never change what a customer is charged.
+    const cached = readCatalogCache();
+    if (cached) return cached.map(mapDbProductToLegacyShape);
+    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=${CATALOG_COLUMNS}`;
     const res = await fetch(url, {
       headers: {
         apikey: PRODUCTS_SUPABASE_ANON,
@@ -472,6 +520,7 @@ async function fetchCatalogProducts() {
     });
     if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
     const rows = await res.json();
+    writeCatalogCache(rows);
     return rows.map(mapDbProductToLegacyShape);
   })();
 
@@ -1113,7 +1162,7 @@ function renderSingleCard(product) {
         ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
         ${product.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <span class="card-stock-badge${product.inStock === false ? ' is-out' : ''}"><span class="dot"></span>${product.inStock === false ? "Out of Stock" : "In Stock"}</span>
-        <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
+        <img src="${cardImageUrl(product.image, 400)}" alt="${product.name}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
         ${product.productTier ? `<span class="tier-badge">${tierDisplayLabel(product.productTier)}</span>` : ""}
@@ -1352,7 +1401,7 @@ function renderVariantCard(variants) {
       <div class="product-image">
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <span class="card-stock-badge${famOut ? ' is-out' : ''}"><span class="dot"></span>${famOut ? "Out of Stock" : "In Stock"}</span>
-        <img src="${v.image}" alt="${v.productFamily || v.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
+        <img src="${cardImageUrl(v.image, 400)}" alt="${v.productFamily || v.name}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
         ${tierHtml}
@@ -1436,7 +1485,7 @@ function applyVariantToCard(card, v) {
   if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
 
   const img = card.querySelector(".product-image img");
-  if (img) img.src = v.image;
+  if (img) img.src = cardImageUrl(v.image, 400);
 
   // RRS-31: follows the selected variant, since a family can mix flagged
   // and unflagged SKUs. Toggled rather than left from initial render, or
@@ -3458,7 +3507,7 @@ function loadCartPage() {
     cartItemsContainer.innerHTML += `
       <div class="cart-row">
         <div class="cart-product">
-          <img src="${item.image}" alt="${item.name}">
+          <img src="${cardImageUrl(item.image, 160)}" alt="${item.name}" loading="lazy" decoding="async">
           <div>
             <h3>${item.name}</h3>
             <p>${item.description || ""}</p>
@@ -3749,7 +3798,7 @@ function loadCheckoutProducts() {
 
     return `
       <div class="checkout-product">
-        <img src="${item.image}" alt="${item.name}">
+        <img src="${cardImageUrl(item.image, 160)}" alt="${item.name}" loading="lazy" decoding="async">
 
         <div>
           <h4>${item.name}</h4>
@@ -4294,7 +4343,7 @@ function showFeaturedProducts() {
 
         <div class="product-image">
           ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
-          <img src="${product.image}" alt="${product.name}" onerror="this.src='/assets/img/product-placeholder.svg'">
+          <img src="${cardImageUrl(product.image, 400)}" alt="${product.name}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
         </div>
 
         <h3>${product.name}</h3>
@@ -4451,7 +4500,7 @@ function loadPaymentSummary() {
 
     return `
       <div class="payment-summary-item">
-        <img src="${item.image}" alt="${item.name}">
+        <img src="${cardImageUrl(item.image, 160)}" alt="${item.name}" loading="lazy" decoding="async">
 
         <div>
           <h4>${item.name}</h4>

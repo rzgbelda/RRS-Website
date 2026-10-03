@@ -633,6 +633,15 @@ module.exports = async (req, res) => {
 
   const isArticleRoute = url.pathname === '/blog/post' || url.searchParams.has('slug');
 
+  // Product and article pages were rebuilt (shell + Supabase lookup) on
+  // every single request: 0.5-0.7s before the browser got a byte. The HTML
+  // only carries meta tags/JSON-LD -- prices and stock load client-side --
+  // so letting Vercel's CDN keep a good response for 5 minutes (and serve
+  // it stale while refreshing) is safe. Error fallbacks stay uncached so a
+  // Supabase blip isn't pinned in the cache.
+  const cacheGood = () => res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=300, stale-while-revalidate=86400');
+  const noCache = () => res.setHeader('Cache-Control', 'no-store');
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
 
   if (isArticleRoute) {
@@ -651,9 +660,11 @@ module.exports = async (req, res) => {
       const article = await lookupArticle(slug);
       if (!article) { res.status(200).send(articleShell); return; }
 
+      cacheGood();
       res.status(200).send(injectArticleMeta(articleShell, article));
     } catch (err) {
       console.error('[product-meta] falling back to plain article shell:', err.message);
+      noCache();
       res.status(200).send(articleShell);
     }
     return;
@@ -691,11 +702,13 @@ module.exports = async (req, res) => {
     // domain is quote-only; affiliate subdomains keep their prices.
     const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(':')[0].toLowerCase();
     const quoteOnly = /^(www\.)?roomreadysupply\.com$/.test(host);
+    cacheGood();
     res.status(200).send(injectMeta(shell, product, { quoteOnly }));
   } catch (err) {
     // Any failure here degrades to exactly the previous behaviour: the
     // unmodified shell, with the browser filling the tags in as before.
     console.error('[product-meta] falling back to plain shell:', err.message);
+    noCache();
     res.status(200).send(shell);
   }
 };

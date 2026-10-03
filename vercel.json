@@ -56,11 +56,35 @@
       ]
     },
     {
-      "source": "/(account|admin|cart|checkout|login|payment|catalog|product|profile|wishlist|reset-password|order-confirmation)",
+      "source": "/(account|admin|cart|checkout|login|payment|catalog|profile|wishlist|reset-password|order-confirmation)",
       "headers": [
         {
           "key": "Cache-Control",
           "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/(.*).(js|css)",
+      "has": [
+        {
+          "type": "query",
+          "key": "v"
+        }
+      ],
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
         }
       ]
     }
