@@ -93,6 +93,7 @@
     }
   }
   </script>
+  <link rel="preconnect" href="https://giprkvlyouwfzjlaibkq.supabase.co" crossorigin>
   <link rel="stylesheet" href="style.css?v=20261003a" />
 </head>
 
@@ -114,7 +115,7 @@
 
   <header class="navbar">
     <a href="/" class="logo">
-      <picture><source srcset="assets/img/RR logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
+      <picture><source srcset="assets/img/RR%20logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
     </a>
 
     <nav class="nav-links">
@@ -670,7 +671,6 @@
       <button type="button" class="reorder-video-trigger" onclick="openVideoLightbox()" aria-label="Play full-size demo: setting your reorder frequency in the cart">
         <video class="reorder-video-player" autoplay muted loop playsinline
                preload="metadata"
-               poster="assets/img/reorder-frequency-demo-poster.jpg"
                aria-hidden="true" tabindex="-1">
           <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
         </video>
@@ -1119,7 +1119,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
-<script src="script.js?v=20261003d"></script>
+<script src="script.js?v=20261003e"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 <!-- -- Contact Us Modal ------------------------------------- -->
@@ -1320,7 +1320,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVideoLi
     <button type="button" class="video-lightbox-close" onclick="closeVideoLightbox()" aria-label="Close video">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>
-    <video id="videoLightboxPlayer" controls playsinline preload="none" poster="assets/img/reorder-frequency-demo-poster.jpg">
+    <video id="videoLightboxPlayer" controls playsinline preload="none">
       <source src="assets/video/reorder-frequency-demo.mp4" type="video/mp4">
     </video>
   </div>

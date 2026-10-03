@@ -511,6 +511,16 @@ async function fetchCatalogProducts() {
     // staleness can never change what a customer is charged.
     const cached = readCatalogCache();
     if (cached) return cached.map(mapDbProductToLegacyShape);
+    // Edge-cached copy first (/catalog-data, ~0.1 s); straight to Supabase
+    // only if that fails, so the storefront never depends on it.
+    try {
+      if (/[?&]fresh/.test(location.search)) throw 0; // ?fresh: skip every cache
+      const edge = await fetch("/catalog-data");
+      if (edge.ok) {
+        const rows = await edge.json();
+        if (Array.isArray(rows)) { writeCatalogCache(rows); return rows.map(mapDbProductToLegacyShape); }
+      }
+    } catch { /* fall through to Supabase */ }
     const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=${CATALOG_COLUMNS}`;
     const res = await fetch(url, {
       headers: {

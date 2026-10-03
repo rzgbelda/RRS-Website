@@ -25,6 +25,15 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://giprkvlyou
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
   'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
 
+// Mirrors CATALOG_COLUMNS in script.js (the storefront's product shape).
+const CATALOG_COLUMNS = [
+  'sku','name','description','overview','feature1','feature2','feature3','feature4',
+  'price','price_tier1','price_tier2','price_tier3','tier1_min_qty','tier2_min_qty','tier3_min_qty',
+  'category_name','case_qty','pack_size','unit','sell_by_each','in_stock','is_fast_ship',
+  'image_url','images','weight','length','width','height','moq','moq_group','moq_group_min',
+  'product_family','family_key','variant_label','product_tier','color_group','color_label',
+  'meta_title','meta_description',
+].join(',');
 const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
@@ -625,6 +634,31 @@ async function handleUnsubscribe(req, res, url) {
 
 module.exports = async (req, res) => {
   const url = new URL(req.url, 'https://www.roomreadysupply.com');
+
+  // Catalog JSON for the storefront, cached at Vercel's edge. Browsers
+  // used to query Supabase directly on every page view (1-2 s per request
+  // from the visitor's side). Reads products_public -- the view that
+  // already excludes cost/margin columns -- with the public anon key, and
+  // only the columns the storefront renders, so nothing here is more than
+  // what script.js could already fetch itself. 60 s fresh, then served
+  // stale while one request refreshes it in the background.
+  if (url.pathname === '/catalog-data') {
+    try {
+      const r = await fetch(SUPABASE_URL + '/rest/v1/products_public?select=' + CATALOG_COLUMNS, {
+        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
+      });
+      if (!r.ok) throw new Error('Supabase ' + r.status);
+      const rows = await r.text();
+      res.setHeader('Content-Type', 'application/json; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=600');
+      res.status(200).send(rows);
+    } catch (err) {
+      console.error('[catalog-data]', err.message);
+      res.setHeader('Cache-Control', 'no-store');
+      res.status(502).json({ error: 'catalog unavailable' });
+    }
+    return;
+  }
 
   if (url.pathname === '/unsubscribe') {
     await handleUnsubscribe(req, res, url);

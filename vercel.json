@@ -427,6 +427,10 @@
     {
       "source": "/reset-password",
       "destination": "/reset-password.html"
+    },
+    {
+      "source": "/catalog-data",
+      "destination": "/api/product-meta"
     }
   ]
 }
