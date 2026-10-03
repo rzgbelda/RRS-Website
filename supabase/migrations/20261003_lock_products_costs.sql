@@ -58,3 +58,28 @@ revoke select on public.products from anon;
 
 -- Verify (as an anonymous visitor this should now return [] or a permission error):
 --   GET /rest/v1/products?select=cost_per_case&limit=1   (with only the anon key)
+
+-- 3) Orders: no more direct public inserts.
+--
+-- "create_order" (20260806b) let any visitor INSERT into orders straight
+-- through the REST API as long as user_id was null -- with any
+-- payment_status ('paid') and any total -- skipping every check in
+-- api/create-order.js. Checkout creates orders only through that endpoint
+-- now (service role, which ignores RLS), and staff keep their own policies
+-- (owner_all_orders, marketing_insert_orders), so this one can go.
+drop policy if exists "create_order" on public.orders;
+
+-- 4) Order items: the browser still inserts line items right after
+-- checkout (payment.html), but "insert_order_items" was WITH CHECK (true):
+-- anyone could add items to ANY order, forever. Limit it to orders created
+-- in the last 30 minutes, which covers checkout and nothing else.
+drop policy if exists "insert_order_items" on public.order_items;
+create policy "insert_order_items_fresh_order" on public.order_items
+  for insert
+  with check (
+    exists (
+      select 1 from public.orders o
+      where o.id = order_items.order_id
+        and o.created_at > now() - interval '30 minutes'
+    )
+  );
