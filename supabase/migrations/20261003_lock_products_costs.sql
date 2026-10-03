@@ -73,13 +73,22 @@ drop policy if exists "create_order" on public.orders;
 -- checkout (payment.html), but "insert_order_items" was WITH CHECK (true):
 -- anyone could add items to ANY order, forever. Limit it to orders created
 -- in the last 30 minutes, which covers checkout and nothing else.
+-- The check runs through a SECURITY DEFINER helper: the inserting guest
+-- can't SELECT orders (RLS), so a plain EXISTS subquery would always be
+-- false and break guest checkout. The helper only answers yes/no.
+create or replace function public.order_accepts_items(p_order_id uuid)
+returns boolean language sql security definer stable set search_path = public as $
+  select exists (
+    select 1 from public.orders o
+    where o.id = p_order_id
+      and o.created_at > now() - interval '30 minutes'
+  );
+$;
+revoke all on function public.order_accepts_items(uuid) from public;
+grant execute on function public.order_accepts_items(uuid) to anon, authenticated;
+
 drop policy if exists "insert_order_items" on public.order_items;
+drop policy if exists "insert_order_items_fresh_order" on public.order_items;
 create policy "insert_order_items_fresh_order" on public.order_items
   for insert
-  with check (
-    exists (
-      select 1 from public.orders o
-      where o.id = order_items.order_id
-        and o.created_at > now() - interval '30 minutes'
-    )
-  );
+  with check (public.order_accepts_items(order_id));
