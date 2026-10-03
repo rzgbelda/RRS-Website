@@ -1,3 +1,4 @@
+const requireStaff = require('./_lib/require-staff');
 const { createClient } = require('@supabase/supabase-js');
 const { Resend } = require('resend');
 const { recordAcknowledgement } = require('./_lib/acknowledgements');
@@ -468,6 +469,13 @@ module.exports = async (req, res) => {
   }
 
   if (!Stripe) return res.status(500).json({ error: 'stripe module not available' });
+
+  // SECURITY (2026-10-03): the invoice path (Stripe payment link + email to
+  // the customer on file) had no caller check -- anyone holding a quote or
+  // order id could trigger it. Only the admin panel uses it; the public
+  // quote-confirm page uses the confirm_token branches above.
+  const staff = await requireStaff(req, res);
+  if (!staff) return;
 
   const { quote_request_id, order_id, preview_only } = req.body || {};
   if (!quote_request_id && !order_id) {

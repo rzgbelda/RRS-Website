@@ -346,6 +346,17 @@ function saveSeoApiKey() {
    credential as Search Console -- that account additionally needs GA4
    property-level Viewer access granted (separate from Search Console
    access) before this will return real data instead of an error. */
+// analytics / search-console edge functions are staff-only (requireStaff):
+// they need the signed-in staff member's session token, not the public key.
+// Falls back to the given key only if there's no session (the function then
+// answers 401, which the panel shows as an error).
+async function staffBearer(fallback) {
+  try {
+    const { data } = await window.sb.auth.getSession();
+    return data?.session?.access_token || fallback;
+  } catch { return fallback; }
+}
+
 const GA4_ENDPOINT = "https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/analytics";
 const GA4_ANON_KEY = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
 
@@ -376,7 +387,7 @@ async function loadSiteTraffic() {
 
   try {
     const res = await fetch(`${GA4_ENDPOINT}?start=${start}&end=${end}`, {
-      headers: { Authorization: "Bearer " + GA4_ANON_KEY },
+      headers: { Authorization: "Bearer " + (await staffBearer(GA4_ANON_KEY)) },
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));
@@ -438,7 +449,7 @@ async function loadSearchConsole() {
   try {
     const res = await fetch(GSC_ENDPOINT, {
       method: "POST",
-      headers: { "Authorization": "Bearer " + GSC_ANON_KEY, "Content-Type": "application/json" },
+      headers: { "Authorization": "Bearer " + (await staffBearer(GSC_ANON_KEY)), "Content-Type": "application/json" },
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || ("HTTP " + res.status));

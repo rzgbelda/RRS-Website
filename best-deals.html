@@ -694,7 +694,9 @@
 
         const skus = [...new Set(deals.map(d => d.sku))];
         const { data: products, error: prodErr } = await window.sb
-          .from('products')
+          // products_public, not products: the base table carries supplier
+          // cost and is staff-only (20261003_lock_products_costs.sql).
+          .from('products_public')
           // "*" rather than an explicit column list: retail_price only
           // exists on the live table once its migration has been run, and
           // PostgREST hard-errors (42703) on a named column that isn't

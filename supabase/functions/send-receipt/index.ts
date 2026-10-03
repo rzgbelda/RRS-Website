@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 
@@ -355,6 +356,12 @@ async function generatePDF(order: any): Promise<Uint8Array> {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // SECURITY (2026-10-03): email mode let anyone make RRS send a branded "Order Confirmed" email with any content to any address (a phishing vector). Sending email is staff-only; ?download=1 (a customer saving their own receipt PDF, no email) stays open.
+  if (!new URL(req.url).searchParams.has("download")) {
+    const staff = await requireStaff(req, CORS);
+    if (!staff.ok) return staff.response;
+  }
 
   try {
     const order = await req.json();

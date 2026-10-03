@@ -525,7 +525,8 @@ const _cache = new Map();
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function sbGet(query) {
-  const res = await fetch(SUPABASE_URL + '/rest/v1/products?' + query, {
+  // products_public: the base table is staff-only (it carries supplier cost).
+  const res = await fetch(SUPABASE_URL + '/rest/v1/products_public?' + query, {
     headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
   });
   if (!res.ok) throw new Error('Supabase ' + res.status);

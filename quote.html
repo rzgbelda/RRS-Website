@@ -755,7 +755,7 @@
   async function searchVqProducts(input, term) {
     const token = ++vqSearchToken;
     if (!term || term.trim().length < 2) { hideVqDropdown(); return; }
-    const { data, error } = await sb.from('products')
+    const { data, error } = await sb.from('products_public')
       .select('name')
       .eq('is_active', true)
       .ilike('name', `%${term.trim()}%`)

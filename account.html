@@ -1436,9 +1436,10 @@
       btn.disabled = true; btn.textContent = "Saving…";
       try {
         const { data: { user } } = await window.sb.auth.getUser();
+        const { data: { session: s1 } } = await window.sb.auth.getSession();
         const res = await fetch("/api/create-order", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", Authorization: "Bearer " + (s1?.access_token || "") },
           body: JSON.stringify({
             action: "update_reorder",
             order_id: d.id,
@@ -1474,9 +1475,10 @@
       btn.disabled = true; btn.textContent = "Cancelling…";
       try {
         const { data: { user } } = await window.sb.auth.getUser();
+        const { data: { session: s2 } } = await window.sb.auth.getSession();
         const res = await fetch('/api/create-order', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + (s2?.access_token || '') },
           body: JSON.stringify({ action: 'cancel_reorder', order_id: orderId, requester_email: user?.email || '' }),
         });
         const body = await res.json().catch(() => ({}));

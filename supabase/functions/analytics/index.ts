@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 // Reuses the same service-account credential as supabase/functions/search-console
 // (same JWT-signing pattern, different Google API + scope) -- the service
@@ -103,6 +104,10 @@ function isValidDate(s: string) {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // SECURITY (2026-10-03): returned the site's Google Analytics data to anyone holding the public anon key (it is in every page). Staff only.
+  const staff = await requireStaff(req, CORS);
+  if (!staff.ok) return staff.response;
 
   try {
     if (!SERVICE_ACCOUNT_B64) throw new Error("GSC_SERVICE_ACCOUNT_B64 is not configured");

@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 // ── Warp Freight API integration ────────────────────────────────────────────
 // Real schema pulled from WARP's own published OpenAPI docs
@@ -293,6 +294,10 @@ async function handleBook(payload: {
 // ── Server ───────────────────────────────────────────────────────────────
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // SECURITY (2026-10-03): quotes/books Warp freight. Warp is retired, but the endpoint stayed open to the public anon key. Staff only.
+  const staff = await requireStaff(req, CORS);
+  if (!staff.ok) return staff.response;
 
   try {
     const { action, payload } = await req.json();

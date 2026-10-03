@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 const SHIPPO_API_KEY   = Deno.env.get("SHIPPO_API_KEY")!;
 const SUPABASE_URL     = Deno.env.get("SUPABASE_URL")!;
@@ -83,6 +84,10 @@ async function sendShippingEmail(opts: {
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // SECURITY (2026-10-03): buys paid Shippo labels. Shippo is retired, but the endpoint stayed open to the public anon key. Staff only.
+  const staff = await requireStaff(req, CORS);
+  if (!staff.ok) return staff.response;
 
   try {
     const {

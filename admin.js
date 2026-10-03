@@ -2141,6 +2141,13 @@ function showCvtStep(n) {
   });
 }
 
+// JSON headers carrying the signed-in staff member's session token, for
+// /api endpoints that verify the caller (requireStaff on the server).
+async function adminAuthHeaders() {
+  const { data } = await window.sb.auth.getSession();
+  return { "Content-Type": "application/json", Authorization: "Bearer " + (data?.session?.access_token || "") };
+}
+
 /* Text-only product update.
  *
  * The bulk importer upserts whole rows, so re-importing a file just to
@@ -5575,9 +5582,11 @@ async function resendReceipt(orderId) {
 
   const ANON = 'sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN';
   try {
+    // send-receipt's email mode is staff-only: send the signed-in session token.
+    const { data: sess } = await window.sb.auth.getSession();
     const res = await fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${ANON}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${sess?.session?.access_token || ANON}` },
       body: JSON.stringify({
         order_number:     o.order_number,
         customer_name:    o.customer_name  || '',
@@ -11549,7 +11558,7 @@ async function previewInvoice() {
   try {
     const res = await fetch("/api/send-invoice", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await adminAuthHeaders(),
       body: JSON.stringify({ quote_request_id: currentQuoteId, preview_only: true }),
     });
     const data = await res.json();
@@ -11579,7 +11588,7 @@ async function sendInvoiceFromPreview() {
   try {
     const res = await fetch("/api/send-invoice", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await adminAuthHeaders(),
       body: JSON.stringify({ quote_request_id: currentQuoteId }),
     });
     const data = await res.json();
@@ -11625,7 +11634,7 @@ async function previewOrderInvoice(orderId) {
     try {
       res = await fetch("/api/send-invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await adminAuthHeaders(),
         body: JSON.stringify({ order_id: orderId, preview_only: true }),
         signal: controller.signal,
       });
@@ -11669,7 +11678,7 @@ async function sendOrderInvoiceFromPreview() {
     try {
       res = await fetch("/api/send-invoice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await adminAuthHeaders(),
         body: JSON.stringify({ order_id: o.id }),
         signal: controller.signal,
       });
@@ -13390,7 +13399,7 @@ async function salesDownloadInvoicePdf(orderId, orderNumber) {
     // staff invoice-preview overlay, with no new API surface needed.
     const res = await fetch("/api/send-invoice", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await adminAuthHeaders(),
       body: JSON.stringify({ order_id: orderId, preview_only: true }),
     });
     const data = await res.json();
@@ -13413,7 +13422,7 @@ async function salesSendInvoiceEmail(orderId, customerEmail) {
     showToast("Sending…");
     const res = await fetch("/api/send-invoice", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: await adminAuthHeaders(),
       body: JSON.stringify({ order_id: orderId }),
     });
     const data = await res.json();

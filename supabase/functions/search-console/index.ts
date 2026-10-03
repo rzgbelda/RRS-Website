@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { create, getNumericDate } from "https://deno.land/x/djwt@v3.0.1/mod.ts";
+import { requireStaff } from "../_shared/require-staff.ts";
 
 const GSC_SERVICE_ACCOUNT_B64 = Deno.env.get("GSC_SERVICE_ACCOUNT_B64") ?? "";
 const SITE = "https://www.roomreadysupply.com/";
@@ -98,6 +99,10 @@ async function queryPerformance(accessToken: string, dimensions: string[], rowLi
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
+
+  // SECURITY (2026-10-03): returned Search Console data to anyone holding the public anon key. Staff only.
+  const staff = await requireStaff(req, CORS);
+  if (!staff.ok) return staff.response;
 
   try {
     if (!GSC_SERVICE_ACCOUNT_B64) {

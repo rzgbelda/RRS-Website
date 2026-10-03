@@ -51,6 +51,22 @@ function unsubscribeHeaders(email) {
  * of adding one. Dispatched by method/action below; the original
  * POST-with-no-action behavior is unchanged for payment.html.
  */
+// The caller's identity, verified from their own Supabase session token
+// (Authorization: Bearer <access_token>) -- never from ids/emails in the
+// request body, which the browser controls. Null when not signed in.
+async function callerFromToken(supabase, req) {
+  const h = req.headers.authorization || req.headers.Authorization || '';
+  const token = h.startsWith('Bearer ') ? h.slice(7).trim() : '';
+  if (!token || token.startsWith('sb_publishable_')) return null;
+  try {
+    const { data, error } = await supabase.auth.getUser(token);
+    if (error || !data?.user) return null;
+    const { data: prof } = await supabase.from('profiles').select('role').eq('id', data.user.id).maybeSingle();
+    return { id: data.user.id, email: String(data.user.email || '').toLowerCase(), role: prof?.role || null };
+  } catch { return null; }
+}
+const STAFF_ROLES = ['owner', 'admin', 'marketing'];
+
 module.exports = async (req, res) => {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -138,6 +154,38 @@ module.exports = async (req, res) => {
   };
 
   if (!orderData.order_number) return res.status(400).json({ error: 'order_number is required' });
+
+  // SECURITY (2026-10-03): this used to insert whatever the browser sent,
+  // so anyone could POST an order marked payment_status 'paid' with any
+  // total and it showed up in admin ready to ship, or attach an order to
+  // another customer's account via user_id. Now:
+  //  - status always starts 'pending';
+  //  - a paid/authorized/processing status is only accepted when Stripe
+  //    itself confirms the PaymentIntent, and the total comes from Stripe;
+  //  - one PaymentIntent can back only one order;
+  //  - user_id is the verified signed-in caller, or null for guests.
+  orderData.status = 'pending';
+  const caller = await callerFromToken(supabase, req);
+  orderData.user_id = caller ? caller.id : null;
+  const claimed = String(orderData.payment_status || 'pending');
+  if (orderData.stripe_payment_intent_id) {
+    const { data: dup } = await supabase.from('orders').select('id').eq('stripe_payment_intent_id', orderData.stripe_payment_intent_id).maybeSingle();
+    if (dup) return res.status(200).json({ id: dup.id, duplicate: true });
+    try {
+      const stripe = require('stripe')(String(process.env.STRIPE_SECRET_KEY || '').trim());
+      const pi = await stripe.paymentIntents.retrieve(orderData.stripe_payment_intent_id);
+      orderData.payment_status = pi.status === 'succeeded' ? 'paid'
+        : pi.status === 'processing' ? 'processing'
+        : pi.status === 'requires_capture' ? 'authorized'
+        : 'pending';
+      orderData.total = Math.round(Number(pi.amount)) / 100;
+    } catch (e) {
+      console.error('[create-order] could not verify PaymentIntent', orderData.stripe_payment_intent_id, e.message);
+      orderData.payment_status = 'pending';
+    }
+  } else if (!['pending', 'pending_invoice', 'unpaid'].includes(claimed)) {
+    orderData.payment_status = 'pending';
+  }
 
   let { data, error } = await supabase
     .from('orders')
@@ -663,7 +711,12 @@ async function updateReorder(supabase, b, res) {
     .single();
   if (error || !o) return res.status(404).json({ error: 'Order not found' });
 
-  if (requester_email && o.customer_email && requester_email.toLowerCase() !== o.customer_email.toLowerCase()) {
+  // SECURITY (2026-10-03): checked against the caller's verified session,
+  // not requester_email from the body (which was optional, so omitting it
+  // skipped the check entirely).
+  const editor = await callerFromToken(supabase, req);
+  if (!editor) return res.status(401).json({ error: 'Please sign in to edit this order.' });
+  if (!STAFF_ROLES.includes(editor.role) && editor.email !== String(o.customer_email || '').toLowerCase()) {
     return res.status(403).json({ error: 'Not authorized to edit this order.' });
   }
   if (!o.reorder_active) {
@@ -932,7 +985,9 @@ async function cancelReorder(supabase, b, res) {
     .single();
   if (error || !o) return res.status(404).json({ error: 'Order not found' });
 
-  if (requester_email && o.customer_email && requester_email.toLowerCase() !== o.customer_email.toLowerCase()) {
+  const canceller = await callerFromToken(supabase, req);
+  if (!canceller) return res.status(401).json({ error: 'Please sign in to cancel this order.' });
+  if (!STAFF_ROLES.includes(canceller.role) && canceller.email !== String(o.customer_email || '').toLowerCase()) {
     return res.status(403).json({ error: 'Not authorized to cancel this order.' });
   }
 

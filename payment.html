@@ -625,6 +625,18 @@
     // The server is the authority on the total, so if its figure differs
     // from the one this page calculated, show the server's -- the
     // customer should never see one number and be charged another.
+    // Headers for /api/create-order. The server links the order to an
+    // account only from a verified session token (never the user_id in the
+    // body), so a signed-in customer's token rides along; guests send none.
+    async function createOrderHeaders() {
+      var h = { 'Content-Type': 'application/json' };
+      try {
+        var s = window.sb ? (await window.sb.auth.getSession()).data.session : null;
+        if (s && s.access_token) h.Authorization = 'Bearer ' + s.access_token;
+      } catch (e) {}
+      return h;
+    }
+
     function applyServerTotals(data) {
       if (!data || typeof data.total !== 'number') return;
       window._orderSubtotal = data.subtotal;
@@ -804,7 +816,8 @@
           // (which would let any visitor read every guest order ever placed).
           var createRes = await fetch('/api/create-order', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            // Session token: verified server-side to link the order to the signed-in account.
+            headers: await createOrderHeaders(),
             body: JSON.stringify({
               order_number: orderNum,
               user_id: userId,
@@ -987,7 +1000,8 @@
             // problem" error here even though their card was charged.
             var createRes = await fetch('/api/create-order', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              // Session token: verified server-side to link the order to the signed-in account.
+              headers: await createOrderHeaders(),
               body: JSON.stringify({
                 order_number: orderNum,
                 user_id: userId,

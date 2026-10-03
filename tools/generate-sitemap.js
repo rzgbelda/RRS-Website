@@ -104,7 +104,7 @@ async function main() {
 
 async function generateProductSitemap(today) {
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/products?select=sku,name,price,price_tier1,price_tier2,price_tier3&is_active=eq.true`,
+    `${SUPABASE_URL}/rest/v1/products_public?select=sku,name,price,price_tier1,price_tier2,price_tier3&is_active=eq.true`,
     { headers: { apikey: SUPABASE_ANON, Authorization: `Bearer ${SUPABASE_ANON}` } }
   );
   if (!res.ok) throw new Error(`Failed to load products (${res.status})`);

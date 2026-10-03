@@ -1,0 +1,15 @@
+# Internal files that must never be served from the website.
+# Without this, Vercel published the whole repo: anyone could download the
+# database schema, migrations, seed data, supplier spreadsheets, internal
+# docs and admin tooling (e.g. /supabase/schema.sql, /supabase/Catalog.xlsx).
+# Note: "supabase/" is the folder only -- the site's /supabase.js stays.
+supabase/
+docs/
+tools/
+.claude/
+.playwright-mcp/
+products.csv
+*.md
+*.sql
+*.xlsx
+*.mjs
