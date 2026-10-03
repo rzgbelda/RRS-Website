@@ -77,13 +77,13 @@ drop policy if exists "create_order" on public.orders;
 -- can't SELECT orders (RLS), so a plain EXISTS subquery would always be
 -- false and break guest checkout. The helper only answers yes/no.
 create or replace function public.order_accepts_items(p_order_id uuid)
-returns boolean language sql security definer stable set search_path = public as $
+returns boolean language sql security definer stable set search_path = public as $$
   select exists (
     select 1 from public.orders o
     where o.id = p_order_id
       and o.created_at > now() - interval '30 minutes'
   );
-$;
+$$;
 revoke all on function public.order_accepts_items(uuid) from public;
 grant execute on function public.order_accepts_items(uuid) to anon, authenticated;
 
