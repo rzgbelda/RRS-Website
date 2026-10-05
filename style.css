@@ -4822,13 +4822,20 @@ span.flatpickr-weekday {
   font-size:13px;
   color:#6b7280;
 }
-.tier-reorder{
+.tier-card .tier-reorder{
   display:block;
-  margin-top:10px;
+  margin-top:12px;
   padding-top:10px;
-  border-top:1px dashed #d8e0ea;
-  font-size:13px;
-  font-weight:800;
+  border-top:1px solid #e8eef5;
+  font-size:12.5px;
+  font-weight:500;
+  line-height:1.4;
+  letter-spacing:.01em;
+  color:#5B6C7E;
+}
+.tier-card .tier-reorder b{
+  font-size:14px;
+  font-weight:700;
   color:#15803d;
 }
 

@@ -2551,7 +2551,8 @@ function populateProductPage(product) {
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
       // The reorder 5% stacks on every tier, so show the real best price
       // here rather than leaving it to look like the top tier is the floor.
-      setText(`tier${i + 1}Reorder`, `$${(price * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)} with Auto-Reorder`);
+      const reorderEl = document.getElementById(`tier${i + 1}Reorder`);
+      if (reorderEl) reorderEl.innerHTML = `<b>$${(price * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)}</b> with Auto-Reorder`;
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
         ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitsLower}`
