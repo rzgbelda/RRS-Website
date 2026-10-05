@@ -8110,7 +8110,7 @@ button, a, [role="button"] { touch-action: manipulation; }
   padding: clamp(28px,5vw,56px) clamp(16px,5vw,60px);
   max-width: 1320px;
   margin: 0 auto;
-  background: var(--rrs-bg);
+  background: #fff;
   align-items: start;
   box-sizing: border-box;
   width: 100%;
