@@ -1433,7 +1433,7 @@ function renderVariantCard(variants) {
           <div class="price-block">
             ${rangeHtml}
             <div class="price-row">
-              <span class="price">${price.toFixed(2)}</span>
+              <span class="price">$${price.toFixed(2)}</span>
               <span class="unit">/ ${v.priceBy || "Case"}</span>
             </div>
           </div>
