@@ -2975,6 +2975,7 @@ function switchProductVariant(slug) {
   }
 
   populateProductPage(product);
+  if (typeof window.refreshProductPagePrice === "function") window.refreshProductPagePrice();
 }
 
 function loadProductPage() {
@@ -3474,6 +3475,14 @@ function setupProductQuantity() {
     qtyValue.value = getQty();
     updateProductPagePrice();
   });
+
+  // This setup runs once per page load, but switching option/variant swaps
+  // the product's prices, MOQ and unit on the button in place. Expose a
+  // refresh so switchProductVariant can re-price the "Your price" panel.
+  window.refreshProductPagePrice = () => {
+    qtyValue.value = getQty();
+    updateProductPagePrice();
+  };
 
   updateProductPagePrice();
 }
