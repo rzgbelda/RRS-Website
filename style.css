@@ -4822,6 +4822,15 @@ span.flatpickr-weekday {
   font-size:13px;
   color:#6b7280;
 }
+.tier-reorder{
+  display:block;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px dashed #d8e0ea;
+  font-size:13px;
+  font-weight:800;
+  color:#15803d;
+}
 
 .buy-box {
   background: #fff;

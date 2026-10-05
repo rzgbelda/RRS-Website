@@ -2549,6 +2549,9 @@ function populateProductPage(product) {
       }
 
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
+      // The reorder 5% stacks on every tier, so show the real best price
+      // here rather than leaving it to look like the top tier is the floor.
+      setText(`tier${i + 1}Reorder`, `$${(price * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)} with Auto-Reorder`);
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
         ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitsLower}`
@@ -3446,7 +3449,7 @@ function setupProductQuantity() {
       b.setAttribute("aria-checked", active ? "true" : "false");
     });
     if (freqWrap) freqWrap.style.display = reorder ? "" : "none";
-    if (addLabel) addLabel.textContent = reorder ? "START REORDER — SAVE 5%" : "ADD TO CART";
+    if (addLabel) addLabel.textContent = reorder ? "START AUTO-REORDER — EXTRA 5% OFF" : "ADD TO CART";
   }
 
   if (modeOnce)    modeOnce.onclick    = () => setPurchaseMode("once");
