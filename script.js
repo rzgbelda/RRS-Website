@@ -1456,13 +1456,29 @@ function renderVariantCard(variants) {
   const tierHtml = famTiers.length === 1
     ? `<span class="tier-badge">${tierDisplayLabel(famTiers[0])}</span>` : "";
 
-  // Color pills: show unique colors (using first size's color variants as reference)
+  // Color pills: one per distinct color, each anchored to the DISPLAYED
+  // variant's size when that color has a sibling there, falling back to
+  // the color's own representative variant otherwise.
+  //
+  // This used to anchor to dedupedVariants[0] -- i.e. whichever row happens
+  // to sort first in the array -- regardless of which variant the card
+  // actually displays (the representative variant v, picked separately by
+  // pickRepresentativeVariant). For a family where every color shares every
+  // size (gloves: Blue/Black x S/M/L/XL) that accident was invisible. For
+  // Kleenline (709040 Natural only exists at 24x33in; every Black SKU is a
+  // different size) it meant the pill list silently collapsed to whichever
+  // color variants[0] happened to be -- Natural showed as the only, "active"
+  // pill even when the card was displaying a Black variant's price and
+  // description. Confirmed live, 2026-10-07.
   let colorPillsHtml = "";
   if (hasColors) {
-    const firstSize = dedupedVariants[0];
-    const colorOptions = variants.filter(vv => vv.variantLabel === firstSize.variantLabel);
-    colorPillsHtml = colorOptions.map((vv, i) =>
-      `<button class="variant-pill color-pill${i === 0 ? " active" : ""}" data-vidx="${variants.indexOf(vv)}" onclick="selectVariantColor(this)">${vv.colorLabel}</button>`
+    const colors = [...new Set(variants.map(vv => vv.colorLabel).filter(Boolean))];
+    const colorOptions = colors.map(color =>
+      variants.find(vv => vv.colorLabel === color && vv.variantLabel === v.variantLabel) ||
+      variants.find(vv => vv.colorLabel === color)
+    );
+    colorPillsHtml = colorOptions.map(vv =>
+      `<button class="variant-pill color-pill${vv.colorLabel === v.colorLabel ? " active" : ""}" data-vidx="${variants.indexOf(vv)}" onclick="selectVariantColor(this)">${vv.colorLabel}</button>`
     ).join("");
   }
 
@@ -1897,8 +1913,12 @@ function openVariantModal(card) {
     // had thread counts, so a family grouped by either sorted to the end
     // via indexOf's -1 fallback instead of its intended position -- for
     // Ultra Luxury that meant sorting after Wrinkle-Free, for thread
-    // counts it meant an undefined order among 180/200/250.
-    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
+    // counts it meant an undefined order among 180/200/250. Same reasoning
+    // for the Mil values (20261007b_can_liner_thickness_tier.sql): without
+    // them here the 4 LDPE can-liner thicknesses would all share indexOf's
+    // -1 and sort in whatever order Set() happened to produce, not
+    // thinnest-to-thickest.
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
     const sorted = [...tiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     body = sorted.map(t => `
       <div class="vm-group">
@@ -2980,7 +3000,10 @@ function injectProductVariantSelector(variants, activeProduct) {
   let tierHtml = "";
   let pillsHtml;
   if (sizeTiers.length > 1) {
-    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free"];
+    // Same tier vocabulary/sort order as openVariantModal's own `order`
+    // above -- keep the two in sync, or the catalog-card modal and this
+    // product-page picker can show a family's tiers in different sequence.
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
     const sortedTiers = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     // Active tier is whichever the current product belongs to, so a size
     // switch within a tier (switchProductVariant) never silently jumps the
