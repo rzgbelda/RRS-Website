@@ -6643,8 +6643,39 @@ span.flatpickr-weekday {
     grid-template-columns: 1fr;
   }
 
+  /* Bug (2026-10-07 responsiveness audit): collapsing the GRID to 1fr here
+     did nothing on its own -- .product-gallery/.pp-purchase-panel/
+     .product-info/.pp-tier-cards-block/.buy-box each still carry their
+     desktop grid-column:1/2/3 placement (set unconditionally near the top
+     of this file), so CSS Grid invented extra implicit columns to honor
+     those placements anyway. Between 961-1100px that squeezed .buy-box
+     (grid-column:3) into an auto-sized sliver far narrower than its real
+     content (price, quantity stepper, Add to Cart), which then rendered
+     clipped off the right edge of the page -- a customer in that width
+     range could not reach the Add to Cart button at all.
+     Mirrors the reset the @media (max-width: 960px) rule below already
+     does (that one explains it in more detail) -- these values are
+     idempotent with that rule's, so having both active at once (<=960px)
+     is harmless. */
+  .product-gallery,
+  .pp-purchase-panel,
+  .product-info,
+  .pp-tier-cards-block,
+  .buy-box {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .product-gallery      { order: 1; }
+  .product-info         { order: 2; }
+  .pp-tier-cards-block  { order: 3; }
+  .pp-purchase-panel    { order: 4; }
+  .buy-box              { order: 5; }
+
   .buy-box {
     max-width: 430px;
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 
