@@ -84,6 +84,31 @@ function tierPriceFor(row, qty) {
   return base || tier1 || 0;
 }
 
+// Shipping allowance per packaged pound, from the 2026-09 shipping fee
+// analysis (median observed rate $0.47/lb across the reviewed products;
+// $0.50 adopted as the standard allowance). Mirrored by SHIPPING_RATE_PER_LB
+// in script.js for the checkout summary -- same constraint as the reorder
+// discount rate below: script.js is a plain browser script with no exports,
+// so if these two disagree the customer is shown one number and charged
+// another.
+//
+// Deliberately not exposed to customers as a rate. The checkout summary
+// shows only the resulting dollar total, never "$0.50/lb" or the weight
+// it was derived from.
+const SHIPPING_RATE_PER_LB = 0.50;
+
+// Minimum delivery charge per ORDER, not per line. Weight alone
+// undercharges on light goods -- a 0.15 lb item computes to $0.07, which
+// does not cover picking, packing or a carrier's own minimum -- so any
+// shipped order below this floor is charged the floor instead.
+//
+// Per order deliberately: applying it per line would charge a ten-item
+// light order ten separate minimums.
+//
+// Under 21.98 lb the floor wins; above it, weight does. Mirrored by
+// SHIPPING_MIN_CHARGE in script.js.
+const SHIPPING_MIN_CHARGE = 10.99;
+
 /**
  * items: [{ sku, quantity }] as sent by the browser.
  * state: USPS two-letter code used for sales tax.
@@ -110,7 +135,7 @@ function parseDestination(d) {
 
 // Vendors keyed by slug (products.distributor -> vendors.slug), with their
 // warehouse ship-from address. Any error (e.g. the slug migration not run
-// yet) yields an empty map: every group is then unrated (no warehouse to rate from).
+// yet) yields an empty map: every group then falls back to the estimate.
 async function loadVendors(supabase, shipLines) {
   const slugs = [...new Set(shipLines.map(l => String(l.distributor || '').trim().toLowerCase()).filter(Boolean))];
   const map = new Map();
@@ -296,68 +321,54 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   // remitted, so it stays as-is until that's confirmed with an accountant.
   const tax = Math.round(discountedSubtotal * getTaxRate(state) * 100) / 100;
 
-  // Delivery is a real carrier rate or nothing. The old $0.50/lb allowance
-  // (and its $10.99 minimum) was retired 2026-10-06: RRS only quotes
-  // shipping, the distributor ships it on RRS's UPS account, so a guessed
-  // figure is never charged.
-  //
+  // Warehouse pickup is never freighted, so it carries no allowance and
+  // no minimum -- the floor exists to cover shipping an order, and a
+  // pickup is not shipped.
+  const isPickup = String(fulfillmentMethod || '').trim().toLowerCase() === 'pickup';
+  const byWeight = Math.round(totalWeightLb * SHIPPING_RATE_PER_LB * 100) / 100;
+  let shipping = isPickup ? 0 : Math.max(byWeight, SHIPPING_MIN_CHARGE);
+
   // Per-distributor shipping. RRS dropships, so each distributor ships from
   // its OWN warehouse: group the cart by distributor, decide parcel vs
-  // freight per group (FREIGHT_MIN_LB in shipping.js), rate each group from
-  // its own address to the customer, and sum. UPS rates parcel shipments
-  // (UPS_RATING_ENABLED), TForce rates freight (TFORCE_RATING_ENABLED).
-  //
-  // Warehouse pickup is never shipped, so it carries no delivery charge.
-  const isPickup = String(fulfillmentMethod || '').trim().toLowerCase() === 'pickup';
+  // freight per group, rate each group from its own address to the
+  // customer, and sum. Off unless UPS_RATING_ENABLED=true AND the customer
+  // gave a ZIP; in every other case the flat formula above stands, so
+  // deploying this changes nothing until it is switched on.
   const dest = parseDestination(destination);
+  // UPS rates parcel shipments; TForce rates freight (over 150 lb). Each has
+  // its own switch, and a shipment whose carrier is off or fails keeps the
+  // weight estimate.
   const upsOn = String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true';
   const tforceOn = String(process.env.TFORCE_RATING_ENABLED || '').toLowerCase() === 'true';
-
-  // Volume orders: a distributor shipment over the UPS parcel limit cannot go
-  // UPS Ground. These go to the custom-quote flow (checkout's volume modal;
-  // create-payment-intent.js refuses to charge them) unless
-  // FREIGHT_CHECKOUT_ENABLED=true AND every freight shipment actually got a
-  // TForce rate -- a failed freight lookup still goes to a quote.
-  const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
-  const hasFreight = !isPickup &&
-    groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
-
-  let shipping = 0;
-  let freightUnrated = hasFreight;
-  // Why delivery could not be priced, or null: 'zip' = no valid address yet,
-  // 'rate' = UPS returned no Ground rate for a parcel shipment.
-  let shippingUnavailable = null;
-
-  if (!isPickup) {
-    if (!dest) {
-      shippingUnavailable = 'zip';
-    } else if (!upsOn && !tforceOn) {
-      shippingUnavailable = 'rate';
-    } else {
-      const vendorsBySlug = await loadVendors(supabase, shipLines);
-      const carrier = {};
-      if (upsOn) carrier.rateParcel = a => require('./ups').rateParcelCheapest(a);
-      if (tforceOn) carrier.rateFreight = a => require('./tforce').rateFreight(a);
-      const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier });
-      shipping = r.total;
-      freightUnrated = r.shipments.some(s => s.mode === 'freight' && s.amount == null);
-      if (r.shipments.some(s => s.mode === 'parcel' && s.amount == null)) shippingUnavailable = 'rate';
-      // Function logs only. Distributor names are internal and never go back
-      // to the customer.
-      console.log('[shipping]', JSON.stringify(r.shipments));
-    }
+  if (!isPickup && dest && (upsOn || tforceOn)) {
+    const vendorsBySlug = await loadVendors(supabase, shipLines);
+    const carrier = {};
+    if (upsOn) carrier.rateParcel = a => require('./ups').rateParcelCheapest(a);
+    if (tforceOn) carrier.rateFreight = a => require('./tforce').rateFreight(a);
+    const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier });
+    shipping = r.total;
+    // Function logs only. Distributor names are internal and never go back
+    // to the customer.
+    console.log('[shipping]', JSON.stringify(r.shipments));
   }
 
-  const needsFreightQuote = hasFreight && (!freightCheckoutOn || freightUnrated);
-  // A volume order goes to a quote whatever the parcel side says.
-  if (needsFreightQuote) shippingUnavailable = null;
+  // Volume orders: a distributor shipment over the UPS parcel limit
+  // (FREIGHT_MIN_LB in shipping.js) cannot go UPS Ground, and there is no
+  // dependable automatic freight rate yet. Rather than charge a guess, the
+  // checkout hands these orders to the custom-quote flow and
+  // create-payment-intent.js refuses to take payment for them. Grouped per
+  // distributor exactly like the shipping calculation, since each warehouse
+  // ships separately. Set FREIGHT_CHECKOUT_ENABLED=true to let freight orders
+  // pay online again (e.g. once TForce rating is live).
+  const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
+  const needsFreightQuote = !isPickup && !freightCheckoutOn &&
+    groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 
   return {
     ok: true,
     needsFreightQuote,
-    shippingUnavailable,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,

@@ -23,9 +23,12 @@
 // change.
 const FREIGHT_MIN_LB = 150;
 
-// There is deliberately no fallback estimate (the old $0.50/lb allowance was
-// retired 2026-10-06): a shipment either gets a real carrier rate or none,
-// and price-cart.js decides what an unrated shipment means for checkout.
+// Used when a real rate can't be had (UPS down, vendor has no address, a
+// freight shipment with no freight API yet): the standard allowance the site
+// has always charged -- $0.50 per packaged pound, $10.99 minimum. Mirrors
+// SHIPPING_RATE_PER_LB / SHIPPING_MIN_CHARGE in price-cart.js and script.js.
+const ESTIMATE_RATE_PER_LB = 0.50;
+const ESTIMATE_MIN_CHARGE = 10.99;
 
 // Where unassigned products ship from: the RRS warehouse.
 const RRS_ORIGIN = {
@@ -36,6 +39,10 @@ const round2 = n => Math.round(n * 100) / 100;
 
 function classifyShipment(weightLb) {
   return Number(weightLb) > FREIGHT_MIN_LB ? 'freight' : 'parcel';
+}
+
+function estimateShipment(weightLb) {
+  return round2(Math.max(round2(Number(weightLb) * ESTIMATE_RATE_PER_LB), ESTIMATE_MIN_CHARGE));
 }
 
 function originComplete(o) {
@@ -128,9 +135,9 @@ async function cheapestAcrossOrigins(origins, rateFn, args) {
 /**
  * Returns { total, shipments: [{ distributor, mode, weightLb, amount, method, from }] }.
  * `carrier` = { rateParcel(args) -> {amount}, rateFreight?(args) -> {amount} }
- * A shipment that can't be rated (carrier error, vendor with no address, no
- * freight API) comes back with amount null and method 'unrated'; `total`
- * sums only the rated ones.
+ * Any carrier error, missing address or missing freight API falls back to the
+ * weight estimate for that shipment only -- checkout never dead-ends on a
+ * carrier problem.
  */
 async function computeShipping({ lines, vendorsBySlug, destination, carrier }) {
   const groups = groupByDistributor(lines, vendorsBySlug);
@@ -140,7 +147,7 @@ async function computeShipping({ lines, vendorsBySlug, destination, carrier }) {
     const mode = classifyShipment(g.weightLb);
     const origins = g.origins.filter(originComplete);
     let amount = null;
-    let method = !origins.length ? 'unrated-no-origin' : 'unrated';
+    let method = 'estimate';
     let from = origins[0] ? `${origins[0].city} ${origins[0].state}` : null;
 
     const canRate = carrier && destination && destination.zip && origins.length > 0;
@@ -152,12 +159,17 @@ async function computeShipping({ lines, vendorsBySlug, destination, carrier }) {
       if (best) { amount = best.amount; method = 'freight'; from = `${best.origin.city} ${best.origin.state}`; }
     }
 
+    if (amount == null) {
+      amount = estimateShipment(g.weightLb);
+      method = !origins.length ? 'estimate-no-origin'
+        : (mode === 'freight' && !(carrier && carrier.rateFreight) ? 'estimate-freight' : 'estimate');
+    }
     shipments.push({ distributor: g.distributor, mode, weightLb: round2(g.weightLb), amount, method, from });
   }
 
-  return { total: round2(shipments.reduce((s, x) => s + (x.amount || 0), 0)), shipments };
+  return { total: round2(shipments.reduce((s, x) => s + x.amount, 0)), shipments };
 }
 
 module.exports = {
-  FREIGHT_MIN_LB, RRS_ORIGIN, classifyShipment, groupByDistributor, buildPackages, computeShipping,
+  FREIGHT_MIN_LB, RRS_ORIGIN, classifyShipment, estimateShipment, groupByDistributor, buildPackages, computeShipping,
 };
