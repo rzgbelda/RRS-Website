@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
-  <link rel="stylesheet" href="admin.css?v=11" />
+  <link rel="stylesheet" href="admin.css?v=12" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -2338,34 +2338,38 @@
             <textarea id="bdPitchInput" class="a-input" rows="3" placeholder="One or two sentences on why this is a deal." style="resize:vertical"></textarea>
           </div>
 
-          <!-- Deal pricing (20261006_best_deal_pricing.sql). While the deal is
-               Active these prices replace the product's prices everywhere:
-               catalog, product page, cart and checkout. Blank = keep the
-               regular price for that row. -->
-          <div class="cms-form-group bdp-section" id="bdPricingSection" style="display:none">
+          <!-- Deal pricing (20261006_best_deal_pricing.sql) + Was Price
+               (20261007_best_deal_strike_price.sql), one visual panel:
+               Deal Pricing is what the customer is CHARGED everywhere
+               (catalog, product page, cart, checkout); Was Price is
+               marketing copy -- the crossed-out price shown only on the
+               Best Deals page. Kept as two sections for the different save
+               semantics, but presented as one connected card so they don't
+               read as two unrelated form fields. -->
+          <div class="cms-form-group" id="bdPricingSection" style="display:none">
             <label class="cms-label">Deal Pricing <span class="cms-label-hint">blank keeps the regular price</span></label>
-            <div class="bdp-table" id="bdPricingRows"></div>
-            <div class="bdp-actions">
-              <button type="button" class="a-btn-secondary" onclick="bdFillRegularPrices()">Start from regular prices</button>
-              <button type="button" class="a-btn-secondary" onclick="bdClearDealPrices()">Clear deal prices</button>
-            </div>
-            <p class="bdp-note" id="bdPricingNote">Applies everywhere while this deal is Active &mdash; catalog, product page, cart and checkout. Set it to Draft or delete it to restore regular prices.</p>
-          </div>
+            <div class="bdp-card">
+              <div class="bdp-table" id="bdPricingRows"></div>
+              <div class="bdp-actions">
+                <button type="button" class="a-btn-secondary" onclick="bdFillRegularPrices()">Start from regular prices</button>
+                <button type="button" class="a-btn-secondary" onclick="bdClearDealPrices()">Clear deal prices</button>
+              </div>
+              <p class="bdp-note" id="bdPricingNote">Applies everywhere while this deal is Active &mdash; catalog, product page, cart and checkout. Set it to Draft or delete it to restore regular prices.</p>
 
-          <!-- Strikethrough "was" price for the Best Deals landing page
-               specifically (20261007_best_deal_strike_price.sql). Separate
-               from Deal Pricing above: that's what the customer is CHARGED
-               everywhere; this is marketing copy -- the crossed-out price
-               shown only on the Best Deals page itself, next to the real
-               price. Auto-suggested from the selling-price row once a deal
-               price is entered, so it's never left blank by mistake. -->
-          <div class="cms-form-group" id="bdStrikeSection" style="display:none">
-            <label class="cms-label">Was Price <span class="cms-label-hint">shown struck-through on the Best Deals page &mdash; optional</span></label>
-            <div style="display:flex;gap:10px;align-items:center">
-              <input id="bdStrikePriceInput" type="number" min="0" step="0.01" class="a-input" style="max-width:160px" placeholder="0.00" oninput="bdStrikeTouched=true">
-              <span id="bdStrikePreview" style="font-size:12.5px;color:#94a3b8"></span>
+              <!-- Strikethrough "was" price for the Best Deals landing page
+                   specifically. Auto-suggested from the selling-price row
+                   once a deal price is entered, so it's never left blank by
+                   mistake. -->
+              <div class="bdp-strike-divider" id="bdStrikeSection" style="display:none">
+                <label class="cms-label">Was Price <span class="cms-label-hint">shown struck-through on the Best Deals page &mdash; optional</span></label>
+                <div class="bdp-strike-row">
+                  <span class="bdp-strike-dollar">$</span>
+                  <input id="bdStrikePriceInput" type="number" min="0" step="0.01" class="a-input bdp-strike-input" placeholder="0.00" oninput="bdStrikeTouched=true">
+                  <span id="bdStrikePreview" class="bdp-strike-preview"></span>
+                </div>
+                <p class="bdp-note">Leave blank to hide the "was" price on Best Deals. Must be higher than the deal's selling price to show.</p>
+              </div>
             </div>
-            <p class="bdp-note">Leave blank to hide the "was" price on Best Deals. Must be higher than the deal's selling price to show.</p>
           </div>
 
           <div class="tkt-form-row">
