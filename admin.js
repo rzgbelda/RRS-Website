@@ -9174,12 +9174,18 @@ function bdSelectedProduct() {
   return _bdProductCache.find(x => x.sku === sku) || null;
 }
 
-function onBestDealProductPick() {
+// touchedByCaller: true when the caller (editBestDeal) is about to set its
+// own saved strike_price right after this returns -- skips resetting
+// bdStrikeTouched/the input here so that value isn't immediately overwritten
+// by the auto-suggestion. A fresh manual product pick (the datalist oninput)
+// always resets it: a different product means a different "was" price.
+function onBestDealProductPick(touchedByCaller) {
   const p = bdSelectedProduct();
   const preview = document.getElementById("bdProductPreview");
   if (!p) {
     preview.style.display = "none";
     document.getElementById("bdPricingSection").style.display = "none";
+    document.getElementById("bdStrikeSection").style.display = "none";
     return;
   }
   document.getElementById("bdProductPreviewImg").src = p.image_url || "";
@@ -9187,6 +9193,11 @@ function onBestDealProductPick() {
   document.getElementById("bdProductPreviewPrice").textContent = `Regular price $${Number(p.price).toFixed(2)}`;
   preview.style.display = "flex";
   renderBestDealPricingRows();
+  if (!touchedByCaller) {
+    bdStrikeTouched = false;
+    document.getElementById("bdStrikePriceInput").value = "";
+  }
+  bdSyncStrikeSuggestion();
 }
 
 // Rows for the selected product: the selling price, plus each tier the
@@ -9206,11 +9217,48 @@ function renderBestDealPricingRows(values) {
       <div class="bdp-row" data-key="${r.key}">
         <div class="bdp-label"><strong>${r.label}</strong><span>${r.min ? `${p[r.min]}+ ${unit}s` : `per ${unit}`}</span></div>
         <div class="bdp-regular">${Number(p[r.reg]) > 0 ? "$" + Number(p[r.reg]).toFixed(2) : "—"}</div>
-        <input type="number" min="0" step="0.01" class="a-input bdp-input" id="bd_${r.key}" placeholder="${Number(p[r.reg]) > 0 ? Number(p[r.reg]).toFixed(2) : ""}" value="${current[r.key] != null ? current[r.key] : ""}" oninput="updateBestDealMargins()">
+        <input type="number" min="0" step="0.01" class="a-input bdp-input" id="bd_${r.key}" placeholder="${Number(p[r.reg]) > 0 ? Number(p[r.reg]).toFixed(2) : ""}" value="${current[r.key] != null ? current[r.key] : ""}" oninput="updateBestDealMargins(); bdSyncStrikeSuggestion();">
         <div class="bdp-margin none" id="bdm_${r.key}">—</div>
       </div>`).join("")}`;
   section.style.display = "";
   updateBestDealMargins();
+}
+
+/* ── "Was" price for the Best Deals page (20261007_best_deal_strike_price.sql) ──
+   Kept separate from deal_price/tier pricing above: those are what the
+   customer is actually charged everywhere; this is marketing copy shown
+   only on the Best Deals landing page, next to the price. Auto-suggested
+   from the product's regular selling price the moment a deal price is
+   entered, so a deal can never go live with a flat price and no
+   strikethrough (the original bug report) unless staff deliberately clear
+   it. A manual edit to the field stops the auto-suggestion from overwriting
+   it again for the rest of this modal session. */
+let bdStrikeTouched = false;
+
+function bdSyncStrikeSuggestion() {
+  const p = bdSelectedProduct();
+  const section = document.getElementById("bdStrikeSection");
+  const input = document.getElementById("bdStrikePriceInput");
+  const preview = document.getElementById("bdStrikePreview");
+  if (!p || !section || !input) return;
+  section.style.display = "";
+
+  const reg = Number(p.price) || 0;
+  if (!bdStrikeTouched && reg > 0) input.value = reg.toFixed(2);
+
+  const dealPriceEl = document.getElementById("bd_deal_price");
+  const dealPrice = dealPriceEl && dealPriceEl.value ? Number(dealPriceEl.value) : reg;
+  const strike = Number(input.value) || 0;
+  if (preview) {
+    if (strike > 0 && dealPrice > 0 && strike > dealPrice) {
+      const pct = Math.round((1 - dealPrice / strike) * 100);
+      preview.textContent = `Shows "$${strike.toFixed(2)}" struck through next to $${dealPrice.toFixed(2)} — Save ${pct}%`;
+    } else if (strike > 0) {
+      preview.textContent = `Won't show — must be higher than the deal price ($${dealPrice.toFixed(2)})`;
+    } else {
+      preview.textContent = "No \"was\" price — the page will show a flat price with no strikethrough.";
+    }
+  }
 }
 
 function bdReadDealInputs() {
@@ -9254,11 +9302,13 @@ function bdFillRegularPrices() {
     if (el && Number(p[r.reg]) > 0) el.value = Number(p[r.reg]).toFixed(2);
   });
   updateBestDealMargins();
+  bdSyncStrikeSuggestion();
 }
 
 function bdClearDealPrices() {
   BD_PRICE_ROWS.forEach(r => { const el = document.getElementById("bd_" + r.key); if (el) el.value = ""; });
   updateBestDealMargins();
+  bdSyncStrikeSuggestion();
 }
 
 async function openAddBestDeal() {
@@ -9272,6 +9322,10 @@ async function openAddBestDeal() {
   document.getElementById("bdProductPreview").style.display = "none";
   document.getElementById("bdPricingSection").style.display = "none";
   document.getElementById("bdPricingRows").innerHTML = "";
+  document.getElementById("bdStrikeSection").style.display = "none";
+  document.getElementById("bdStrikePriceInput").value = "";
+  document.getElementById("bdStrikePreview").textContent = "";
+  bdStrikeTouched = false;
   await loadBestDealProductOptions();
   openModal("bestDealModal");
 }
@@ -9289,10 +9343,16 @@ async function editBestDeal(id) {
   await loadBestDealProductOptions();
   const p = _bdProductCache.find(x => x.sku === d.sku);
   document.getElementById("bdSkuInput").value = p ? `${p.sku} — ${p.name}` : d.sku;
-  onBestDealProductPick();
+  onBestDealProductPick(true);
   const saved = {};
   BD_PRICE_ROWS.forEach(r => { saved[r.key] = d[r.key] != null ? Number(d[r.key]) : null; });
   renderBestDealPricingRows(saved);
+  // An existing deal's saved strike_price (if any) wins over the
+  // auto-suggestion; a deal with no strike_price yet still gets suggested
+  // one, which is exactly the gap that prompted this field.
+  bdStrikeTouched = d.strike_price != null;
+  document.getElementById("bdStrikePriceInput").value = d.strike_price != null ? Number(d.strike_price).toFixed(2) : "";
+  bdSyncStrikeSuggestion();
   openModal("bestDealModal");
 }
 
@@ -9319,19 +9379,30 @@ async function saveBestDeal() {
     deal[r.key] = Math.round(v * 100) / 100;
   }
 
+  // "Was" price. Blank is valid (hides the strikethrough on Best Deals,
+  // deliberately) -- only a positive, entered value is validated.
+  const strikeRaw = document.getElementById("bdStrikePriceInput")?.value.trim() || "";
+  const strikePrice = strikeRaw === "" ? null : Number(strikeRaw);
+  if (strikePrice != null && !(strikePrice > 0)) {
+    showToast("Was Price: enter a price above $0, or leave it blank.");
+    return;
+  }
+
   const btn = document.getElementById("bdSaveBtn");
   btn.disabled = true; btn.textContent = "Saving…";
 
-  const payload = { sku: skuRaw, hook_title: hook, pitch_text: pitch, position, is_active: isActive, updated_at: new Date().toISOString(), ...deal };
+  const payload = { sku: skuRaw, hook_title: hook, pitch_text: pitch, position, is_active: isActive, strike_price: strikePrice, updated_at: new Date().toISOString(), ...deal };
   const { error } = id
     ? await window.sb.from("best_deals").update(payload).eq("id", id)
     : await window.sb.from("best_deals").insert(payload);
 
   btn.disabled = false; btn.textContent = "Save Deal";
   if (error) {
-    showToast(/deal_price|deal_tier/.test(error.message || "")
-      ? "Deal pricing isn't set up on the database yet — run 20261006_best_deal_pricing.sql in Supabase."
-      : "Couldn't save: " + error.message);
+    const msg = error.message || "";
+    showToast(
+      /strike_price/.test(msg) ? "The \"Was Price\" field isn't set up on the database yet — run 20261007_best_deal_strike_price.sql in Supabase."
+      : /deal_price|deal_tier/.test(msg) ? "Deal pricing isn't set up on the database yet — run 20261006_best_deal_pricing.sql in Supabase."
+      : "Couldn't save: " + msg);
     return;
   }
 

@@ -5,7 +5,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
-  <link rel="stylesheet" href="admin.css?v=10" />
+  <link rel="stylesheet" href="admin.css?v=11" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -2352,6 +2352,22 @@
             <p class="bdp-note" id="bdPricingNote">Applies everywhere while this deal is Active &mdash; catalog, product page, cart and checkout. Set it to Draft or delete it to restore regular prices.</p>
           </div>
 
+          <!-- Strikethrough "was" price for the Best Deals landing page
+               specifically (20261007_best_deal_strike_price.sql). Separate
+               from Deal Pricing above: that's what the customer is CHARGED
+               everywhere; this is marketing copy -- the crossed-out price
+               shown only on the Best Deals page itself, next to the real
+               price. Auto-suggested from the selling-price row once a deal
+               price is entered, so it's never left blank by mistake. -->
+          <div class="cms-form-group" id="bdStrikeSection" style="display:none">
+            <label class="cms-label">Was Price <span class="cms-label-hint">shown struck-through on the Best Deals page &mdash; optional</span></label>
+            <div style="display:flex;gap:10px;align-items:center">
+              <input id="bdStrikePriceInput" type="number" min="0" step="0.01" class="a-input" style="max-width:160px" placeholder="0.00" oninput="bdStrikeTouched=true">
+              <span id="bdStrikePreview" style="font-size:12.5px;color:#94a3b8"></span>
+            </div>
+            <p class="bdp-note">Leave blank to hide the "was" price on Best Deals. Must be higher than the deal's selling price to show.</p>
+          </div>
+
           <div class="tkt-form-row">
             <div class="cms-form-group">
               <label class="cms-label">Position <span class="cms-label-hint">display order, 1 first</span></label>
@@ -2842,26 +2858,24 @@
              are unchanged. -->
         <input type="hidden" id="prodPrice" value="" />
 
-        <!-- Row 4c: Sale price stays manual -- it is a deliberate promotion,
-             not something derived from cost. -->
-        <div class="a-form-col-3">
-          <div class="a-field">
-            <label>Sale Price</label>
-            <input type="number" id="prodSalePrice" placeholder="0.00" min="0" step="0.01" />
-          </div>
-          <div class="a-field a-field-checkbox">
-            <label>On Sale?</label>
-            <label class="a-checkbox-label">
-              <input type="checkbox" id="prodIsOnSale" />
-              Enable sale price
-            </label>
-          </div>
-          <div class="a-field">
-            <label>Retail Price</label>
-            <input type="number" id="prodRetailPrice" placeholder="0.00" min="0" step="0.01" />
-            <small style="color:#94a3b8;font-size:11px">"Compare at" price shown on Best Deals — never charged.</small>
-          </div>
+        <!-- Row 4c: Sale Price / On Sale? removed (2026-10-07) -- Best Deals
+             (Admin > Best Deals) is now the one place that puts a product on
+             sale: it carries its own deal price AND its own "Was Price"
+             strikethrough (20261006_best_deal_pricing.sql,
+             20261007_best_deal_strike_price.sql), so a second, disconnected
+             "is this on sale" toggle here only invited the two to disagree.
+             sale_price/is_on_sale stay on the products table (CSV import and
+             the sales-rep calculator still read them) -- only the manual
+             edit controls are gone. Retail Price stays: it's still read as a
+             fallback "was" price on Best Deals for any deal that hasn't set
+             its own Was Price yet. -->
+        <div class="a-field" style="max-width:240px">
+          <label>Retail Price</label>
+          <input type="number" id="prodRetailPrice" placeholder="0.00" min="0" step="0.01" />
+          <small style="color:#94a3b8;font-size:11px">Fallback "compare at" price on Best Deals, used only when a deal has no Was Price of its own set.</small>
         </div>
+        <input type="hidden" id="prodSalePrice" value="" />
+        <input type="checkbox" id="prodIsOnSale" style="display:none" />
 
         <!-- Row 4c: single-product minimum order / case increment -- e.g. a
              wash cloth sold "by the dozen" but only in 50-dozen cases: set
@@ -3383,7 +3397,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=102"></script>
+<script src="admin.js?v=103"></script>
 <script src="admin-seo.js?v=5"></script>
 <script>
   function toggleSidebar() {

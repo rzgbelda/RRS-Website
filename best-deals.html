@@ -518,12 +518,16 @@
       const specs = [];
       specs.push(`<li>${BD_CHECK_SVG}<span><b>Item #</b> ${escBd(p.sku || '')}</span></li>`);
       if (p.case_qty) specs.push(`<li>${BD_CHECK_SVG}<span><b>Case Qty</b> ${escBd(p.case_qty)}</span></li>`);
-      // Retail Price is a separate "compare at" reference number the CEO
-      // sets per product -- never charged, never used elsewhere in the
-      // app -- so it's only shown when actually set, rather than falling
-      // back to something that would misrepresent it as a real list price.
-      const hasRetail = Number(p.retail_price) > 0 && p.price != null && Number(p.retail_price) > Number(p.price);
-      if (hasRetail) specs.push(`<li>${BD_CHECK_SVG}<span><b>Retail Price</b> <span class="bd-retail-strike">$${Number(p.retail_price).toFixed(2)}</span></span></li>`);
+      // "Was" price: deal.strike_price (set right here in the Best Deals
+      // editor, 20261007_best_deal_strike_price.sql) is the primary source
+      // -- it's deal-specific marketing copy, entered next to the deal price
+      // that drove it, so it can't go live without a strikethrough the way
+      // retail_price (a separate field on the PRODUCT, edited in a different
+      // admin screen) could and did. retail_price is kept only as a
+      // fallback for any deal that still relies on it.
+      const strikeAt = Number(deal.strike_price) > 0 ? Number(deal.strike_price) : Number(p.retail_price);
+      const hasRetail = strikeAt > 0 && p.price != null && strikeAt > Number(p.price);
+      if (hasRetail) specs.push(`<li>${BD_CHECK_SVG}<span><b>Retail Price</b> <span class="bd-retail-strike">$${strikeAt.toFixed(2)}</span></span></li>`);
       const hasWeight = Number(p.weight) > 0.05;
       const hasDims = Number(p.length) > 0.05 && Number(p.width) > 0.05;
       if (hasWeight) specs.push(`<li>${BD_CHECK_SVG}<span><b>Weight</b> ${Number(p.weight)} lbs</span></li>`);
@@ -536,7 +540,7 @@
 
       const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (p.unit === 'Case' ? 'Case' : (p.unit || 'Case'));
       const price = p.price != null ? Number(p.price).toFixed(2) : '—';
-      const savingsPct = hasRetail ? Math.round((1 - Number(p.price) / Number(p.retail_price)) * 100) : null;
+      const savingsPct = hasRetail ? Math.round((1 - Number(p.price) / strikeAt) * 100) : null;
       // NOT p.slug -- that's the raw products.slug DB column (generated
       // from the product NAME when it was created in admin). The product
       // page's own lookup (loadProductPage() in script.js) never reads
@@ -616,7 +620,7 @@
             <ul class="bd-card-specs">${specs.join('')}</ul>
             <div class="bd-card-price-row">
               <div class="bd-card-price-block">
-                ${hasRetail ? `<div class="bd-card-retail">Retail <span class="bd-retail-strike">$${Number(p.retail_price).toFixed(2)}</span></div>` : ''}
+                ${hasRetail ? `<div class="bd-card-retail">Retail <span class="bd-retail-strike">$${strikeAt.toFixed(2)}</span></div>` : ''}
                 <div class="bd-price-line">
                   <div class="bd-card-price"><span class="bd-price-amt">$${price}</span><span class="bd-price-label">Our Price / ${unitLabel}</span></div>
                   ${savingsPct ? `<span class="bd-savings-pill">Save ${savingsPct}%</span>` : ''}
