@@ -2170,15 +2170,38 @@ async function adminAuthHeaders() {
 // Changing it does not touch products.slug or any product URL: the live
 // product pages route by SKU-derived slug (mapDbProductToLegacyShape() in
 // script.js), never by the stored slug column, so renaming here is safe.
-const TEXT_UPDATE_COLS = ["name", "description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "case_qty"];
+//
+// color_group / color_label / product_tier added 2026-10-07 (same audit,
+// same Wraptite import): the corrupted name separator also broke the
+// importer's auto-grouping (cvtDeriveVariant splits on that exact
+// character), so 30 products -- Barrier Nitrile gloves in two colors, LDPE/
+// HDPE can liners in four thickness tiers, Kleenline Coreless Roll liners
+// -- landed with no family_key/variant_label/color/tier at all and never
+// grouped into one card with a picker. Fixing the text alone does not
+// retroactively regroup them, so this tool needed these three columns too.
+// product_tier is a closed vocabulary (products_product_tier_check) --
+// 20261007b_can_liner_thickness_tier.sql adds the Mil values used here; an
+// unlisted value fails the whole row's write, not just that column.
+const TEXT_UPDATE_COLS = ["name", "description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "color_group", "color_label", "product_tier", "case_qty"];
 async function runProductTextUpdate(file) {
   if (!file) return;
   const raw = parseCsvRows(stripBom(await file.text()));
-  const headers = (raw[0] || []).map(h => h.trim().toLowerCase().replace(/[\s_-]+/g, ""));
+  // File headers are normalized (spaces/underscores/hyphens stripped) so
+  // "Product Family", "product-family" and "productfamily" all match --
+  // but TEXT_UPDATE_COLS' own entries (e.g. "product_family") must go
+  // through that SAME normalization before comparing, or any column whose
+  // name contains an underscore can never match. Pre-2026-10-07 this tool
+  // normalized only the file side, so product_family/variant_label/case_qty
+  // silently never matched anything and always fell through to "No text
+  // columns found" -- confirmed by testing a real upload through a real
+  // browser, not just the description/overview/feature1-4 columns that
+  // happen to contain no underscore and so never exposed the mismatch.
+  const norm = s => s.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const headers = (raw[0] || []).map(norm);
   const skuIdx = headers.indexOf("sku");
   if (skuIdx < 0) { alert("The file needs an 'sku' column."); return; }
   const colIdx = {};
-  for (const c of TEXT_UPDATE_COLS) { const i = headers.indexOf(c); if (i >= 0) colIdx[c] = i; }
+  for (const c of TEXT_UPDATE_COLS) { const i = headers.indexOf(norm(c)); if (i >= 0) colIdx[c] = i; }
   if (!Object.keys(colIdx).length) { alert("No text columns found. Expected: " + TEXT_UPDATE_COLS.join(", ")); return; }
 
   const updates = [];
@@ -2195,7 +2218,7 @@ async function runProductTextUpdate(file) {
     if (Object.keys(payload).length) updates.push({ sku, payload });
   }
   if (!updates.length) { alert("Nothing to update -- every text cell is blank."); return; }
-  if (!confirm(`Update ${Object.keys(colIdx).join(", ")} on ${updates.length} products (matched by SKU)?\n\nPrices, tiers, images and every other field stay as they are.`)) return;
+  if (!confirm(`Update ${Object.keys(colIdx).join(", ")} on ${updates.length} products (matched by SKU)?\n\nPrices, images and every other field stay as they are.`)) return;
 
   let ok = 0; const missing = [], failed = [];
   for (const { sku, payload } of updates) {
