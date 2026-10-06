@@ -9252,22 +9252,87 @@ async function renderVendorsTab() {
     return;
   }
 
-  list.innerHTML = vendors.map(v => `
-    <div class="a-card" style="padding:16px 18px;display:flex;gap:14px;align-items:flex-start;${v.is_active ? "" : "opacity:.55"}">
-      <div style="flex:1;min-width:0">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:4px">
-          <strong style="font-size:14px;color:#0d1f38">${escHtml(v.name)}</strong>
+  list.innerHTML = vendors.map(v => {
+    const addrOk = !!(v.ship_from_street && v.ship_from_city && v.ship_from_state && String(v.ship_from_zip || "").length >= 5);
+    const extras = Array.isArray(v.extra_warehouses) ? v.extra_warehouses.length : 0;
+    const days = v.estimated_ship_days;
+    return `
+    <div class="a-card vnd-card${v.is_active ? "" : " is-inactive"}">
+      <div class="vnd-card-main">
+        <div class="vnd-card-top">
+          <strong class="vnd-card-name">${escHtml(v.name)}</strong>
           <span class="a-badge ${v.is_active ? "a-badge-green" : "a-badge-yellow"}">${v.is_active ? "Active" : "Inactive"}</span>
           ${v.category ? `<span class="a-badge">${escHtml(v.category)}</span>` : ""}
+          ${addrOk ? "" : `<span class="a-badge a-badge-red" title="Checkout falls back to the weight-based estimate for this vendor's products">No warehouse address</span>`}
+          ${v.slug ? "" : `<span class="a-badge a-badge-orange" title="Per-warehouse shipping matches products to vendors by slug">No slug</span>`}
         </div>
-        <div style="font-size:12.5px;color:#64748b">${escHtml(v.contact_name || "—")} &middot; ${escHtml(v.contact_email)}${v.contact_phone ? " &middot; " + escHtml(v.contact_phone) : ""}</div>
-        <div style="font-size:12px;color:#94a3b8;margin-top:2px">Estimated ship time: ${v.estimated_ship_days} day${v.estimated_ship_days === 1 ? "" : "s"}${v.notes ? " &middot; " + escHtml(v.notes) : ""}</div>
+        <div class="vnd-card-line">${escHtml(v.contact_name || "—")} &middot; ${escHtml(v.contact_email)}${v.contact_phone ? " &middot; " + escHtml(v.contact_phone) : ""}</div>
+        ${addrOk ? `<div class="vnd-card-line">Ships from ${escHtml(v.ship_from_city)}, ${escHtml(v.ship_from_state)} ${escHtml(v.ship_from_zip)}${extras ? ` <span style="color:#94a3b8">+ ${extras} more warehouse${extras === 1 ? "" : "s"}</span>` : ""}</div>` : ""}
+        <div class="vnd-card-line muted">Est. ship time: ${days} day${days === 1 ? "" : "s"}${v.slug ? " &middot; slug: " + escHtml(v.slug) : ""}${v.notes ? " &middot; " + escHtml(v.notes) : ""}</div>
       </div>
-      <div style="display:flex;gap:8px;flex:none">
-        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px" onclick="editVendor('${v.id}')">Edit</button>
-        <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px;color:#dc2626" onclick="deleteVendor('${v.id}')">Delete</button>
+      <div class="vnd-card-actions">
+        <button class="a-btn-secondary" onclick="editVendor('${v.id}')">Edit</button>
+        <button class="a-btn-secondary vnd-del" onclick="deleteVendor('${v.id}')">Delete</button>
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
+}
+
+// Additional-warehouse editor: one row per warehouse (street / city / ST /
+// ZIP) in place of the old one-line-per-warehouse comma format.
+function addVndWarehouseRow(w) {
+  const list = document.getElementById("vndExtraList");
+  if (!list) return;
+  const v = w || {};
+  const row = document.createElement("div");
+  row.className = "vnd-extra-item";
+  row.innerHTML = `
+    <div class="vnd-extra-head"><span class="vnd-extra-title"></span>
+      <button type="button" class="vnd-extra-remove">Remove</button></div>
+    <input type="text" class="a-input vnd-x-street" placeholder="Street address" aria-label="Street address">
+    <div class="vnd-addr-row">
+      <input type="text" class="a-input vnd-x-city" placeholder="City" aria-label="City">
+      <input type="text" class="a-input vnd-x-state" placeholder="ST" maxlength="2" aria-label="State">
+      <input type="text" class="a-input vnd-x-zip" placeholder="ZIP" maxlength="10" aria-label="ZIP">
+    </div>`;
+  row.querySelector(".vnd-x-street").value = v.street || "";
+  row.querySelector(".vnd-x-city").value = v.city || "";
+  row.querySelector(".vnd-x-state").value = v.state || "";
+  row.querySelector(".vnd-x-zip").value = v.zip || "";
+  row.querySelector(".vnd-extra-remove").addEventListener("click", () => { row.remove(); renumberVndWarehouses(); });
+  list.appendChild(row);
+  renumberVndWarehouses();
+}
+
+function renumberVndWarehouses() {
+  document.querySelectorAll("#vndExtraList .vnd-extra-item").forEach((row, i) => {
+    row.querySelector(".vnd-extra-title").textContent = "Warehouse " + (i + 2);
+  });
+}
+
+function setVndExtraWarehouses(arr) {
+  const list = document.getElementById("vndExtraList");
+  list.innerHTML = "";
+  const clean = Array.isArray(arr) ? arr : [];
+  clean.forEach(w => addVndWarehouseRow(w));
+  list.dataset.loaded = JSON.stringify(readVndExtraRows().rows);
+}
+
+// Reads the rows. Fully blank rows are ignored; a partly filled or invalid
+// row is reported by its number so the user knows which one to fix.
+function readVndExtraRows() {
+  const rows = [];
+  let error = null;
+  document.querySelectorAll("#vndExtraList .vnd-extra-item").forEach((el, i) => {
+    const g = c => el.querySelector(c).value.trim();
+    const w = { street: g(".vnd-x-street"), city: g(".vnd-x-city"), state: g(".vnd-x-state").toUpperCase(), zip: g(".vnd-x-zip") };
+    if (!w.street && !w.city && !w.state && !w.zip) return;
+    if (!error && (!w.street || !w.city || !/^[A-Z]{2}$/.test(w.state) || !/^\d{5}$/.test(w.zip))) {
+      error = "Warehouse " + (i + 2) + " needs a street, city, 2-letter state and 5-digit ZIP.";
+    }
+    rows.push(w);
+  });
+  return { rows, error };
 }
 
 function openAddVendor() {
@@ -9280,7 +9345,7 @@ function openAddVendor() {
   document.getElementById("vndContactEmail").value = "";
   document.getElementById("vndShipDays").value = "3";
   ["Street","City","State","Zip"].forEach(f => { document.getElementById("vndShip" + f).value = ""; });
-  { const ex = document.getElementById("vndExtraWarehouses"); ex.value = ""; ex.dataset.loaded = ""; }
+  setVndExtraWarehouses([]);
   document.getElementById("vndNotes").value = "";
   document.getElementById("vndActive").value = "true";
   openModal("vendorModal");
@@ -9301,12 +9366,7 @@ async function editVendor(id) {
   document.getElementById("vndShipCity").value = v.ship_from_city || "";
   document.getElementById("vndShipState").value = v.ship_from_state || "";
   document.getElementById("vndShipZip").value = v.ship_from_zip || "";
-  {
-    const ex = document.getElementById("vndExtraWarehouses");
-    const text = (Array.isArray(v.extra_warehouses) ? v.extra_warehouses : [])
-      .map(w => [w.street, w.city, w.state, w.zip].join(", ")).join("\n");
-    ex.value = text; ex.dataset.loaded = text;
-  }
+  setVndExtraWarehouses(v.extra_warehouses);
   document.getElementById("vndNotes").value = v.notes || "";
   document.getElementById("vndActive").value = String(v.is_active);
   openModal("vendorModal");
@@ -9339,20 +9399,14 @@ async function saveVendor() {
   };
   // Additional warehouses. Written only when the text actually changed, so
   // saving a vendor never touches (or needs) the column unless someone edits it.
-  const exEl = document.getElementById("vndExtraWarehouses");
-  if (exEl.value.trim() !== (exEl.dataset.loaded || "").trim()) {
-    const parsed = [];
-    for (const line of exEl.value.split("\n").map(l => l.trim()).filter(Boolean)) {
-      const parts = line.split(",").map(p => p.trim());
-      const [street, city, state, zip] = parts;
-      if (parts.length !== 4 || !street || !city || !/^[A-Za-z]{2}$/.test(state) || !/^\d{5}$/.test(zip)) {
-        btn.disabled = false; btn.textContent = "Save Vendor";
-        showToast("Warehouse line needs: Street, City, ST, ZIP (5 digits) \u2014 \"" + line + "\"");
-        return;
-      }
-      parsed.push({ street, city, state: state.toUpperCase(), zip });
-    }
-    payload.extra_warehouses = parsed;
+  const extra = readVndExtraRows();
+  if (extra.error) {
+    btn.disabled = false; btn.textContent = "Save Vendor";
+    showToast(extra.error);
+    return;
+  }
+  if (JSON.stringify(extra.rows) !== (document.getElementById("vndExtraList").dataset.loaded || "[]")) {
+    payload.extra_warehouses = extra.rows;
   }
   const { error } = id
     ? await window.sb.from("vendors").update(payload).eq("id", id)
