@@ -1346,7 +1346,16 @@ function renderVariantCard(variants) {
     tier3MinQty: vv.tier3MinQty ?? null,
     priceBy: vv.priceBy || "",
     slug: vv.slug,
-    variantLabel: vv.variantLabel || vv.size || "",
+    // productTier before size: for a genuine size-labelled family (a towel
+    // pack size, a sheet's inches) size IS the meaningful label and this
+    // order never matters since productTier is usually absent there. For a
+    // family that varies ONLY by tier (can liners grouped by Mil thickness,
+    // 20261007b_can_liner_thickness_tier.sql), vv.size holds pack_size (a
+    // raw count like "20"), which is never a label a buyer picks by -- it
+    // was showing as the modal row's name instead of the real tier until
+    // this was reordered. productTier is carried through unmassaged
+    // (tierDisplayLabel() is applied only where it's actually displayed).
+    variantLabel: vv.variantLabel || vv.productTier || vv.size || "",
     colorGroup:   vv.colorGroup  || "",
     colorLabel:   vv.colorLabel  || "",
     // Carried so a variant switch can update the Mix & Match badge and the
@@ -1380,15 +1389,31 @@ function renderVariantCard(variants) {
   const escapedJson = JSON.stringify(variantsData)
     .replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 
-  // Size pills: deduplicate by variantLabel, keep only the first (default/Tan) per size
+  // Size pills: deduplicate by variantLabel, keep only the first (default/Tan) per size.
+  //
+  // Falls back to productTier, then size, then a positional placeholder --
+  // a family that varies ONLY by tier (e.g. can liners grouped by Mil
+  // thickness, with no separate size: 20261007b_can_liner_thickness_tier.sql)
+  // has no variantLabel/size on any row, so every row shared the identical
+  // fallback label and deduped down to one "option," which hid the trigger
+  // button entirely below (optionCount > 1) -- the family's price RANGE
+  // still showed (that reads straight off min/max price, not this dedup),
+  // but nothing on the card let a buyer actually open the picker and choose
+  // a thickness. Confirmed live, 2026-10-07: 4 LDPE can-liner families
+  // showed a price range with no way to select which price applied.
   const hasColors = variants.some(vv => vv.colorLabel);
+  // productTier BEFORE size: vv.size here is pack_size (e.g. a raw count
+  // like "20"), always non-empty for these products, so checking it first
+  // would mask productTier completely and every row would again dedupe to
+  // the same pack-size key -- exactly how this broke on the first pass.
+  const dedupeLabel = (vv, i) => vv.variantLabel || vv.productTier || vv.size || "Option " + (i + 1);
   const seenLabels = new Map();
   variants.forEach((vv, i) => {
-    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+    const label = dedupeLabel(vv, i);
     if (!seenLabels.has(label)) seenLabels.set(label, i);
   });
   const dedupedVariants = variants.filter((vv, i) => {
-    const label = vv.variantLabel || vv.size || "Option " + (i + 1);
+    const label = dedupeLabel(vv, i);
     return seenLabels.get(label) === i;
   });
   // One way to choose, not two. A native <select> and an "N options" button
@@ -1410,7 +1435,14 @@ function renderVariantCard(variants) {
   // belongs to. The count moves to the right as a quiet hint that there is
   // more to choose from.
   const optionCount = dedupedVariants.length;
-  const currentLabel = v.variantLabel || v.size || "Select option";
+  // Same tier fallback as dedupeLabel above, so the button's own text isn't
+  // blank for a tier-only family -- e.g. "1.0 Mil" instead of falling
+  // through to the generic "Select option".
+  // productTier before size -- same ordering fix as dedupeLabel above, and
+  // for the same reason: v.size is pack_size here, always non-empty for a
+  // tier-only family, so checking it first always wins and the button text
+  // never reaches the real tier.
+  const currentLabel = v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option";
   const triggerHtml = optionCount > 1 ? `
     <button type="button" class="variant-trigger" aria-haspopup="dialog">
       <span class="vt-label" data-field="variantLabel">${currentLabel}</span>
@@ -1583,8 +1615,11 @@ function applyVariantToCard(card, v) {
   if (packEl) packEl.textContent = "Pack Size: " + (v.size || "");
 
   // The options button names the current selection, so it has to follow it.
+  // Same productTier fallback as renderVariantCard's currentLabel -- a
+  // tier-only family (no variantLabel/size on any row) needs this or the
+  // button goes blank the moment a tier is picked inside the modal.
   const labelEl = card.querySelector('[data-field="variantLabel"]');
-  if (labelEl) labelEl.textContent = v.variantLabel || v.size || "Select option";
+  if (labelEl) labelEl.textContent = v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option";
 
   card.dataset.url = "/product?item=" + encodeURIComponent(v.slug);
 
