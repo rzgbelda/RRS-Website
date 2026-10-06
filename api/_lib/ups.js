@@ -98,12 +98,26 @@ async function rateParcelCheapest({ origin, dest, packages, shipper }) {
   if (!shipments) throw new Error('UPS rating returned no rates');
   if (!Array.isArray(shipments)) shipments = [shipments];
 
-  const priced = shipments.map(r => {
+  let priced = shipments.map(r => {
     const neg = r.NegotiatedRateCharges && r.NegotiatedRateCharges.TotalCharge && r.NegotiatedRateCharges.TotalCharge.MonetaryValue;
     const list = r.TotalCharges && r.TotalCharges.MonetaryValue;
     const amount = Number(neg != null ? neg : list);
     return { amount, service: r.Service && r.Service.Code, negotiated: neg != null };
   }).filter(r => Number.isFinite(r.amount) && r.amount > 0);
+
+  // RRS only quotes the rate; the distributor ships on RRS's UPS account. The
+  // customer must be charged for the service the distributor will actually
+  // use, so quote UPS Ground (code 03) rather than the cheapest of whatever
+  // services UPS returns -- an economy service the distributor never books
+  // would make the quote lower than the real bill. Set UPS_SERVICE_CODE to
+  // another UPS service code to change it, or to "any" for the old
+  // cheapest-of-all behaviour. If the chosen service is not returned the rate
+  // fails and shipping.js falls back to the weight estimate for that shipment.
+  const wanted = String(process.env.UPS_SERVICE_CODE || '03').trim().toLowerCase();
+  if (wanted !== 'any') {
+    priced = priced.filter(r => String(r.service) === wanted);
+    if (!priced.length) throw new Error('UPS returned no rate for service ' + wanted);
+  }
   if (!priced.length) throw new Error('UPS rating returned no usable rate');
 
   return priced.reduce((best, r) => (r.amount < best.amount ? r : best), priced[0]);
