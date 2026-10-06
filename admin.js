@@ -9263,7 +9263,7 @@ async function renderVendorsTab() {
           <strong class="vnd-card-name">${escHtml(v.name)}</strong>
           <span class="a-badge ${v.is_active ? "a-badge-green" : "a-badge-yellow"}">${v.is_active ? "Active" : "Inactive"}</span>
           ${v.category ? `<span class="a-badge">${escHtml(v.category)}</span>` : ""}
-          ${addrOk ? "" : `<span class="a-badge a-badge-red" title="Checkout falls back to the weight-based estimate for this vendor's products">No warehouse address</span>`}
+          ${addrOk ? "" : `<span class="a-badge a-badge-red" title="Delivery can't be calculated for this vendor's products, so they can't be checked out">No warehouse address</span>`}
           ${v.slug ? "" : `<span class="a-badge a-badge-orange" title="Per-warehouse shipping matches products to vendors by slug">No slug</span>`}
         </div>
         <div class="vnd-card-line">${escHtml(v.contact_name || "—")} &middot; ${escHtml(v.contact_email)}${v.contact_phone ? " &middot; " + escHtml(v.contact_phone) : ""}</div>

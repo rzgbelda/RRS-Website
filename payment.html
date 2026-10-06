@@ -298,7 +298,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20261003e"></script>
+  <script src="script.js?v=20261006b"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -568,13 +568,13 @@
       // later. applyServerTotals() overwrites all of this with the
       // authoritative figures as soon as the PaymentIntent comes back.
       var isPickup = String(checkoutForTax.fulfillmentMethod || '').toLowerCase() === 'pickup';
-      var shipping = isPickup || typeof shippingFeeForCart !== 'function'
-        ? 0
-        : shippingFeeForCart(cart);
+      // There is no client-side delivery estimate any more: the real UPS
+      // Ground rate arrives with the server's totals (applyServerTotals).
+      var shipping = 0;
       var shipLine0 = document.getElementById('payment-shipping-line');
       var shipEl0 = document.getElementById('payment-shipping');
       if (shipLine0 && shipEl0) {
-        shipEl0.textContent = shipping > 0 ? '$' + shipping.toFixed(2) : 'Free';
+        shipEl0.textContent = isPickup ? 'Free' : 'Calculating…';
         shipLine0.style.display = '';
       }
 
@@ -639,6 +639,8 @@
 
     function applyServerTotals(data) {
       if (!data || typeof data.total !== 'number') return;
+      // Tells script.js's summary renderer not to overwrite these figures.
+      window._rrsServerTotals = true;
       window._orderSubtotal = data.subtotal;
       window._orderTax = data.tax;
       window._orderShipping = Number(data.shipping) || 0;
@@ -721,6 +723,15 @@
         // Volume (freight) order: not paid online. Back to checkout, which
         // opens the custom-quote modal.
         if (data.freightQuote) { window.location.href = 'checkout.html?volume=1'; return; }
+        // Delivery couldn't be rated (bad ZIP, or UPS returned no Ground
+        // rate). Nothing can be charged or invoiced without it.
+        if (data.shippingUnavailable) {
+          window._shippingBlocked = data.error;
+          var shipElU = document.getElementById('payment-shipping');
+          if (shipElU) shipElU.textContent = 'Unavailable';
+          showError(data.error);
+          return;
+        }
         if (data.error) throw new Error(data.error);
         applyServerTotals(data);
         clientSecret = data.clientSecret;
@@ -790,6 +801,14 @@
           errEl.style.display = 'block';
           return;
         }
+      }
+
+      // Delivery couldn't be rated for this address -- don't place the order
+      // (card or invoice) without it.
+      if (window._shippingBlocked) {
+        errEl.textContent = window._shippingBlocked;
+        errEl.style.display = 'block';
+        return;
       }
 
       if (method === 'invoice' || method === 'po') {

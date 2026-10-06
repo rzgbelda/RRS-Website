@@ -843,39 +843,9 @@ const BULK_VOLUME_MIN_CASES = 50;
 const REORDER_DISCOUNT_RATE = 0.05;
 const REORDER_DISCOUNT_LABEL = "5%";
 
-// Shipping allowance per packaged pound. Same duplication constraint as the
-// reorder rate above: the authoritative copy is SHIPPING_RATE_PER_LB in
-// api/_lib/price-cart.js, which is what actually charges the card.
-//
-// The rate itself is internal. What the customer sees is the resulting
-// dollar amount on the Delivery line -- never "$0.50/lb", never the order's
-// weight. Don't surface either in UI copy.
-const SHIPPING_RATE_PER_LB = 0.50;
-
-// Minimum delivery charge per ORDER (not per line). Light orders compute
-// to less than it costs to ship them at all, so anything below this floor
-// is charged the floor. Authoritative copy is SHIPPING_MIN_CHARGE in
-// api/_lib/price-cart.js -- if they disagree the customer is shown one
-// number and charged another.
-const SHIPPING_MIN_CHARGE = 10.99;
-
-// Order shipping allowance = total packaged weight x the rate. A line with
-// no usable weight contributes 0 lb rather than blocking checkout, matching
-// price-cart.js -- catalog weights are still being corrected and a customer
-// must not hit a dead end on a real product.
-function shippingFeeForCart(cart) {
-  if (!cart || !cart.length) return 0;
-  let lbs = 0;
-  for (const item of cart) {
-    const w = Number(item && item.weight);
-    const qty = Number(item && item.quantity) || 1;
-    if (Number.isFinite(w) && w > 0) lbs += w * qty;
-  }
-  const byWeight = Math.round(lbs * SHIPPING_RATE_PER_LB * 100) / 100;
-  // Floor applies to the order as a whole. An empty cart returns 0 above
-  // rather than the minimum -- there is nothing to ship.
-  return Math.max(byWeight, SHIPPING_MIN_CHARGE);
-}
+// Delivery has no client-side formula: the old $0.50/lb allowance was
+// retired 2026-10-06. Every delivery figure shown comes from the server's
+// real UPS Ground rate (api/_lib/price-cart.js, via fetchCheckoutQuote()).
 
 // A cart line counts toward the reorder discount when it carries a real
 // recurring schedule. "Once" (and an absent value) is a one-time buy.
@@ -3925,39 +3895,32 @@ function loadCheckoutProducts() {
     coDiscountRow.style.display = "none";
   }
 
-  // Delivery. Warehouse pickup is never freighted, so it shows Free rather
-  // than an allowance. Only the resulting dollar amount is ever shown --
-  // never the per-pound rate or the order's weight.
-  //
-  // This is a preview: api/_lib/price-cart.js recomputes it from the
-  // database and that figure is what's charged. The two use the same rate,
-  // but a stale cart line (an old weight cached in localStorage) would only
-  // affect what's displayed here, never the amount billed.
+  // Delivery. Warehouse pickup is never shipped, so it shows Free. Otherwise
+  // the line waits for the server's real UPS Ground rate (filled in by
+  // refreshCheckoutShippingQuote below) -- there is no estimate to show.
   const isPickup = !!document.getElementById('fulfillPickup')?.checked;
-  const shipping = isPickup ? 0 : shippingFeeForCart(cart);
+  const zipReady = /^\d{5}$/.test((document.getElementById('checkout-zip')?.value || '').trim());
   const shippingEl = document.getElementById('summary-shipping');
   if (shippingEl) {
+    shippingEl.style.fontWeight = '800';
+    shippingEl.style.fontSize = '';
     if (isPickup) {
       shippingEl.textContent = 'Free — pickup';
       shippingEl.style.color = '#15803d';
-      shippingEl.style.fontWeight = '800';
-      shippingEl.style.fontSize = '';
     } else {
-      shippingEl.textContent = `$${shipping.toFixed(2)}`;
-      shippingEl.style.color = '';
-      shippingEl.style.fontWeight = '800';
-      shippingEl.style.fontSize = '';
+      shippingEl.textContent = zipReady ? 'Calculating…' : 'Enter ZIP to calculate';
+      shippingEl.style.color = '#64748b';
     }
   }
 
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
+  if (totalEl) totalEl.textContent = isPickup
+    ? `$${(discountedSubtotal + tax).toFixed(2)}`
+    : `$${(discountedSubtotal + tax).toFixed(2)} + delivery`;
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // The formula above is only the first paint. With a full ZIP, swap in the
-  // carrier rate the server will actually charge.
-  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping: shipping });
+  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax });
 
   // Recalculate tax live as the customer picks/changes their state. Bound
   // once (not on every loadCheckoutProducts() call, which would stack a
@@ -4025,13 +3988,6 @@ function fetchCheckoutQuote() {
   return p;
 }
 
-// True when the server says this cart is a volume (freight) order that goes
-// to a custom quote instead of online payment.
-async function checkoutNeedsFreightQuote() {
-  const d = await fetchCheckoutQuote();
-  return !!(d && d.freightQuote);
-}
-
 // Switches the checkout summary between normal payment and "volume quote"
 // mode. In quote mode Delivery reads "Custom quote", the total excludes
 // freight, the payment acknowledgement is hidden (nothing is being paid),
@@ -4060,20 +4016,23 @@ function setCheckoutFreightMode(on, totals) {
   if (typeof syncSubmitEnabled === 'function') syncSubmitEnabled();
 }
 
-function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping }) {
+function refreshCheckoutShippingQuote({ discountedSubtotal, tax }) {
   const seq = ++_shipQuoteSeq;
   fetchCheckoutQuote().then(d => {
     // A newer request (another keystroke) supersedes this one.
     if (!d || seq !== _shipQuoteSeq) return;
     if (d.freightQuote) { setCheckoutFreightMode(true, { discountedSubtotal, tax }); return; }
     if (window._rrsFreightQuote) setCheckoutFreightMode(false);
-    if (typeof d.shipping !== 'number') return;
-    // Real carrier rates need a full ZIP; without one the formula stays.
-    const zip = (document.getElementById('checkout-zip')?.value || '').trim();
-    if (!/^\d{5}$/.test(zip)) return;
     const el = document.getElementById('summary-shipping');
-    if (el) el.textContent = `$${d.shipping.toFixed(2)}`;
     const totalEl = document.getElementById('summary-total');
+    // No ZIP yet ('zip') keeps the "Enter ZIP" prompt; a ZIP UPS couldn't
+    // rate ('rate') says so -- checkout won't continue until it can.
+    if (d.shippingUnavailable) {
+      if (el && d.shippingUnavailable === 'rate') { el.textContent = 'Unavailable for this address'; el.style.color = '#b45309'; }
+      return;
+    }
+    if (typeof d.shipping !== 'number') return;
+    if (el) { el.textContent = `$${d.shipping.toFixed(2)}`; el.style.color = ''; }
     if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + d.shipping).toFixed(2)}`;
   });
 }
@@ -4586,23 +4545,19 @@ function loadPaymentSummary() {
 
   subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // Delivery is a weight-based allowance again (it used to be folded into
-  // product pricing, which is why this was hardcoded to 0 -- leaving that
-  // in place made this function render a total that excluded delivery,
-  // overwriting the correct figure payment.html's inline loadSummary() had
-  // just written). Pickup carries no allowance.
-  //
-  // Preview only: api/_lib/price-cart.js recomputes it server-side and
-  // that is what's charged.
+  // Delivery comes only from the server's UPS Ground rate, which
+  // payment.html's applyServerTotals() writes once the PaymentIntent is
+  // created. Until then this shows a placeholder, and once the server's
+  // figures are on screen this function must not overwrite them.
+  if (window._rrsServerTotals) return;
   let checkoutData = {};
   try { checkoutData = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}'); } catch {}
-  const shippingCost = String(checkoutData.fulfillmentMethod || '').toLowerCase() === 'pickup'
-    ? 0
-    : shippingFeeForCart(cart);
+  const isPickupOrder = String(checkoutData.fulfillmentMethod || '').toLowerCase() === 'pickup';
+  const shippingCost = 0;
   const shipEl = document.getElementById('payment-shipping');
   const shipLine = document.getElementById('payment-shipping-line');
   if (shipEl && shipLine) {
-    shipEl.textContent = shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free';
+    shipEl.textContent = isPickupOrder ? 'Free' : 'Calculating…';
     shipLine.style.display = '';
   }
 

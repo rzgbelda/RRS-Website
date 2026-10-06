@@ -433,7 +433,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20261006a"></script>
+<script src="script.js?v=20261006b"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script>
 // The delivery-estimate box gates submission. Held in one place so the
@@ -523,12 +523,20 @@ async function saveCheckoutAndProceed() {
   // quote, not to payment. Asked of the server every time -- it knows each
   // product's warehouse -- so a slow summary refresh can't let one through.
   // The payment API refuses these orders too.
+  //
+  // Delivery is a real UPS Ground rate or nothing, so a parcel order can't
+  // continue until the server has rated its address.
   const btn = document.getElementById('submitOrderBtn');
   if (btn) btn.disabled = true;
-  let isVolume = false;
-  try { isVolume = await checkoutNeedsFreightQuote(); } catch (e) {}
+  let quote = null;
+  try { quote = await fetchCheckoutQuote(); } catch (e) {}
   syncSubmitEnabled();
-  if (isVolume) { openVolumeQuoteModal(); return; }
+  if (quote && quote.freightQuote) { openVolumeQuoteModal(); return; }
+  if (!/^\d{5}$/.test(document.getElementById('checkout-zip')?.value.trim() || '')) {
+    alert('Please enter a 5-digit ZIP code so we can calculate your UPS Ground delivery.');
+    return;
+  }
+  if (quote && quote.shippingUnavailable) { alert(quote.error); return; }
 
   // Warehouse pickup is no longer offered at checkout (see the comment
   // above #fulfillShip) -- every new order ships. This stays a variable

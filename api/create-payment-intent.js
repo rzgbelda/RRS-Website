@@ -57,6 +57,14 @@ function safeMetadata(raw) {
   return out;
 }
 
+// Customer-facing reason delivery couldn't be priced (see shippingUnavailable
+// in _lib/price-cart.js).
+function shippingUnavailableMessage(reason) {
+  return reason === 'zip'
+    ? 'Please enter your full delivery address with a 5-digit ZIP code so we can calculate your UPS Ground delivery.'
+    : 'We couldn’t calculate UPS Ground delivery to this address right now. Please double-check the address and try again, or call us at (252) 227-0073 and we’ll take care of it.';
+}
+
 module.exports = async (req, res) => {
   const origin = req.headers.origin || '';
   if (isAllowedOrigin(origin)) {
@@ -93,6 +101,11 @@ module.exports = async (req, res) => {
       // quote instead (see needsFreightQuote in _lib/price-cart.js).
       if (q.needsFreightQuote) {
         return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal });
+      }
+      // No real UPS rate yet (no ZIP, or UPS returned nothing): no delivery
+      // figure -- there is no estimate to fall back on any more.
+      if (q.shippingUnavailable) {
+        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, error: shippingUnavailableMessage(q.shippingUnavailable), shipping: null, tax: q.tax, subtotal: q.subtotal });
       }
       return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal });
     }
@@ -133,6 +146,10 @@ module.exports = async (req, res) => {
         freightQuote: true,
         error: 'This is a volume order that ships by freight. Please request a custom quote so we can secure the best freight rate and volume pricing for you.',
       });
+    }
+    // Never charge an order whose delivery couldn't be rated.
+    if (priced.shippingUnavailable) {
+      return res.status(400).json({ shippingUnavailable: priced.shippingUnavailable, error: shippingUnavailableMessage(priced.shippingUnavailable) });
     }
     if (priced.amountCents < 50) {
       return res.status(400).json({ error: 'Order total is below the $0.50 minimum.' });
