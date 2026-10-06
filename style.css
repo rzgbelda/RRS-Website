@@ -10661,14 +10661,16 @@ html.rrs-quote-only .pp-price-cta {
 
 /* ─────────────────────────────────────────
    BEST DEAL (20261006_best_deal_pricing.sql)
-   Catalog card tag (bottom-left of the image, above the Mix & Match badge
+   Catalog card tag (bottom-center of the image, above the Mix & Match badge
    when there is one), struck "was" price, and the product
    page banner + tier-card "was" prices.
 ───────────────────────────────────────── */
 .best-deal-badge {
   position: absolute;
   bottom: 10px;
-  left: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
   z-index: 3;
   display: inline-flex;
   align-items: center;
@@ -10741,6 +10743,6 @@ html.rrs-quote-only .pp-price-cta {
 @media (max-width: 480px) {
   .pp-deal-link { margin-left: 0; }
 }
-/* The deal tag sits bottom-left of the image. A Mix & Match product already
-   has its MOQ badge there, so the deal tag stacks just above it. */
+/* The deal tag sits bottom-center of the image. A Mix & Match product has
+   its MOQ badge along the bottom, so the deal tag stacks just above it. */
 .product-image:has(.moq-group-badge) .best-deal-badge { bottom: 42px; }
