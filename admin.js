@@ -2161,7 +2161,16 @@ async function adminAuthHeaders() {
 // product_family / variant_label regroup options into one card (family_key
 // is derived from the family name, same as the importer); case_qty fixes
 // the "each case contains" count. None of these touch pricing.
-const TEXT_UPDATE_COLS = ["description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "case_qty"];
+//
+// "name" added 2026-10-07 (responsiveness/data audit): 63 products had a
+// corrupted character in their name (the – separator or the × in a
+// dimension, both lost on an earlier import and replaced with U+FFFD) --
+// the only one of these a customer sees as the page's actual product
+// title/<h1>, and until now the only text field this tool could NOT fix.
+// Changing it does not touch products.slug or any product URL: the live
+// product pages route by SKU-derived slug (mapDbProductToLegacyShape() in
+// script.js), never by the stored slug column, so renaming here is safe.
+const TEXT_UPDATE_COLS = ["name", "description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "case_qty"];
 async function runProductTextUpdate(file) {
   if (!file) return;
   const raw = parseCsvRows(stripBom(await file.text()));

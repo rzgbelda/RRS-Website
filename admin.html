@@ -481,7 +481,7 @@
           </label>
           <button class="a-btn-primary" id="openCsvImport" onclick="showCsvSection()" style="margin-right:8px;background:#1a4a8a">&uarr; Import CSV</button>
           <!-- Text-only update: changes description/overview/features by SKU and nothing else. -->
-          <button class="a-btn-outline" onclick="document.getElementById('textUpdateFile').click()" style="margin-right:8px;width:auto" title="CSV with sku + description / overview / feature1-4 / product_family / variant_label / case_qty. Only those columns change.">&#9998; Update Text from CSV</button>
+          <button class="a-btn-outline" onclick="document.getElementById('textUpdateFile').click()" style="margin-right:8px;width:auto" title="CSV with sku + name / description / overview / feature1-4 / product_family / variant_label / case_qty. Only those columns change.">&#9998; Update Text from CSV</button>
           <input type="file" id="textUpdateFile" accept=".csv" style="display:none" onchange="runProductTextUpdate(this.files[0]); this.value=''">
           <button class="a-btn-primary" id="openAddProduct" onclick="openAddProduct()">+ Add Product</button>
         </div>
