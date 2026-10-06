@@ -1311,6 +1311,13 @@ function pickRepresentativeVariant(variants) {
     if (stillAvailable) return stillAvailable;
   }
 
+  // A family with a Best Deal size leads with that size, so the card shows
+  // the deal tag and price instead of hiding it behind another option.
+  const deals = available.filter(v => v.isBestDeal);
+  if (deals.length) {
+    return deals.reduce((best, v) => (variantUnitPrice(v) > 0 && variantUnitPrice(v) < variantUnitPrice(best)) ? v : best, deals[0]);
+  }
+
   const priced = available.filter(v => variantUnitPrice(v) > 0);
   const pool = priced.length ? priced : available;
   return pool.reduce((best, v) =>
