@@ -89,6 +89,11 @@ module.exports = async (req, res) => {
       const md = qb.metadata || {};
       const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address);
       if (!q.ok) return res.status(400).json({ error: q.error });
+      // Volume (freight) orders get no delivery figure: they go to a custom
+      // quote instead (see needsFreightQuote in _lib/price-cart.js).
+      if (q.needsFreightQuote) {
+        return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal });
+      }
       return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal });
     }
   } catch (err) {
@@ -120,6 +125,15 @@ module.exports = async (req, res) => {
     // per-distributor shipping is rated from each warehouse to this ZIP.
     const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address);
     if (!priced.ok) return res.status(400).json({ error: priced.error });
+    // Enforced here, not just in the checkout UI: a volume order is never
+    // charged a guessed freight figure, even from a stale page or a
+    // hand-built request.
+    if (priced.needsFreightQuote) {
+      return res.status(409).json({
+        freightQuote: true,
+        error: 'This is a volume order that ships by freight. Please request a custom quote so we can secure the best freight rate and volume pricing for you.',
+      });
+    }
     if (priced.amountCents < 50) {
       return res.status(400).json({ error: 'Order total is below the $0.50 minimum.' });
     }

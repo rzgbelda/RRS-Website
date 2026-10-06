@@ -3984,18 +3984,21 @@ function loadCheckoutProducts() {
 // the formula preview in place.
 const _shipQuoteCache = {};
 let _shipQuoteSeq = 0;
-function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping }) {
-  const zip = (document.getElementById('checkout-zip')?.value || '').trim();
-  if (!/^\d{5}$/.test(zip)) return;
+
+// Asks the server to price the current checkout cart (quote only, no
+// payment). Resolves to its JSON, or null on any failure. Cached per
+// cart+state+ZIP. A ZIP is optional: without one the server still says
+// whether the order is a freight-size volume order.
+function fetchCheckoutQuote() {
+  const zipRaw = (document.getElementById('checkout-zip')?.value || '').trim();
+  const zip = /^\d{5}$/.test(zipRaw) ? zipRaw : '';
   const oneTime = checkoutOrderType === 'one-time';
-  const cart = getCart();
-  const items = cart.map(i => ({
+  const items = getCart().map(i => ({
     sku: i.itemNumber || '',
     quantity: parseInt(i.quantity) || 1,
     reorder: oneTime ? 'Once' : (i.reorder || ''),
   })).filter(i => i.sku);
-  if (!items.length) return;
-
+  if (!items.length) return Promise.resolve(null);
   const state = document.getElementById('checkout-state')?.value || '';
   const addr = {
     street: document.getElementById('checkout-street')?.value || '',
@@ -4003,18 +4006,8 @@ function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping
     state, zip,
   };
   const key = JSON.stringify([items, state, zip]);
-
-  const apply = shipping => {
-    const el = document.getElementById('summary-shipping');
-    if (el) el.textContent = `$${shipping.toFixed(2)}`;
-    const totalEl = document.getElementById('summary-total');
-    if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
-  };
-
-  if (_shipQuoteCache[key] != null) { apply(_shipQuoteCache[key]); return; }
-
-  const seq = ++_shipQuoteSeq;
-  fetch('/api/create-payment-intent', {
+  if (_shipQuoteCache[key]) return _shipQuoteCache[key];
+  const p = fetch('/api/create-payment-intent', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -4025,14 +4018,66 @@ function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping
     }),
   })
     .then(r => r.json())
-    .then(d => {
-      if (typeof d.shipping !== 'number') return;
-      _shipQuoteCache[key] = d.shipping;
-      // A newer request (another keystroke) supersedes this one.
-      if (seq === _shipQuoteSeq) apply(d.shipping);
-    })
-    .catch(() => {});
+    .catch(() => null);
+  _shipQuoteCache[key] = p;
+  // A failed lookup is not cached, so the next render retries it.
+  p.then(d => { if (!d) delete _shipQuoteCache[key]; });
+  return p;
 }
+
+// True when the server says this cart is a volume (freight) order that goes
+// to a custom quote instead of online payment.
+async function checkoutNeedsFreightQuote() {
+  const d = await fetchCheckoutQuote();
+  return !!(d && d.freightQuote);
+}
+
+// Switches the checkout summary between normal payment and "volume quote"
+// mode. In quote mode Delivery reads "Custom quote", the total excludes
+// freight, the payment acknowledgement is hidden (nothing is being paid),
+// and the button opens the volume-quote modal (see checkout.html).
+function setCheckoutFreightMode(on, totals) {
+  window._rrsFreightQuote = !!on;
+  const shipEl = document.getElementById('summary-shipping');
+  const totalEl = document.getElementById('summary-total');
+  const noteEl = document.querySelector('.summary-note');
+  const ack = document.querySelector('.ack-check');
+  const btn = document.getElementById('submitOrderBtn');
+  if (noteEl && !noteEl.dataset.defaultText) noteEl.dataset.defaultText = noteEl.textContent.trim();
+  if (btn && !btn.dataset.defaultText) btn.dataset.defaultText = btn.textContent.trim();
+  if (on) {
+    if (shipEl) { shipEl.textContent = 'Custom quote'; shipEl.style.color = '#ED7226'; }
+    if (totalEl && totals) totalEl.textContent = `$${(totals.discountedSubtotal + totals.tax).toFixed(2)} + freight`;
+    if (noteEl) noteEl.textContent = 'Volume order: we’ll secure your freight rate and best volume pricing in a custom quote. No payment today.';
+    if (ack) ack.style.display = 'none';
+    if (btn) btn.textContent = 'Get My Volume Quote';
+  } else {
+    if (shipEl) shipEl.style.color = '';
+    if (noteEl && noteEl.dataset.defaultText) noteEl.textContent = noteEl.dataset.defaultText;
+    if (ack) ack.style.display = '';
+    if (btn && btn.dataset.defaultText) btn.textContent = btn.dataset.defaultText;
+  }
+  if (typeof syncSubmitEnabled === 'function') syncSubmitEnabled();
+}
+
+function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping }) {
+  const seq = ++_shipQuoteSeq;
+  fetchCheckoutQuote().then(d => {
+    // A newer request (another keystroke) supersedes this one.
+    if (!d || seq !== _shipQuoteSeq) return;
+    if (d.freightQuote) { setCheckoutFreightMode(true, { discountedSubtotal, tax }); return; }
+    if (window._rrsFreightQuote) setCheckoutFreightMode(false);
+    if (typeof d.shipping !== 'number') return;
+    // Real carrier rates need a full ZIP; without one the formula stays.
+    const zip = (document.getElementById('checkout-zip')?.value || '').trim();
+    if (!/^\d{5}$/.test(zip)) return;
+    const el = document.getElementById('summary-shipping');
+    if (el) el.textContent = `$${d.shipping.toFixed(2)}`;
+    const totalEl = document.getElementById('summary-total');
+    if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + d.shipping).toFixed(2)}`;
+  });
+}
+
 
 function setupCheckoutOrderTypeToggle() {
   const reorderOption = document.getElementById("reorderOption");

@@ -1,6 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { getTaxRate } = require('../../tax-rates');
-const { computeShipping } = require('./shipping');
+const { computeShipping, groupByDistributor, classifyShipment } = require('./shipping');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -352,10 +352,23 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
     console.log('[shipping]', JSON.stringify(r.shipments));
   }
 
+  // Volume orders: a distributor shipment over the UPS parcel limit
+  // (FREIGHT_MIN_LB in shipping.js) cannot go UPS Ground, and there is no
+  // dependable automatic freight rate yet. Rather than charge a guess, the
+  // checkout hands these orders to the custom-quote flow and
+  // create-payment-intent.js refuses to take payment for them. Grouped per
+  // distributor exactly like the shipping calculation, since each warehouse
+  // ships separately. Set FREIGHT_CHECKOUT_ENABLED=true to let freight orders
+  // pay online again (e.g. once TForce rating is live).
+  const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
+  const needsFreightQuote = !isPickup && !freightCheckoutOn &&
+    groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
+
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 
   return {
     ok: true,
+    needsFreightQuote,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,

@@ -718,6 +718,9 @@
           }
         })
       }).then(function(res) { return res.json(); }).then(function(data) {
+        // Volume (freight) order: not paid online. Back to checkout, which
+        // opens the custom-quote modal.
+        if (data.freightQuote) { window.location.href = 'checkout.html?volume=1'; return; }
         if (data.error) throw new Error(data.error);
         applyServerTotals(data);
         clientSecret = data.clientSecret;
