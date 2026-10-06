@@ -53,13 +53,34 @@ function originComplete(o) {
 // packages of up to 50 lb and use the largest case dimensions seen. Rating
 // on weight (not a per-line case count) keeps this right whatever a line's
 // unit is (case, dozen, pail), since those don't all mean one carton.
+//
+// Only trustworthy box dimensions are used. Soft goods (sheets, towels,
+// linens) are stored with their flat PRODUCT size and no height, which is not
+// a carton and would be rated as an oversize or absurdly heavy-by-volume box.
+// A line's dimensions count only when length, width and height are all
+// present and within UPS's limits (longest side 108 in, length + girth 165
+// in); otherwise that line contributes nothing and the standard carton below
+// is used with the real weight -- the heavy case weights on these goods
+// dominate dimensional weight anyway.
+const DEFAULT_BOX = { length: 14, width: 12, height: 10 };
+const UPS_MAX_LONGEST = 108, UPS_MAX_LENGTH_GIRTH = 165;
+
+function usableDims(l) {
+  const d = [Number(l.length), Number(l.width), Number(l.height)];
+  if (!d.every(x => Number.isFinite(x) && x > 0)) return null;
+  const s = [...d].sort((a, b) => b - a);
+  if (s[0] > UPS_MAX_LONGEST || s[0] + 2 * (s[1] + s[2]) > UPS_MAX_LENGTH_GIRTH) return null;
+  return { length: d[0], width: d[1], height: d[2] };
+}
+
 function buildPackages(group) {
   const w = Math.max(group.weightLb, 1);
   const n = Math.min(Math.ceil(w / 50), 25);
-  const dim = k => Math.max(1, ...group.lines.map(l => Number(l[k]) || 0)) || 1;
-  const L = group.lines.some(l => l.length) ? dim('length') : 14;
-  const W = group.lines.some(l => l.width) ? dim('width') : 12;
-  const H = group.lines.some(l => l.height) ? dim('height') : 10;
+  const good = group.lines.map(usableDims).filter(Boolean);
+  const max = k => Math.max(...good.map(d => d[k]));
+  const L = good.length ? max('length') : DEFAULT_BOX.length;
+  const W = good.length ? max('width') : DEFAULT_BOX.width;
+  const H = good.length ? max('height') : DEFAULT_BOX.height;
   return Array.from({ length: n }, () => ({ weight: w / n, length: L, width: W, height: H }));
 }
 
