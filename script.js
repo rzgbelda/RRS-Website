@@ -446,6 +446,15 @@ function mapDbProductToLegacyShape(row) {
     tier1MinQty: row.tier1_min_qty != null ? Number(row.tier1_min_qty) : null,
     tier2MinQty: row.tier2_min_qty != null ? Number(row.tier2_min_qty) : null,
     tier3MinQty: row.tier3_min_qty != null ? Number(row.tier3_min_qty) : null,
+    // Best Deal (20261006_best_deal_pricing.sql): price/price1-3 above are
+    // already the deal prices; regular* are what the product normally costs,
+    // for the tag and the struck-through "was" price. Absent (older view or
+    // cached row) means not a deal.
+    isBestDeal: row.is_best_deal === true,
+    regularPrice: row.regular_price != null ? String(row.regular_price) : "",
+    regularPrice1: row.regular_price_tier1 != null ? String(row.regular_price_tier1) : "",
+    regularPrice2: row.regular_price_tier2 != null ? String(row.regular_price_tier2) : "",
+    regularPrice3: row.regular_price_tier3 != null ? String(row.regular_price_tier3) : "",
     weight: row.weight != null ? String(row.weight) : "",
     length: row.length != null ? String(row.length) : "",
     width: row.width != null ? String(row.width) : "",
@@ -473,11 +482,15 @@ const CATALOG_COLUMNS = [
   "product_family","family_key","variant_label","product_tier","color_group","color_label",
   "meta_title","meta_description",
 ].join(",");
+// Best Deal fields (20261006_best_deal_pricing.sql). Requested separately so
+// that, if the view doesn't have them yet, the catalog retries without them
+// instead of failing to load (PostgREST rejects unknown columns).
+const CATALOG_DEAL_COLUMNS = "is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3";
 
 // 5 minutes: long enough that browsing (catalog -> product -> cart) reuses
 // one download, short enough that admin edits show up quickly. Add
 // ?fresh to any URL to bypass it (handy right after editing a product).
-const CATALOG_CACHE_KEY = "rrs_catalog_cache_v1";
+const CATALOG_CACHE_KEY = "rrs_catalog_cache_v2"; // v2: carries Best Deal fields
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 function readCatalogCache() {
   try {
@@ -521,13 +534,9 @@ async function fetchCatalogProducts() {
         if (Array.isArray(rows)) { writeCatalogCache(rows); return rows.map(mapDbProductToLegacyShape); }
       }
     } catch { /* fall through to Supabase */ }
-    const url = `${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=${CATALOG_COLUMNS}`;
-    const res = await fetch(url, {
-      headers: {
-        apikey: PRODUCTS_SUPABASE_ANON,
-        Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
-      },
-    });
+    const headers = { apikey: PRODUCTS_SUPABASE_ANON, Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}` };
+    let res = await fetch(`${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=${CATALOG_COLUMNS},${CATALOG_DEAL_COLUMNS}`, { headers });
+    if (!res.ok) res = await fetch(`${PRODUCTS_SUPABASE_URL}/rest/v1/products_public?select=${CATALOG_COLUMNS}`, { headers });
     if (!res.ok) throw new Error(`Failed to load products (${res.status})`);
     const rows = await res.json();
     writeCatalogCache(rows);
@@ -1162,13 +1171,30 @@ function escAttr(s) {
     .replace(/'/g, "&#39;");
 }
 
+/* Best Deal tag + "was" price (20261006_best_deal_pricing.sql). A product on
+   an active Best Deal already carries the deal prices in price/price1-3;
+   regularPrice is what it normally costs. */
+const BEST_DEAL_ICON = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5z"/></svg>`;
+
+function bestDealBadgeHtml() {
+  return `<span class="best-deal-badge">${BEST_DEAL_ICON}Best Deal</span>`;
+}
+
+// Struck-through regular price, only when the deal is actually lower.
+function wasPriceHtml(product, shownPrice) {
+  if (!product || !product.isBestDeal) return "";
+  const reg = cleanPrice(product.regularPrice);
+  return reg > shownPrice + 0.004 ? `<span class="price-was">$${reg.toFixed(2)}</span>` : "";
+}
+
 function renderSingleCard(product) {
   const displayPrice = cleanPrice(product.price);
   const cartPrice = cleanPrice(product.price1) || cleanPrice(product.price);
   const price = displayPrice || cartPrice;
   return `
-    <div class="product-card" data-url="/product?item=${encodeURIComponent(product.slug)}">
+    <div class="product-card${product.isBestDeal ? " is-best-deal" : ""}" data-url="/product?item=${encodeURIComponent(product.slug)}">
       <div class="product-image">
+        ${product.isBestDeal ? bestDealBadgeHtml() : ""}
         ${product.moqGroup ? `<span class="moq-group-badge">MIX &amp; MATCH MOQ: ${product.moqGroupMin}</span>` : ""}
         ${product.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <span class="card-stock-badge${product.inStock === false ? ' is-out' : ''}"><span class="dot"></span>${product.inStock === false ? "Out of Stock" : "In Stock"}</span>
@@ -1193,6 +1219,7 @@ function renderSingleCard(product) {
             <div class="price-row">
               <span class="price">$${price.toFixed(2)}</span>
               <span class="unit">/ ${product.priceBy || "Case"}</span>
+              ${wasPriceHtml(product, price)}
             </div>
           </div>
           <button
@@ -1338,6 +1365,9 @@ function renderVariantCard(variants) {
     // the variant for applyVariantToCard() to have anything to apply.
     inStock:       vv.inStock !== false,
     weight:        vv.weight || "",
+    // Best Deal follows the selected variant: a deal is per SKU.
+    isBestDeal:    !!vv.isBestDeal,
+    regularPrice:  vv.regularPrice || "",
   }));
 
   const escapedJson = JSON.stringify(variantsData)
@@ -1405,10 +1435,11 @@ function renderVariantCard(variants) {
   const famOut = !familyInStock(variants);
 
   return `
-    <div class="product-card"
+    <div class="product-card${v.isBestDeal ? " is-best-deal" : ""}"
          data-url="/product?item=${encodeURIComponent(v.slug)}"
          data-variants="${escapedJson}">
       <div class="product-image">
+        ${v.isBestDeal ? bestDealBadgeHtml() : ""}
         ${v.isFastShip ? `<span class="fast-ship-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></svg>Fast Delivery</span>` : ""}
         <span class="card-stock-badge${famOut ? ' is-out' : ''}"><span class="dot"></span>${famOut ? "Out of Stock" : "In Stock"}</span>
         <img src="${cardImageUrl(v.image, 400)}" alt="${v.productFamily || v.name}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
@@ -1435,6 +1466,7 @@ function renderVariantCard(variants) {
             <div class="price-row">
               <span class="price">$${price.toFixed(2)}</span>
               <span class="unit">/ ${v.priceBy || "Case"}</span>
+              ${wasPriceHtml(v, price)}
             </div>
           </div>
           <button
@@ -1493,6 +1525,14 @@ function applyVariantToCard(card, v) {
 
   const unitEl = card.querySelector(".unit");
   if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
+
+  // Best Deal tag and "was" price follow the selected variant.
+  card.classList.toggle("is-best-deal", !!v.isBestDeal);
+  card.querySelector(".best-deal-badge")?.remove();
+  if (v.isBestDeal) card.querySelector(".product-image")?.insertAdjacentHTML("afterbegin", bestDealBadgeHtml());
+  card.querySelector(".price-was")?.remove();
+  const wasHtml = wasPriceHtml(v, price);
+  if (wasHtml) card.querySelector(".price-row")?.insertAdjacentHTML("beforeend", wasHtml);
 
   const img = card.querySelector(".product-image img");
   if (img) img.src = cardImageUrl(v.image, 400);
@@ -2232,6 +2272,30 @@ function selectProductImage(thumbEl, src) {
   thumbEl.classList.add("active");
 }
 
+// Best Deal banner above the product name. Created on demand (no template
+// change needed) and re-rendered on every variant switch, since a deal is
+// per SKU.
+function renderProductDealBanner(product) {
+  const nameEl = document.getElementById("productName");
+  if (!nameEl) return;
+  let banner = document.getElementById("productDealBanner");
+  if (!product || !product.isBestDeal) { if (banner) banner.remove(); return; }
+  if (!banner) {
+    banner = document.createElement("a");
+    banner.id = "productDealBanner";
+    banner.className = "pp-deal-banner";
+    banner.href = "/best-deals";
+    nameEl.parentNode.insertBefore(banner, nameEl);
+  }
+  const now = cleanPrice(product.price);
+  const reg = cleanPrice(product.regularPrice);
+  const pct = reg > now && now > 0 ? Math.round((1 - now / reg) * 100) : 0;
+  banner.innerHTML =
+    `<span class="pp-deal-tag">${BEST_DEAL_ICON}Best Deal</span>` +
+    `<span class="pp-deal-text">${pct >= 1 ? `Save ${pct}% on this month&rsquo;s featured price` : "Featured in this month&rsquo;s Best Deals"}</span>` +
+    `<span class="pp-deal-link">See all deals &rarr;</span>`;
+}
+
 function populateProductPage(product) {
   const price = cleanPrice(product.price);
 
@@ -2373,6 +2437,8 @@ function populateProductPage(product) {
     tierBadge.style.display = product.productTier ? "" : "none";
   }
 
+  renderProductDealBanner(product);
+
   setText("productDescription", product.description);
   setText("overviewDescription", product.overview || product.description);
 
@@ -2468,6 +2534,12 @@ function populateProductPage(product) {
       tierMinQty(product, "tier3_min_qty", "tier3MinQty"),
     ];
     const prices = [t1, t2, t3];
+    // Regular (non-deal) price for each tier, for the struck "was" price on
+    // a Best Deal. Kept index-aligned with prices[] through the tier-1
+    // rebuilds below.
+    const regs = product.isBestDeal
+      ? [cleanPrice(product.regularPrice1), cleanPrice(product.regularPrice2), cleanPrice(product.regularPrice3)]
+      : [0, 0, 0];
     let shownCount = 0;
 
     // Mix & Match groups are sold by the pallet: the group minimum is one
@@ -2490,6 +2562,7 @@ function populateProductPage(product) {
     if (palletQty > 1 && !mins[0] && cleanPrice(product.price)) {
       mins[0] = palletQty;
       prices[0] = cleanPrice(product.price);
+      if (product.isBestDeal) regs[0] = cleanPrice(product.regularPrice);
     }
     // Same for a plain per-case product (Wraptite, Starlinen): the importer
     // drops a tier 1 that equals the base price, leaving "6-29" and "30+"
@@ -2499,6 +2572,7 @@ function populateProductPage(product) {
         mins.slice(1).some((m, j) => m && prices[j + 1])) {
       mins[0] = 1;
       prices[0] = cleanPrice(product.price);
+      if (product.isBestDeal) regs[0] = cleanPrice(product.regularPrice);
     }
     const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
     const unitLower = unitWord.toLowerCase();
@@ -2549,6 +2623,20 @@ function populateProductPage(product) {
       }
 
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
+      // Best Deal: the regular price for this tier, struck through.
+      const priceEl = document.getElementById(`tier${i + 1}Price`);
+      let wasEl = document.getElementById(`tier${i + 1}Was`);
+      if (regs[i] > price + 0.004) {
+        if (!wasEl && priceEl) {
+          wasEl = document.createElement("s");
+          wasEl.id = `tier${i + 1}Was`;
+          wasEl.className = "tier-was";
+          priceEl.insertAdjacentElement("afterend", wasEl);
+        }
+        if (wasEl) wasEl.textContent = `$${regs[i].toFixed(2)}`;
+      } else if (wasEl) {
+        wasEl.remove();
+      }
       // The reorder 5% stacks on every tier, so show the real best price
       // here rather than leaving it to look like the top tier is the floor.
       const reorderEl = document.getElementById(`tier${i + 1}Reorder`);

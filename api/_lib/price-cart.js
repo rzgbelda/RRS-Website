@@ -198,6 +198,31 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
 
   if (error) return { ok: false, error: 'Could not price this order.' };
 
+  // Best Deal pricing: an active deal's prices replace the product's, the
+  // same overlay products_public applies for every page that DISPLAYS a
+  // price (20261006_best_deal_pricing.sql). This reads the base table, so it
+  // must apply it too, or the cart would show the deal price and charge the
+  // regular one. A failed lookup (e.g. migration not run yet) keeps regular
+  // prices -- the same thing the pages show in that case.
+  const { data: deals, error: dealErr } = await supabase
+    .from('best_deals')
+    .select('sku, deal_price, deal_tier1, deal_tier2, deal_tier3, position, created_at')
+    .eq('is_active', true)
+    .in('sku', Array.from(wanted.keys()))
+    .order('position', { ascending: true })
+    .order('created_at', { ascending: true });
+  if (dealErr) console.warn('[price-cart] best_deals lookup failed:', dealErr.message);
+  const dealBySku = new Map();
+  for (const d of deals || []) if (!dealBySku.has(d.sku)) dealBySku.set(d.sku, d);
+  for (const r of rows || []) {
+    const d = dealBySku.get(r.sku);
+    if (!d) continue;
+    if (d.deal_price != null) r.price = d.deal_price;
+    if (d.deal_tier1 != null) r.price_tier1 = d.deal_tier1;
+    if (d.deal_tier2 != null) r.price_tier2 = d.deal_tier2;
+    if (d.deal_tier3 != null) r.price_tier3 = d.deal_tier3;
+  }
+
   const bySku = new Map((rows || []).map(r => [r.sku, r]));
 
   // Mix & Match products pool toward the tier: every unit in the same

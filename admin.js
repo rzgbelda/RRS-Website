@@ -9088,6 +9088,15 @@ async function previewAboutBanner(input) {
 
 let _bdProductCache = [];
 
+// Deal-price fields on best_deals (20261006_best_deal_pricing.sql), and the
+// product field each one overrides.
+const BD_PRICE_ROWS = [
+  { key: "deal_price", label: "Selling price", reg: "price",       min: null,            cost: ["cost_per_case"] },
+  { key: "deal_tier1", label: "Tier 1",        reg: "price_tier1", min: "tier1_min_qty", cost: ["tier1_cost", "cost_per_case"] },
+  { key: "deal_tier2", label: "Tier 2",        reg: "price_tier2", min: "tier2_min_qty", cost: ["tier2_cost", "cost_per_case"] },
+  { key: "deal_tier3", label: "Tier 3",        reg: "price_tier3", min: "tier3_min_qty", cost: ["tier3_cost", "cost_per_case"] },
+];
+
 async function renderBestDealsTab() {
   const list = document.getElementById("bestDealsList");
   if (!list) return;
@@ -9117,6 +9126,10 @@ async function renderBestDealsTab() {
   list.innerHTML = deals.map(d => {
     const p = productBySku[d.sku];
     const missing = !p;
+    const hasDealPrice = BD_PRICE_ROWS.some(r => d[r.key] != null);
+    const priceLine = !p ? "" : (d.deal_price != null
+      ? `${escHtml(p.name)} &middot; <strong style="color:#c2410c">$${Number(d.deal_price).toFixed(2)}</strong> <s style="color:#94a3b8">$${Number(p.price).toFixed(2)}</s> <span style="color:#94a3b8">(deal price)</span>`
+      : `${escHtml(p.name)} &middot; <strong style="color:#0d1f38">$${Number(p.price).toFixed(2)}</strong> <span style="color:#94a3b8">(${hasDealPrice ? "regular base price, deal tiers set" : "regular price"})</span>`);
     return `
     <div class="a-card" style="padding:16px 18px;display:flex;gap:14px;align-items:flex-start;${d.is_active ? "" : "opacity:.55"}">
       <img src="${p?.image_url || ""}" alt="" style="width:52px;height:52px;object-fit:contain;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;flex:none">
@@ -9125,10 +9138,11 @@ async function renderBestDealsTab() {
           <span style="font-size:11px;font-weight:800;color:#94a3b8;font-family:ui-monospace,monospace">#${d.position}</span>
           <strong style="font-size:14px;color:#0d1f38">${escHtml(d.hook_title)}</strong>
           <span class="a-badge ${d.is_active ? "a-badge-green" : "a-badge-yellow"}">${d.is_active ? "Active" : "Draft"}</span>
+          ${hasDealPrice ? `<span class="a-badge a-badge-orange">Deal pricing</span>` : ""}
           ${missing ? `<span class="a-badge a-badge-red">Product not found (sku: ${escHtml(d.sku)})</span>` : (!p.is_active ? `<span class="a-badge a-badge-red">Product inactive</span>` : "")}
         </div>
         <div style="font-size:12.5px;color:#64748b;margin-bottom:4px">${escHtml(d.pitch_text)}</div>
-        <div style="font-size:12px;color:#94a3b8">${p ? `${escHtml(p.name)} &middot; <strong style="color:#0d1f38">$${Number(p.price).toFixed(2)}</strong> <span style="color:#94a3b8">(live price)</span>` : ""}</div>
+        <div style="font-size:12px;color:#94a3b8">${priceLine}</div>
       </div>
       <div style="display:flex;gap:8px;flex:none">
         <button class="a-btn-secondary" style="font-size:12px;padding:6px 12px" onclick="editBestDeal('${d.id}')">Edit</button>
@@ -9140,9 +9154,11 @@ async function renderBestDealsTab() {
 
 async function loadBestDealProductOptions() {
   if (_bdProductCache.length) return _bdProductCache;
+  // Staff-only base table: includes supplier cost so the editor can show the
+  // margin each deal price leaves.
   const { data } = await window.sb
     .from("products")
-    .select("sku,name,image_url,price")
+    .select("sku,name,image_url,unit,price,price_tier1,price_tier2,price_tier3,tier1_min_qty,tier2_min_qty,tier3_min_qty,cost_per_case,tier1_cost,tier2_cost,tier3_cost")
     .eq("is_active", true)
     .order("name");
   _bdProductCache = data || [];
@@ -9153,16 +9169,96 @@ async function loadBestDealProductOptions() {
   return _bdProductCache;
 }
 
+function bdSelectedProduct() {
+  const sku = document.getElementById("bdSkuInput").value.split(" — ")[0].trim();
+  return _bdProductCache.find(x => x.sku === sku) || null;
+}
+
 function onBestDealProductPick() {
-  const val = document.getElementById("bdSkuInput").value;
-  const sku = val.split(" — ")[0].trim();
-  const p = _bdProductCache.find(x => x.sku === sku);
+  const p = bdSelectedProduct();
   const preview = document.getElementById("bdProductPreview");
-  if (!p) { preview.style.display = "none"; return; }
+  if (!p) {
+    preview.style.display = "none";
+    document.getElementById("bdPricingSection").style.display = "none";
+    return;
+  }
   document.getElementById("bdProductPreviewImg").src = p.image_url || "";
   document.getElementById("bdProductPreviewName").textContent = p.name;
-  document.getElementById("bdProductPreviewPrice").textContent = `$${Number(p.price).toFixed(2)} (live price, shown automatically)`;
+  document.getElementById("bdProductPreviewPrice").textContent = `Regular price $${Number(p.price).toFixed(2)}`;
   preview.style.display = "flex";
+  renderBestDealPricingRows();
+}
+
+// Rows for the selected product: the selling price, plus each tier the
+// product actually has (a threshold and a price). Keeps whatever the user
+// already typed when re-rendered.
+function renderBestDealPricingRows(values) {
+  const p = bdSelectedProduct();
+  const wrap = document.getElementById("bdPricingRows");
+  const section = document.getElementById("bdPricingSection");
+  if (!p || !wrap) return;
+  const current = values || bdReadDealInputs();
+  const unit = String(p.unit || "Case").replace(/s$/i, "").toLowerCase();
+  const rows = BD_PRICE_ROWS.filter(r => r.key === "deal_price" || (p[r.min] != null && Number(p[r.reg]) > 0));
+  wrap.innerHTML = `
+    <div class="bdp-row bdp-head"><span>Price</span><span>Regular</span><span>Deal price</span><span>Margin</span></div>
+    ${rows.map(r => `
+      <div class="bdp-row" data-key="${r.key}">
+        <div class="bdp-label"><strong>${r.label}</strong><span>${r.min ? `${p[r.min]}+ ${unit}s` : `per ${unit}`}</span></div>
+        <div class="bdp-regular">${Number(p[r.reg]) > 0 ? "$" + Number(p[r.reg]).toFixed(2) : "—"}</div>
+        <input type="number" min="0" step="0.01" class="a-input bdp-input" id="bd_${r.key}" placeholder="${Number(p[r.reg]) > 0 ? Number(p[r.reg]).toFixed(2) : ""}" value="${current[r.key] != null ? current[r.key] : ""}" oninput="updateBestDealMargins()">
+        <div class="bdp-margin none" id="bdm_${r.key}">—</div>
+      </div>`).join("")}`;
+  section.style.display = "";
+  updateBestDealMargins();
+}
+
+function bdReadDealInputs() {
+  const out = {};
+  BD_PRICE_ROWS.forEach(r => {
+    const el = document.getElementById("bd_" + r.key);
+    const v = el ? el.value.trim() : "";
+    out[r.key] = v === "" ? null : Number(v);
+  });
+  return out;
+}
+
+function bdCostFor(p, row) {
+  for (const k of row.cost) if (Number(p[k]) > 0) return Number(p[k]);
+  return 0;
+}
+
+// Margin on the deal price (or the regular price when left blank), from the
+// product's supplier cost. Red = below cost (saving is blocked).
+function updateBestDealMargins() {
+  const p = bdSelectedProduct();
+  if (!p) return;
+  const vals = bdReadDealInputs();
+  BD_PRICE_ROWS.forEach(r => {
+    const el = document.getElementById("bdm_" + r.key);
+    if (!el) return;
+    const price = vals[r.key] != null ? vals[r.key] : Number(p[r.reg]) || 0;
+    const cost = bdCostFor(p, r);
+    if (!(price > 0) || !(cost > 0)) { el.className = "bdp-margin none"; el.textContent = cost > 0 ? "—" : "No cost on file"; return; }
+    const m = (price - cost) / price;
+    el.className = "bdp-margin " + (m < 0 ? "bad" : m < 0.10 ? "low" : "ok");
+    el.textContent = (m * 100).toFixed(1) + "%" + (m < 0 ? " · below cost" : "");
+  });
+}
+
+function bdFillRegularPrices() {
+  const p = bdSelectedProduct();
+  if (!p) return;
+  BD_PRICE_ROWS.forEach(r => {
+    const el = document.getElementById("bd_" + r.key);
+    if (el && Number(p[r.reg]) > 0) el.value = Number(p[r.reg]).toFixed(2);
+  });
+  updateBestDealMargins();
+}
+
+function bdClearDealPrices() {
+  BD_PRICE_ROWS.forEach(r => { const el = document.getElementById("bd_" + r.key); if (el) el.value = ""; });
+  updateBestDealMargins();
 }
 
 async function openAddBestDeal() {
@@ -9174,6 +9270,8 @@ async function openAddBestDeal() {
   document.getElementById("bdPositionInput").value = "1";
   document.getElementById("bdActiveInput").value = "true";
   document.getElementById("bdProductPreview").style.display = "none";
+  document.getElementById("bdPricingSection").style.display = "none";
+  document.getElementById("bdPricingRows").innerHTML = "";
   await loadBestDealProductOptions();
   openModal("bestDealModal");
 }
@@ -9187,10 +9285,14 @@ async function editBestDeal(id) {
   document.getElementById("bdPitchInput").value = d.pitch_text;
   document.getElementById("bdPositionInput").value = d.position;
   document.getElementById("bdActiveInput").value = String(d.is_active);
+  document.getElementById("bdPricingRows").innerHTML = "";
   await loadBestDealProductOptions();
   const p = _bdProductCache.find(x => x.sku === d.sku);
   document.getElementById("bdSkuInput").value = p ? `${p.sku} — ${p.name}` : d.sku;
   onBestDealProductPick();
+  const saved = {};
+  BD_PRICE_ROWS.forEach(r => { saved[r.key] = d[r.key] != null ? Number(d[r.key]) : null; });
+  renderBestDealPricingRows(saved);
   openModal("bestDealModal");
 }
 
@@ -9205,16 +9307,33 @@ async function saveBestDeal() {
   if (!skuRaw) { showToast("Pick a product first."); return; }
   if (!hook || !pitch) { showToast("Hook headline and pitch text are required."); return; }
 
+  // Deal prices: positive, never below supplier cost.
+  const p = bdSelectedProduct();
+  const deal = bdReadDealInputs();
+  for (const r of BD_PRICE_ROWS) {
+    const v = deal[r.key];
+    if (v == null) continue;
+    if (!(v > 0)) { showToast(`${r.label}: enter a price above $0, or leave it blank.`); return; }
+    const cost = p ? bdCostFor(p, r) : 0;
+    if (cost > 0 && v < cost) { showToast(`${r.label} ($${v.toFixed(2)}) is below cost ($${cost.toFixed(2)}).`); return; }
+    deal[r.key] = Math.round(v * 100) / 100;
+  }
+
   const btn = document.getElementById("bdSaveBtn");
   btn.disabled = true; btn.textContent = "Saving…";
 
-  const payload = { sku: skuRaw, hook_title: hook, pitch_text: pitch, position, is_active: isActive, updated_at: new Date().toISOString() };
+  const payload = { sku: skuRaw, hook_title: hook, pitch_text: pitch, position, is_active: isActive, updated_at: new Date().toISOString(), ...deal };
   const { error } = id
     ? await window.sb.from("best_deals").update(payload).eq("id", id)
     : await window.sb.from("best_deals").insert(payload);
 
   btn.disabled = false; btn.textContent = "Save Deal";
-  if (error) { showToast("Couldn't save: " + error.message); return; }
+  if (error) {
+    showToast(/deal_price|deal_tier/.test(error.message || "")
+      ? "Deal pricing isn't set up on the database yet — run 20261006_best_deal_pricing.sql in Supabase."
+      : "Couldn't save: " + error.message);
+    return;
+  }
 
   closeModal("bestDealModal");
   showToast("Deal saved.");

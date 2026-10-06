@@ -4262,3 +4262,35 @@ th.fam-num { text-align: right; }
   .vnd-field-narrow { max-width: none; }
   .vnd-card { flex-direction: column; }
 }
+
+/* ─────────────────────────────────────────
+   BEST DEAL PRICING (admin Best Deals modal)
+───────────────────────────────────────── */
+.bdp-table { border: 1px solid #e8edf4; border-radius: 10px; overflow: hidden; }
+.bdp-row {
+  display: grid;
+  grid-template-columns: 1.3fr .9fr 1fr .9fr;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 12px;
+  border-top: 1px solid #f0f4fa;
+  font-size: 12.5px;
+}
+.bdp-row:first-child { border-top: none; }
+.bdp-head { background: #f8fafc; font-size: 10.5px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: #94a3b8; }
+.bdp-label strong { display: block; color: #0d1f38; font-size: 12.5px; }
+.bdp-label span { color: #94a3b8; font-size: 11.5px; }
+.bdp-regular { color: #64748b; font-weight: 600; }
+.bdp-row .a-input { height: 34px; padding: 0 10px; font-size: 13px; }
+.bdp-margin { font-weight: 700; font-size: 12px; }
+.bdp-margin.ok { color: #15803d; }
+.bdp-margin.low { color: #b45309; }
+.bdp-margin.bad { color: #dc2626; }
+.bdp-margin.none { color: #94a3b8; font-weight: 500; }
+.bdp-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.bdp-actions .a-btn-secondary { font-size: 12px; padding: 6px 12px; }
+.bdp-note { font-size: 11.5px; color: #94a3b8; margin: 8px 0 0; line-height: 1.5; }
+@media (max-width: 560px) {
+  .bdp-row { grid-template-columns: 1fr 1fr; }
+  .bdp-head { display: none; }
+}

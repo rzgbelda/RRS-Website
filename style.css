@@ -10658,3 +10658,91 @@ html.rrs-quote-only .pp-price-cta {
 .site-legal-footer a { color: #ED7226; font-weight: 600; text-decoration: none; }
 .site-legal-footer a:hover { text-decoration: underline; }
 .site-legal-footer p { margin: 0; }
+
+/* ─────────────────────────────────────────
+   BEST DEAL (20261006_best_deal_pricing.sql)
+   Catalog card tag (top-left of the image -- Fast Delivery and stock sit
+   top-right, Mix & Match bottom-left), struck "was" price, and the product
+   page banner + tier-card "was" prices.
+───────────────────────────────────────── */
+.best-deal-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px 5px 9px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff8a2a 0%, #ed7226 55%, #d95a10 100%);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  box-shadow: 0 4px 12px rgba(237, 114, 38, .35), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+.best-deal-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+
+.product-card.is-best-deal {
+  box-shadow: 0 0 0 1.5px rgba(237, 114, 38, .55), 0 10px 28px rgba(237, 114, 38, .10);
+}
+
+.price-was {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #94a3b8;
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.pp-deal-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 2px 0 14px;
+  padding: 10px 14px;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  background: linear-gradient(90deg, #fff4eb 0%, #fffaf5 100%);
+  text-decoration: none;
+  color: #7c2d12;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.pp-deal-banner:hover { border-color: #fdba74; box-shadow: 0 4px 14px rgba(237, 114, 38, .12); }
+.pp-deal-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px 4px 8px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff8a2a 0%, #ed7226 55%, #d95a10 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.pp-deal-tag svg { width: 11px; height: 11px; }
+.pp-deal-text { font-size: 13.5px; font-weight: 600; }
+.pp-deal-link { margin-left: auto; font-size: 12.5px; font-weight: 700; color: #ed7226; white-space: nowrap; }
+
+.tier-was {
+  display: block;
+  margin-top: 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+@media (max-width: 480px) {
+  .pp-deal-link { margin-left: 0; }
+}
+/* On a Best Deal card the top row belongs to the deal tag; the right-side
+   pills (Fast Delivery, stock) step down a row so narrow cards never collide. */
+.product-card.is-best-deal .product-image .fast-ship-badge,
+.product-card.is-best-deal .product-image .card-stock-badge { top: 42px; }
+.product-card.is-best-deal .product-image .fast-ship-badge + .card-stock-badge { top: 72px; }

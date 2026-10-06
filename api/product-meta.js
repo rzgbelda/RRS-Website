@@ -34,6 +34,8 @@ const CATALOG_COLUMNS = [
   'product_family','family_key','variant_label','product_tier','color_group','color_label',
   'meta_title','meta_description',
 ].join(',');
+// Mirrors CATALOG_DEAL_COLUMNS in script.js.
+const CATALOG_DEAL_COLUMNS = 'is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3';
 const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
@@ -645,9 +647,11 @@ module.exports = async (req, res) => {
   // stale while one request refreshes it in the background.
   if (url.pathname === '/catalog-data') {
     try {
-      const r = await fetch(SUPABASE_URL + '/rest/v1/products_public?select=' + CATALOG_COLUMNS, {
-        headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY },
-      });
+      const h = { headers: { apikey: SUPABASE_ANON_KEY, Authorization: 'Bearer ' + SUPABASE_ANON_KEY } };
+      // Best Deal fields first; without them if the view predates
+      // 20261006_best_deal_pricing.sql (unknown columns are a 400).
+      let r = await fetch(SUPABASE_URL + '/rest/v1/products_public?select=' + CATALOG_COLUMNS + ',' + CATALOG_DEAL_COLUMNS, h);
+      if (!r.ok) r = await fetch(SUPABASE_URL + '/rest/v1/products_public?select=' + CATALOG_COLUMNS, h);
       if (!r.ok) throw new Error('Supabase ' + r.status);
       const rows = await r.text();
       res.setHeader('Content-Type', 'application/json; charset=utf-8');
