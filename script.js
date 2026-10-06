@@ -2247,9 +2247,15 @@ function computeTitleParts(p) {
   // A bare number is a pack count (pack_size "1"), not a size -- it led
   // titles like "Bulk Pallet 1 Retain™ ...".
   if (/^\d+$/.test(sizeStr)) sizeStr = "";
-  // Strip any dash variant (en dash, em dash, or plain hyphen) that
-  // precedes "Wholesale Pricing" in the raw supplier name.
-  const cleanName = p.name.replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
+  // productFamily, not name, when the product belongs to a group: name is
+  // each SKU's own distinct string (sized/tiered/colored), so a grouped
+  // product's H1/SEO title used to change depending on which variant
+  // happened to be active -- "Bulk Case Kleenline Black Coreless Roll Can
+  // Liners..." on one size, a different string on another, none of them
+  // matching the catalog card's own title (which already used
+  // v.productFamily || v.name, see renderVariantCard). Confirmed live,
+  // 2026-10-07.
+  const cleanName = (p.productFamily || p.name).replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, "").trim();
   // Only prepend the size if the name doesn't already contain it
   // anywhere -- startsWith() missed names like "Economy 22x44 Bath
   // Towels", producing "22x44 Economy 22x44 Bath Towels".
@@ -2461,13 +2467,16 @@ function populateProductPage(product) {
         item: `${SITE}/category/${categorySlug(product.category)}`,
       });
     }
-    trail.push({ "@type": "ListItem", position: trail.length + 1, name: product.name, item: pageUrl });
+    // productFamily when grouped, same as the H1/seoTitle (computeTitleParts
+    // above) -- otherwise the breadcrumb's last crumb named the one active
+    // variant while the heading above it named the family.
+    trail.push({ "@type": "ListItem", position: trail.length + 1, name: product.productFamily || product.name, item: pageUrl });
     bcEl.textContent = JSON.stringify({
       "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: trail,
     });
   }
 
-  setText("breadcrumbProductName", product.name);
+  setText("breadcrumbProductName", product.productFamily || product.name);
 
   // Link the breadcrumb's category segment to its landing page, but only
   // for categories that actually have one -- the thinner categories
@@ -3035,14 +3044,28 @@ function injectProductVariantSelector(variants, activeProduct) {
     pillsHtml = sizeVariants.map(pillFor).join("");
   }
 
-  // Color pills – find siblings with same colorGroup
+  // Color pills – one per DISTINCT color, not one per sibling row. A color
+  // can have several sibling SKUs (Kleenline Black exists at 3 sizes/tiers),
+  // and filtering allProducts by colorGroup alone returned every one of
+  // those rows, so a 2-color family with one color at 3 sizes rendered 4
+  // color pills -- "Black, Black, Black, Natural" -- instead of 2.
+  // Confirmed live, 2026-10-07. Same distinct-color logic as the catalog
+  // card's colorPillsHtml (renderVariantCard): each color's pill points at
+  // whichever sibling shares the active product's own variantLabel, falling
+  // back to that color's cheapest/first row when no size overlaps (true for
+  // Kleenline, where Natural and Black don't share a single size).
   let colorHtml = "";
   if (activeProduct.colorGroup) {
     const colorSiblings = allProducts.filter(p => p.colorGroup === activeProduct.colorGroup);
-    if (colorSiblings.length > 1) {
-      const colorPills = colorSiblings.map(p => {
+    const colors = [...new Set(colorSiblings.map(p => p.colorLabel).filter(Boolean))];
+    if (colors.length > 1) {
+      const colorOptions = colors.map(color =>
+        colorSiblings.find(p => p.colorLabel === color && p.variantLabel === activeProduct.variantLabel) ||
+        colorSiblings.find(p => p.colorLabel === color)
+      );
+      const colorPills = colorOptions.map(p => {
         const out = p.inStock === false;
-        return `<button type="button" class="variant-pill color-pill${p.itemNumber === activeProduct.itemNumber ? " active" : ""}${out ? " is-out" : ""}"
+        return `<button type="button" class="variant-pill color-pill${p.colorLabel === activeProduct.colorLabel ? " active" : ""}${out ? " is-out" : ""}"
                  data-slug="${p.slug}"
                  ${out ? `disabled aria-disabled="true" title="${p.colorLabel} — Out of Stock"` : `onclick="switchProductVariant('${p.slug}')" title="${p.colorLabel}"`}
          >${p.colorLabel}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;

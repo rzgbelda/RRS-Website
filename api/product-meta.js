@@ -145,7 +145,13 @@ function computeTitleParts(p) {
   let sizeStr     = sizeMatch ? sizeMatch[1].trim() : (p.size || '');
   // A bare number is a pack count, not a size. Mirrors script.js.
   if (/^\d+$/.test(sizeStr)) sizeStr = '';
-  const cleanName = String(p.name || '').replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, '').trim();
+  // product_family, not name, when grouped -- mirrors script.js's
+  // computeTitleParts. Without this the crawler-facing <title>/og:title/
+  // JSON-LD Product.name disagreed with the on-page H1 (which already
+  // preferred productFamily) for any grouped product, and changed per
+  // variant instead of staying stable for the family. Confirmed live,
+  // 2026-10-07.
+  const cleanName = String(p.product_family || p.name || '').replace(/\s*[–—-]\s*Wholesale Pricing.*$/i, '').trim();
   // Dimensions get written two ways across the catalog -- a size field of
   // `27" × 54"` versus a name containing `27x54` -- so the separator has to
   // normalize away too, not just punctuation. Stripping only non-alphanumerics
@@ -372,7 +378,10 @@ function buildBreadcrumbJsonLd(p, pageUrl) {
       item: SITE + '/category/' + categorySlug(p.category_name),
     });
   }
-  trail.push({ '@type': 'ListItem', position: trail.length + 1, name: p.name, item: pageUrl });
+  // product_family when grouped, same as the H1/seoTitle above -- otherwise
+  // the breadcrumb's last crumb named the one active variant while the
+  // heading above it named the family, disagreeing on the same page.
+  trail.push({ '@type': 'ListItem', position: trail.length + 1, name: p.product_family || p.name, item: pageUrl });
   return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: trail };
 }
 
