@@ -10661,13 +10661,13 @@ html.rrs-quote-only .pp-price-cta {
 
 /* ─────────────────────────────────────────
    BEST DEAL (20261006_best_deal_pricing.sql)
-   Catalog card tag (top-left of the image -- Fast Delivery and stock sit
-   top-right, Mix & Match bottom-left), struck "was" price, and the product
+   Catalog card tag (bottom-left of the image, above the Mix & Match badge
+   when there is one), struck "was" price, and the product
    page banner + tier-card "was" prices.
 ───────────────────────────────────────── */
 .best-deal-badge {
   position: absolute;
-  top: 10px;
+  bottom: 10px;
   left: 10px;
   z-index: 3;
   display: inline-flex;
@@ -10741,8 +10741,6 @@ html.rrs-quote-only .pp-price-cta {
 @media (max-width: 480px) {
   .pp-deal-link { margin-left: 0; }
 }
-/* On a Best Deal card the top row belongs to the deal tag; the right-side
-   pills (Fast Delivery, stock) step down a row so narrow cards never collide. */
-.product-card.is-best-deal .product-image .fast-ship-badge,
-.product-card.is-best-deal .product-image .card-stock-badge { top: 42px; }
-.product-card.is-best-deal .product-image .fast-ship-badge + .card-stock-badge { top: 72px; }
+/* The deal tag sits bottom-left of the image. A Mix & Match product already
+   has its MOQ badge there, so the deal tag stacks just above it. */
+.product-image:has(.moq-group-badge) .best-deal-badge { bottom: 42px; }
