@@ -265,13 +265,17 @@
     .pb-form-msg.pb-ok { display: block; background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.4); color: #86efac; }
     .pb-form-msg.pb-err { display: block; background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.4); color: #fca5a5; }
 
-    /* -- Comparison teaser -- */
-    .pb-compare { background: #f6f9fc; border-top: 1px solid #e8eef5; padding: 56px 0; }
+    /* -- Comparison teaser --
+       Orange brand background per CEO request. The table card stays dark
+       navy so its own text contrast is untouched; only the surrounding
+       section and the left-column copy needed new colors to read well
+       against orange instead of the previous light-gray background. */
+    .pb-compare { background: linear-gradient(135deg, #ed7226 0%, #f08838 100%); border-top: 1px solid #d4611a; padding: 56px 0; }
     .pb-compare-inner { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: .9fr 1.1fr; gap: 44px; align-items: center; }
-    .pb-compare h2 { font-size: 26px; font-weight: 900; color: #0b2d52; margin: 0 0 12px; letter-spacing: -.01em; }
-    .pb-compare p { font-size: 14.5px; color: #5b6c7e; line-height: 1.75; margin: 0; max-width: 46ch; }
+    .pb-compare h2 { font-size: 26px; font-weight: 900; color: #fff; margin: 0 0 12px; letter-spacing: -.01em; }
+    .pb-compare p { font-size: 14.5px; color: rgba(255,255,255,.92); line-height: 1.75; margin: 0; max-width: 46ch; }
     .pb-compare-sample-tag { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #93b4d8; margin-bottom: 2px; }
-    .pb-compare-table { background: #0b1f38; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px rgba(11,45,82,.14); }
+    .pb-compare-table { background: #0b1f38; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 48px rgba(11,31,56,.28); }
     .pb-compare-table-head { display: flex; justify-content: space-between; align-items: center; background: #123b68; padding: 14px 20px; }
     .pb-compare-table-head span:first-child { color: #fff; font-weight: 800; font-size: 14px; }
     .pb-compare-table-head span:last-child { color: #93b4d8; font-size: 12px; font-weight: 700; }
