@@ -230,15 +230,15 @@ function isTabAllowed(tab) {
   return !ADMIN_ONLY_TABS.includes(tab);
 }
 
-// CRM & Leads and Campaigns are view-only for Owner by design (RRS-25
-// follow-up): Owner can see everything there for oversight, but only
-// Marketing can actually configure or change it. RLS (see migration
-// 20260902f_crm_campaigns_owner_readonly.sql) is the real enforcement
-// -- this is the UI-side guard so an Owner clicking Save gets a clear
-// "you can't edit this" toast instead of a confusing RLS error, and so
-// the buttons don't look clickable when they'd silently fail.
+// CRM & Leads and Campaigns were briefly view-only for Owner (RRS-25
+// follow-up, migration 20260902f_crm_campaigns_owner_readonly.sql).
+// 20261007_crm_campaigns_owner_write_access.sql reverted that, so Owner
+// has full read+write access again, same as Marketing. Kept as a
+// function (always returning false) rather than deleting every call
+// site, since blockIfCrmReadOnly() is still a reasonable single place to
+// reintroduce a role gate here if that's ever wanted again.
 function isCrmCampaignsReadOnly() {
-  return window._adminRole === "owner";
+  return false;
 }
 
 function blockIfCrmReadOnly() {
