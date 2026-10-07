@@ -191,6 +191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupMobileNav();
   updateCartBadge();
   updateQuoteBadge();
+  renderPriceBeatButton();
   setupReorderDropdowns();
   setupLogin();
   setupAccountDropdown();
@@ -598,6 +599,54 @@ function cartValue(cart) {
         : Number(i.price || i.price1 || 0) || 0;
     return sum + price * (Number(i.quantity) || 0);
   }, 0);
+}
+
+/* =========================
+   PRICE BEAT FLOATING BUTTON
+========================= */
+// Sitewide sticky CTA to /price-beat, bottom-left (see .price-beat-fab in
+// style.css for why that corner). Built once and appended to <body> here
+// rather than added to every page's markup, the same reasoning as
+// loadGhlChatWidget()/updateMiniCart(): this is the only place guaranteed
+// to run on every page, including the ~26 pages that still copy-paste
+// their header instead of using /partials/site-header.
+//
+// Hidden on the page it links to (no point offering it there) and on the
+// same cart/checkout/account/login flow pages the mini-cart and GHL chat
+// widget already exclude themselves from -- those pages have their own
+// focused job and a promotional FAB would only compete with it.
+const PRICE_BEAT_EXCLUDED_PATHS = [
+  "/price-beat", "/cart", "/checkout", "/payment", "/order-confirmation",
+  "/account", "/login", "/reset-password", "/admin",
+];
+
+function priceBeatFabSuppressed() {
+  const p = (location.pathname || "/").toLowerCase().replace(/\.html$/, "").replace(/\/+$/, "") || "/";
+  return PRICE_BEAT_EXCLUDED_PATHS.includes(p);
+}
+
+function renderPriceBeatButton() {
+  if (priceBeatFabSuppressed()) {
+    const existing = document.getElementById("priceBeatFab");
+    if (existing) existing.style.display = "none";
+    return;
+  }
+  if (document.getElementById("priceBeatFab")) return;
+
+  const a = document.createElement("a");
+  a.id = "priceBeatFab";
+  a.className = "price-beat-fab";
+  a.href = "/price-beat";
+  a.setAttribute("aria-label", "We'll beat your supplier's price — get a written comparison");
+  a.innerHTML =
+    `<span class="price-beat-fab-icon">` +
+      `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>` +
+    `</span>` +
+    `<span class="price-beat-fab-text">Beat My Price</span>`;
+  a.addEventListener("click", () => {
+    if (typeof gtag === "function") gtag("event", "price_beat_fab_click");
+  });
+  document.body.appendChild(a);
 }
 
 /* =========================

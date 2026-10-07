@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Quote-only mode: prices hidden on the main domain (other subdomains
+       keep them). Set here, before first paint, so no price ever flashes.
+       See RRS_QUOTE_ONLY in script.js. -->
+  <script>/* Quote-only mode disabled for launch -- prices now show on the main domain. To re-enable, uncomment: if(/^(www\.)?roomreadysupply\.com$/.test(location.hostname))document.documentElement.classList.add('rrs-quote-only'); */</script>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-69R8R75Q3Y');
+  </script>
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/Favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>We'll Beat Your Supplier's Price | Room Ready Supply</title>
+  <meta name="description" content="Send us what you're paying now for up to 3 items and we'll send back our price next to theirs, in writing, within 1 business day. No account, no commitment." />
+  <link rel="canonical" href="https://www.roomreadysupply.com/price-beat" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Room Ready Supply" />
+  <meta property="og:title" content="We'll Beat Your Supplier's Price | Room Ready Supply" />
+  <meta property="og:description" content="Send us what you're paying now for up to 3 items and we'll send back our price next to theirs, in writing, within 1 business day." />
+  <meta property="og:url" content="https://www.roomreadysupply.com/price-beat" />
+  <meta property="og:image" content="https://www.roomreadysupply.com/assets/img/banner1.jpg" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="We'll Beat Your Supplier's Price | Room Ready Supply" />
+  <meta name="twitter:description" content="Send us what you're paying now for up to 3 items and we'll send back our price next to theirs, in writing, within 1 business day." />
+  <meta name="twitter:image" content="https://www.roomreadysupply.com/assets/img/banner1.jpg" />
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "We'll Beat Your Supplier's Price",
+  "description": "Send us what you're paying now for up to 3 items and we'll send back our price next to theirs, in writing, within 1 business day.",
+  "url": "https://www.roomreadysupply.com/price-beat",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Room Ready Supply",
+    "url": "https://www.roomreadysupply.com/"
+  }
+}
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.roomreadysupply.com/" },
+    { "@type": "ListItem", "position": 2, "name": "Price Beat", "item": "https://www.roomreadysupply.com/price-beat" }
+  ]
+}
+  </script>
+  <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How fast will I hear back?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Within 1 business day. A real person reviews your items and sends our price next to what you're paying now, in writing." }
+    },
+    {
+      "@type": "Question",
+      "name": "What if you can't beat my price?",
+      "acceptedAnswer": { "@type": "Answer", "text": "We'll say so plainly and show you the closest option we can offer instead. There's no cost or commitment either way." }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need an account to submit this?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No account and no commitment required to send your prices and get a comparison back." }
+    },
+    {
+      "@type": "Question",
+      "name": "How many items can I submit?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Up to 3 items per request. Start with just one, or send all three for a fuller comparison." }
+    }
+  ]
+}
+  </script>
+  <link rel="stylesheet" href="style.css?v=20261007f" />
+  <style>
+    /* -- Price Beat page --------------------------------------------
+       Built on the site's existing .cat-* landing-page classes
+       (see quote-match.html) for the shell, with its own pb-* classes
+       for the hero, form card and comparison teaser -- those have no
+       existing equivalent elsewhere on the site. */
+    .pb-hero {
+      background: linear-gradient(135deg, var(--rrs-navy, #0b2d52) 0%, #123b68 60%, #0e3156 100%);
+      color: #fff;
+      padding: 64px 0 56px;
+      position: relative;
+      overflow: hidden;
+    }
+    .pb-hero::before {
+      /* Faint diagonal line texture, echoing the reference design's corner
+         flourish, without needing an image asset. */
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.05) 0 2px, transparent 2px 28px);
+      pointer-events: none;
+    }
+    .pb-hero-inner {
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 40px;
+      align-items: end;
+    }
+    .pb-crumb { font-size: 12.5px; color: #93b4d8; margin-bottom: 18px; }
+    .pb-crumb a { color: #93b4d8; text-decoration: none; }
+    .pb-crumb a:hover { color: #fff; text-decoration: underline; }
+    .pb-eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: #ffd9b8; background: rgba(237,114,38,.16); border: 1px solid rgba(237,114,38,.4);
+      padding: 6px 14px; border-radius: 100px; margin-bottom: 18px;
+    }
+    .pb-hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 900;
+      letter-spacing: -.02em;
+      line-height: 1.06;
+      margin: 0 0 18px;
+    }
+    .pb-hero h1 em { font-style: normal; color: #ff9a52; }
+    .pb-hero-sub { font-size: 16px; line-height: 1.7; color: #c3d6ea; max-width: 54ch; margin: 0 0 26px; }
+    .pb-hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+    .pb-btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--rrs-orange, #ed7226); color: #fff; font-weight: 800; font-size: 15px;
+      padding: 15px 28px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(237,114,38,.35);
+      transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+    }
+    .pb-btn-primary:hover { background: #d4611a; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(237,114,38,.45); }
+    .pb-btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.08); color: #fff; font-weight: 700; font-size: 14.5px;
+      padding: 14px 22px; border-radius: 12px; text-decoration: none; border: 1.5px solid rgba(255,255,255,.25);
+      transition: background .15s ease;
+    }
+    .pb-btn-ghost:hover { background: rgba(255,255,255,.16); }
+
+    .pb-hero-stat {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.18);
+      border-left: 4px solid var(--rrs-orange, #ed7226);
+      border-radius: 16px;
+      padding: 24px 26px;
+      backdrop-filter: blur(6px);
+    }
+    .pb-hero-stat .pb-stat-num { font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 6px; }
+    .pb-hero-stat .pb-stat-label { font-size: 14px; color: #c3d6ea; line-height: 1.5; }
+
+    /* -- Trust strip -- */
+    .pb-trust {
+      background: #fff; border-bottom: 1px solid #e8eef5;
+      padding: 18px 0;
+    }
+    .pb-trust-inner {
+      max-width: 1180px; margin: 0 auto; padding: 0 24px;
+      display: flex; flex-wrap: wrap; gap: 28px; justify-content: center;
+      font-size: 13.5px; font-weight: 700; color: #334155;
+    }
+    .pb-trust-inner span { display: inline-flex; align-items: center; gap: 7px; }
+    .pb-trust-inner svg { color: var(--rrs-orange, #ed7226); flex-shrink: 0; }
+
+    /* -- Two-column layout: steps + form -- */
+    .pb-main {
+      max-width: 1180px; margin: 0 auto; padding: 56px 24px 20px;
+      display: grid; grid-template-columns: 1fr 1.15fr; gap: 44px; align-items: start;
+    }
+    .pb-steps-head h2 { font-size: 26px; font-weight: 900; color: #0b2d52; letter-spacing: -.01em; margin: 0 0 10px; }
+    .pb-steps-head p { font-size: 15px; color: #5b6c7e; line-height: 1.7; margin: 0 0 30px; max-width: 48ch; }
+    .pb-step-list { list-style: none; margin: 0; padding: 0; position: relative; }
+    .pb-step {
+      display: flex; gap: 16px; position: relative; padding-bottom: 28px;
+    }
+    .pb-step:not(:last-child)::before {
+      content: ""; position: absolute; left: 15px; top: 34px; bottom: 0;
+      width: 2px; background: #e4e9f0;
+    }
+    .pb-step-num {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+      background: #0b2d52; color: #fff; font-weight: 800; font-size: 14px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 1;
+    }
+    .pb-step h3 { font-size: 15.5px; font-weight: 800; color: #0b2d52; margin: 0 0 4px; }
+    .pb-step p { font-size: 13.5px; color: #5b6c7e; line-height: 1.55; margin: 0; }
+    .pb-honesty-note {
+      display: flex; gap: 12px; align-items: flex-start;
+      background: #f0fdf6; border: 1.5px solid #bbf0d3; border-radius: 14px;
+      padding: 18px 20px; margin-top: 8px;
+    }
+    .pb-honesty-note svg { color: #16a34a; flex-shrink: 0; margin-top: 2px; }
+    .pb-honesty-note strong { color: #0f7a3d; }
+    .pb-honesty-note p { font-size: 13.5px; color: #276749; line-height: 1.6; margin: 4px 0 0; }
+
+    /* -- Form card -- */
+    .pb-card {
+      background: #0b1f38; color: #fff; border-radius: 20px;
+      border-top: 4px solid var(--rrs-orange, #ed7226);
+      box-shadow: 0 20px 60px rgba(11,45,82,.18);
+      padding: 34px 32px 30px;
+    }
+    .pb-card h2 { font-size: 22px; font-weight: 900; margin: 0 0 8px; letter-spacing: -.01em; }
+    .pb-card > p { font-size: 13.5px; color: #93b4d8; line-height: 1.6; margin: 0 0 24px; }
+    .pb-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px; }
+    .pb-field { display: flex; flex-direction: column; gap: 6px; }
+    .pb-field label { font-size: 12.5px; font-weight: 700; color: #cfe0f2; }
+    .pb-field input, .pb-field textarea {
+      background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.16);
+      border-radius: 10px; padding: 11px 13px; font-size: 14px; color: #fff; font-family: 'Inter', sans-serif;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    .pb-field input::placeholder, .pb-field textarea::placeholder { color: #6f8db0; }
+    .pb-field input:focus, .pb-field textarea:focus {
+      outline: none; border-color: var(--rrs-orange, #ed7226); background: rgba(255,255,255,.1);
+    }
+    .pb-field input.pb-invalid, .pb-field textarea.pb-invalid { border-color: #f87171; }
+    .pb-field-err { display: none; font-size: 12px; color: #fca5a5; margin-top: 2px; }
+
+    .pb-items-head { font-size: 12.5px; font-weight: 700; color: #cfe0f2; margin: 22px 0 10px; }
+    .pb-item-row {
+      display: grid; grid-template-columns: 30px 1fr 140px; gap: 10px; align-items: start; margin-bottom: 12px;
+    }
+    .pb-item-num {
+      width: 30px; height: 38px; border-radius: 9px; background: rgba(237,114,38,.18);
+      color: #ff9a52; font-weight: 800; font-size: 13px; display: flex; align-items: center; justify-content: center;
+    }
+    .pb-item-row label { display: block; font-size: 11px; font-weight: 700; color: #93b4d8; margin-bottom: 4px; }
+    .pb-item-row input {
+      width: 100%; background: rgba(255,255,255,.06); border: 1.5px solid rgba(255,255,255,.16);
+      border-radius: 9px; padding: 10px 12px; font-size: 13.5px; color: #fff; font-family: 'Inter', sans-serif;
+    }
+    .pb-item-row input::placeholder { color: #6f8db0; }
+    .pb-item-row input:focus { outline: none; border-color: var(--rrs-orange, #ed7226); }
+
+    .pb-notes-field { margin-top: 18px; margin-bottom: 22px; }
+    .pb-notes-field textarea { width: 100%; min-height: 72px; resize: vertical; }
+
+    .pb-submit-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .pb-submit-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--rrs-orange, #ed7226); color: #fff; font-weight: 800; font-size: 15px;
+      padding: 15px 26px; border-radius: 11px; border: none; cursor: pointer;
+      transition: background .15s ease, transform .15s ease;
+    }
+    .pb-submit-btn:hover { background: #d4611a; transform: translateY(-1px); }
+    .pb-submit-btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+    .pb-call-note { font-size: 12.5px; color: #93b4d8; margin-top: 16px; }
+    .pb-call-note a { color: #ff9a52; font-weight: 700; text-decoration: none; }
+    .pb-call-note a:hover { text-decoration: underline; }
+    .pb-form-msg { display: none; margin-top: 16px; padding: 12px 14px; border-radius: 10px; font-size: 13.5px; font-weight: 600; }
+    .pb-form-msg.pb-ok { display: block; background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.4); color: #86efac; }
+    .pb-form-msg.pb-err { display: block; background: rgba(248,113,113,.12); border: 1px solid rgba(248,113,113,.4); color: #fca5a5; }
+
+    /* -- Comparison teaser -- */
+    .pb-compare { background: #f6f9fc; border-top: 1px solid #e8eef5; padding: 56px 0; }
+    .pb-compare-inner { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: .9fr 1.1fr; gap: 44px; align-items: center; }
+    .pb-compare h2 { font-size: 26px; font-weight: 900; color: #0b2d52; margin: 0 0 12px; letter-spacing: -.01em; }
+    .pb-compare p { font-size: 14.5px; color: #5b6c7e; line-height: 1.75; margin: 0; max-width: 46ch; }
+    .pb-compare-table { background: #0b1f38; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px rgba(11,45,82,.14); }
+    .pb-compare-table-head { display: flex; justify-content: space-between; align-items: center; background: #123b68; padding: 14px 20px; }
+    .pb-compare-table-head span:first-child { color: #fff; font-weight: 800; font-size: 14px; }
+    .pb-compare-table-head span:last-child { color: #93b4d8; font-size: 12px; font-weight: 700; }
+    .pb-compare-cols { display: grid; grid-template-columns: 1.4fr 1fr 1fr; padding: 12px 20px 6px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6f8db0; }
+    .pb-compare-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; align-items: center; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+    .pb-skel { height: 10px; border-radius: 6px; background: rgba(255,255,255,.14); }
+    .pb-skel-our { background: var(--rrs-orange, #ed7226); opacity: .85; }
+
+    /* -- FAQ -- */
+    .pb-faq { padding: 56px 0 64px; }
+
+    @media (max-width: 880px) {
+      .pb-hero-inner { grid-template-columns: 1fr; }
+      .pb-hero-stat { max-width: 340px; }
+      .pb-main { grid-template-columns: 1fr; padding-top: 44px; }
+      .pb-field-grid { grid-template-columns: 1fr; }
+      .pb-compare-inner { grid-template-columns: 1fr; }
+      .pb-card { padding: 28px 22px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="site-header-slot"></div>
+
+  <!-- -- Hero ------------------------------------------------------ -->
+  <header class="pb-hero">
+    <div class="pb-hero-inner">
+      <div>
+        <nav class="pb-crumb" aria-label="Breadcrumb"><a href="/">Home</a> &rsaquo; Price Beat</nav>
+        <span class="pb-eyebrow">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+          Written Price Comparison
+        </span>
+        <h1>We'll beat your supplier's price on <em>3 items</em>&mdash;in writing.</h1>
+        <p class="pb-hero-sub">Send us what you're paying now. Within 1 business day, a real person sends back our price next to theirs, side by side. No account to create, nothing to sign, no commitment to order.</p>
+        <div class="pb-hero-ctas">
+          <a href="#pb-form" class="pb-btn-primary">
+            Show Us Your Prices
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </a>
+          <a href="tel:12522270073" class="pb-btn-ghost">
+            <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            (252) 227-0073
+          </a>
+        </div>
+      </div>
+      <div class="pb-hero-stat">
+        <div class="pb-stat-num">1 business day</div>
+        <div class="pb-stat-label">A clear answer from a real person at our Plymouth, NC office&mdash;not an automated maze.</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- -- Trust strip ------------------------------------------------ -->
+  <div class="pb-trust">
+    <div class="pb-trust-inner">
+      <span><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> No account required</span>
+      <span><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> No commitment to order</span>
+      <span><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Answer in 1 business day</span>
+      <span><svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Reviewed by a real person</span>
+    </div>
+  </div>
+
+  <!-- -- Steps + Form ------------------------------------------------ -->
+  <main class="pb-main">
+    <div class="pb-steps-head">
+      <h2>A straight comparison. Nothing hidden.</h2>
+      <p>You already know what you buy. Show us the numbers and let us do the work.</p>
+      <ol class="pb-step-list">
+        <li class="pb-step">
+          <div class="pb-step-num">1</div>
+          <div><h3>Tell us what you're paying</h3><p>List the item, case or pack details, and your current price.</p></div>
+        </li>
+        <li class="pb-step">
+          <div class="pb-step-num">2</div>
+          <div><h3>We check every item</h3><p>We compare like-for-like so the numbers actually mean something.</p></div>
+        </li>
+        <li class="pb-step">
+          <div class="pb-step-num">3</div>
+          <div><h3>You get it in writing</h3><p>Our price beside yours, with clear ordering terms&mdash;within 1 business day.</p></div>
+        </li>
+      </ol>
+      <div class="pb-honesty-note">
+        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+        <div><strong>Can't beat one?</strong><p>We'll say so plainly and show you the closest option we can offer&mdash;no vague runaround.</p></div>
+      </div>
+    </div>
+
+    <div class="pb-card" id="pb-form">
+      <h2>Show us your prices</h2>
+      <p>Start with one item or send all three. The more detail you share, the cleaner the comparison.</p>
+
+      <form id="priceBeatForm" novalidate>
+        <div class="pb-field-grid">
+          <div class="pb-field">
+            <label for="pbContactName">Your name</label>
+            <input id="pbContactName" type="text" placeholder="Full name" required autocomplete="name">
+            <span class="pb-field-err" id="pbContactNameErr">Please enter your name.</span>
+          </div>
+          <div class="pb-field">
+            <label for="pbBusinessName">Property or business</label>
+            <input id="pbBusinessName" type="text" placeholder="Business name" required autocomplete="organization">
+            <span class="pb-field-err" id="pbBusinessNameErr">Please enter your business or property name.</span>
+          </div>
+        </div>
+        <div class="pb-field-grid" style="grid-template-columns:1fr;">
+          <div class="pb-field">
+            <label for="pbEmail">Email</label>
+            <input id="pbEmail" type="email" placeholder="you@business.com" required autocomplete="email">
+            <span class="pb-field-err" id="pbEmailErr">Please enter a valid email address.</span>
+          </div>
+        </div>
+
+        <div class="pb-items-head">What are you paying now?</div>
+        <div id="pbItemsList">
+          <div class="pb-item-row">
+            <div class="pb-item-num">1</div>
+            <div>
+              <label for="pbItem1Desc">Item + case/pack details</label>
+              <input id="pbItem1Desc" type="text" placeholder="Example: 2-ply jumbo tissue, 12 rolls">
+            </div>
+            <div>
+              <label for="pbItem1Price">Current price</label>
+              <input id="pbItem1Price" type="text" placeholder="$ per case" inputmode="decimal">
+            </div>
+          </div>
+          <div class="pb-item-row">
+            <div class="pb-item-num">2</div>
+            <div>
+              <label for="pbItem2Desc">Item + case/pack details (optional)</label>
+              <input id="pbItem2Desc" type="text" placeholder="Item + case/pack details">
+            </div>
+            <div>
+              <label for="pbItem2Price">Current price</label>
+              <input id="pbItem2Price" type="text" placeholder="$ per case" inputmode="decimal">
+            </div>
+          </div>
+          <div class="pb-item-row">
+            <div class="pb-item-num">3</div>
+            <div>
+              <label for="pbItem3Desc">Item + case/pack details (optional)</label>
+              <input id="pbItem3Desc" type="text" placeholder="Item + case/pack details">
+            </div>
+            <div>
+              <label for="pbItem3Price">Current price</label>
+              <input id="pbItem3Price" type="text" placeholder="$ per case" inputmode="decimal">
+            </div>
+          </div>
+        </div>
+        <span class="pb-field-err" id="pbItemsErr">Please enter at least one item.</span>
+
+        <div class="pb-field pb-notes-field">
+          <label for="pbNotes">Anything we should know? (optional)</label>
+          <textarea id="pbNotes" placeholder="Brand, size, order quantity, delivery needs&hellip;"></textarea>
+        </div>
+
+        <div class="pb-submit-row">
+          <button type="submit" class="pb-submit-btn" id="pbSubmitBtn">
+            Beat My Prices
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+        </div>
+        <p class="pb-call-note">Prefer to talk? Call <a href="tel:12522270073">(252) 227-0073</a>. Mon&ndash;Fri, 8 AM&ndash;5 PM.</p>
+        <div class="pb-form-msg" id="pbFormMsg"></div>
+      </form>
+    </div>
+  </main>
+
+  <!-- -- Comparison teaser ------------------------------------------------ -->
+  <section class="pb-compare">
+    <div class="pb-compare-inner">
+      <div>
+        <h2>&ldquo;In writing&rdquo; means side by side.</h2>
+        <p>No vague discount promise. You'll see the item, what you're paying, and our price on one clear comparison&mdash;sent to your inbox within 1 business day.</p>
+      </div>
+      <div class="pb-compare-table" aria-hidden="true">
+        <div class="pb-compare-table-head"><span>Your written price comparison</span><span>Up to 3 items</span></div>
+        <div class="pb-compare-cols"><span>Item</span><span>Your price</span><span>Our price</span></div>
+        <div class="pb-compare-row"><span class="pb-skel" style="width:70%"></span><span class="pb-skel" style="width:50%"></span><span class="pb-skel pb-skel-our" style="width:60%"></span></div>
+        <div class="pb-compare-row"><span class="pb-skel" style="width:55%"></span><span class="pb-skel" style="width:45%"></span><span class="pb-skel pb-skel-our" style="width:50%"></span></div>
+        <div class="pb-compare-row"><span class="pb-skel" style="width:62%"></span><span class="pb-skel" style="width:40%"></span><span class="pb-skel pb-skel-our" style="width:55%"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- -- FAQ ------------------------------------------------ -->
+  <section class="cat-faq pb-faq">
+    <div class="cat-wrap">
+      <h2>Frequently Asked Questions</h2>
+      <div class="cat-faq-item">
+        <h3>How fast will I hear back?</h3>
+        <p>Within 1 business day. A real person reviews your items and sends our price next to what you're paying now, in writing.</p>
+      </div>
+      <div class="cat-faq-item">
+        <h3>What if you can't beat my price?</h3>
+        <p>We'll say so plainly and show you the closest option we can offer instead. There's no cost or commitment either way.</p>
+      </div>
+      <div class="cat-faq-item">
+        <h3>Do I need an account to submit this?</h3>
+        <p>No account and no commitment required to send your prices and get a comparison back.</p>
+      </div>
+      <div class="cat-faq-item">
+        <h3>How many items can I submit?</h3>
+        <p>Up to 3 items per request. Start with just one, or send all three for a fuller comparison.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-legal-footer">
+    <nav aria-label="Legal">
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/shipping-policy">Shipping Policy</a>
+    </nav>
+    <p>Room Ready Supply &middot; 609 Washington St, Plymouth, NC 27962</p>
+  </footer>
+  <div class="bottom-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div><span>☎ (252) 227-0073</span><span>✉ sales@roomreadysupply.com</span></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="/supabase.js"></script>
+  <script src="/script.js"></script>
+  <script src="/ghl-chat.js?v=20260930a" defer></script>
+
+  <!-- -- Form submit ------------------------------------------------ -->
+  <script>
+  (function () {
+    const FN_URL = 'https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/price-beat-request';
+    const form      = document.getElementById('priceBeatForm');
+    const submitBtn = document.getElementById('pbSubmitBtn');
+    const msgEl     = document.getElementById('pbFormMsg');
+
+    function setFieldError(inputId, errId, show) {
+      const input = document.getElementById(inputId);
+      const err   = document.getElementById(errId);
+      if (input) input.classList.toggle('pb-invalid', !!show);
+      if (err) err.style.display = show ? 'block' : 'none';
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      let hasError = false;
+
+      const contactName = document.getElementById('pbContactName').value.trim();
+      if (!contactName) { setFieldError('pbContactName', 'pbContactNameErr', true); hasError = true; }
+      else setFieldError('pbContactName', 'pbContactNameErr', false);
+
+      const businessName = document.getElementById('pbBusinessName').value.trim();
+      if (!businessName) { setFieldError('pbBusinessName', 'pbBusinessNameErr', true); hasError = true; }
+      else setFieldError('pbBusinessName', 'pbBusinessNameErr', false);
+
+      const email = document.getElementById('pbEmail').value.trim();
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setFieldError('pbEmail', 'pbEmailErr', true); hasError = true; }
+      else setFieldError('pbEmail', 'pbEmailErr', false);
+
+      const items = [1, 2, 3].map(n => ({
+        description:   document.getElementById('pbItem' + n + 'Desc').value.trim(),
+        current_price: document.getElementById('pbItem' + n + 'Price').value.trim(),
+      })).filter(i => i.description);
+
+      const itemsErr = document.getElementById('pbItemsErr');
+      if (!items.length) {
+        itemsErr.style.display = 'block';
+        document.getElementById('pbItemsList').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        hasError = true;
+      } else {
+        itemsErr.style.display = 'none';
+      }
+
+      if (hasError) return;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Sending&hellip;';
+      msgEl.className = 'pb-form-msg';
+      msgEl.style.display = 'none';
+
+      try {
+        const res = await fetch(FN_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_ANON },
+          body: JSON.stringify({
+            contact_name:  contactName,
+            business_name: businessName,
+            email,
+            items,
+            notes: document.getElementById('pbNotes').value.trim(),
+            affiliate_subdomain: (typeof getAffiliateSubdomain === 'function' ? getAffiliateSubdomain() : null),
+          }),
+        });
+
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || 'Submission failed.');
+
+        if (typeof gtag === 'function') {
+          gtag('event', 'generate_lead', { currency: 'USD', lead_type: 'price_beat_request', items_requested: items.length });
+        }
+
+        form.reset();
+        msgEl.textContent = "Got it — we'll send your written price comparison within 1 business day.";
+        msgEl.className = 'pb-form-msg pb-ok';
+        msgEl.style.display = 'block';
+        msgEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      } catch (err) {
+        msgEl.textContent = err.message || 'Something went wrong. Please try again or call (252) 227-0073.';
+        msgEl.className = 'pb-form-msg pb-err';
+        msgEl.style.display = 'block';
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Beat My Prices <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      }
+    });
+  })();
+  </script>
+
+</body>
+</html>

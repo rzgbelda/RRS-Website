@@ -10284,6 +10284,55 @@ input.qty-input:focus {
 }
 
 /* ══════════════════════════════════════════════════════════════════
+   PRICE BEAT FLOATING BUTTON
+   Docked bottom-LEFT (the mini-cart and GHL chat bubble already own the
+   bottom-right corner, and the Mix & Match bar sits bottom-center) so it
+   never collides with either. Injected from script.js -- see
+   renderPriceBeatButton() -- so it appears on every page without editing
+   each HTML file. Suppressed on /price-beat itself and on
+   checkout/payment/login/account, same exclusion list as the mini-cart
+   and GHL chat widget.
+   ══════════════════════════════════════════════════════════════════ */
+.price-beat-fab {
+  position: fixed;
+  left: 20px;
+  bottom: 24px;
+  z-index: 9996;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--rrs-orange, #ed7226);
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-weight: 800;
+  font-size: 14px;
+  text-decoration: none;
+  padding: 14px 20px 14px 16px;
+  border-radius: 100px;
+  box-shadow: 0 10px 28px rgba(237,114,38,.4), 0 2px 8px rgba(11,45,82,.12);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.price-beat-fab:hover {
+  background: #d4611a;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 34px rgba(237,114,38,.48), 0 2px 8px rgba(11,45,82,.14);
+}
+.price-beat-fab-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(255,255,255,.22);
+  flex-shrink: 0;
+}
+.price-beat-fab-text { white-space: nowrap; }
+@media (max-width: 640px) {
+  .price-beat-fab { left: 14px; bottom: 14px; padding: 13px 18px 13px 13px; font-size: 13px; }
+  .price-beat-fab-icon { width: 26px; height: 26px; }
+}
+/* Give the mini-cart's own suppression paths the same treatment here so
+   the FAB never sits on top of a page that IS a cart/checkout flow. */
+body.price-beat-fab-hidden .price-beat-fab { display: none; }
+
+/* ══════════════════════════════════════════════════════════════════
    PERSISTENT MINI-CART
    Docked bottom-right so the order stays visible while the customer
    keeps shopping. Leaves the corner to its right for the GHL chat bubble
