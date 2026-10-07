@@ -279,16 +279,47 @@
     .pb-skel { height: 10px; border-radius: 6px; background: rgba(255,255,255,.14); }
     .pb-skel-our { background: var(--rrs-orange, #ed7226); opacity: .85; }
 
-    /* -- FAQ -- */
-    .pb-faq { padding: 56px 0 64px; }
+    /* -- FAQ --
+       Previously borrowed quote-match.html's .cat-faq/.cat-wrap/.cat-faq-item
+       classes, but those are defined only in that page's own inline <style>
+       block, not in the shared style.css -- so here they rendered as bare
+       unstyled text with no card, border or spacing. Given this page its
+       own fully self-contained pb-faq-* rules instead. */
+    .pb-faq { background: #f6f9fc; border-top: 1px solid #e8eef5; padding: 64px 0 72px; }
+    .pb-faq-inner { max-width: 880px; margin: 0 auto; padding: 0 24px; }
+    .pb-faq h2 { font-size: 28px; font-weight: 900; color: #0b2d52; letter-spacing: -.01em; margin: 0 0 28px; text-align: center; }
+    .pb-faq-item {
+      background: #fff; border: 1.5px solid #e2e8f0; border-radius: 14px;
+      padding: 20px 24px; margin-bottom: 14px;
+      box-shadow: 0 2px 10px rgba(11,45,82,.04);
+    }
+    .pb-faq-item h3 { font-size: 15.5px; font-weight: 800; color: #0b2d52; margin: 0 0 8px; }
+    .pb-faq-item p { font-size: 14px; line-height: 1.7; color: #5b6c7e; margin: 0; }
 
     @media (max-width: 880px) {
-      .pb-hero-inner { grid-template-columns: 1fr; }
-      .pb-hero-stat { max-width: 340px; }
-      .pb-main { grid-template-columns: 1fr; padding-top: 44px; }
+      .pb-hero { padding: 48px 0 40px; }
+      .pb-hero-inner { grid-template-columns: 1fr; gap: 28px; }
+      .pb-hero-stat { max-width: 100%; }
+      .pb-main { grid-template-columns: 1fr; padding: 40px 20px 16px; gap: 36px; }
       .pb-field-grid { grid-template-columns: 1fr; }
-      .pb-compare-inner { grid-template-columns: 1fr; }
-      .pb-card { padding: 28px 22px 24px; }
+      .pb-compare { padding: 40px 0; }
+      .pb-compare-inner { grid-template-columns: 1fr; padding: 0 20px; gap: 28px; }
+      .pb-card { padding: 26px 20px 22px; }
+      .pb-item-row { grid-template-columns: 24px 1fr; }
+      .pb-item-row > div:last-child { grid-column: 2; }
+      .pb-item-num { width: 24px; height: 24px; font-size: 11px; margin-bottom: 4px; }
+      .pb-trust-inner { gap: 16px 22px; font-size: 12.5px; }
+      .pb-faq { padding: 48px 0 56px; }
+      .pb-faq-inner { padding: 0 20px; }
+      .pb-faq h2 { font-size: 24px; }
+    }
+
+    @media (max-width: 560px) {
+      .pb-hero-ctas { flex-direction: column; align-items: stretch; }
+      .pb-btn-primary, .pb-btn-ghost { justify-content: center; }
+      .pb-trust-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
+      .pb-compare-cols, .pb-compare-row { grid-template-columns: 1.2fr 1fr .9fr; padding-left: 16px; padding-right: 16px; }
+      .pb-compare-table-head { padding: 12px 16px; flex-wrap: wrap; gap: 4px; }
     }
   </style>
 </head>
@@ -458,22 +489,22 @@
   </section>
 
   <!-- -- FAQ ------------------------------------------------ -->
-  <section class="cat-faq pb-faq">
-    <div class="cat-wrap">
+  <section class="pb-faq">
+    <div class="pb-faq-inner">
       <h2>Frequently Asked Questions</h2>
-      <div class="cat-faq-item">
+      <div class="pb-faq-item">
         <h3>How fast will I hear back?</h3>
         <p>Within 1 business day. A real person reviews your items and sends our price next to what you're paying now, in writing.</p>
       </div>
-      <div class="cat-faq-item">
+      <div class="pb-faq-item">
         <h3>What if you can't beat my price?</h3>
         <p>We'll say so plainly and show you the closest option we can offer instead. There's no cost or commitment either way.</p>
       </div>
-      <div class="cat-faq-item">
+      <div class="pb-faq-item">
         <h3>Do I need an account to submit this?</h3>
         <p>No account and no commitment required to send your prices and get a comparison back.</p>
       </div>
-      <div class="cat-faq-item">
+      <div class="pb-faq-item">
         <h3>How many items can I submit?</h3>
         <p>Up to 3 items per request. Start with just one, or send all three for a fuller comparison.</p>
       </div>
