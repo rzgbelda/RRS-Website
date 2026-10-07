@@ -32,6 +32,14 @@
 -- appear in this CSV; only 180/200/250 were previously allowed alongside
 -- the quality-tier words -- same gap 20260930b_thread_count_tier.sql
 -- closed for 180/200/250 themselves).
+--
+-- Built on top of 20261007b_can_liner_thickness_tier.sql's list, not
+-- 20260930b's -- 20261007b is the more recent migration and already
+-- added the Mil values (1.0/1.25/1.5/2 Mil) for Wraptite can liners.
+-- An earlier version of this migration rebuilt the constraint from
+-- 20260930b's older list instead and silently dropped those Mil values,
+-- which broke the ALTER TABLE (existing can-liner rows already carry
+-- them) -- fixed by carrying every value forward here.
 
 alter table public.products
   drop constraint if exists products_product_tier_check;
@@ -39,7 +47,8 @@ alter table public.products
   add constraint products_product_tier_check check (
     product_tier is null or product_tier in
       ('Economy','Premium','Luxury','Ultra Luxury','Suites','Ringspun',
-       'Hospitality','Wrinkle-Free','180','200','250','300')
+       'Hospitality','Wrinkle-Free','180','200','250','300',
+       '1.0 Mil','1.25 Mil','1.5 Mil','2 Mil')
   );
 
 begin;
