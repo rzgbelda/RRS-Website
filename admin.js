@@ -87,6 +87,53 @@ document.getElementById("adminLogout")?.addEventListener("click", async () => {
   showLogin();
 });
 
+/* ── Forgot password (admin sign-in screen) ───────────────────────
+   Previously the only way to reset an admin password was through
+   Supabase Dashboard -> Authentication -> Users -> "Send password
+   recovery", which emails a link built from the project's default
+   Site URL -- not this site's /reset-password page -- so clicking it
+   just dropped the admin on the homepage with no form to use.
+   This reuses the exact same resetPasswordForEmail() + /reset-password
+   flow login.html already has for customers, just reachable from here
+   too, so admin accounts don't depend on a dashboard-side workaround. */
+document.getElementById("adminForgotPasswordLink")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  document.getElementById("adminForgotModal").style.display = "flex";
+  document.getElementById("adminForgotEmail").value = document.getElementById("adminEmail")?.value || "";
+  document.getElementById("adminForgotMsg").textContent = "";
+});
+
+function closeAdminForgotModal() {
+  document.getElementById("adminForgotModal").style.display = "none";
+}
+
+document.getElementById("adminForgotModal")?.addEventListener("click", (e) => {
+  if (e.target === e.currentTarget) closeAdminForgotModal();
+});
+
+async function sendAdminResetEmail() {
+  const email = document.getElementById("adminForgotEmail").value.trim();
+  const msg   = document.getElementById("adminForgotMsg");
+  if (!email) { msg.style.color = "#ef4444"; msg.textContent = "Please enter your email address."; return; }
+
+  msg.style.color = "#888"; msg.textContent = "Sending...";
+
+  // ?from=admin tells reset-password.html to send the admin back to
+  // /admin (not /login) once the new password is set.
+  const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/reset-password?from=admin"
+  });
+
+  if (error) {
+    msg.style.color = "#ef4444";
+    msg.textContent = error.message;
+  } else {
+    msg.style.color = "#22c55e";
+    msg.textContent = "✓ Reset link sent! Check your email inbox.";
+    setTimeout(closeAdminForgotModal, 3000);
+  }
+}
+
 /* ── My Profile (display name) ────────────────────────────────── */
 
 function applyUserPillDisplay(fullName, email) {
