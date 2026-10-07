@@ -3353,7 +3353,8 @@ textarea:focus {
 .price-row {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  flex-wrap: wrap;
+  gap: 3px 6px;
   margin-bottom: 14px;
 }
 
@@ -3361,11 +3362,13 @@ textarea:focus {
   color: #ED7226;
   font-size: 24px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .unit {
   color: #777;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 .add-btn {
@@ -10949,6 +10952,7 @@ html.rrs-quote-only .pp-price-cta {
   color: #94a3b8;
   text-decoration: line-through;
   text-decoration-thickness: 1.5px;
+  white-space: nowrap;
 }
 
 .pp-deal-banner {
