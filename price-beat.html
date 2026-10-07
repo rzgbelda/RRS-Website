@@ -270,14 +270,25 @@
     .pb-compare-inner { max-width: 1180px; margin: 0 auto; padding: 0 24px; display: grid; grid-template-columns: .9fr 1.1fr; gap: 44px; align-items: center; }
     .pb-compare h2 { font-size: 26px; font-weight: 900; color: #0b2d52; margin: 0 0 12px; letter-spacing: -.01em; }
     .pb-compare p { font-size: 14.5px; color: #5b6c7e; line-height: 1.75; margin: 0; max-width: 46ch; }
+    .pb-compare-sample-tag { font-size: 11.5px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: #93b4d8; margin-bottom: 2px; }
     .pb-compare-table { background: #0b1f38; border-radius: 16px; overflow: hidden; box-shadow: 0 16px 40px rgba(11,45,82,.14); }
     .pb-compare-table-head { display: flex; justify-content: space-between; align-items: center; background: #123b68; padding: 14px 20px; }
     .pb-compare-table-head span:first-child { color: #fff; font-weight: 800; font-size: 14px; }
     .pb-compare-table-head span:last-child { color: #93b4d8; font-size: 12px; font-weight: 700; }
-    .pb-compare-cols { display: grid; grid-template-columns: 1.4fr 1fr 1fr; padding: 12px 20px 6px; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6f8db0; }
-    .pb-compare-row { display: grid; grid-template-columns: 1.4fr 1fr 1fr; align-items: center; padding: 14px 20px; border-top: 1px solid rgba(255,255,255,.08); }
-    .pb-skel { height: 10px; border-radius: 6px; background: rgba(255,255,255,.14); }
-    .pb-skel-our { background: var(--rrs-orange, #ed7226); opacity: .85; }
+    .pb-compare-cols { display: grid; grid-template-columns: 1.5fr .85fr .85fr .7fr; padding: 12px 20px 8px; font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: #6f8db0; }
+    .pb-compare-row { display: grid; grid-template-columns: 1.5fr .85fr .85fr .7fr; align-items: center; padding: 15px 20px; border-top: 1px solid rgba(255,255,255,.08); }
+    .pb-compare-item { display: flex; flex-direction: column; gap: 2px; }
+    .pb-compare-item strong { font-size: 13.5px; font-weight: 700; color: #fff; }
+    .pb-compare-item span { font-size: 11.5px; color: #7d99bb; }
+    .pb-compare-their-price { font-size: 13.5px; color: #c3d6ea; text-decoration: line-through; text-decoration-color: rgba(248,113,113,.6); }
+    .pb-compare-our-price { font-size: 14.5px; font-weight: 800; color: #ff9a52; }
+    .pb-compare-save {
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 11.5px; font-weight: 800; color: #86efac;
+      background: rgba(34,197,94,.14); border: 1px solid rgba(34,197,94,.3);
+      border-radius: 100px; padding: 4px 9px; white-space: nowrap;
+    }
+    .pb-compare-foot { padding: 14px 20px 18px; font-size: 11.5px; color: #6f8db0; border-top: 1px solid rgba(255,255,255,.08); }
 
     /* -- FAQ --
        Previously borrowed quote-match.html's .cat-faq/.cat-wrap/.cat-faq-item
@@ -318,8 +329,21 @@
       .pb-hero-ctas { flex-direction: column; align-items: stretch; }
       .pb-btn-primary, .pb-btn-ghost { justify-content: center; }
       .pb-trust-inner { flex-direction: column; align-items: flex-start; gap: 10px; }
-      .pb-compare-cols, .pb-compare-row { grid-template-columns: 1.2fr 1fr .9fr; padding-left: 16px; padding-right: 16px; }
       .pb-compare-table-head { padding: 12px 16px; flex-wrap: wrap; gap: 4px; }
+      /* Four columns of item name, two prices and a savings badge don't
+         fit a phone width -- stack each row as item on top, prices +
+         badge on a second line below it instead of forcing tiny columns. */
+      .pb-compare-cols { display: none; }
+      .pb-compare-row {
+        grid-template-columns: 1fr; gap: 8px;
+        padding: 14px 16px;
+      }
+      .pb-compare-row > :not(.pb-compare-item) {
+        display: inline-flex; align-items: center; gap: 6px;
+      }
+      .pb-compare-row > .pb-compare-their-price::before { content: "Them: "; color: #7d99bb; font-weight: 700; }
+      .pb-compare-row > .pb-compare-our-price::before { content: "RRS: "; color: #93b4d8; font-weight: 700; }
+      .pb-compare-foot { padding-left: 16px; padding-right: 16px; }
     }
   </style>
 </head>
@@ -479,11 +503,27 @@
         <p>No vague discount promise. You'll see the item, what you're paying, and our price on one clear comparison&mdash;sent to your inbox within 1 business day.</p>
       </div>
       <div class="pb-compare-table" aria-hidden="true">
-        <div class="pb-compare-table-head"><span>Your written price comparison</span><span>Up to 3 items</span></div>
-        <div class="pb-compare-cols"><span>Item</span><span>Your price</span><span>Our price</span></div>
-        <div class="pb-compare-row"><span class="pb-skel" style="width:70%"></span><span class="pb-skel" style="width:50%"></span><span class="pb-skel pb-skel-our" style="width:60%"></span></div>
-        <div class="pb-compare-row"><span class="pb-skel" style="width:55%"></span><span class="pb-skel" style="width:45%"></span><span class="pb-skel pb-skel-our" style="width:50%"></span></div>
-        <div class="pb-compare-row"><span class="pb-skel" style="width:62%"></span><span class="pb-skel" style="width:40%"></span><span class="pb-skel pb-skel-our" style="width:55%"></span></div>
+        <div class="pb-compare-table-head"><span>Sample written price comparison</span><span>Up to 3 items</span></div>
+        <div class="pb-compare-cols"><span>Item</span><span>Your price</span><span>Our price</span><span>Savings</span></div>
+        <div class="pb-compare-row">
+          <div class="pb-compare-item"><strong>2-Ply Bath Tissue</strong><span>96 rolls / case</span></div>
+          <span class="pb-compare-their-price">$58.00</span>
+          <span class="pb-compare-our-price">$49.95</span>
+          <span class="pb-compare-save">Save 14%</span>
+        </div>
+        <div class="pb-compare-row">
+          <div class="pb-compare-item"><strong>Hand Soap 800mL</strong><span>12 units / case</span></div>
+          <span class="pb-compare-their-price">$71.50</span>
+          <span class="pb-compare-our-price">$64.20</span>
+          <span class="pb-compare-save">Save 10%</span>
+        </div>
+        <div class="pb-compare-row">
+          <div class="pb-compare-item"><strong>33 Gal Trash Liners</strong><span>100 ct / case</span></div>
+          <span class="pb-compare-their-price">$41.25</span>
+          <span class="pb-compare-our-price">$35.48</span>
+          <span class="pb-compare-save">Save 14%</span>
+        </div>
+        <div class="pb-compare-foot">Sample only &mdash; your comparison is built from the exact items and prices you send us.</div>
       </div>
     </div>
   </section>
