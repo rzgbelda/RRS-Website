@@ -9904,6 +9904,157 @@ input.qty-input:focus {
   .hc-trust-item span { font-size: 11px; }
 }
 
+/* ── Facility Contracts (homepage, between trust strip and Best Deals) ──
+   A dark navy band breaks up the white hero/trust/carousel stack and
+   doubles as a visual anchor for a B2B-contract pitch that's otherwise
+   easy to skim past. Two-column: pitch + CTA on the left, the 4 contract
+   perks as cards on the right -- stacks to a single column at 900px,
+   same breakpoint the hero and trust strip already use. */
+.hc-contracts {
+  background: linear-gradient(135deg, #0b2d52 0%, #123b68 60%, #0e3156 100%);
+  padding: clamp(40px, 5vw, 64px) clamp(16px, 5vw, 60px);
+  position: relative;
+  overflow: hidden;
+}
+.hc-contracts::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(135deg, rgba(255,255,255,.04) 0 2px, transparent 2px 28px);
+  pointer-events: none;
+}
+.hc-contracts-wrap {
+  max-width: 1320px;
+  margin: 0 auto;
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: clamp(28px, 4vw, 52px);
+  align-items: center;
+}
+.hc-contracts-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #ffd9b8;
+  background: rgba(237,114,38,.16);
+  border: 1px solid rgba(237,114,38,.4);
+  padding: 6px 14px;
+  border-radius: 100px;
+  margin-bottom: 16px;
+}
+.hc-contracts-copy h2 {
+  font-size: clamp(25px, 3.4vw, 36px);
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.01em;
+  line-height: 1.16;
+  margin: 0 0 14px;
+}
+.hc-contracts-copy p {
+  font-size: 15px;
+  color: #c3d6ea;
+  line-height: 1.7;
+  margin: 0 0 26px;
+  max-width: 52ch;
+}
+.hc-contracts-ctas { display: flex; gap: 14px; flex-wrap: wrap; }
+.hc-contracts-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ED7226;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14.5px;
+  text-decoration: none;
+  padding: 14px 24px;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px rgba(237,114,38,.35);
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.hc-contracts-btn:hover {
+  background: #d4611a;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 26px rgba(237,114,38,.45);
+}
+.hc-contracts-call {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  padding: 14px 20px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(255,255,255,.25);
+  background: rgba(255,255,255,.06);
+  transition: background .15s ease;
+}
+.hc-contracts-call:hover { background: rgba(255,255,255,.14); }
+
+.hc-contracts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+.hc-contracts-card {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 14px;
+  padding: 18px;
+  backdrop-filter: blur(4px);
+  transition: background .18s ease, border-color .18s ease, transform .18s ease;
+}
+.hc-contracts-card:hover {
+  background: rgba(255,255,255,.08);
+  border-color: rgba(237,114,38,.45);
+  transform: translateY(-2px);
+}
+.hc-contracts-card-ico {
+  flex: 0 0 38px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  background: rgba(237,114,38,.18);
+  color: #ff9a52;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hc-contracts-card-text strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 3px;
+  line-height: 1.3;
+}
+.hc-contracts-card-text span {
+  display: block;
+  font-size: 12.5px;
+  color: #a9c1da;
+  line-height: 1.45;
+}
+@media (max-width: 900px) {
+  .hc-contracts-wrap { grid-template-columns: 1fr; }
+  .hc-contracts-copy { text-align: center; }
+  .hc-contracts-copy p { margin-left: auto; margin-right: auto; }
+  .hc-contracts-ctas { justify-content: center; }
+}
+@media (max-width: 560px) {
+  .hc-contracts-grid { grid-template-columns: 1fr; }
+  .hc-contracts-ctas { flex-direction: column; align-items: stretch; }
+  .hc-contracts-btn, .hc-contracts-call { justify-content: center; }
+}
+
 /* ── Category tiles ─────────────────────────────────────────────── */
 /* 9 tiles: 3 columns divides evenly, so no orphan row at any width. */
 .hc-cat-grid {
