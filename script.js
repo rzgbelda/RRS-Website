@@ -637,12 +637,12 @@ function renderPriceBeatButton() {
   a.id = "priceBeatFab";
   a.className = "price-beat-fab";
   a.href = "/price-beat";
-  a.setAttribute("aria-label", "We'll beat your supplier's price — get a written comparison");
+  a.setAttribute("aria-label", "Price Match — get a written price comparison");
   a.innerHTML =
     `<span class="price-beat-fab-icon">` +
       `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>` +
     `</span>` +
-    `<span class="price-beat-fab-text">Beat My Price</span>`;
+    `<span class="price-beat-fab-text">Price Match</span>`;
   a.addEventListener("click", () => {
     if (typeof gtag === "function") gtag("event", "price_beat_fab_click");
   });
