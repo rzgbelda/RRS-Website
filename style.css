@@ -121,6 +121,25 @@ body {
     color: #ED7226;
 }
 
+/* Price Beat nav link -- deliberately styled differently from every other
+   nav item (bold, orange, lightning icon) so it stands out as a distinct
+   offer rather than reading as just another page in the menu. */
+.nav-link-highlight {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 5px;
+    color: #ED7226 !important;
+    font-weight: 800 !important;
+}
+.nav-link-highlight svg { flex-shrink: 0; }
+.nav-link-highlight:hover {
+    background: rgba(237, 114, 38, 0.1) !important;
+}
+.mobile-nav a.nav-link-highlight {
+    color: #ED7226 !important;
+    font-weight: 800 !important;
+}
+
 .nav-icons {
   display: flex;
   align-items: center;
