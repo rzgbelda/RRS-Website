@@ -1177,7 +1177,7 @@ function escAttr(s) {
 const BEST_DEAL_ICON = `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9L12 2.5z"/></svg>`;
 
 function bestDealBadgeHtml() {
-  return `<span class="best-deal-badge">${BEST_DEAL_ICON}Best Deal</span>`;
+  return `<span class="best-deal-badge">${BEST_DEAL_ICON}Best Deal${BEST_DEAL_ICON}</span>`;
 }
 
 // Struck-through regular price, only when the deal is actually lower.
@@ -2055,6 +2055,9 @@ const CATEGORY_ARTICLE_MAP = {
 // and keeps it for the rest of the page load, so typing in the search box
 // or ticking a category re-renders in a STABLE order (cards don't jump
 // around while a customer is browsing); a refresh draws fresh keys.
+// Best Deal products are the one exception to the randomizer: they're
+// pinned to the front of the grid (still shuffled among themselves) so the
+// first row is always a deal row.
 const _catalogShuffleKeys = new Map();
 function shuffleCatalog(products) {
   const keyOf = p => {
@@ -2062,7 +2065,9 @@ function shuffleCatalog(products) {
     if (!_catalogShuffleKeys.has(id)) _catalogShuffleKeys.set(id, Math.random());
     return _catalogShuffleKeys.get(id);
   };
-  return products.slice().sort((a, b) => keyOf(a) - keyOf(b));
+  const deals = products.filter(p => p.isBestDeal).sort((a, b) => keyOf(a) - keyOf(b));
+  const rest  = products.filter(p => !p.isBestDeal).sort((a, b) => keyOf(a) - keyOf(b));
+  return deals.concat(rest);
 }
 
 function getActiveCategories() {

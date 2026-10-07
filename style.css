@@ -10706,7 +10706,7 @@ html.rrs-quote-only .pp-price-cta {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 5px 11px 5px 9px;
+  padding: 5px 10px;
   border-radius: 999px;
   background: linear-gradient(135deg, #ff8a2a 0%, #ed7226 55%, #d95a10 100%);
   color: #fff;
@@ -10717,6 +10717,7 @@ html.rrs-quote-only .pp-price-cta {
   box-shadow: 0 4px 12px rgba(237, 114, 38, .35), inset 0 1px 0 rgba(255, 255, 255, .25);
 }
 .best-deal-badge svg { width: 11px; height: 11px; flex-shrink: 0; }
+.best-deal-badge svg:last-child { width: 9px; height: 9px; opacity: .85; }
 
 .product-card.is-best-deal {
   box-shadow: 0 0 0 1.5px rgba(237, 114, 38, .55), 0 10px 28px rgba(237, 114, 38, .10);
