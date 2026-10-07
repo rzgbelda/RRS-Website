@@ -5927,6 +5927,10 @@ async function renderCrmTab() {
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 8l5-5 5 5M4 21h16"/></svg>
           Import CSV
         </button>
+        <button class="crm-btn crm-btn-primary" onclick="openCrmAddLeadModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 5v14M5 12h14"/></svg>
+          Add Lead
+        </button>
         ${tktIsAdmin() ? `<button class="crm-btn crm-btn-ghost" onclick="openDevTeamModal()">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
           Staff Accounts
@@ -6455,6 +6459,78 @@ async function saveCrmImport() {
 
   closeModal("crmImportModal");
   showToast(`Imported ${data.length} lead${data.length === 1 ? "" : "s"}.`);
+  renderCrmTab();
+}
+
+/* ── Add Lead (manual, single row) ──────────────────────────────
+   Same destination table/shape as the CSV importer (saveCrmImport above),
+   just for the one-off case: a phone call, a walk-up, a referral someone
+   heard about in person -- nothing to import, just a lead to log. */
+
+function populateCrmAddLeadSelects() {
+  const sourceSel = document.getElementById("crmAddSource");
+  if (sourceSel && sourceSel.options.length <= 1) {
+    sourceSel.insertAdjacentHTML("beforeend", CRM_SOURCES.map(s => `<option value="${escHtml(s)}">${escHtml(s)}</option>`).join(""));
+  }
+  const statusSel = document.getElementById("crmAddStatus");
+  if (statusSel && !statusSel.options.length) {
+    statusSel.innerHTML = CRM_STATUS.map(s => `<option value="${s.key}"${s.key==="new"?" selected":""}>${escHtml(s.label)}</option>`).join("");
+  }
+}
+
+function openCrmAddLeadModal() {
+  if (blockIfCrmReadOnly()) return;
+  ["crmAddBusinessName","crmAddContactName","crmAddEmail","crmAddPhone","crmAddCustomerType","crmAddTags","crmAddNotes"]
+    .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+  const err = document.getElementById("crmAddLeadError");
+  if (err) err.style.display = "none";
+  populateCrmAddLeadSelects();
+  document.getElementById("crmAddSource").value = "";
+  document.getElementById("crmAddStatus").value = "new";
+  openModal("crmAddLeadModal");
+}
+
+async function saveCrmAddLead() {
+  if (blockIfCrmReadOnly()) return;
+
+  const businessName = document.getElementById("crmAddBusinessName").value.trim();
+  const contactName  = document.getElementById("crmAddContactName").value.trim();
+  const email        = document.getElementById("crmAddEmail").value.trim();
+  const errEl = document.getElementById("crmAddLeadError");
+
+  // Same minimum the CSV importer requires (parseCrmCsv skips a row with
+  // none of these) -- a lead needs at least one way to identify or reach
+  // whoever it is, or it's just a blank card on the board.
+  if (!businessName && !contactName && !email) {
+    errEl.textContent = "Enter at least a business name, contact name, or email.";
+    errEl.style.display = "block";
+    return;
+  }
+  errEl.style.display = "none";
+
+  const tagsRaw = document.getElementById("crmAddTags").value.trim();
+  const payload = {
+    business_name:  businessName || null,
+    contact_name:   contactName || null,
+    email:          email || null,
+    phone_number:   document.getElementById("crmAddPhone").value.trim() || null,
+    customer_type:  document.getElementById("crmAddCustomerType").value.trim() || null,
+    lead_source:    document.getElementById("crmAddSource").value || "Other",
+    status:         document.getElementById("crmAddStatus").value || "new",
+    tags:           tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [],
+    notes:          document.getElementById("crmAddNotes").value.trim() || null,
+  };
+
+  const btn = document.getElementById("crmAddLeadSaveBtn");
+  btn.disabled = true; btn.textContent = "Adding…";
+
+  const { error } = await window.sb.from("quote_requests").insert(payload);
+
+  btn.disabled = false; btn.textContent = "Add Lead";
+  if (error) { errEl.textContent = "Couldn't add lead: " + error.message; errEl.style.display = "block"; return; }
+
+  closeModal("crmAddLeadModal");
+  showToast("Lead added.");
   renderCrmTab();
 }
 
