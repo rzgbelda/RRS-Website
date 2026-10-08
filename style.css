@@ -7178,7 +7178,11 @@ span.flatpickr-weekday {
     box-shadow: 4px 0 24px rgba(0,0,0,0.2);
     transition: left 0.3s ease;
     align-self: unset;
-    padding-bottom: 40px;
+    /* Clears the Price Match FAB (fixed, left:20px/bottom:24px, ~48px tall --
+       see .price-beat-fab), which otherwise sits on top of the drawer's own
+       last category/type checkboxes since the drawer's visible bottom edge
+       is the viewport bottom, same place the FAB floats. */
+    padding-bottom: 100px;
     display: flex;
     flex-direction: column;
   }
