@@ -2931,6 +2931,69 @@ textarea:focus {
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
+/* Nested "type" checkboxes (Flat Sheet, Pillowcase, ...) that appear under a
+   category once it's checked -- see TYPE_NOUNS_BY_CATEGORY in script.js. */
+.filter-subtypes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0 4px 27px;
+  padding-left: 10px;
+  border-left: 2px solid #f0f4fa;
+}
+.filter-subtypes label {
+  display: grid;
+  grid-template-columns: 15px 1fr;
+  align-items: center;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #5a7294;
+  gap: 8px;
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 8px;
+  transition: background .15s, color .15s;
+}
+.filter-subtypes label:hover {
+  background: #f4f7fb;
+  color: #ED7226;
+}
+.filter-subtypes label:has(input:checked) {
+  background: rgba(237,114,38,.08);
+  color: #ED7226;
+  font-weight: 600;
+}
+.filter-subtypes input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 15px;
+  height: 15px;
+  min-width: 15px;
+  min-height: 15px;
+  border: 2px solid #d0dae8;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.filter-subtypes input[type="checkbox"]:hover { border-color: #ED7226; }
+.filter-subtypes input[type="checkbox"]:checked {
+  background: #ED7226;
+  border-color: #ED7226;
+}
+.filter-subtypes input[type="checkbox"]:checked::after {
+  content: '';
+  display: block;
+  width: 3px;
+  height: 7px;
+  border: 2px solid #fff;
+  border-top: none;
+  border-left: none;
+  transform: rotate(45deg) translate(-1px, -1px);
+  margin: auto;
+}
+
 /* VOLUME PRICING BASKET PANEL (catalog sidebar) */
 
 .vp-basket-panel {

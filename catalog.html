@@ -205,17 +205,21 @@
           <!-- "A-Z" checkbox removed per RRS-29 item 8 -- value="a-z" was
                never read by applyFilters() in script.js, so checking it
                did nothing; it just looked broken. -->
-          <label><input type="checkbox" class="category-filter" value="bed-sheets-linens">Bed Sheets &amp; Linens</label>
-          <label><input type="checkbox" class="category-filter" value="towels">Towels</label>
-          <label><input type="checkbox" class="category-filter" value="paper-products">Paper Products</label>
-          <label><input type="checkbox" class="category-filter" value="cleaning-chemicals">Cleaning Chemicals</label>
-          <label><input type="checkbox" class="category-filter" value="pillows-mattress-protectors">Pillows &amp; Mattress Protectors</label>
-          <label><input type="checkbox" class="category-filter" value="trash-liners-can-liners">Trash Liners &amp; Can Liners</label>
-          <label><input type="checkbox" class="category-filter" value="gloves-ppe">Gloves &amp; PPE</label>
-          <label><input type="checkbox" class="category-filter" value="guest-amenities">Guest Amenities</label>
-          <label><input type="checkbox" class="category-filter" value="housekeeping-supplies">Housekeeping Supplies</label>
-          <label><input type="checkbox" class="category-filter" value="furniture">Furniture</label>
-          <label><input type="checkbox" class="category-filter" value="laundry-cleaning-chemicals">Laundry &amp; Cleaning Chemicals</label>
+          <!-- Each category is wrapped in filter-cat-group so script.js can drop
+               a nested "Type" checkbox list (bed-sheets-linens: Flat Sheet,
+               Fitted Sheet, Pillowcase, ... -- see TYPE_NOUNS_BY_CATEGORY) right
+               after that category's label, shown only while it's checked. -->
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="bed-sheets-linens">Bed Sheets &amp; Linens</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="towels">Towels</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="paper-products">Paper Products</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="cleaning-chemicals">Cleaning Chemicals</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="pillows-mattress-protectors">Pillows &amp; Mattress Protectors</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="trash-liners-can-liners">Trash Liners &amp; Can Liners</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="gloves-ppe">Gloves &amp; PPE</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="guest-amenities">Guest Amenities</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="housekeeping-supplies">Housekeeping Supplies</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="furniture">Furniture</label></div>
+          <div class="filter-cat-group"><label><input type="checkbox" class="category-filter" value="laundry-cleaning-chemicals">Laundry &amp; Cleaning Chemicals</label></div>
         </div>
       </aside>
 

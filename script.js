@@ -2123,11 +2123,41 @@ function getActiveCategories() {
   return Array.from(document.querySelectorAll('.category-filter:checked')).map(cb => cb.value);
 }
 
+// Sub-filter within a category (e.g. "Flat Sheet" vs "Pillowcase" within Bed
+// Sheets & Linens). There's no real product_type column -- product_family
+// already carries the type as its trailing noun phrase (e.g. "Prestige 600
+// Luxury Blend Fitted Sheet"), the same pattern admin.js's CVT_PRODUCT_TYPE_NOUNS
+// extracts for CSV-import grouping. Longest noun first per category so e.g.
+// "Bath Sheet" is tried before "Bath Mat"/"Sheet" could wrongly match first,
+// and so a multi-word noun isn't shadowed by a shorter one that's also a
+// suffix of it.
+// Only categories with enough real variety to be worth sub-filtering are
+// listed here; everything else just shows the category-level grid as today.
+const TYPE_NOUNS_BY_CATEGORY = {
+  "bed-sheets-linens": ["Sheet Set", "Flat Sheet", "Fitted Sheet", "Pillowcase Pair", "Pillowcase", "Duvet Cover"],
+  "towels": ["Bath Sheet", "Bath Towel", "Bath Mat", "Hand Towel", "Washcloth", "Kitchen Towel", "Dish Cloth", "Bar Mop", "Pot Holder"],
+  "gloves-ppe": ["Nitrile Examination Gloves", "Disposable Gloves"],
+  "trash-liners-can-liners": ["Coreless Roll Can Liners", "Can Liners"],
+};
+
+function productType(product) {
+  const cat = categorySlug(product.category);
+  const nouns = TYPE_NOUNS_BY_CATEGORY[cat];
+  if (!nouns) return "";
+  const haystack = product.productFamily || product.name || "";
+  return nouns.find(n => haystack.endsWith(n)) || "";
+}
+
+function getActiveTypes() {
+  return Array.from(document.querySelectorAll('.type-filter:checked')).map(cb => cb.value);
+}
+
 function applyFilters() {
   const keyword   = (document.getElementById('search-input')?.value || '').toLowerCase();
   const categories = getActiveCategories();
   const sortAZ     = categories.includes('a-z');
   const catFilters = categories.filter(c => c !== 'a-z');
+  const typeFilters = getActiveTypes();
 
   let filtered = allProducts.filter(product => {
     // Search keyword match
@@ -2151,6 +2181,16 @@ function applyFilters() {
     // that instead of guessing from prose.
     if (catFilters.length > 0) {
       if (!catFilters.includes(categorySlug(product.category))) return false;
+    }
+
+    // Type match -- product must be one of the checked types, if any are
+    // checked. Types are category-specific noun phrases (see
+    // TYPE_NOUNS_BY_CATEGORY), so this never needs to be scoped to catFilters
+    // separately: a "Pillowcase" checkbox only exists once bed-sheets-linens
+    // is checked, and productType() already returns "" for every other
+    // category's products.
+    if (typeFilters.length > 0) {
+      if (!typeFilters.includes(productType(product))) return false;
     }
 
     return true;
@@ -2194,7 +2234,7 @@ function applyCatalogSearchParam() {
   const cat = params.get('category');
   if (cat) {
     const box = document.querySelector(`.category-filter[value="${CSS.escape(cat)}"]`);
-    if (box) { box.checked = true; changed = true; }
+    if (box) { box.checked = true; changed = true; syncCategorySubtypes(box); }
   }
 
   // Coming Back to the catalog, the browser restores the checkboxes and the
@@ -2217,8 +2257,63 @@ function applyCatalogSearchParam() {
 // unconditionally (not just when e.persisted), and resync if a category
 // is active but the grid wasn't filtered for it.
 window.addEventListener('pageshow', () => {
-  if (document.getElementById('search-input') && allProducts.length && getActiveCategories().length) applyFilters();
+  if (document.getElementById('search-input') && allProducts.length) {
+    syncAllCategorySubtypes();
+    if (getActiveCategories().length) applyFilters();
+  }
 });
+
+// The nested type checkboxes are (re)built fresh every time their category
+// gets re-checked (back-navigation, bfcache restore, a fresh ?category= load
+// -- see syncCategorySubtypes), so unlike the category checkboxes themselves
+// they never exist early enough for the browser's own back-forward form
+// state restore to find and re-check them. Persist which ones were on, keyed
+// by tab (sessionStorage survives both reload and bfcache), and re-apply
+// that set explicitly whenever the list is rebuilt.
+const TYPE_FILTER_STORAGE_KEY = 'rrs_catalog_active_types';
+
+function getStoredActiveTypes() {
+  try { return JSON.parse(sessionStorage.getItem(TYPE_FILTER_STORAGE_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+
+function storeActiveTypes() {
+  try { sessionStorage.setItem(TYPE_FILTER_STORAGE_KEY, JSON.stringify(getActiveTypes())); }
+  catch (e) {}
+}
+
+// Builds (or removes) the nested "Flat Sheet / Fitted Sheet / ..." checkbox
+// list under one category, to match whether that category's own checkbox is
+// now checked. Reused on every path that can change a category checkbox's
+// state: a user click, ?category= deep-links, and the back-navigation
+// restore below -- so the type list never gets left stale or missing.
+function syncCategorySubtypes(categoryCheckbox) {
+  const group = categoryCheckbox.closest('.filter-cat-group');
+  if (!group) return;
+  const slug = categoryCheckbox.value;
+  const nouns = TYPE_NOUNS_BY_CATEGORY[slug];
+  let subtypes = group.querySelector('.filter-subtypes');
+
+  if (!categoryCheckbox.checked || !nouns) {
+    if (subtypes) subtypes.remove();
+    return;
+  }
+  if (subtypes) return; // already built for this category
+
+  const stored = getStoredActiveTypes();
+  subtypes = document.createElement('div');
+  subtypes.className = 'filter-subtypes';
+  subtypes.innerHTML = nouns.map(noun => {
+    const safe = noun.replace(/"/g, '&quot;');
+    const isChecked = stored.includes(noun) ? ' checked' : '';
+    return `<label><input type="checkbox" class="type-filter" value="${safe}"${isChecked}>${safe}</label>`;
+  }).join('');
+  group.appendChild(subtypes);
+}
+
+function syncAllCategorySubtypes() {
+  document.querySelectorAll('.category-filter').forEach(syncCategorySubtypes);
+}
 
 // Replace old search listener with unified filter handler
 document.addEventListener('input', e => {
@@ -2226,7 +2321,13 @@ document.addEventListener('input', e => {
 });
 
 document.addEventListener('change', e => {
-  if (e.target.classList.contains('category-filter')) applyFilters();
+  if (e.target.classList.contains('category-filter')) {
+    syncCategorySubtypes(e.target);
+    applyFilters();
+  } else if (e.target.classList.contains('type-filter')) {
+    storeActiveTypes();
+    applyFilters();
+  }
 });
 
 /* =========================
