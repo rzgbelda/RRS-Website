@@ -2207,8 +2207,17 @@ function applyCatalogSearchParam() {
 
 // Same for a page restored from the back/forward cache: the DOM (ticked
 // boxes) can come back without the grid matching it.
-window.addEventListener('pageshow', e => {
-  if (e.persisted && document.getElementById('search-input') && allProducts.length) applyFilters();
+//
+// On a plain back-navigation (not bfcache: e.persisted is false), Chrome
+// restores ticked checkboxes asynchronously, racing the catalog fetch --
+// applyCatalogSearchParam() above can run and see every box unchecked
+// right before the browser flips them back on, so it never calls
+// applyFilters() and the grid stays unfiltered despite the ticked box.
+// pageshow fires after that restore has settled, so re-check there too,
+// unconditionally (not just when e.persisted), and resync if a category
+// is active but the grid wasn't filtered for it.
+window.addEventListener('pageshow', () => {
+  if (document.getElementById('search-input') && allProducts.length && getActiveCategories().length) applyFilters();
 });
 
 // Replace old search listener with unified filter handler
