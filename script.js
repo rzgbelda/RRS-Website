@@ -2888,7 +2888,16 @@ function populateProductPage(product) {
     // product and its card is hidden outright rather than padded with a
     // repeated price, which would advertise a volume discount the buyer
     // can never actually reach.
-    const unitWord = (product.priceBy || "Case").replace(/s$/i, "");
+    //
+    // Tier card wording is always "Case" (2026-10-10), never
+    // product.priceBy's real unit (Set/Pair/Each/...) -- CEO direction:
+    // the volume tiers price per case regardless of what the individual
+    // selling unit is called, so "1-5 Sets" read as if a "set" were the
+    // thing being counted in bulk, when the real bulk unit a buyer is
+    // ordering in is always a case. Scoped to just this label: the
+    // Quantity selector, Add to Cart button, and everywhere else on the
+    // page keep using the product's real unit, which IS correct there.
+    const unitWord = "Case";
     const mins = [
       tierMinQty(product, "tier1_min_qty", "tier1MinQty"),
       tierMinQty(product, "tier2_min_qty", "tier2MinQty"),

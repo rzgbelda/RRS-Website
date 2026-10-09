@@ -3193,10 +3193,10 @@ function cvtNormalizeValue(key, value, srcRow) {
     return String(CVT_TIER_DEFAULT_MIN[key]);
   }
 
-  // A tier priced AT OR ABOVE the base price is not a volume discount --
-  // it charges more for ordering more. Dropped rather than imported,
-  // since the threshold rule below then drops with it and the card
-  // disappears cleanly.
+  // A tier priced ABOVE the base price is not a volume discount -- it
+  // charges more for ordering more. Dropped rather than imported, since
+  // the threshold rule below then drops with it and the card disappears
+  // cleanly.
   //
   // Two real cases in the OfficeCrave feed, both traced to its cost
   // column rather than to the thresholds (the Markup% sheet reproduces
@@ -3211,12 +3211,17 @@ function cvtNormalizeValue(key, value, srcRow) {
   //     that tier to $80.97 against a $9.06 base. Corrected below rather
   //     than dropped, because the intended value is unambiguous.
   //
-  // A tier EQUAL to base is caught by the same test: InnStyle's only tier
-  // column is "Price 1-5 Cases", which restates the regular price, and
-  // 170 of its 172 products would otherwise render a "1+ Cases" card
-  // advertising a discount the buyer can never get. Dropping the price
-  // drops the threshold with it (the threshold rule above requires a
-  // valid price), so the card disappears cleanly.
+  // price_tier1 EQUAL to base is kept, not dropped (2026-10-10 follow-up
+  // -- was ">=" for all three tiers, which also caught this). Tier 1 is
+  // the starting rate, not a volume discount over something smaller --
+  // "1-5 cases costs the same as the base price" is simply true on a
+  // product with no lower tier, not a data error the way a tier2/tier3
+  // price at or above a LOWER tier would be. Dropping it removed the
+  // "1-5 Cases" card entirely on every InnStyle product priced this way
+  // (170 of 172), leaving a 2-card layout that read as broken rather
+  // than a product with no 1-5-case discount, which is what it actually
+  // is. tier2/tier3 keep the >= test: a tier priced the same as a tier
+  // BELOW it is still not a real volume incentive.
   if (/^price_tier[123]$/.test(key) && v) {
     const corrected = CVT_PRICE_CORRECTIONS[cvtRowSku(srcRow) + ":" + key];
     if (corrected != null) return corrected;
@@ -3226,7 +3231,10 @@ function cvtNormalizeValue(key, value, srcRow) {
       ? cvtNormalizeValue("price", String(srcRow[priceCol] ?? ""), srcRow)
       : "";
     const cleaned = v.replace(/[$,\s]/g, "");
-    if (base && parseFloat(cleaned) >= parseFloat(base)) return "";
+    const dropTest = key === "price_tier1"
+      ? (n, b) => n > b
+      : (n, b) => n >= b;
+    if (base && dropTest(parseFloat(cleaned), parseFloat(base))) return "";
   }
 
   // Supplier feeds disagree on casing -- Sasso writes "EACH", the others
