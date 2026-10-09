@@ -4760,13 +4760,23 @@ span.flatpickr-weekday {
 }
 
 /* Specifications + Key Features, relocated into .product-info ahead of
-   the description paragraph (CEO direction, 2026-10-10 -- see the note
-   in product-template.html). .detail-card's default 22px padding and
-   margin-bottom:14px h3 are tuned for the old full-width cards; scaled
-   down here since this column is a fraction of that width. */
+   the description paragraph (CEO direction, 2026-10-10; description
+   pulled back out to its own full-width Overview card in a same-day
+   follow-up -- see .pp-overview-card below and the note in
+   product-template.html). Side by side via .pp-inline-details -- the
+   column is wide enough for both compact cards abreast. .detail-card's
+   default 22px padding and margin-bottom:14px h3 are tuned for the old
+   full-width cards; scaled down here since each of these two is about
+   half this column's width. */
+.pp-inline-details {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  align-items: start;
+}
 .pp-inline-detail {
   padding: 16px 18px;
-  margin-bottom: 16px;
+  margin-bottom: 0;
 }
 .pp-inline-detail .tabs {
   margin: -16px -18px 12px;
@@ -4776,6 +4786,21 @@ span.flatpickr-weekday {
   margin-top: 10px;
   margin-bottom: 10px;
   font-size: 14px;
+}
+.pp-inline-detail table,
+.pp-inline-detail td {
+  font-size: 12px;
+}
+.pp-inline-detail td {
+  padding: 5px 0;
+}
+
+/* Overview: the description paragraph's own full-width card, matching
+   .pp-faq-card's sizing (.detail-card defaults, not .pp-inline-detail's
+   scaled-down version) since both sit below .product-layout at full
+   page width. */
+.pp-overview-card {
+  margin-top: 24px;
 }
 
 /* Buyer reassurance under the add-to-cart block: every line states
@@ -7666,6 +7691,14 @@ button, a, [role="button"] { touch-action: manipulation; }
   .checkout-product { min-width: 640px; overflow-x: auto; }
 }
 
+/* Specifications/Key Features stay side by side down through tablet
+   widths (.product-info is full page width below 1100px/960px, plenty
+   of room for both), but a real phone-width column is too narrow for a
+   data table and a checklist abreast -- stack them there. */
+@media (max-width: 640px) {
+  .pp-inline-details { grid-template-columns: 1fr; }
+}
+
 /* ── Product detail: collapse 3-col at narrow ── */
 @media (max-width: 960px) {
   .product-layout { grid-template-columns: 1fr; }
@@ -7677,7 +7710,7 @@ button, a, [role="button"] { touch-action: manipulation; }
      of .product-layout at all (it sits below it, outside this grid
      entirely), so it needs no placement reset here. Reset the
      remaining explicit placements back to plain document-order
-     stacking: gallery, then product info (name/badges/description),
+     stacking: gallery, then product info (name/badges/specs/features),
      then the tier cards, then the purchase panel, then the buy box. */
   .product-gallery,
   .pp-purchase-panel,

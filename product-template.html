@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261010" />
+  <link rel="stylesheet" href="style.css?v=20261010b" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -40,6 +40,7 @@
        actually has the product fixes that. -->
   <style>
     .product-page.ppg-loading .product-layout,
+    .product-page.ppg-loading .pp-overview-card,
     .product-page.ppg-loading .pp-faq-card { visibility: hidden; }
     .ppg-loader {
       display: none; align-items: center; justify-content: center; gap: 12px;
@@ -279,55 +280,56 @@
         <!-- Specs + Key Features moved up here, ahead of the description
              paragraph (CEO direction, 2026-10-10): a buyer scanning this
              narrow column should see what the product actually IS and
-             what's in the case before reading prose about it. Stacked
-             vertically (not side by side) -- .product-info is a narrow
-             grid column (see .product-layout in style.css), too tight for
-             two cards abreast the way they ran in the old full-width
-             .details-grid-top. -->
-        <div class="detail-card specs-card pp-inline-detail">
-          <div class="tabs">
-            <h3>Specifications</h3>
+             what's in the case before reading prose about it. Side by
+             side in .pp-inline-details (2026-10-10 follow-up) -- the
+             column is wide enough (see .product-layout in style.css) for
+             both compact cards abreast, so they no longer need to stack.
+             The description paragraph itself was pulled back out of this
+             column entirely (same follow-up) into its own full-width
+             Overview card below .product-layout, next to Common
+             Questions -- see #productDescription there. -->
+        <div class="pp-inline-details">
+          <div class="detail-card specs-card pp-inline-detail">
+            <div class="tabs">
+              <h3>Specifications</h3>
+            </div>
+
+            <table>
+              <tr>
+                <td>Product Name</td>
+                <td id="specName"></td>
+              </tr>
+
+              <tr>
+                <td>Item Number</td>
+                <td id="specItemNumber"></td>
+              </tr>
+
+              <tr>
+                <td>Case Qty</td>
+                <td id="specCaseQty"></td>
+              </tr>
+
+              <tr>
+                <td>Size</td>
+                <td id="specSize"></td>
+              </tr>
+
+              <tr>
+                <td>Price</td>
+                <td id="specPrice"></td>
+              </tr>
+            </table>
           </div>
 
-          <table>
-            <tr>
-              <td>Product Name</td>
-              <td id="specName"></td>
-            </tr>
+          <div class="detail-card features-card pp-inline-detail">
+            <div class="tabs">
+              <h3>Key Features</h3>
+            </div>
 
-            <tr>
-              <td>Item Number</td>
-              <td id="specItemNumber"></td>
-            </tr>
-
-            <tr>
-              <td>Case Qty</td>
-              <td id="specCaseQty"></td>
-            </tr>
-
-            <tr>
-              <td>Size</td>
-              <td id="specSize"></td>
-            </tr>
-
-            <tr>
-              <td>Price</td>
-              <td id="specPrice"></td>
-            </tr>
-          </table>
-        </div>
-
-        <div class="detail-card features-card pp-inline-detail">
-          <div class="tabs">
-            <h3>Key Features</h3>
+            <ul id="featuresList"></ul>
           </div>
-
-          <ul id="featuresList"></ul>
         </div>
-
-        <p class="product-desc" id="productDescription">
-          Product description will appear here.
-        </p>
 
       </div>
 
@@ -463,6 +465,20 @@
       </aside>
 
     </div>
+
+    <!-- Overview: the descriptive paragraph, pulled out of .product-info
+         (2026-10-10 follow-up) into its own full-width card here, next to
+         Common Questions below -- same card shape/sizing as
+         .pp-faq-card, both using .detail-card's default (non-inline)
+         padding and tabs styling. -->
+    <section class="detail-card pp-overview-card">
+      <div class="tabs">
+        <h3>Overview</h3>
+      </div>
+      <p class="product-desc" id="productDescription">
+        Product description will appear here.
+      </p>
+    </section>
 
     <!-- Two FAQs, generated from this product's own real data (case/dozen
          quantity, weight, dimensions, MOQ) rather than written per-SKU by
