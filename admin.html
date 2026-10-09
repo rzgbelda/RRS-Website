@@ -171,6 +171,10 @@
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v3M16 3v3"/></svg>
         Campaigns
       </a>
+      <a href="#" class="a-nav-item admin-only-nav" data-tab="visitor-insights">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 4 3 5-8"/></svg>
+        Visitor Insights
+      </a>
       <a href="#" class="a-nav-item admin-only-nav" data-tab="blog">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h7M9 11h7"/></svg>
         Blog
@@ -1754,6 +1758,10 @@
       <!-- Populated dynamically by renderCampaignsTab() in admin.js -->
     </div><!-- /campaigns tab -->
 
+    <div id="tab-visitor-insights" class="a-tab" style="display:none">
+      <!-- Populated dynamically by renderVisitorInsightsTab() in admin.js -->
+    </div><!-- /visitor-insights tab -->
+
     <div id="tab-blog" class="a-tab" style="display:none">
       <!-- Populated dynamically by renderBlogTab() in admin.js -->
     </div><!-- /blog tab -->
@@ -1965,11 +1973,12 @@
                 <option value="crm_lead_created">New lead created</option>
                 <option value="quote_stale">Quote sent, no order yet</option>
                 <option value="order_delivered">Order marked delivered</option>
+                <option value="cart_abandoned">Cart abandoned (signed-in user)</option>
               </select>
             </div>
             <div class="camp-field" id="autoStaleWrap" style="display:none">
-              <span class="camp-field-label">Stale After (days)</span>
-              <input id="autoStaleAfterDays" type="number" min="1" value="5" class="camp-input">
+              <span class="camp-field-label" id="autoStaleLabel">Stale After (days)</span>
+              <input id="autoStaleAfterDays" type="number" min="1" step="1" value="5" class="camp-input">
             </div>
           </div>
           <div class="camp-field">
@@ -1990,6 +1999,8 @@
             <code class="camp-mergefield">{{contact_name}}</code>
             <code class="camp-mergefield">{{first_name}}</code>
             <code class="camp-mergefield">{{review_link}}</code>
+            <code class="camp-mergefield">{{cart_items}}</code>
+            <code class="camp-mergefield">{{cart_value}}</code>
           </div>
           <p id="autoError" class="camp-formerror" style="display:none"></p>
         </div>

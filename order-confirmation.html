@@ -268,7 +268,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="script.js?v=20261007h"></script>
+<script src="script.js?v=20261009"></script>
 <script>
 var _confirmCheckout = {};
 (function () {
@@ -345,6 +345,13 @@ var _confirmCheckout = {};
         tax: Number(tax.toFixed(2)),
         items: items.map(function (i) { return gaItem(i); }),
       });
+      logPageEvent('checkout_complete');
+      // A completed order is no longer an "abandoned" cart -- clear the
+      // signed-in user's server-side mirror (20261009 migration) so the
+      // cart_abandoned automation never nudges someone about items they
+      // already bought. Scoped to this same trackedKey guard above so it
+      // only runs once per order, not on every refresh of this page.
+      if (typeof clearServerCart === 'function') clearServerCart();
       localStorage.setItem(trackedKey, '1');
     }
   } catch (err) {

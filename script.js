@@ -202,6 +202,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupCalendar();
   setupFeaturedSliderButtons();
 
+  // Once per page load: catalog.html gets the more specific catalog_view,
+  // every other page gets a plain page_view. Deliberately not fired from
+  // inside fetchCatalogProducts()'s .then() below -- that only resolves
+  // once the catalog JSON is back, which would miss anyone who navigates
+  // away before it loads (exactly the "no catalog view, just left"
+  // footprint this exists to capture).
+  logPageEvent(location.pathname.replace(/\/+$/, "") === "/catalog" ? "catalog_view" : "page_view");
+
   fetchCatalogProducts()
     .then(products => {
       allProducts = products.filter(isSellable);
@@ -602,6 +610,58 @@ function cartValue(cart) {
 }
 
 /* =========================
+   OWN-BACKEND FUNNEL TRACKING
+========================= */
+// trackEcommerce() above only ever sends to GA4 -- useful for ads/SEO
+// reporting, but nothing it sends is queryable from our own admin or
+// joinable against our own accounts/orders. logPageEvent() mirrors the
+// same funnel moments into page_events (20261009 migration) so admin can
+// answer "where do visitors actually drop off" from our own data.
+//
+// Session id is a plain localStorage value, not a cookie -- this project
+// has no cookie-consent banner, and a funnel id carries no personal data
+// on its own. Survives reloads/new tabs for the same visitor; a stable
+// per-visitor session the way GA4's own client id works.
+function getTrackingSessionId() {
+  try {
+    let id = localStorage.getItem("rrs_session_id");
+    if (!id) {
+      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+      localStorage.setItem("rrs_session_id", id);
+    }
+    return id;
+  } catch {
+    return null;
+  }
+}
+
+// Fire-and-forget: a dropped or slow write must never block navigation or
+// surface an error to the visitor. window.sb may not exist yet depending
+// on this page's script order (see supabase.js load notes elsewhere in
+// this file), so this silently no-ops rather than queuing/retrying --
+// losing an occasional event is fine for a funnel-shape view.
+function logPageEvent(eventType, productSku) {
+  try {
+    const sessionId = getTrackingSessionId();
+    if (!sessionId || !window.sb) return;
+    window.sb.auth.getUser().then(({ data }) => {
+      window.sb.from("page_events").insert({
+        session_id: sessionId,
+        user_id: data?.user?.id || null,
+        event_type: eventType,
+        path: location.pathname || "/",
+        product_sku: productSku || null,
+        referrer: document.referrer || null,
+      }).then(({ error }) => {
+        if (error) console.warn("[tracking] page_events insert failed:", error.message);
+      });
+    }).catch(() => {});
+  } catch (err) {
+    console.warn("[tracking] logPageEvent failed:", err && err.message);
+  }
+}
+
+/* =========================
    PRICE BEAT FLOATING BUTTON
 ========================= */
 // Sitewide sticky CTA to /price-beat, bottom-left (see .price-beat-fab in
@@ -659,6 +719,70 @@ function getCart() {
 
 function saveCart(cart) {
   localStorage.setItem("cart", JSON.stringify(cart));
+  syncServerCart(cart);
+}
+
+/* =========================
+   SERVER-SIDE CART MIRROR (abandoned-cart recovery)
+========================= */
+// The cart itself stays localStorage-only -- same read path, same speed,
+// no UX change. This just mirrors it into cart_items (20261009 migration)
+// for signed-in users so a daily cron sweep (api/create-order.js) can
+// detect "added N hours ago, never checked out" and queue a reminder
+// email -- something no purely client-side cart can ever support, since
+// nothing abandoned in a closed browser tab is visible to a server.
+//
+// Anonymous visitors are skipped entirely: there is no email to send a
+// stranger, so mirroring their cart would just be rows no automation can
+// ever use. saveCart() is the single choke point every add/remove/qty
+// change already runs through (confirmed: no other file calls saveCart
+// directly), so this is the only hook needed to stay in sync.
+let _cartSyncInFlight = false;
+async function syncServerCart(cart) {
+  try {
+    if (!window.sb || _cartSyncInFlight) return;
+    _cartSyncInFlight = true;
+    const { data } = await window.sb.auth.getUser();
+    const userId = data?.user?.id;
+    if (!userId) { _cartSyncInFlight = false; return; }
+
+    // Full replace rather than a diff: carts here are a handful of line
+    // items at most, and computing an add/update/remove diff client-side
+    // buys nothing a delete-then-reinsert doesn't already give for free.
+    await window.sb.from("cart_items").delete().eq("user_id", userId);
+    if (cart && cart.length) {
+      const rows = cart.map(i => ({
+        user_id: userId,
+        product_sku: i.itemNumber || i.sku || "",
+        product_name: i.name || "",
+        quantity: Number(i.quantity) || 1,
+        price_snapshot: (typeof cleanPrice === "function" ? cleanPrice(i.price || i.price1 || 0) : Number(i.price || i.price1 || 0)) || 0,
+      })).filter(r => r.product_sku);
+      if (rows.length) {
+        const { error } = await window.sb.from("cart_items").insert(rows);
+        if (error) console.warn("[cart-sync] insert failed:", error.message);
+      }
+    }
+  } catch (err) {
+    console.warn("[cart-sync] failed:", err && err.message);
+  } finally {
+    _cartSyncInFlight = false;
+  }
+}
+
+// Called once an order is actually placed (order-confirmation.html) so a
+// completed purchase's items are never mistaken for an abandoned cart by
+// the cart_abandoned automation sweep.
+async function clearServerCart() {
+  try {
+    if (!window.sb) return;
+    const { data } = await window.sb.auth.getUser();
+    const userId = data?.user?.id;
+    if (!userId) return;
+    await window.sb.from("cart_items").delete().eq("user_id", userId);
+  } catch (err) {
+    console.warn("[cart-sync] clear failed:", err && err.message);
+  }
 }
 
 function updateCartBadge() {
@@ -3001,6 +3125,7 @@ function populateProductPage(product) {
     value: cleanPrice(product.price || product.price1) || 0,
     items: [gaItem(product, 1)],
   });
+  logPageEvent("product_view", product.itemNumber || product.sku || null);
 }
 
 /**
@@ -3465,6 +3590,7 @@ function setupAddToCartButtons() {
         value: (cleanPrice(product.price) || 0) * quantity,
         items: [gaItem(product, quantity)],
       });
+      logPageEvent("add_to_cart", product.itemNumber || product.sku || null);
       flyToCart(button);
 
       // Explicit confirmation. flyToCart's animation plus a small badge

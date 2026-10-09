@@ -406,7 +406,9 @@ function mergeFields(str, q) {
     .replace(/\{\{\s*business_name\s*\}\}/g, q.business_name || '')
     .replace(/\{\{\s*contact_name\s*\}\}/g, q.contact_name || '')
     .replace(/\{\{\s*first_name\s*\}\}/g, (q.contact_name || '').split(' ')[0] || '')
-    .replace(/\{\{\s*review_link\s*\}\}/g, GOOGLE_REVIEW_LINK);
+    .replace(/\{\{\s*review_link\s*\}\}/g, GOOGLE_REVIEW_LINK)
+    .replace(/\{\{\s*cart_items\s*\}\}/g, q.cart_items || '')
+    .replace(/\{\{\s*cart_value\s*\}\}/g, q.cart_value || '');
 }
 
 /**
@@ -465,6 +467,47 @@ async function runDueAutomations(supabase) {
           .select('id, customer_email').eq('status', 'delivered')
           .gte('created_at', windowStart).not('customer_email', 'is', null);
         targets = (data || []).map(o => ({ id: o.id, email: o.customer_email }));
+      } else if (a.trigger_type === 'cart_abandoned') {
+        // cart_items (20261009 migration) is the server-side mirror
+        // script.js's syncServerCart() keeps for every signed-in user's
+        // cart. "Abandoned" = every row for a user is older than
+        // stale_after_days (stored as a fraction of a day -- admin.js's
+        // form shows/collects this one trigger's value in hours) with no
+        // newer activity, i.e. the user's own most recent updated_at
+        // across all their cart lines has crossed the threshold.
+        targetType = 'cart_user';
+        const staleAfterDays = a.stale_after_days ?? 0.25;
+        const staleCutoff = new Date(now.getTime() - staleAfterDays * 86400000).toISOString();
+        // Bounded to 30 days so a cart nobody ever touches again doesn't
+        // keep this query scanning it forever -- automation_sends' unique
+        // constraint still makes re-queuing harmless either way.
+        const windowStart = new Date(now.getTime() - 30 * 86400000).toISOString();
+        const { data: rows } = await supabase.from('cart_items')
+          .select('user_id, updated_at').gte('updated_at', windowStart);
+        // Group client-side to the per-user most-recent updated_at --
+        // one user can have several cart_items rows (one per SKU), and
+        // only the newest one tells us whether the cart as a whole has
+        // gone stale.
+        const latestByUser = new Map();
+        for (const r of (rows || [])) {
+          const prev = latestByUser.get(r.user_id);
+          if (!prev || r.updated_at > prev) latestByUser.set(r.user_id, r.updated_at);
+        }
+        const staleUserIds = [...latestByUser.entries()]
+          .filter(([, latest]) => latest <= staleCutoff)
+          .map(([userId]) => userId);
+        if (staleUserIds.length) {
+          // Looked up one at a time via getUserById rather than paginating
+          // auth.admin.listUsers() -- the stale set here is normally small
+          // (users with a cart gone quiet), and a per-id lookup stays
+          // correct as the total user base grows, where a single
+          // listUsers() page (default 50) would silently miss anyone past
+          // the first page.
+          for (const userId of staleUserIds) {
+            const { data: u } = await supabase.auth.admin.getUserById(userId);
+            if (u?.user?.email) targets.push({ id: userId, email: u.user.email });
+          }
+        }
       }
 
       for (const t of targets) {
@@ -494,6 +537,27 @@ async function runDueAutomations(supabase) {
           mergeSource = o ? {
             business_name: o.business_name, contact_name: o.customer_name, email: o.customer_email, status: o.status,
           } : null;
+        } else if (s.target_type === 'cart_user') {
+          const { data: items } = await supabase.from('cart_items')
+            .select('product_name, quantity, price_snapshot').eq('user_id', s.target_id);
+          // Empty means the cart was cleared (checked out, or every line
+          // removed) during the delay window -- clearServerCart() in
+          // order-confirmation.html, or syncServerCart()'s full-replace on
+          // any edit, both leave zero rows. Either way there's nothing
+          // left to remind this person about.
+          if (!items || !items.length) {
+            mergeSource = null;
+          } else {
+            const { data: prof } = await supabase.from('profiles')
+              .select('full_name').eq('id', s.target_id).maybeSingle();
+            const value = items.reduce((sum, i) => sum + (Number(i.price_snapshot) || 0) * (Number(i.quantity) || 1), 0);
+            mergeSource = {
+              email: s.recipient_email,
+              contact_name: prof?.full_name || '',
+              cart_items: items.map(i => `${i.quantity} x ${i.product_name}`).join(', '),
+              cart_value: '$' + value.toFixed(2),
+            };
+          }
         } else {
           const { data: q } = await supabase.from('quote_requests')
             .select('business_name, contact_name, email, status').eq('id', s.target_id).maybeSingle();
@@ -501,7 +565,7 @@ async function runDueAutomations(supabase) {
         }
 
         if (!mergeSource) {
-          await supabase.from('automation_sends').update({ skipped_reason: 'target_not_found' }).eq('id', s.id);
+          await supabase.from('automation_sends').update({ skipped_reason: a.trigger_type === 'cart_abandoned' ? 'cart_cleared' : 'target_not_found' }).eq('id', s.id);
           skipped++; continue;
         }
         // A quote_stale target that converted (moved off quote_sent)

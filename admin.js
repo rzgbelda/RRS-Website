@@ -237,7 +237,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 // Marketing owns full day-to-day operations -- everything except
 // account/user management and the dev ticket board.
 const MARKETING_TABS = [
-  "dashboard", "crm", "campaigns", "products", "inventory", "mix-match", "product-families", "orders",
+  "dashboard", "crm", "campaigns", "visitor-insights", "products", "inventory", "mix-match", "product-families", "orders",
   "quote-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
 ];
@@ -438,6 +438,7 @@ function switchTab(tab) {
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
+      "visitor-insights":"Visitor Insights",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
       "sales-tax":"Sales Tax", "partner":"My Dashboard", "partner-products":"Products" }[tab] || tab;
 
@@ -459,6 +460,7 @@ function switchTab(tab) {
   if (tab === "best-deals")       renderBestDealsTab();
   if (tab === "crm")              renderCrmTab();
   if (tab === "campaigns")        renderCampaignsTab();
+  if (tab === "visitor-insights") renderVisitorInsightsTab();
   if (tab === "vendors")          renderVendorsTab();
   if (tab === "order-exceptions") renderExceptionsTab();
   if (tab === "blog")             renderBlogTab();
@@ -7392,7 +7394,13 @@ const AUTO_TRIGGER_LABEL = {
   crm_lead_created: "New lead created",
   quote_stale: "Quote sent, no order yet",
   order_delivered: "Order marked delivered",
+  cart_abandoned: "Cart abandoned",
 };
+
+// Triggers whose stale_after_days field should be shown (crm_lead_created
+// and order_delivered fire on the row's own event, nothing to measure a
+// staleness window against).
+const AUTO_TRIGGERS_WITH_STALE_FIELD = ["quote_stale", "cart_abandoned"];
 
 async function openAutomationsModal() {
   resetAutomationForm();
@@ -7419,9 +7427,41 @@ async function renderAutomationList() {
 }
 
 function toggleAutoStaleField() {
-  const isStale = document.getElementById("autoTriggerType")?.value === "quote_stale";
+  const triggerType = document.getElementById("autoTriggerType")?.value;
+  const showField = AUTO_TRIGGERS_WITH_STALE_FIELD.includes(triggerType);
   const wrap = document.getElementById("autoStaleWrap");
-  if (wrap) wrap.style.display = isStale ? "" : "none";
+  if (wrap) wrap.style.display = showField ? "" : "none";
+
+  // cart_abandoned reuses the same stale_after_days column but the unit
+  // that actually makes sense for a cart is hours, not days -- a cart
+  // left untouched for "5 days" is a far weaker nudge than a few hours
+  // later. The column stores a plain number of days, so the input itself
+  // still submits that number; only the label/step/placeholder change so
+  // staff can type something like "6 hours" worth of a day (0.25) without
+  // doing the division in their head.
+  const isCart = triggerType === "cart_abandoned";
+  const label = document.getElementById("autoStaleLabel");
+  const input = document.getElementById("autoStaleAfterDays");
+  if (label) label.textContent = isCart ? "Abandoned After (hours)" : "Stale After (days)";
+  if (input) {
+    input.step = isCart ? "0.25" : "1";
+    input.dataset.unit = isCart ? "hours" : "days";
+  }
+}
+
+// autoStaleAfterDays is shown to staff in hours for cart_abandoned but
+// stored in automations.stale_after_days as a fraction of a day (the
+// column every other trigger already uses) -- these two convert at the
+// read/write boundary so the sweep in api/create-order.js never has to
+// know which unit staff were shown.
+function staleFieldValueToDays(triggerType, rawValue) {
+  const n = parseFloat(rawValue);
+  if (!isFinite(n) || n <= 0) return triggerType === "cart_abandoned" ? 0.25 : 5;
+  return triggerType === "cart_abandoned" ? n / 24 : n;
+}
+function staleFieldDaysToDisplay(triggerType, days) {
+  if (triggerType === "cart_abandoned") return Math.round((days || 0.25) * 24 * 100) / 100;
+  return days ?? 5;
 }
 
 function resetAutomationForm() {
@@ -7442,7 +7482,7 @@ function editAutomation(a) {
   document.getElementById("autoEditId").value = a.id;
   document.getElementById("autoName").value = a.name;
   document.getElementById("autoTriggerType").value = a.trigger_type;
-  document.getElementById("autoStaleAfterDays").value = a.stale_after_days || 5;
+  document.getElementById("autoStaleAfterDays").value = staleFieldDaysToDisplay(a.trigger_type, a.stale_after_days);
   document.getElementById("autoDelayDays").value = a.delay_days;
   document.getElementById("autoSubject").value = a.subject;
   document.getElementById("autoBodyHtml").value = a.body_html;
@@ -7466,7 +7506,9 @@ async function saveAutomation() {
   const payload = {
     name,
     trigger_type: triggerType,
-    stale_after_days: triggerType === "quote_stale" ? (parseInt(document.getElementById("autoStaleAfterDays").value) || 5) : null,
+    stale_after_days: AUTO_TRIGGERS_WITH_STALE_FIELD.includes(triggerType)
+      ? staleFieldValueToDays(triggerType, document.getElementById("autoStaleAfterDays").value)
+      : null,
     delay_days: parseInt(document.getElementById("autoDelayDays").value) || 0,
     subject, body_html,
     created_by: session?.user?.id || null,
@@ -7494,6 +7536,159 @@ async function deleteAutomation(id) {
   const { error } = await window.sb.from("automations").delete().eq("id", id);
   if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   await renderAutomationList();
+}
+
+/* ============================================================
+   VISITOR INSIGHTS -- where visitors actually drop off (page_events)
+   and which signed-in users have items sitting in an untouched cart
+   (cart_items), both from the 20261009 migration. trackEcommerce()
+   (script.js) already sent these same moments to GA4, but nothing GA4
+   receives is queryable from here or joinable against our own
+   orders/accounts -- this tab is our own copy of that funnel, plus the
+   abandoned-cart list the cart_abandoned automation (Automations modal,
+   above) acts on.
+============================================================ */
+
+const VISITOR_FUNNEL_STEPS = [
+  { type: "page_view",        label: "Visited the site" },
+  { type: "catalog_view",     label: "Viewed the catalog" },
+  { type: "product_view",     label: "Viewed a product" },
+  { type: "add_to_cart",      label: "Added to cart" },
+  { type: "checkout_start",   label: "Started checkout" },
+  { type: "checkout_complete", label: "Completed an order" },
+];
+
+async function renderVisitorInsightsTab() {
+  const panel = document.getElementById("tab-visitor-insights");
+  if (!panel) return;
+  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading…</div>`;
+
+  panel.innerHTML = `
+   <div class="camp-page">
+    <div class="camp-header">
+      <div>
+        <h1 class="camp-title">Visitor Insights</h1>
+        <p class="camp-subtitle">Where visitors drop off, and signed-in carts sitting untouched.</p>
+      </div>
+      <div class="camp-header-actions">
+        <select id="viFunnelRange" class="camp-select" onchange="renderVisitorFunnel()">
+          <option value="7">Last 7 days</option>
+          <option value="30" selected>Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="camp-formdivider"><span>Visitor Funnel</span></div>
+    <div id="viFunnelBox" class="camp-listbox"><div class="a-empty" style="padding:30px">Loading…</div></div>
+
+    <div class="camp-formdivider"><span>Abandoned Carts</span></div>
+    <p class="camp-subtitle" style="margin:-6px 0 14px">Signed-in users with items still in their cart. The "Abandoned Cart Reminder" automation (see Automations in Campaigns) emails these automatically once a cart crosses its configured age.</p>
+    <div id="viCartsBox" class="camp-listbox"><div class="a-empty" style="padding:30px">Loading…</div></div>
+   </div>
+  `;
+
+  renderVisitorFunnel();
+  renderAbandonedCarts();
+}
+
+async function renderVisitorFunnel() {
+  const box = document.getElementById("viFunnelBox");
+  if (!box) return;
+  const days = parseInt(document.getElementById("viFunnelRange")?.value || "30");
+  const since = new Date(Date.now() - days * 86400000).toISOString();
+
+  const { data, error } = await window.sb.from("page_events")
+    .select("session_id, event_type").gte("occurred_at", since);
+  if (error) {
+    box.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    return;
+  }
+
+  // Funnel counting is per-session (a visitor can load several pages
+  // without that meaning several "visits"), and deliberately NOT a strict
+  // "did they do step N before step N+1" funnel -- a visitor can view a
+  // product straight from a Google result with no catalog_view at all.
+  // Each step instead counts how many sessions reached at least that far,
+  // which is the honest shape of this site's real entry points.
+  const sessionsByStep = VISITOR_FUNNEL_STEPS.map(() => new Set());
+  for (const row of (data || [])) {
+    const idx = VISITOR_FUNNEL_STEPS.findIndex(s => s.type === row.event_type);
+    if (idx >= 0) sessionsByStep[idx].add(row.session_id);
+  }
+  const counts = sessionsByStep.map(s => s.size);
+  const maxCount = Math.max(1, counts[0]);
+
+  box.innerHTML = VISITOR_FUNNEL_STEPS.map((step, i) => {
+    const count = counts[i];
+    const pctOfTotal = Math.round((count / maxCount) * 100);
+    const dropFromPrev = i === 0 ? null : (counts[i - 1] ? Math.round((1 - count / counts[i - 1]) * 100) : null);
+    return `
+    <div class="camp-listrow" style="align-items:center">
+      <div class="camp-listrow-body" style="flex:1;gap:6px">
+        <strong>${escHtml(step.label)}</strong>
+        <div style="background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden;margin-top:2px">
+          <div style="background:#ED7226;height:100%;width:${pctOfTotal}%"></div>
+        </div>
+      </div>
+      <div class="camp-listrow-actions" style="flex-direction:column;align-items:flex-end;gap:2px">
+        <strong style="font-size:15px;color:#0B1F38">${count.toLocaleString()}</strong>
+        ${dropFromPrev !== null ? `<span style="font-size:12px;color:${dropFromPrev > 50 ? "#b91c1c" : "#94a3b8"}">&minus;${dropFromPrev}% from prior step</span>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+async function renderAbandonedCarts() {
+  const box = document.getElementById("viCartsBox");
+  if (!box) return;
+
+  const { data, error } = await window.sb.from("cart_items")
+    .select("user_id, product_name, quantity, price_snapshot, updated_at")
+    .order("updated_at", { ascending: false });
+  if (error) {
+    box.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    return;
+  }
+
+  if (!data || !data.length) {
+    box.innerHTML = `<p class="camp-listbox-empty">No signed-in user currently has items in their cart.</p>`;
+    return;
+  }
+
+  // Grouped client-side by user: cart_items is one row per SKU, but this
+  // view is about a user's cart as a whole (total value, how long since
+  // they last touched it), the same unit the cart_abandoned automation
+  // itself reasons about.
+  const byUser = new Map();
+  for (const row of data) {
+    if (!byUser.has(row.user_id)) byUser.set(row.user_id, { items: [], lastUpdated: row.updated_at });
+    const bucket = byUser.get(row.user_id);
+    bucket.items.push(row);
+    if (row.updated_at > bucket.lastUpdated) bucket.lastUpdated = row.updated_at;
+  }
+
+  const userIds = [...byUser.keys()];
+  const { data: profiles } = await window.sb.from("profiles").select("id, full_name, email").in("id", userIds);
+  const profileById = new Map((profiles || []).map(p => [p.id, p]));
+
+  const rows = [...byUser.entries()].map(([userId, bucket]) => {
+    const profile = profileById.get(userId);
+    const value = bucket.items.reduce((sum, i) => sum + (Number(i.price_snapshot) || 0) * (Number(i.quantity) || 1), 0);
+    const itemSummary = bucket.items.map(i => `${i.quantity} x ${escHtml(i.product_name)}`).join(", ");
+    return { userId, profile, value, itemSummary, lastUpdated: bucket.lastUpdated, itemCount: bucket.items.length };
+  }).sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
+
+  box.innerHTML = rows.map(r => `
+    <div class="camp-listrow">
+      <div class="camp-listrow-body" style="gap:4px">
+        <strong>${escHtml(r.profile?.full_name || r.profile?.email || "Unknown user")}</strong>
+        <span>${r.itemSummary} &middot; Last touched ${fmt(r.lastUpdated)}</span>
+      </div>
+      <div class="camp-listrow-actions">
+        <strong style="font-size:14px;color:#0B1F38">$${r.value.toFixed(2)}</strong>
+      </div>
+    </div>`).join("");
 }
 
 /* ============================================================
