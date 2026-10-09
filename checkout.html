@@ -625,15 +625,52 @@ async function saveCheckoutAndProceed() {
 }
 
 /* ── Volume order → custom quote ──────────────────────────────── */
+// Per CEO direction (2026-10-09): clicking the checkout page's own "Get
+// My Volume Quote" button (set by setCheckoutFreightMode() in script.js)
+// used to just open this modal and stop, requiring a second click on the
+// modal's OWN "Get My Volume Quote" button to actually go anywhere -- the
+// same action asked for twice. The volume-pricing/shipping-fee
+// explanation itself is still shown (nothing here was cut), but it's now
+// a brief, auto-advancing notice rather than a second confirmation gate:
+// it counts down and calls startVolumeQuote() on its own, while the
+// button stays clickable to skip the wait immediately. "Back to
+// Checkout" still cancels the whole thing if the buyer wants to review
+// their cart first.
+const VQM_AUTO_ADVANCE_SECONDS = 5;
+let _vqmCountdownTimer = null;
+let _vqmCountdownRemaining = VQM_AUTO_ADVANCE_SECONDS;
+
 function openVolumeQuoteModal() {
   const m = document.getElementById('volumeQuoteModal');
   if (!m) return;
   m.style.display = 'flex';
   document.body.style.overflow = 'hidden';
   setTimeout(() => document.getElementById('vqmPrimary')?.focus(), 50);
+  startVqmCountdown();
+}
+
+function startVqmCountdown() {
+  stopVqmCountdown();
+  _vqmCountdownRemaining = VQM_AUTO_ADVANCE_SECONDS;
+  updateVqmCountdownLabel();
+  _vqmCountdownTimer = setInterval(() => {
+    _vqmCountdownRemaining--;
+    if (_vqmCountdownRemaining <= 0) { stopVqmCountdown(); startVolumeQuote(); return; }
+    updateVqmCountdownLabel();
+  }, 1000);
+}
+
+function stopVqmCountdown() {
+  if (_vqmCountdownTimer) { clearInterval(_vqmCountdownTimer); _vqmCountdownTimer = null; }
+}
+
+function updateVqmCountdownLabel() {
+  const btn = document.getElementById('vqmPrimary');
+  if (btn) btn.textContent = `Get My Volume Quote (${_vqmCountdownRemaining})`;
 }
 
 function closeVolumeQuoteModal() {
+  stopVqmCountdown();
   const m = document.getElementById('volumeQuoteModal');
   if (m) m.style.display = 'none';
   document.body.style.overflow = '';
@@ -652,6 +689,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // (quote.html reads 'vq_pending' on load and pre-fills itself), so they
 // don't re-enter anything.
 function startVolumeQuote() {
+  stopVqmCountdown(); // button click skips the rest of the auto-advance wait
   const v = id => document.getElementById(id)?.value.trim() || '';
   const items = getCart().map(i => ({
     name: (i.name || 'Item') + (i.itemNumber ? ` (Item #${i.itemNumber})` : ''),
@@ -695,7 +733,7 @@ function startVolumeQuote() {
       <li><strong>Freight rates compared</strong> to get you the lowest delivery cost</li>
       <li><strong>No payment today.</strong> Review and approve your quote first</li>
     </ul>
-    <p class="vqm-small">Your cart and delivery details carry over, so it only takes a moment.</p>
+    <p class="vqm-small" id="vqmAutoAdvanceNote" aria-live="polite">Your cart and delivery details carry over, so it only takes a moment &mdash; taking you to your quote request automatically.</p>
     <div class="vqm-actions">
       <button type="button" class="vqm-secondary" onclick="closeVolumeQuoteModal()">Back to Checkout</button>
       <button type="button" class="vqm-primary" id="vqmPrimary" onclick="startVolumeQuote()">Get My Volume Quote</button>
