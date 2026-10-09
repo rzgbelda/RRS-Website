@@ -468,13 +468,16 @@ async function runDueAutomations(supabase) {
           .gte('created_at', windowStart).not('customer_email', 'is', null);
         targets = (data || []).map(o => ({ id: o.id, email: o.customer_email }));
       } else if (a.trigger_type === 'cart_abandoned') {
-        // cart_items (20261009 migration) is the server-side mirror
+        // cart_mirror (20261009 migration) is the server-side mirror
         // script.js's syncServerCart() keeps for every signed-in user's
-        // cart. "Abandoned" = every row for a user is older than
-        // stale_after_days (stored as a fraction of a day -- admin.js's
-        // form shows/collects this one trigger's value in hours) with no
-        // newer activity, i.e. the user's own most recent updated_at
-        // across all their cart lines has crossed the threshold.
+        // cart -- named cart_mirror, not cart_items, because schema.sql
+        // already has an unrelated, unused cart_items table with a
+        // completely different column shape. "Abandoned" = every row for
+        // a user is older than stale_after_days (stored as a fraction of
+        // a day -- admin.js's form shows/collects this one trigger's
+        // value in hours) with no newer activity, i.e. the user's own
+        // most recent updated_at across all their cart lines has crossed
+        // the threshold.
         targetType = 'cart_user';
         const staleAfterDays = a.stale_after_days ?? 0.25;
         const staleCutoff = new Date(now.getTime() - staleAfterDays * 86400000).toISOString();
@@ -482,10 +485,10 @@ async function runDueAutomations(supabase) {
         // keep this query scanning it forever -- automation_sends' unique
         // constraint still makes re-queuing harmless either way.
         const windowStart = new Date(now.getTime() - 30 * 86400000).toISOString();
-        const { data: rows } = await supabase.from('cart_items')
+        const { data: rows } = await supabase.from('cart_mirror')
           .select('user_id, updated_at').gte('updated_at', windowStart);
         // Group client-side to the per-user most-recent updated_at --
-        // one user can have several cart_items rows (one per SKU), and
+        // one user can have several cart_mirror rows (one per SKU), and
         // only the newest one tells us whether the cart as a whole has
         // gone stale.
         const latestByUser = new Map();
@@ -538,7 +541,7 @@ async function runDueAutomations(supabase) {
             business_name: o.business_name, contact_name: o.customer_name, email: o.customer_email, status: o.status,
           } : null;
         } else if (s.target_type === 'cart_user') {
-          const { data: items } = await supabase.from('cart_items')
+          const { data: items } = await supabase.from('cart_mirror')
             .select('product_name, quantity, price_snapshot').eq('user_id', s.target_id);
           // Empty means the cart was cleared (checked out, or every line
           // removed) during the delay window -- clearServerCart() in

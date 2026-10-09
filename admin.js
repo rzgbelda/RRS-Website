@@ -7541,7 +7541,7 @@ async function deleteAutomation(id) {
 /* ============================================================
    VISITOR INSIGHTS -- where visitors actually drop off (page_events)
    and which signed-in users have items sitting in an untouched cart
-   (cart_items), both from the 20261009 migration. trackEcommerce()
+   (cart_mirror), both from the 20261009 migration. trackEcommerce()
    (script.js) already sent these same moments to GA4, but nothing GA4
    receives is queryable from here or joinable against our own
    orders/accounts -- this tab is our own copy of that funnel, plus the
@@ -7643,7 +7643,7 @@ async function renderAbandonedCarts() {
   const box = document.getElementById("viCartsBox");
   if (!box) return;
 
-  const { data, error } = await window.sb.from("cart_items")
+  const { data, error } = await window.sb.from("cart_mirror")
     .select("user_id, product_name, quantity, price_snapshot, updated_at")
     .order("updated_at", { ascending: false });
   if (error) {
@@ -7656,7 +7656,7 @@ async function renderAbandonedCarts() {
     return;
   }
 
-  // Grouped client-side by user: cart_items is one row per SKU, but this
+  // Grouped client-side by user: cart_mirror is one row per SKU, but this
   // view is about a user's cart as a whole (total value, how long since
   // they last touched it), the same unit the cart_abandoned automation
   // itself reasons about.

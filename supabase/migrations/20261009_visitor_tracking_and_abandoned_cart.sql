@@ -11,7 +11,7 @@
 --    ever stored in our own database, so it could never be queried from
 --    admin or joined against our own orders/accounts.
 --
--- 2. cart_items: the cart itself is localStorage-only today (script.js's
+-- 2. cart_mirror: the cart itself is localStorage-only today (script.js's
 --    getCart()/saveCart()) -- it has never existed anywhere the backend
 --    can see it. A cron sweep cannot detect an "abandoned cart" that only
 --    ever lived in one visitor's browser. This table is a server-side
@@ -21,6 +21,18 @@
 --    (text), matching the shape the cart array already uses everywhere
 --    client-side (item.itemNumber / item.sku) rather than introducing a
 --    uuid FK the cart object doesn't carry.
+--
+--    Deliberately NOT named cart_items: schema.sql already defines a
+--    carts/cart_items pair (cart_id -> carts.id, product_id -> products.id)
+--    from initial project setup. Confirmed dead code -- no page or script
+--    in this repo ever reads or writes either table, only localStorage --
+--    but it still exists live in the database, so reusing that name here
+--    would silently collide with its different column shape (cart_id,
+--    product_id uuid, no updated_at) rather than create a new table. Left
+--    untouched rather than dropped: unused tables aren't this migration's
+--    problem to clean up, and there's no guarantee nothing in the admin
+--    dashboard still queries it. If the old carts/cart_items pair is ever
+--    confirmed fully unused and removed, this table does not depend on it.
 
 -- ============================================================
 -- PAGE_EVENTS
@@ -61,9 +73,9 @@ create policy "crm_staff_read_events"
   using (public.is_crm_staff());
 
 -- ============================================================
--- CART_ITEMS -- server-side mirror of a signed-in user's cart.
+-- CART_MIRROR -- server-side mirror of a signed-in user's cart.
 -- ============================================================
-create table if not exists public.cart_items (
+create table if not exists public.cart_mirror (
   id            uuid primary key default gen_random_uuid(),
   user_id       uuid not null references auth.users(id) on delete cascade,
   product_sku   text not null,
@@ -75,34 +87,34 @@ create table if not exists public.cart_items (
   unique (user_id, product_sku)
 );
 
-create index if not exists cart_items_updated_idx on public.cart_items(updated_at);
+create index if not exists cart_mirror_updated_idx on public.cart_mirror(updated_at);
 
-create or replace function public.cart_items_set_updated_at()
+create or replace function public.cart_mirror_set_updated_at()
 returns trigger language plpgsql as $$
 begin
   new.updated_at := now();
   return new;
 end $$;
 
-drop trigger if exists cart_items_before_update on public.cart_items;
-create trigger cart_items_before_update
-  before update on public.cart_items
-  for each row execute function public.cart_items_set_updated_at();
+drop trigger if exists cart_mirror_before_update on public.cart_mirror;
+create trigger cart_mirror_before_update
+  before update on public.cart_mirror
+  for each row execute function public.cart_mirror_set_updated_at();
 
-alter table public.cart_items enable row level security;
+alter table public.cart_mirror enable row level security;
 
 -- A signed-in user may only ever read/write their own mirrored cart --
 -- this table backs a marketing reminder, not a cart-restore feature, but
 -- there's no reason to make it readable beyond its owner and staff.
-drop policy if exists "user_manages_own_cart" on public.cart_items;
-create policy "user_manages_own_cart"
-  on public.cart_items for all
+drop policy if exists "user_manages_own_cart_mirror" on public.cart_mirror;
+create policy "user_manages_own_cart_mirror"
+  on public.cart_mirror for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
-drop policy if exists "crm_staff_read_cart_items" on public.cart_items;
-create policy "crm_staff_read_cart_items"
-  on public.cart_items for select
+drop policy if exists "crm_staff_read_cart_mirror" on public.cart_mirror;
+create policy "crm_staff_read_cart_mirror"
+  on public.cart_mirror for select
   using (public.is_crm_staff());
 
 -- ============================================================

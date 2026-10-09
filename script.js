@@ -726,7 +726,9 @@ function saveCart(cart) {
    SERVER-SIDE CART MIRROR (abandoned-cart recovery)
 ========================= */
 // The cart itself stays localStorage-only -- same read path, same speed,
-// no UX change. This just mirrors it into cart_items (20261009 migration)
+// no UX change. This just mirrors it into cart_mirror (20261009 migration
+// -- named cart_mirror, not cart_items, because schema.sql already has an
+// unrelated, unused cart_items table with a completely different shape)
 // for signed-in users so a daily cron sweep (api/create-order.js) can
 // detect "added N hours ago, never checked out" and queue a reminder
 // email -- something no purely client-side cart can ever support, since
@@ -749,7 +751,7 @@ async function syncServerCart(cart) {
     // Full replace rather than a diff: carts here are a handful of line
     // items at most, and computing an add/update/remove diff client-side
     // buys nothing a delete-then-reinsert doesn't already give for free.
-    await window.sb.from("cart_items").delete().eq("user_id", userId);
+    await window.sb.from("cart_mirror").delete().eq("user_id", userId);
     if (cart && cart.length) {
       const rows = cart.map(i => ({
         user_id: userId,
@@ -759,7 +761,7 @@ async function syncServerCart(cart) {
         price_snapshot: (typeof cleanPrice === "function" ? cleanPrice(i.price || i.price1 || 0) : Number(i.price || i.price1 || 0)) || 0,
       })).filter(r => r.product_sku);
       if (rows.length) {
-        const { error } = await window.sb.from("cart_items").insert(rows);
+        const { error } = await window.sb.from("cart_mirror").insert(rows);
         if (error) console.warn("[cart-sync] insert failed:", error.message);
       }
     }
@@ -779,7 +781,7 @@ async function clearServerCart() {
     const { data } = await window.sb.auth.getUser();
     const userId = data?.user?.id;
     if (!userId) return;
-    await window.sb.from("cart_items").delete().eq("user_id", userId);
+    await window.sb.from("cart_mirror").delete().eq("user_id", userId);
   } catch (err) {
     console.warn("[cart-sync] clear failed:", err && err.message);
   }
