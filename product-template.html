@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261010d" />
+  <link rel="stylesheet" href="style.css?v=20261010e" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -40,8 +40,7 @@
        actually has the product fixes that. -->
   <style>
     .product-page.ppg-loading .product-layout,
-    .product-page.ppg-loading .pp-overview-card,
-    .product-page.ppg-loading .pp-faq-card { visibility: hidden; }
+    .product-page.ppg-loading .pp-below-layout { visibility: hidden; }
     .ppg-loader {
       display: none; align-items: center; justify-content: center; gap: 12px;
       flex-direction: column; padding: 90px 0; color: #5B6C7E; font-size: 14px;
@@ -488,48 +487,53 @@
 
     </div>
 
-    <!-- Overview: the descriptive paragraph, pulled out of .product-info
-         (2026-10-10 follow-up) into its own full-width card here, next to
-         Common Questions below -- same card shape/sizing as
-         .pp-faq-card, both using .detail-card's default (non-inline)
-         padding and tabs styling. -->
-    <section class="detail-card pp-overview-card">
-      <div class="tabs">
-        <h3>Overview</h3>
-      </div>
-      <p class="product-desc" id="productDescription">
-        Product description will appear here.
-      </p>
-    </section>
+    <!-- Overview + Common Questions, side by side (2026-10-10 follow-up)
+         -- same .pp-below-layout 2-col grid pattern as .pp-inline-details
+         above. Both cards keep .detail-card's default (non-inline)
+         padding/tabs sizing; only their shared row is a grid now, not
+         either card individually. -->
+    <div class="pp-below-layout">
 
-    <!-- Two FAQs, generated from this product's own real data (case/dozen
-         quantity, weight, dimensions, MOQ) rather than written per-SKU by
-         hand for 110+ products or filled with invented specifics. The two
-         questions were chosen from what buyers in this exact industry
-         (bulk/wholesale janitorial, paper, and chemical supply) actually
-         ask most, per a web search done for this feature:
-         - "how many come in a case / what's the minimum order" -- case
-           quantities and bulk sizing are the #1 question in every
-           wholesale gloves/paper-towel buying guide checked (gloves.com,
-           buygloves.com, Schneider Direct).
-         - "how is this shipped / how much does it weigh" -- carton weight
-           and dimensions are what a facilities buyer needs to plan
-           freight/loading dock/storage before ordering, and this site's
-           own shipping-policy.html already treats that as a first-class
-           question (parcel vs. LTL freight is decided by weight).
-         A third common one -- chemical dilution ratios -- was
-         deliberately NOT added: this site's product data has no per-SKU
-         dilution ratio field, and inventing one for a specific SKU would
-         be a fabricated safety-relevant number, not a reasonable default.
-         Sits below the product description, full-width, as its own card
-         -- Specifications and Key Features now live higher up in
-         .product-info (see the note there, 2026-10-10). -->
-    <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
-      <div class="tabs">
-        <h3>Common Questions</h3>
-      </div>
-      <div id="ppFaqList"></div>
-    </section>
+      <!-- Overview: the descriptive paragraph, pulled out of .product-info
+           (2026-10-10 follow-up) into its own card here. -->
+      <section class="detail-card pp-overview-card">
+        <div class="tabs">
+          <h3>Overview</h3>
+        </div>
+        <p class="product-desc" id="productDescription">
+          Product description will appear here.
+        </p>
+      </section>
+
+      <!-- Two FAQs, generated from this product's own real data (case/dozen
+           quantity, weight, dimensions, MOQ) rather than written per-SKU by
+           hand for 110+ products or filled with invented specifics. The two
+           questions were chosen from what buyers in this exact industry
+           (bulk/wholesale janitorial, paper, and chemical supply) actually
+           ask most, per a web search done for this feature:
+           - "how many come in a case / what's the minimum order" -- case
+             quantities and bulk sizing are the #1 question in every
+             wholesale gloves/paper-towel buying guide checked (gloves.com,
+             buygloves.com, Schneider Direct).
+           - "how is this shipped / how much does it weigh" -- carton weight
+             and dimensions are what a facilities buyer needs to plan
+             freight/loading dock/storage before ordering, and this site's
+             own shipping-policy.html already treats that as a first-class
+             question (parcel vs. LTL freight is decided by weight).
+           A third common one -- chemical dilution ratios -- was
+           deliberately NOT added: this site's product data has no per-SKU
+           dilution ratio field, and inventing one for a specific SKU would
+           be a fabricated safety-relevant number, not a reasonable
+           default. Specifications and Key Features live higher up in
+           .product-info (see the note there, 2026-10-10). -->
+      <section class="detail-card pp-faq-card" id="ppFaqCard" style="display:none">
+        <div class="tabs">
+          <h3>Common Questions</h3>
+        </div>
+        <div id="ppFaqList"></div>
+      </section>
+
+    </div>
 
     <a href="#" id="productGuideLink" class="product-guide-link" style="display:none">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>
