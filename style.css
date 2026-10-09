@@ -5378,11 +5378,21 @@ span.flatpickr-weekday {
 }
 .stock.is-out { color: #dc2626; }
 
+/* Two rows: Specifications + Key Features side by side on top (what the
+   product IS, scannable at a glance), Overview full-width below it
+   (CEO direction, 2026-10-10 -- was a single 3-column row with Overview
+   leading). */
 .details-grid {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr 1.1fr;
+  display: flex;
+  flex-direction: column;
   gap: 22px;
   margin-top: 34px;
+}
+
+.details-grid-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 22px;
 }
 
 .detail-card {
@@ -6724,7 +6734,7 @@ span.flatpickr-weekday {
 
 @media (max-width: 1100px) {
   .product-layout,
-  .details-grid {
+  .details-grid-top {
     grid-template-columns: 1fr;
   }
 
@@ -7690,7 +7700,7 @@ button, a, [role="button"] { touch-action: manipulation; }
     max-height: none;
     overflow-y: visible;
   }
-  .details-grid { grid-template-columns: 1fr; }
+  .details-grid-top { grid-template-columns: 1fr; }
 }
 
 /* ── Pricing card: collapse image at narrow ── */

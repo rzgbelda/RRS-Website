@@ -415,58 +415,68 @@
 
     </div>
 
+    <!-- Specs + Key Features lead (CEO direction, 2026-10-10): a buyer
+         scanning the page should see what the product actually IS and
+         what's in the case before reading prose about it. Overview now
+         sits below, full-width, in its own row -- see .details-grid /
+         .details-grid-top in style.css for the two-row layout this
+         pairs with. -->
     <div class="details-grid">
+
+      <div class="details-grid-top">
+
+        <div class="detail-card specs-card">
+          <div class="tabs">
+            <h3>Specifications</h3>
+          </div>
+
+          <table>
+            <tr>
+              <td>Product Name</td>
+              <td id="specName"></td>
+            </tr>
+
+            <tr>
+              <td>Item Number</td>
+              <td id="specItemNumber"></td>
+            </tr>
+
+            <tr>
+              <td>Case Qty</td>
+              <td id="specCaseQty"></td>
+            </tr>
+
+            <tr>
+              <td>Size</td>
+              <td id="specSize"></td>
+            </tr>
+
+            <tr>
+              <td>Price</td>
+              <td id="specPrice"></td>
+            </tr>
+          </table>
+        </div>
+
+        <div class="detail-card features-card">
+          <div class="tabs">
+            <h3>Key Features</h3>
+          </div>
+
+          <ul id="featuresList"></ul>
+        </div>
+
+      </div>
 
       <div class="detail-card description-card">
         <div class="tabs">
           <h3>Overview</h3>
         </div>
 
-        
+
         <p id="overviewDescription">
           Product overview will appear here.
         </p>
-      </div>
-
-      <div class="detail-card specs-card">
-        <div class="tabs">
-          <h3>Specifications</h3>
-        </div>
-
-        <table>
-          <tr>
-            <td>Product Name</td>
-            <td id="specName"></td>
-          </tr>
-
-          <tr>
-            <td>Item Number</td>
-            <td id="specItemNumber"></td>
-          </tr>
-
-          <tr>
-            <td>Case Qty</td>
-            <td id="specCaseQty"></td>
-          </tr>
-
-          <tr>
-            <td>Size</td>
-            <td id="specSize"></td>
-          </tr>
-
-          <tr>
-            <td>Price</td>
-            <td id="specPrice"></td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="detail-card features-card">
-        <div class="tabs">
-          <h3>Key Features</h3>
-        </div>
-
-        <ul id="featuresList"></ul>
       </div>
 
     </div>
