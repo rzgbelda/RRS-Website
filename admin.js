@@ -7580,11 +7580,11 @@ async function renderVisitorInsightsTab() {
     </div>
 
     <div class="camp-formdivider"><span>Visitor Funnel</span></div>
-    <div id="viFunnelBox" class="camp-listbox"><div class="a-empty" style="padding:30px">Loading…</div></div>
+    <div id="viFunnelBox" class="camp-funnel"><div class="a-empty" style="padding:30px;grid-column:1/-1">Loading…</div></div>
 
-    <div class="camp-formdivider"><span>Abandoned Carts</span></div>
+    <div class="camp-formdivider" style="margin-top:28px"><span>Abandoned Carts</span></div>
     <p class="camp-subtitle" style="margin:-6px 0 14px">Signed-in users with items still in their cart. The "Abandoned Cart Reminder" automation (see Automations in Campaigns) emails these automatically once a cart crosses its configured age.</p>
-    <div id="viCartsBox" class="camp-listbox"><div class="a-empty" style="padding:30px">Loading…</div></div>
+    <div id="viCartsBox" class="camp-cartgrid"><div class="a-empty" style="padding:30px;grid-column:1/-1">Loading…</div></div>
    </div>
   `;
 
@@ -7601,7 +7601,7 @@ async function renderVisitorFunnel() {
   const { data, error } = await window.sb.from("page_events")
     .select("session_id, event_type").gte("occurred_at", since);
   if (error) {
-    box.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    box.innerHTML = `<p class="camp-dr-hint" style="grid-column:1/-1">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
     return;
   }
 
@@ -7624,17 +7624,13 @@ async function renderVisitorFunnel() {
     const pctOfTotal = Math.round((count / maxCount) * 100);
     const dropFromPrev = i === 0 ? null : (counts[i - 1] ? Math.round((1 - count / counts[i - 1]) * 100) : null);
     return `
-    <div class="camp-listrow" style="align-items:center">
-      <div class="camp-listrow-body" style="flex:1;gap:6px">
-        <strong>${escHtml(step.label)}</strong>
-        <div style="background:#f1f5f9;border-radius:6px;height:8px;overflow:hidden;margin-top:2px">
-          <div style="background:#ED7226;height:100%;width:${pctOfTotal}%"></div>
-        </div>
-      </div>
-      <div class="camp-listrow-actions" style="flex-direction:column;align-items:flex-end;gap:2px">
-        <strong style="font-size:15px;color:#0B1F38">${count.toLocaleString()}</strong>
-        ${dropFromPrev !== null ? `<span style="font-size:12px;color:${dropFromPrev > 50 ? "#b91c1c" : "#94a3b8"}">&minus;${dropFromPrev}% from prior step</span>` : ""}
-      </div>
+    <div class="camp-funnel-step">
+      <p class="camp-funnel-label">${escHtml(step.label)}</p>
+      <div class="camp-funnel-count">${count.toLocaleString()}</div>
+      <div class="camp-funnel-bar"><div class="camp-funnel-bar-fill" style="width:${pctOfTotal}%"></div></div>
+      ${dropFromPrev !== null
+        ? `<p class="camp-funnel-drop" style="color:${dropFromPrev > 50 ? "#dc2626" : "#94a3b8"}">&minus;${dropFromPrev}% from prior step</p>`
+        : `<p class="camp-funnel-drop" style="color:transparent">&nbsp;</p>`}
     </div>`;
   }).join("");
 }
@@ -7647,12 +7643,18 @@ async function renderAbandonedCarts() {
     .select("user_id, product_name, quantity, price_snapshot, updated_at")
     .order("updated_at", { ascending: false });
   if (error) {
-    box.innerHTML = `<p class="camp-dr-hint">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    box.innerHTML = `<p class="camp-dr-hint" style="grid-column:1/-1">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
     return;
   }
 
   if (!data || !data.length) {
-    box.innerHTML = `<p class="camp-listbox-empty">No signed-in user currently has items in their cart.</p>`;
+    box.innerHTML = `<div class="camp-empty" style="grid-column:1/-1">
+      <div class="camp-empty-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      </div>
+      <h3>No abandoned carts</h3>
+      <p>No signed-in user currently has items sitting in their cart.</p>
+    </div>`;
     return;
   }
 
@@ -7680,14 +7682,13 @@ async function renderAbandonedCarts() {
   }).sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
 
   box.innerHTML = rows.map(r => `
-    <div class="camp-listrow">
-      <div class="camp-listrow-body" style="gap:4px">
-        <strong>${escHtml(r.profile?.full_name || r.profile?.email || "Unknown user")}</strong>
-        <span>${r.itemSummary} &middot; Last touched ${fmt(r.lastUpdated)}</span>
+    <div class="camp-cart-card">
+      <div class="camp-cart-card-top">
+        <span class="camp-cart-name">${escHtml(r.profile?.full_name || r.profile?.email || "Unknown user")}</span>
+        <span class="camp-cart-value">$${r.value.toFixed(2)}</span>
       </div>
-      <div class="camp-listrow-actions">
-        <strong style="font-size:14px;color:#0B1F38">$${r.value.toFixed(2)}</strong>
-      </div>
+      <p class="camp-cart-items">${r.itemSummary}</p>
+      <p class="camp-cart-meta">${r.itemCount} item${r.itemCount === 1 ? "" : "s"} &middot; Last touched ${fmt(r.lastUpdated)}</p>
     </div>`).join("");
 }
 

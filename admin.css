@@ -2911,6 +2911,57 @@ body.admin-body {
 .camp-stat-n { display: block; font-size: 22px; font-weight: 800; color: var(--camp-ink); letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
 .camp-stat-l { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--camp-ink-faint); margin-top: 3px; }
 
+/* ── Visitor funnel (Visitor Insights tab) ───────────────────────
+   One tile per funnel step, laid out left-to-right on desktop (reads as
+   a funnel) and stacked on narrow screens. Each tile is a full card
+   (not a cramped .camp-listrow) so the step label, count, progress bar,
+   and drop-off note all have room to breathe. */
+.camp-funnel {
+  display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;
+}
+@media (max-width: 1100px) { .camp-funnel { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 640px)  { .camp-funnel { grid-template-columns: repeat(2, 1fr); } }
+
+.camp-funnel-step {
+  background: #fff; border: 1px solid var(--camp-line); border-radius: 14px;
+  padding: 18px 18px 16px; position: relative; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(16,27,48,.04);
+  transition: box-shadow .2s, transform .2s;
+}
+.camp-funnel-step:hover { box-shadow: 0 6px 20px rgba(16,27,48,.08); transform: translateY(-2px); }
+.camp-funnel-step::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--orange) 0%, #ffb366 100%);
+}
+.camp-funnel-label {
+  font-size: 10.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+  color: var(--camp-ink-faint); margin: 0 0 8px;
+}
+.camp-funnel-count {
+  font-size: 26px; font-weight: 800; color: var(--camp-ink); letter-spacing: -.5px;
+  line-height: 1; font-variant-numeric: tabular-nums; margin-bottom: 12px;
+}
+.camp-funnel-bar { background: var(--camp-canvas); border-radius: 6px; height: 7px; overflow: hidden; }
+.camp-funnel-bar-fill { background: linear-gradient(90deg, var(--orange) 0%, #ffb366 100%); height: 100%; border-radius: 6px; transition: width .3s; }
+.camp-funnel-drop { font-size: 11.5px; font-weight: 600; margin-top: 8px; }
+
+/* ── Abandoned-cart cards (Visitor Insights tab) ─────────────────
+   Deliberately its own grid rather than .camp-listbox, which caps at
+   max-height:220px+scroll -- a layout built for long automation/article
+   lists, not a handful of roomy cart summaries that should all be
+   visible at once. */
+.camp-cartgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.camp-cart-card {
+  background: #fff; border: 1px solid var(--camp-line); border-radius: 14px;
+  padding: 16px 18px; box-shadow: 0 1px 3px rgba(16,27,48,.04);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.camp-cart-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.camp-cart-name { font-size: 13.5px; font-weight: 700; color: var(--camp-ink); }
+.camp-cart-value { font-size: 16px; font-weight: 800; color: var(--orange); white-space: nowrap; }
+.camp-cart-items { font-size: 12px; color: var(--camp-ink-soft); line-height: 1.5; }
+.camp-cart-meta { font-size: 11px; color: var(--camp-ink-faint); margin-top: auto; padding-top: 6px; border-top: 1px solid var(--camp-canvas); }
+
 /* ── Filter bar ───────────────────────────────────────────────── */
 .camp-filterbar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
 .camp-search {
