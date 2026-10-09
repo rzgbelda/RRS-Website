@@ -2322,7 +2322,17 @@ function cvtHandleFile(file) {
       showCvtStep(2);
     } catch(err) { showToast("Parse error: " + err.message); }
   };
-  isXlsx ? reader.readAsArrayBuffer(file) : reader.readAsText(file);
+  // Explicit "UTF-8" -- without it, readAsText() falls back to the
+  // browser's own encoding sniffing, which misdetects a UTF-8 CSV with
+  // no byte-order mark (how Excel/Sheets exports one by default) often
+  // enough that it isn't safe to leave unset. A misdetected file doesn't
+  // throw or show a warning here -- every multi-byte character (×, –,
+  // curly quotes) just silently decodes wrong, and since this is the
+  // Converter step, that corrupted text is what gets written to the
+  // database a few clicks later. Confirmed live: 202 products imported
+  // through this exact path show U+FFFD (the "unknown character"
+  // replacement glyph) in place of × in their names.
+  isXlsx ? reader.readAsArrayBuffer(file) : reader.readAsText(file, "UTF-8");
 }
 
 function cvtAutoMap(cols) {
@@ -3490,7 +3500,12 @@ function handleCsvFile(file) {
       showToast("CSV parse error: " + err.message);
     }
   };
-  reader.readAsText(file);
+  // Explicit "UTF-8" -- see the matching note on cvtHandleFile's own
+  // readAsText() call. Same risk here: a misdetected encoding silently
+  // corrupts every × / – / curly-quote character in the file, with
+  // nothing in this preview step to catch it before Import All Rows
+  // writes it to the database.
+  reader.readAsText(file, "UTF-8");
 }
 
 /* Full single-pass RFC 4180 tokenizer. The previous version pre-split the
@@ -6481,7 +6496,11 @@ function handleCrmImportFile(file) {
     summary.style.display = rows.length ? "block" : "none";
     document.getElementById("crmImportSaveBtn").disabled = !rows.length;
   };
-  reader.readAsText(file);
+  // Explicit "UTF-8" -- same encoding-sniffing risk as the product CSV
+  // importers (see cvtHandleFile/handleCsvFile). Business and contact
+  // names can carry the same kind of multi-byte characters a misdetected
+  // encoding would corrupt.
+  reader.readAsText(file, "UTF-8");
 }
 
 async function saveCrmImport() {
