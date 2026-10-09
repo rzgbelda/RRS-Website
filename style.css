@@ -4759,6 +4759,25 @@ span.flatpickr-weekday {
   margin-bottom: 20px;
 }
 
+/* Specifications + Key Features, relocated into .product-info ahead of
+   the description paragraph (CEO direction, 2026-10-10 -- see the note
+   in product-template.html). .detail-card's default 22px padding and
+   margin-bottom:14px h3 are tuned for the old full-width cards; scaled
+   down here since this column is a fraction of that width. */
+.pp-inline-detail {
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+.pp-inline-detail .tabs {
+  margin: -16px -18px 12px;
+  padding: 0 18px;
+}
+.pp-inline-detail h3 {
+  margin-top: 10px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
 /* Buyer reassurance under the add-to-cart block: every line states
    something already true and published elsewhere on the site. */
 .product-assurance {
@@ -5378,23 +5397,6 @@ span.flatpickr-weekday {
 }
 .stock.is-out { color: #dc2626; }
 
-/* Two rows: Specifications + Key Features side by side on top (what the
-   product IS, scannable at a glance), Overview full-width below it
-   (CEO direction, 2026-10-10 -- was a single 3-column row with Overview
-   leading). */
-.details-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  margin-top: 34px;
-}
-
-.details-grid-top {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 22px;
-}
-
 .detail-card {
   background: white;
   border-radius: 8px;
@@ -5463,10 +5465,10 @@ span.flatpickr-weekday {
    cards, in normal document flow. It used to be placed via CSS grid in
    its own cell (column 2, row 2) beside .pp-purchase-panel, which put it
    in the same space as the bottom of .product-info's own content and
-   caused the two to visibly overlap. It now sits below .details-grid,
+   caused the two to visibly overlap. It now sits below .product-layout,
    full width, at its own natural place in document flow -- the same
    overlap is structurally impossible there, and it uses .detail-card's
-   default padding/tabs sizing like Overview/Specs/Key Features instead
+   default padding/tabs sizing like the Overview card used to instead
    of the narrow-column overrides it needed in the old layout. */
 .pp-faq-card {
   margin-top: 24px;
@@ -6733,8 +6735,7 @@ span.flatpickr-weekday {
 }
 
 @media (max-width: 1100px) {
-  .product-layout,
-  .details-grid-top {
+  .product-layout {
     grid-template-columns: 1fr;
   }
 
@@ -7673,8 +7674,8 @@ button, a, [role="button"] { touch-action: manipulation; }
      col 1 row 2, product-info col 2 row 1, pp-tier-cards-block col 2
      row 2, buy-box col 3) would otherwise try to place things in
      columns/rows that no longer exist. .pp-faq-card is not a grid item
-     of .product-layout at all (it sits below .details-grid, outside
-     this grid entirely), so it needs no placement reset here. Reset the
+     of .product-layout at all (it sits below it, outside this grid
+     entirely), so it needs no placement reset here. Reset the
      remaining explicit placements back to plain document-order
      stacking: gallery, then product info (name/badges/description),
      then the tier cards, then the purchase panel, then the buy box. */
@@ -7700,7 +7701,6 @@ button, a, [role="button"] { touch-action: manipulation; }
     max-height: none;
     overflow-y: visible;
   }
-  .details-grid-top { grid-template-columns: 1fr; }
 }
 
 /* ── Pricing card: collapse image at narrow ── */
