@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261010b" />
+  <link rel="stylesheet" href="style.css?v=20261010c" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -165,6 +165,21 @@
           <img id="thumbImage" src="" alt="Product thumbnail" class="thumb active" loading="lazy">
         </div>
       </div>
+
+      <!-- Variant picker (Select Tier / Select Size / Select Color), built
+           and inserted here by buildVariantSelector() in script.js
+           (2026-10-10 follow-up). Its own grid row -- column 1, between
+           the gallery and .pp-purchase-panel (see .product-layout in
+           style.css) -- rather than being injected into either neighbor's
+           markup. Previously inserted directly into .product-info, right
+           before #productDescription; once the description moved out to
+           its own full-width Overview card below .product-layout, that
+           insertion point put the variant picker INSIDE the Overview
+           card instead, above the description text, which is not where
+           either one belongs. Empty div, populated at runtime -- a
+           single-variant product with nothing to pick renders nothing
+           into it and the empty grid row collapses to 0 height. -->
+      <div id="productVariantPanel"></div>
 
       <!-- Purchase mode + Reorder Program. Placed here as its OWN grid
            item (a sibling of .product-gallery/.product-info/.buy-box,
@@ -516,7 +531,7 @@
 
   </section>
 
-  <script src="script.js?v=20261009"></script>
+  <script src="script.js?v=20261010"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 </body>

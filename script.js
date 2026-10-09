@@ -3384,8 +3384,16 @@ function injectProductVariantSelector(variants, activeProduct) {
     ${colorHtml}
   `;
 
-  const descEl = document.getElementById("productDescription");
-  if (descEl) descEl.parentNode.insertBefore(selector, descEl);
+  // Own grid row in .product-layout, column 1, between the gallery and
+  // .pp-purchase-panel (see #productVariantPanel in product-template.html
+  // and .product-layout in style.css) -- not inside .product-info or the
+  // Overview card, which is where this used to land when the insertion
+  // point was "right before #productDescription" and that element lived
+  // in .product-info. Once description moved out to its own Overview
+  // card below .product-layout entirely (2026-10-10 follow-up), that same
+  // insertion point put the picker inside the Overview card instead.
+  const panel = document.getElementById("productVariantPanel");
+  if (panel) panel.appendChild(selector);
 }
 
 // Switches which tier's size row is visible WITHOUT navigating -- picking a

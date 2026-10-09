@@ -4627,31 +4627,35 @@ span.flatpickr-weekday {
 .product-layout {
   display: grid;
   grid-template-columns: 440px minmax(0, 1fr) 330px;
-  /* Two rows so .pp-purchase-panel can be placed explicitly under the
-     gallery (row 2, column 1) -- true CSS grid alignment to the photo,
-     not the panel's HTML being nested inside the gallery's own markup.
-     .product-gallery sits ONLY in row 1 (its own natural content
-     height); the panel sits ONLY in row 2, directly below it -- the two
-     must not both claim column 1 across both rows or they'd overlap in
-     the same cell. .product-info and .buy-box, which are taller than
-     gallery+panel combined or shorter depending on the product, span
-     both rows so their own content is never constrained by row 1's
+  /* Three rows (was two) so #productVariantPanel (the Select Tier/Select
+     Size pickers, moved out of .product-info -- see the note on
+     #productVariantPanel in product-template.html, 2026-10-10) can sit
+     in column 1 between the gallery and .pp-purchase-panel as its own
+     grid row, true CSS grid alignment rather than nesting it in either
+     neighbor's markup. .product-gallery sits ONLY in row 1 (its own
+     natural content height); the variant panel ONLY in row 2; the
+     purchase panel ONLY in row 3 -- none of the three may span into a
+     row another one of them occupies, or they'd overlap in the same
+     cell. .product-info and .buy-box, which are taller than column 1's
+     three rows combined or shorter depending on the product, span all
+     three rows so their own content is never constrained by row 1's
      height. */
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   gap: 24px 38px;
   align-items: start;
 }
 .product-gallery { grid-column: 1; grid-row: 1; }
-.pp-purchase-panel { grid-column: 1; grid-row: 2; }
-/* Row 1 only -- name/badges/description sit beside the gallery. The tier
-   cards used to live in this same element and spanned both rows, which
-   let them trail below wherever row 1's content ended rather than
+#productVariantPanel { grid-column: 1; grid-row: 2; }
+.pp-purchase-panel { grid-column: 1; grid-row: 3; }
+/* Row 1 only -- name/badges/specs/features sit beside the gallery. The
+   tier cards used to live in this same element and spanned every row,
+   which let them trail below wherever row 1's content ended rather than
    lining up with .pp-purchase-panel. They're a separate grid item now
-   (.pp-tier-cards-block, row 2) precisely so their top edge is pinned to
+   (.pp-tier-cards-block, row 3) precisely so their top edge is pinned to
    the grid row instead of to product-info's variable content height. */
 .product-info { grid-column: 2; grid-row: 1; }
-.pp-tier-cards-block { grid-column: 2; grid-row: 2; }
-.buy-box { grid-column: 3; grid-row: 1 / span 2; }
+.pp-tier-cards-block { grid-column: 2; grid-row: 3; }
+.buy-box { grid-column: 3; grid-row: 1 / span 3; }
 
 .product-gallery {
   position: relative;
@@ -4772,11 +4776,16 @@ span.flatpickr-weekday {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 14px;
-  align-items: start;
+  /* Stretch (grid's own default -- no align-items override), not start:
+     Specifications and Key Features should always match height, even
+     when one has more rows/items than the other, rather than each
+     card sizing to its own content and leaving a ragged bottom edge. */
 }
 .pp-inline-detail {
   padding: 16px 18px;
   margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
 }
 .pp-inline-detail .tabs {
   margin: -16px -18px 12px;
@@ -5145,6 +5154,21 @@ span.flatpickr-weekday {
      .product-gallery, which has 32px built in) -- full width here
      matches how .product-gallery and .buy-box each already fill their
      own column edge to edge. */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Variant picker's own card -- same shape/sizing as .pp-purchase-panel
+   directly below it (both column 1, full width, no outer padding of
+   their own). Empty when a product has only one variant (nothing to
+   pick): :empty collapses the card entirely rather than showing a
+   blank bordered box with nothing in it. */
+#productVariantPanel:empty { display: none; }
+#productVariantPanel:not(:empty) {
+  padding: 18px 20px 20px;
+  background: #fff;
+  border: 1.5px solid #e4e9f2;
+  border-radius: 14px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -7703,16 +7727,18 @@ button, a, [role="button"] { touch-action: manipulation; }
 @media (max-width: 960px) {
   .product-layout { grid-template-columns: 1fr; }
   /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
-     grid-row placements (product-gallery col 1 row 1, pp-purchase-panel
-     col 1 row 2, product-info col 2 row 1, pp-tier-cards-block col 2
-     row 2, buy-box col 3) would otherwise try to place things in
-     columns/rows that no longer exist. .pp-faq-card is not a grid item
-     of .product-layout at all (it sits below it, outside this grid
-     entirely), so it needs no placement reset here. Reset the
-     remaining explicit placements back to plain document-order
-     stacking: gallery, then product info (name/badges/specs/features),
-     then the tier cards, then the purchase panel, then the buy box. */
+     grid-row placements (product-gallery col 1 row 1, #productVariantPanel
+     col 1 row 2, pp-purchase-panel col 1 row 3, product-info col 2 row 1,
+     pp-tier-cards-block col 2 row 3, buy-box col 3) would otherwise try
+     to place things in columns/rows that no longer exist. .pp-overview-
+     card and .pp-faq-card are not grid items of .product-layout at all
+     (they sit below it, outside this grid entirely), so they need no
+     placement reset here. Reset the remaining explicit placements back
+     to plain document-order stacking: gallery, then the variant picker,
+     then product info (name/badges/specs/features), then the tier
+     cards, then the purchase panel, then the buy box. */
   .product-gallery,
+  #productVariantPanel,
   .pp-purchase-panel,
   .product-info,
   .pp-tier-cards-block,
@@ -7721,10 +7747,11 @@ button, a, [role="button"] { touch-action: manipulation; }
     grid-row: auto;
   }
   .product-gallery      { order: 1; }
-  .product-info         { order: 2; }
-  .pp-tier-cards-block  { order: 3; }
-  .pp-purchase-panel    { order: 4; }
-  .buy-box              { order: 5; }
+  #productVariantPanel  { order: 2; }
+  .product-info         { order: 3; }
+  .pp-tier-cards-block  { order: 4; }
+  .pp-purchase-panel    { order: 5; }
+  .buy-box              { order: 6; }
   .buy-box {
     max-width: min(480px, 100%);
     /* Sticky only makes sense beside a taller neighbor in the 3-column
