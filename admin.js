@@ -7442,11 +7442,45 @@ function toggleAutoStaleField() {
   const isCart = triggerType === "cart_abandoned";
   const label = document.getElementById("autoStaleLabel");
   const input = document.getElementById("autoStaleAfterDays");
-  if (label) label.textContent = isCart ? "Abandoned After (hours)" : "Stale After (days)";
+  if (label) label.textContent = isCart
+    ? 'How many hours with no cart activity before this counts as "abandoned"?'
+    : 'How many days with no order before this counts as "stale"?';
   if (input) {
     input.step = isCart ? "0.25" : "1";
     input.dataset.unit = isCart ? "hours" : "days";
   }
+  updateAutoTimingSummary();
+}
+
+// Plain-English read-back of what the two timing fields above actually
+// do together -- staff were seeing a bare "Send Delay (days)" number
+// with no sense of how it combines with the trigger's own staleness
+// window, which is the exact confusion that prompted this rewrite.
+function updateAutoTimingSummary() {
+  const el = document.getElementById("autoTimingSummaryText");
+  if (!el) return;
+  const triggerType = document.getElementById("autoTriggerType")?.value;
+  const delayDays = parseFloat(document.getElementById("autoDelayDays")?.value) || 0;
+  const delayPhrase = delayDays <= 0 ? "right away" : "after waiting " + delayDays + " more day" + (delayDays === 1 ? "" : "s");
+
+  const triggerPhrase = {
+    crm_lead_created: "a new lead comes in",
+    order_delivered: "an order is marked delivered",
+  }[triggerType];
+
+  if (triggerPhrase) {
+    el.innerHTML = "This email sends <strong>" + delayPhrase + "</strong> once " + triggerPhrase + ".";
+    return;
+  }
+
+  const staleVal = parseFloat(document.getElementById("autoStaleAfterDays")?.value);
+  const isCart = triggerType === "cart_abandoned";
+  const staleUnit = isCart ? "hour" : "day";
+  const staleN = isFinite(staleVal) && staleVal > 0 ? staleVal : (isCart ? 6 : 5);
+  const staleNoun = isCart ? "no cart activity" : "no order placed";
+  el.innerHTML = "This email sends <strong>" + delayPhrase + "</strong> once a " +
+    (isCart ? "cart" : "quote") + " has gone <strong>" + staleN + " " + staleUnit + (staleN === 1 ? "" : "s") +
+    "</strong> with " + staleNoun + ".";
 }
 
 // autoStaleAfterDays is shown to staff in hours for cart_abandoned but
@@ -7471,7 +7505,7 @@ function resetAutomationForm() {
   document.getElementById("autoStaleAfterDays").value = "5";
   document.getElementById("autoDelayDays").value = "0";
   document.getElementById("autoSubject").value = "";
-  document.getElementById("autoBodyHtml").value = "";
+  document.getElementById("autoBodyHtml").innerHTML = "";
   document.getElementById("autoFormTitle").textContent = "New Automation";
   document.getElementById("autoCancelBtn").style.display = "none";
   document.getElementById("autoError").style.display = "none";
@@ -7485,10 +7519,108 @@ function editAutomation(a) {
   document.getElementById("autoStaleAfterDays").value = staleFieldDaysToDisplay(a.trigger_type, a.stale_after_days);
   document.getElementById("autoDelayDays").value = a.delay_days;
   document.getElementById("autoSubject").value = a.subject;
-  document.getElementById("autoBodyHtml").value = a.body_html;
+  document.getElementById("autoBodyHtml").innerHTML = a.body_html;
   document.getElementById("autoFormTitle").textContent = "Editing: " + a.name;
   document.getElementById("autoCancelBtn").style.display = "inline-block";
   toggleAutoStaleField();
+}
+
+// Which field (Subject input or the rich-text Body) last had the cursor
+// -- set by each field's onfocus so the merge-field buttons and the
+// toolbar know where to insert/act, since clicking a button itself
+// steals focus away from both.
+let _autoLastFocusedField = "autoBodyHtml";
+// Body's own last-known cursor position, saved on every selection change
+// inside it -- clicking a merge-field button also steals focus/selection
+// away from the contenteditable div, so the plain "insert at the current
+// selection" approach would insert at nothing (or the end) instead of
+// where staff actually clicked.
+let _autoBodySavedRange = null;
+(function initAutoBodySelectionTracking() {
+  document.addEventListener("selectionchange", () => {
+    const body = document.getElementById("autoBodyHtml");
+    if (!body) return;
+    const sel = window.getSelection();
+    if (sel.rangeCount && body.contains(sel.anchorNode)) {
+      _autoBodySavedRange = sel.getRangeAt(0).cloneRange();
+    }
+  });
+})();
+
+// Runs a document.execCommand formatting action against the Body editor.
+// execCommand is deprecated but still the only cross-browser way to drive
+// a lightweight contenteditable toolbar without pulling in a real rich-text
+// library -- this project has no bundler/build step to install one into.
+function autoBodyExec(command) {
+  const body = document.getElementById("autoBodyHtml");
+  if (!body) return;
+  body.focus();
+  document.execCommand(command, false, null);
+}
+
+function autoBodyInsertLink() {
+  const url = prompt("Link URL (e.g. https://www.roomreadysupply.com/cart):");
+  if (!url) return;
+  const body = document.getElementById("autoBodyHtml");
+  if (!body) return;
+  body.focus();
+  document.execCommand("createLink", false, url);
+}
+
+// Inserts a {{merge_field}} token at the last known cursor position of
+// whichever field (Subject or Body) was last focused, so staff never
+// have to type or remember the {{...}} syntax by hand.
+function insertAutoMergeField(fieldName) {
+  const token = "{{" + fieldName + "}}";
+  if (_autoLastFocusedField === "autoSubject") {
+    const input = document.getElementById("autoSubject");
+    const start = input.selectionStart ?? input.value.length;
+    const end = input.selectionEnd ?? input.value.length;
+    input.value = input.value.slice(0, start) + token + input.value.slice(end);
+    input.focus();
+    input.setSelectionRange(start + token.length, start + token.length);
+    return;
+  }
+
+  const body = document.getElementById("autoBodyHtml");
+  body.focus();
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  if (_autoBodySavedRange && body.contains(_autoBodySavedRange.startContainer)) {
+    sel.addRange(_autoBodySavedRange);
+  } else {
+    // No prior selection inside Body (e.g. it was empty) -- fall back to
+    // appending at the very end rather than silently doing nothing.
+    const range = document.createRange();
+    range.selectNodeContents(body);
+    range.collapse(false);
+    sel.addRange(range);
+  }
+  document.execCommand("insertText", false, token);
+}
+
+// Renders the Subject/Body with sample data standing in for every merge
+// field -- the exact substitution logic mirrors mergeFields() in
+// api/create-order.js, just run client-side against fake data so staff
+// can see a real, non-technical "this is what it'll look like" preview
+// before saving.
+const AUTO_PREVIEW_SAMPLE = {
+  business_name: "Sunset Bay Hotel",
+  contact_name: "Jamie Rivera",
+  first_name: "Jamie",
+  review_link: "https://g.page/r/example/review",
+  cart_items: "2 x Queen Fitted Sheets, 1 x Bath Towel Case",
+  cart_value: "$214.50",
+};
+function mergeFieldsPreview(str) {
+  return String(str || "").replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key) => AUTO_PREVIEW_SAMPLE[key] ?? match);
+}
+function previewAutomation() {
+  const subject = document.getElementById("autoSubject").value.trim() || "(no subject)";
+  const bodyHtml = document.getElementById("autoBodyHtml").innerHTML.trim() || "<p>(no body)</p>";
+  document.getElementById("autoPreviewSubject").textContent = mergeFieldsPreview(subject);
+  document.getElementById("autoPreviewBody").innerHTML = mergeFieldsPreview(bodyHtml);
+  openModal("automationPreviewModal");
 }
 
 async function saveAutomation() {
@@ -7499,7 +7631,7 @@ async function saveAutomation() {
   const name = document.getElementById("autoName").value.trim();
   const triggerType = document.getElementById("autoTriggerType").value;
   const subject = document.getElementById("autoSubject").value.trim();
-  const body_html = document.getElementById("autoBodyHtml").value.trim();
+  const body_html = document.getElementById("autoBodyHtml").innerHTML.trim();
   if (!name || !subject || !body_html) { errEl.textContent = "Name, subject, and body are all required."; errEl.style.display = "block"; return; }
 
   const { data: { session } } = await window.sb.auth.getSession();

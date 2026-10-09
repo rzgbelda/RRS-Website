@@ -3251,6 +3251,85 @@ body.admin-body {
   font-family: ui-monospace, "JetBrains Mono", monospace; font-size: 11px;
   background: var(--orange-faint); color: var(--orange-dark); border-radius: 6px; padding: 2px 7px;
 }
+/* Clickable variant: same look as the read-only <code> chip, but a real
+   button that inserts the merge field at the last cursor position in
+   whichever field (subject input or rich-text body) was last focused --
+   staff never have to type or remember {{...}} syntax by hand. */
+button.camp-mergefield {
+  border: 1px solid transparent; cursor: pointer; font-weight: 600;
+  transition: background .15s, border-color .15s;
+}
+button.camp-mergefield:hover { background: var(--orange); color: #fff; }
+
+/* ── Timing explainer (Automations modal) ────────────────────────
+   Replaces a bare "Send Delay (days)" number field with two plainly
+   labeled questions and a live, read-back-in-English summary -- the
+   trigger_type/stale_after_days/delay_days split is backend plumbing
+   non-technical marketing staff shouldn't have to reverse-engineer from
+   a field called "days". */
+.camp-timing-box {
+  background: var(--camp-canvas); border: 1px solid var(--camp-line); border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 14px;
+}
+.camp-timing-summary {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: #fff; border: 1px solid var(--camp-line); border-radius: 10px;
+  padding: 10px 12px; margin-top: 12px; font-size: 12.5px; color: var(--camp-ink-soft); line-height: 1.5;
+}
+.camp-timing-summary svg { flex-shrink: 0; margin-top: 1px; color: var(--orange); }
+
+/* ── Rich-text body editor (Automations modal) ───────────────────
+   A plain contenteditable div, not a third-party library -- this project
+   ships no bundler/build step, so a dependency-free toolbar over
+   document.execCommand is the simplest thing that actually works for the
+   handful of formatting options a marketing email needs (bold, italic,
+   link, paragraph breaks). Output is its own innerHTML, read at save
+   time exactly where autoBodyHtml's raw textarea.value used to be. */
+.camp-richtext-toolbar {
+  display: flex; gap: 4px; align-items: center; flex-wrap: wrap;
+  background: var(--camp-canvas); border: 1.5px solid #d5dbe4; border-bottom: none;
+  border-radius: 9px 9px 0 0; padding: 6px;
+}
+.camp-richtext-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 28px; border-radius: 6px; border: 1px solid transparent;
+  background: transparent; color: var(--camp-ink-soft); cursor: pointer;
+  font-size: 13px; font-weight: 700; font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.camp-richtext-btn:hover { background: #fff; border-color: var(--camp-line); color: var(--camp-ink); }
+.camp-richtext-btn.is-active { background: var(--orange-faint); color: var(--orange-dark); }
+.camp-richtext-divider { width: 1px; height: 18px; background: var(--camp-line); margin: 0 2px; }
+.camp-richtext-body {
+  min-height: 160px; max-height: 320px; overflow-y: auto;
+  font-family: inherit; font-size: 13px; line-height: 1.6; color: var(--camp-ink);
+  background: var(--camp-canvas); border: 1.5px solid #d5dbe4; border-radius: 0 0 9px 9px;
+  padding: 12px; outline: none; box-shadow: inset 0 1px 2px rgba(16,27,48,.04);
+  transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.camp-richtext-body:focus { border-color: var(--navy); background: #fff; box-shadow: 0 0 0 3px var(--navy-light); }
+.camp-richtext-body:empty::before { content: attr(data-placeholder); color: var(--camp-ink-faint); }
+.camp-richtext-body p { margin: 0 0 10px; }
+.camp-richtext-body p:last-child { margin-bottom: 0; }
+.camp-richtext-body a { color: var(--orange-dark); }
+.camp-richtext-body ul, .camp-richtext-body ol { margin: 0 0 10px; padding-left: 20px; }
+
+/* ── Email preview modal ──────────────────────────────────────── */
+.camp-preview-frame {
+  background: #f1f5f9; border-radius: 14px; padding: 28px 20px; max-height: 60vh; overflow-y: auto;
+}
+.camp-preview-card {
+  max-width: 480px; margin: 0 auto; background: #fff; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 4px 20px rgba(16,27,48,.1);
+}
+.camp-preview-subject {
+  padding: 16px 20px; border-bottom: 1px solid var(--camp-line); background: #f8fafc;
+  font-size: 13px; color: var(--camp-ink-soft);
+}
+.camp-preview-subject strong { color: var(--camp-ink); font-weight: 700; }
+.camp-preview-body { padding: 20px; font-size: 14px; line-height: 1.6; color: var(--camp-ink); }
+.camp-preview-body p { margin: 0 0 12px; }
+.camp-preview-body a { color: var(--orange-dark); }
 
 /* ==================================================================
    CRM & LEADS -- scoped design system (crm-*), same rationale as

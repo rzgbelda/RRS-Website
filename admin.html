@@ -1966,47 +1966,98 @@
             <span class="camp-field-label">Name</span>
             <input id="autoName" class="camp-input" placeholder="e.g. New Lead Welcome">
           </div>
-          <div class="camp-fieldgrid camp-fieldgrid-2">
-            <div class="camp-field">
-              <span class="camp-field-label">Trigger</span>
-              <select id="autoTriggerType" class="camp-select" onchange="toggleAutoStaleField()">
-                <option value="crm_lead_created">New lead created</option>
-                <option value="quote_stale">Quote sent, no order yet</option>
-                <option value="order_delivered">Order marked delivered</option>
-                <option value="cart_abandoned">Cart abandoned (signed-in user)</option>
-              </select>
-            </div>
-            <div class="camp-field" id="autoStaleWrap" style="display:none">
-              <span class="camp-field-label" id="autoStaleLabel">Stale After (days)</span>
-              <input id="autoStaleAfterDays" type="number" min="1" step="1" value="5" class="camp-input">
-            </div>
-          </div>
           <div class="camp-field">
-            <span class="camp-field-label">Send Delay (days) <span class="camp-field-hint">0 = as soon as it triggers</span></span>
-            <input id="autoDelayDays" type="number" min="0" value="0" class="camp-input">
+            <span class="camp-field-label">Trigger</span>
+            <select id="autoTriggerType" class="camp-select" onchange="toggleAutoStaleField()">
+              <option value="crm_lead_created">New lead created</option>
+              <option value="quote_stale">Quote sent, no order yet</option>
+              <option value="order_delivered">Order marked delivered</option>
+              <option value="cart_abandoned">Cart abandoned (signed-in user)</option>
+            </select>
           </div>
+
+          <div class="camp-timing-box">
+            <div class="camp-field" id="autoStaleWrap" style="display:none;margin-bottom:12px">
+              <span class="camp-field-label" id="autoStaleLabel">How long with no activity before this counts as "stale"?</span>
+              <input id="autoStaleAfterDays" type="number" min="1" step="1" value="5" class="camp-input" oninput="updateAutoTimingSummary()">
+            </div>
+            <div class="camp-field" style="margin-bottom:0">
+              <span class="camp-field-label">How soon after that should the email go out?</span>
+              <input id="autoDelayDays" type="number" min="0" value="0" class="camp-input" oninput="updateAutoTimingSummary()">
+              <span class="camp-field-hint" id="autoDelayUnitHint">days &mdash; 0 means send it immediately, no extra wait</span>
+            </div>
+            <div class="camp-timing-summary">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+              <span id="autoTimingSummaryText">Select a trigger above to see when this email actually sends.</span>
+            </div>
+          </div>
+
           <div class="camp-field">
             <span class="camp-field-label">Subject Line</span>
-            <input id="autoSubject" class="camp-input" placeholder="e.g. Welcome to Room Ready Supply, {{first_name}}">
+            <input id="autoSubject" class="camp-input" placeholder="e.g. Welcome to Room Ready Supply, {{first_name}}" onfocus="_autoLastFocusedField='autoSubject'">
           </div>
+
           <div class="camp-field">
-            <span class="camp-field-label">Body (HTML)</span>
-            <textarea id="autoBodyHtml" class="camp-input camp-textarea camp-mono" rows="6" placeholder="<p>Hi {{first_name}},</p>..."></textarea>
+            <span class="camp-field-label">Email Body</span>
+            <div class="camp-richtext-toolbar">
+              <button type="button" class="camp-richtext-btn" title="Bold" onmousedown="event.preventDefault()" onclick="autoBodyExec('bold')"><b>B</b></button>
+              <button type="button" class="camp-richtext-btn" title="Italic" onmousedown="event.preventDefault()" onclick="autoBodyExec('italic')"><i>I</i></button>
+              <div class="camp-richtext-divider"></div>
+              <button type="button" class="camp-richtext-btn" title="Bullet list" onmousedown="event.preventDefault()" onclick="autoBodyExec('insertUnorderedList')">&#8226;&#8226;&#8226;</button>
+              <button type="button" class="camp-richtext-btn" title="Numbered list" onmousedown="event.preventDefault()" onclick="autoBodyExec('insertOrderedList')">1.</button>
+              <div class="camp-richtext-divider"></div>
+              <button type="button" class="camp-richtext-btn" title="Insert link" onmousedown="event.preventDefault()" onclick="autoBodyInsertLink()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+              </button>
+              <button type="button" class="camp-richtext-btn" title="Remove formatting" onmousedown="event.preventDefault()" onclick="autoBodyExec('removeFormat')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4 8 20"/></svg>
+              </button>
+            </div>
+            <div id="autoBodyHtml" class="camp-richtext-body" contenteditable="true" data-placeholder="Hi {{first_name}}, ..." onfocus="_autoLastFocusedField='autoBodyHtml'"></div>
           </div>
+
           <div class="camp-mergefields">
-            <span class="camp-mergefields-label">Merge fields</span>
-            <code class="camp-mergefield">{{business_name}}</code>
-            <code class="camp-mergefield">{{contact_name}}</code>
-            <code class="camp-mergefield">{{first_name}}</code>
-            <code class="camp-mergefield">{{review_link}}</code>
-            <code class="camp-mergefield">{{cart_items}}</code>
-            <code class="camp-mergefield">{{cart_value}}</code>
+            <span class="camp-mergefields-label">Click to insert:</span>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('business_name')">{{business_name}}</button>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('contact_name')">{{contact_name}}</button>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('first_name')">{{first_name}}</button>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('review_link')">{{review_link}}</button>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('cart_items')">{{cart_items}}</button>
+            <button type="button" class="camp-mergefield" onclick="insertAutoMergeField('cart_value')">{{cart_value}}</button>
           </div>
           <p id="autoError" class="camp-formerror" style="display:none"></p>
         </div>
         <div class="a-modal-footer">
+          <button class="camp-btn camp-btn-ghost" onclick="previewAutomation()">Preview Email</button>
           <button class="camp-btn camp-btn-ghost" id="autoCancelBtn" style="display:none" onclick="resetAutomationForm()">Cancel Edit</button>
           <button class="camp-btn camp-btn-primary" id="autoSaveBtn" onclick="saveAutomation()">Save Automation</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUTOMATION EMAIL PREVIEW MODAL -->
+    <div id="automationPreviewModal" class="a-modal-overlay" style="display:none">
+      <div class="a-modal camp-modal" style="max-width:560px">
+        <div class="camp-modal-header">
+          <span class="camp-modal-icon camp-modal-icon-accent">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 6 12 13 2 6"/><rect x="2" y="4" width="20" height="16" rx="2"/></svg>
+          </span>
+          <div class="camp-modal-headtext">
+            <h3>Email Preview</h3>
+            <p>Shown with sample data in place of merge fields.</p>
+          </div>
+          <button class="a-modal-close" onclick="closeModal('automationPreviewModal')">&times;</button>
+        </div>
+        <div class="a-modal-body">
+          <div class="camp-preview-frame">
+            <div class="camp-preview-card">
+              <div class="camp-preview-subject">Subject: <strong id="autoPreviewSubject"></strong></div>
+              <div class="camp-preview-body" id="autoPreviewBody"></div>
+            </div>
+          </div>
+        </div>
+        <div class="a-modal-footer">
+          <button class="camp-btn camp-btn-primary" onclick="closeModal('automationPreviewModal')">Close</button>
         </div>
       </div>
     </div>
