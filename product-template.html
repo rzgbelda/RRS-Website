@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261010c" />
+  <link rel="stylesheet" href="style.css?v=20261010d" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -156,114 +156,121 @@
 
     <div class="product-layout">
 
-      <div class="product-gallery">
-        <span class="badge">Product</span>
+      <!-- Column 1 (photo, variant picker, purchase panel) is its own
+           flex stack, NOT three separate grid items sharing
+           .product-layout's rows (2026-10-10 follow-up). CSS Grid tracks
+           span every column that starts in them -- row 1 was sized to
+           whichever of .product-gallery or .product-info (column 2,
+           holding Specs/Features) was taller, which is .product-info
+           whenever specs/features run long, as they almost always do.
+           That stretched .product-gallery's cell far past the actual
+           photo height and left a large dead gap before
+           #productVariantPanel, which only started once that oversized
+           row finally ended. Wrapping all three in .pp-col1 (grid-column
+           1, grid-row 1 / span 3 -- one cell spanning the full column
+           height) takes them out of per-row track sizing entirely: they
+           stack tight, back to back, at their own natural heights,
+           independent of how tall column 2's content is. -->
+      <div class="pp-col1">
 
-        <img id="mainProductImage" src="" alt="Product image" class="main-product-img" loading="lazy">
+        <div class="product-gallery">
+          <span class="badge">Product</span>
 
-        <div class="thumb-row">
-          <img id="thumbImage" src="" alt="Product thumbnail" class="thumb active" loading="lazy">
-        </div>
-      </div>
+          <img id="mainProductImage" src="" alt="Product image" class="main-product-img" loading="lazy">
 
-      <!-- Variant picker (Select Tier / Select Size / Select Color), built
-           and inserted here by buildVariantSelector() in script.js
-           (2026-10-10 follow-up). Its own grid row -- column 1, between
-           the gallery and .pp-purchase-panel (see .product-layout in
-           style.css) -- rather than being injected into either neighbor's
-           markup. Previously inserted directly into .product-info, right
-           before #productDescription; once the description moved out to
-           its own full-width Overview card below .product-layout, that
-           insertion point put the variant picker INSIDE the Overview
-           card instead, above the description text, which is not where
-           either one belongs. Empty div, populated at runtime -- a
-           single-variant product with nothing to pick renders nothing
-           into it and the empty grid row collapses to 0 height. -->
-      <div id="productVariantPanel"></div>
-
-      <!-- Purchase mode + Reorder Program. Placed here as its OWN grid
-           item (a sibling of .product-gallery/.product-info/.buy-box,
-           not nested inside any of them) and positioned purely with CSS
-           grid-column/grid-row (see .pp-purchase-panel in style.css) so
-           it renders directly under the product photo -- aligned to it
-           visually -- without being structurally part of the gallery
-           block. It stays adjacent to the tier cards in the source order
-           (right after .product-info) for a sane reading/tab order and
-           because that's where it belongs logically; only its visual
-           position is moved, via grid placement, not its place in the
-           document.
-           The Add to Cart button stays IN the buy box (far right) --
-           it has to, it's the thing that's always in reach as the page
-           scrolls -- and reads which mode is selected from
-           addBtn.dataset.purchaseMode exactly as before; every JS
-           reference here is by id, not DOM position, so this placement
-           change (again) touches nothing about how
-           setPurchaseMode()/the add-to-cart handler find it. -->
-      <div class="pp-purchase-panel">
-
-        <div class="rrs-brandmark">
-          <img class="rrs-brandmark-icon" alt=""
-               src="assets/brand/reorder-badge-88.png"
-               srcset="assets/brand/reorder-badge-88.png 1x, assets/brand/reorder-badge-176.png 2x"
-               width="56" height="56" loading="lazy">
-          <span class="rrs-brandmark-text">Supply <span class="rrs-shine">Smarter.</span> Stay <span class="rrs-shine">Ready.</span></span>
+          <div class="thumb-row">
+            <img id="thumbImage" src="" alt="Product thumbnail" class="thumb active" loading="lazy">
+          </div>
         </div>
 
-        <!-- Live line total for the quantity actually chosen. The tier
-             cards above show the rate at each break; this shows what
-             THIS order costs, which is the number a buyer is actually
-             deciding on. Updated by updateProductPagePrice(). -->
-        <div class="pp-linetotal" id="ppLineTotal" style="display:none">
-          <span class="pp-lt-label">Your price</span>
-          <span class="pp-lt-rate" id="ppLineRate"></span>
-          <strong class="pp-lt-total" id="ppLineTotalValue"></strong>
-        </div>
+        <!-- Variant picker (Select Tier / Select Size / Select Color),
+             built and inserted here by buildVariantSelector() in
+             script.js (2026-10-10 follow-up). Previously inserted
+             directly into .product-info, right before
+             #productDescription; once the description moved out to its
+             own full-width Overview card below .product-layout, that
+             insertion point put the variant picker INSIDE the Overview
+             card instead, above the description text, which is not
+             where either one belongs. Empty div, populated at runtime --
+             a single-variant product with nothing to pick renders
+             nothing into it and the empty card collapses to 0 height
+             (:empty in style.css). -->
+        <div id="productVariantPanel"></div>
 
-        <!-- Purchase mode. Replaces two disconnected buttons ("Add to
-             Cart" / "Add to Reorder Program") that gave no hint the
-             second one was cheaper. Choosing a mode first, then one
-             Add button, mirrors how buyers actually decide and makes
-             the 5% reorder saving visible before the click.
-             Stacked selectable rows (radio dot + label + price), not
-             side-by-side cards -- two cards sharing a wide row each
-             ended up a big shallow box with a short title floating at
-             the top and a price floating at the bottom. A row reads as
-             "pick one of two options," which is what this actually is. -->
-        <div class="pp-modes" role="radiogroup" aria-label="Purchase type">
-          <button type="button" class="pp-mode is-active" id="ppModeOnce"
-                  role="radio" aria-checked="true" data-mode="once">
-            <span class="pp-mode-dot" aria-hidden="true"></span>
-            <span class="pp-mode-body">
-              <span class="pp-mode-title">One-Time Purchase</span>
-              <span class="pp-mode-price" id="ppModeOncePrice">&mdash;</span>
-            </span>
-          </button>
-          <button type="button" class="pp-mode pp-mode--save" id="ppModeReorder"
-                  role="radio" aria-checked="false" data-mode="reorder">
-            <span class="pp-mode-dot" aria-hidden="true"></span>
-            <span class="pp-mode-body">
-              <span class="pp-mode-title">Auto-Reorder</span>
-              <span class="pp-mode-price-group">
-                <span class="pp-mode-flag">Extra 5% Off</span>
-                <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+        <!-- Purchase mode + Reorder Program. The Add to Cart button stays
+             IN the buy box (far right) -- it has to, it's the thing
+             that's always in reach as the page scrolls -- and reads
+             which mode is selected from addBtn.dataset.purchaseMode
+             exactly as before; every JS reference here is by id, not DOM
+             position, so moving this into .pp-col1 touches nothing about
+             how setPurchaseMode()/the add-to-cart handler find it. -->
+        <div class="pp-purchase-panel">
+
+          <div class="rrs-brandmark">
+            <img class="rrs-brandmark-icon" alt=""
+                 src="assets/brand/reorder-badge-88.png"
+                 srcset="assets/brand/reorder-badge-88.png 1x, assets/brand/reorder-badge-176.png 2x"
+                 width="56" height="56" loading="lazy">
+            <span class="rrs-brandmark-text">Supply <span class="rrs-shine">Smarter.</span> Stay <span class="rrs-shine">Ready.</span></span>
+          </div>
+
+          <!-- Live line total for the quantity actually chosen. The tier
+               cards above show the rate at each break; this shows what
+               THIS order costs, which is the number a buyer is actually
+               deciding on. Updated by updateProductPagePrice(). -->
+          <div class="pp-linetotal" id="ppLineTotal" style="display:none">
+            <span class="pp-lt-label">Your price</span>
+            <span class="pp-lt-rate" id="ppLineRate"></span>
+            <strong class="pp-lt-total" id="ppLineTotalValue"></strong>
+          </div>
+
+          <!-- Purchase mode. Replaces two disconnected buttons ("Add to
+               Cart" / "Add to Reorder Program") that gave no hint the
+               second one was cheaper. Choosing a mode first, then one
+               Add button, mirrors how buyers actually decide and makes
+               the 5% reorder saving visible before the click.
+               Stacked selectable rows (radio dot + label + price), not
+               side-by-side cards -- two cards sharing a wide row each
+               ended up a big shallow box with a short title floating at
+               the top and a price floating at the bottom. A row reads as
+               "pick one of two options," which is what this actually is. -->
+          <div class="pp-modes" role="radiogroup" aria-label="Purchase type">
+            <button type="button" class="pp-mode is-active" id="ppModeOnce"
+                    role="radio" aria-checked="true" data-mode="once">
+              <span class="pp-mode-dot" aria-hidden="true"></span>
+              <span class="pp-mode-body">
+                <span class="pp-mode-title">One-Time Purchase</span>
+                <span class="pp-mode-price" id="ppModeOncePrice">&mdash;</span>
               </span>
-            </span>
-          </button>
-        </div>
+            </button>
+            <button type="button" class="pp-mode pp-mode--save" id="ppModeReorder"
+                    role="radio" aria-checked="false" data-mode="reorder">
+              <span class="pp-mode-dot" aria-hidden="true"></span>
+              <span class="pp-mode-body">
+                <span class="pp-mode-title">Auto-Reorder</span>
+                <span class="pp-mode-price-group">
+                  <span class="pp-mode-flag">Extra 5% Off</span>
+                  <span class="pp-mode-price" id="ppModeReorderPrice">&mdash;</span>
+                </span>
+              </span>
+            </button>
+          </div>
 
-        <!-- Only meaningful once Reorder is chosen, so it stays hidden
-             until then rather than asking for a frequency the customer
-             may not need. -->
-        <div class="pp-freq" id="ppFreq" style="display:none">
-          <label for="ppFreqSelect">Deliver every</label>
-          <select id="ppFreqSelect">
-            <option value="Weekly">Week</option>
-            <option value="Every 2 Weeks">2 weeks</option>
-            <option value="Monthly" selected>Month</option>
-            <option value="Every 2 Months">2 months</option>
-            <option value="Every 3 Months">3 months</option>
-          </select>
-          <p class="pp-freq-note">Extra 5% off every order. We email a secure payment link each time, and you can change or cancel anytime.</p>
+          <!-- Only meaningful once Reorder is chosen, so it stays hidden
+               until then rather than asking for a frequency the customer
+               may not need. -->
+          <div class="pp-freq" id="ppFreq" style="display:none">
+            <label for="ppFreqSelect">Deliver every</label>
+            <select id="ppFreqSelect">
+              <option value="Weekly">Week</option>
+              <option value="Every 2 Weeks">2 weeks</option>
+              <option value="Monthly" selected>Month</option>
+              <option value="Every 2 Months">2 months</option>
+              <option value="Every 3 Months">3 months</option>
+            </select>
+            <p class="pp-freq-note">Extra 5% off every order. We email a secure payment link each time, and you can change or cancel anytime.</p>
+          </div>
+
         </div>
 
       </div>

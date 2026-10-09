@@ -4627,35 +4627,35 @@ span.flatpickr-weekday {
 .product-layout {
   display: grid;
   grid-template-columns: 440px minmax(0, 1fr) 330px;
-  /* Three rows (was two) so #productVariantPanel (the Select Tier/Select
-     Size pickers, moved out of .product-info -- see the note on
-     #productVariantPanel in product-template.html, 2026-10-10) can sit
-     in column 1 between the gallery and .pp-purchase-panel as its own
-     grid row, true CSS grid alignment rather than nesting it in either
-     neighbor's markup. .product-gallery sits ONLY in row 1 (its own
-     natural content height); the variant panel ONLY in row 2; the
-     purchase panel ONLY in row 3 -- none of the three may span into a
-     row another one of them occupies, or they'd overlap in the same
-     cell. .product-info and .buy-box, which are taller than column 1's
-     three rows combined or shorter depending on the product, span all
-     three rows so their own content is never constrained by row 1's
-     height. */
-  grid-template-rows: auto auto auto;
+  /* Column 1's three pieces (photo, variant picker, purchase panel) are
+     no longer separate grid items here -- see .pp-col1 below, 2026-10-10
+     follow-up -- so this grid only needs two real row-sharing members:
+     .product-info (column 2) and .pp-tier-cards-block (column 2, pinned
+     under it). grid-template-rows is left at auto-by-content (no
+     explicit track sizes to fight over) now that nothing cross-column
+     forces a shared row height. */
   gap: 24px 38px;
   align-items: start;
 }
-.product-gallery { grid-column: 1; grid-row: 1; }
-#productVariantPanel { grid-column: 1; grid-row: 2; }
-.pp-purchase-panel { grid-column: 1; grid-row: 3; }
-/* Row 1 only -- name/badges/specs/features sit beside the gallery. The
-   tier cards used to live in this same element and spanned every row,
-   which let them trail below wherever row 1's content ended rather than
-   lining up with .pp-purchase-panel. They're a separate grid item now
-   (.pp-tier-cards-block, row 3) precisely so their top edge is pinned to
-   the grid row instead of to product-info's variable content height. */
+/* Its own cell, one row spanning .product-info's full height -- see the
+   comment on .pp-col1 in product-template.html for why this replaced
+   three separate grid-row placements (product-gallery row 1,
+   #productVariantPanel row 2, pp-purchase-panel row 3): those forced row
+   1's track height to match whichever of .product-gallery or
+   .product-info (column 2) was taller, which left a large dead gap under
+   the photo whenever Specs/Features made column 2 the taller one. A flex
+   column, not a grid, internally -- photo/variant-panel/purchase-panel
+   stack tight at their own natural heights regardless of column 2. */
+.pp-col1 {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
 .product-info { grid-column: 2; grid-row: 1; }
-.pp-tier-cards-block { grid-column: 2; grid-row: 3; }
-.buy-box { grid-column: 3; grid-row: 1 / span 3; }
+.pp-tier-cards-block { grid-column: 2; grid-row: 2; }
+.buy-box { grid-column: 3; grid-row: 1 / span 2; }
 
 .product-gallery {
   position: relative;
@@ -6789,31 +6789,34 @@ span.flatpickr-weekday {
   }
 
   /* Bug (2026-10-07 responsiveness audit): collapsing the GRID to 1fr here
-     did nothing on its own -- .product-gallery/.pp-purchase-panel/
-     .product-info/.pp-tier-cards-block/.buy-box each still carry their
-     desktop grid-column:1/2/3 placement (set unconditionally near the top
-     of this file), so CSS Grid invented extra implicit columns to honor
-     those placements anyway. Between 961-1100px that squeezed .buy-box
-     (grid-column:3) into an auto-sized sliver far narrower than its real
-     content (price, quantity stepper, Add to Cart), which then rendered
-     clipped off the right edge of the page -- a customer in that width
-     range could not reach the Add to Cart button at all.
+     did nothing on its own -- .pp-col1/.product-info/.pp-tier-cards-block/
+     .buy-box each still carry their desktop grid-column:1/2/3 placement
+     (set unconditionally near the top of this file), so CSS Grid invented
+     extra implicit columns to honor those placements anyway. Between
+     961-1100px that squeezed .buy-box (grid-column:3) into an auto-sized
+     sliver far narrower than its real content (price, quantity stepper,
+     Add to Cart), which then rendered clipped off the right edge of the
+     page -- a customer in that width range could not reach the Add to
+     Cart button at all.
+     .pp-col1 (2026-10-10 follow-up) replaces what used to be three
+     separate resets here (.product-gallery/#productVariantPanel/
+     .pp-purchase-panel each had their own grid-column/grid-row) -- those
+     three are plain flex children of .pp-col1 now, not grid items of
+     .product-layout, so only .pp-col1 itself needs resetting.
      Mirrors the reset the @media (max-width: 960px) rule below already
      does (that one explains it in more detail) -- these values are
      idempotent with that rule's, so having both active at once (<=960px)
      is harmless. */
-  .product-gallery,
-  .pp-purchase-panel,
+  .pp-col1,
   .product-info,
   .pp-tier-cards-block,
   .buy-box {
     grid-column: 1;
     grid-row: auto;
   }
-  .product-gallery      { order: 1; }
+  .pp-col1               { order: 1; }
   .product-info         { order: 2; }
   .pp-tier-cards-block  { order: 3; }
-  .pp-purchase-panel    { order: 4; }
   .buy-box              { order: 5; }
 
   .buy-box {
@@ -7727,31 +7730,31 @@ button, a, [role="button"] { touch-action: manipulation; }
 @media (max-width: 960px) {
   .product-layout { grid-template-columns: 1fr; }
   /* Collapsing to 1fr leaves only column 1 -- the desktop grid-column/
-     grid-row placements (product-gallery col 1 row 1, #productVariantPanel
-     col 1 row 2, pp-purchase-panel col 1 row 3, product-info col 2 row 1,
-     pp-tier-cards-block col 2 row 3, buy-box col 3) would otherwise try
+     grid-row placements (pp-col1 col 1, product-info col 2 row 1,
+     pp-tier-cards-block col 2 row 2, buy-box col 3) would otherwise try
      to place things in columns/rows that no longer exist. .pp-overview-
      card and .pp-faq-card are not grid items of .product-layout at all
      (they sit below it, outside this grid entirely), so they need no
-     placement reset here. Reset the remaining explicit placements back
-     to plain document-order stacking: gallery, then the variant picker,
-     then product info (name/badges/specs/features), then the tier
-     cards, then the purchase panel, then the buy box. */
-  .product-gallery,
-  #productVariantPanel,
-  .pp-purchase-panel,
+     placement reset here. .pp-col1 (2026-10-10 follow-up) replaces what
+     used to be three separate resets (product-gallery/#productVariant
+     Panel/pp-purchase-panel each had their own grid-column/grid-row) --
+     those three are plain flex children of .pp-col1 now, not grid items
+     of .product-layout, so only .pp-col1 itself needs resetting. Reset
+     the remaining explicit placements back to plain document-order
+     stacking: the whole column-1 stack (photo, variant picker, purchase
+     panel, as .pp-col1), then product info (name/badges/specs/features),
+     then the tier cards, then the buy box. */
+  .pp-col1,
   .product-info,
   .pp-tier-cards-block,
   .buy-box {
     grid-column: 1;
     grid-row: auto;
   }
-  .product-gallery      { order: 1; }
-  #productVariantPanel  { order: 2; }
-  .product-info         { order: 3; }
-  .pp-tier-cards-block  { order: 4; }
-  .pp-purchase-panel    { order: 5; }
-  .buy-box              { order: 6; }
+  .pp-col1               { order: 1; }
+  .product-info         { order: 2; }
+  .pp-tier-cards-block  { order: 3; }
+  .buy-box              { order: 4; }
   .buy-box {
     max-width: min(480px, 100%);
     /* Sticky only makes sense beside a taller neighbor in the 3-column
