@@ -393,32 +393,19 @@
       </p>
 
       <!-- Restates shipping-policy.html section 7 at the moment of decision.
-           Required, and recorded server-side with the exact wording shown
-           (see api/create-order.js), so there is evidence of what was agreed
-           to even if this copy is edited later. -->
-      <label class="ack-check" for="ackDeliveryEstimate">
-        <input type="checkbox" id="ackDeliveryEstimate" onchange="syncSubmitEnabled()">
-        <!-- This previously read "the stated delivery date", but no date was
-             ever stated on this page -- the buyer was asked to acknowledge
-             something they could not see. It now states the real order-
-             confirmation window (1-2 days for the order to be confirmed
-             and transmitted to the supplier, separate from transit).
-             CEO-provided wording (2026-09-24), intentionally scoped to
-             this checkbox only -- shipping-policy.html and the rest of the
-             site still say "processed within 1-2 business days". A
-             specific delivery DATE is deliberately not shown: transit time
-             is not known until freight is quoted, and promising a date we
-             cannot compute would be worse than showing none. The exact
-             wording is captured with the order
-             (deliveryAckText) so the record shows what was on screen. -->
-        <span id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</span>
-      </label>
+           No longer a checkbox (CEO request, 2026-10-13) -- shown as plain
+           text, same pattern as cart.html/payment.html's acknowledgment:
+           being shown at this step and proceeding IS the agreement, no
+           extra click required. Still recorded server-side with the exact
+           wording shown (see api/create-order.js / deliveryAckText) so
+           there is evidence of what was on screen, even though it's no
+           longer gating submission. -->
+      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
 
       <div class="submit-order-actions">
         <button
           class="submit-order-btn"
           id="submitOrderBtn"
-          disabled
           onclick="saveCheckoutAndProceed()"
         >
           Continue to Payment
@@ -443,37 +430,21 @@
 <script src="tax-rates.js"></script>
 <script src="script.js?v=20261013"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-<script>
-// The delivery-estimate box gates submission. Held in one place so the
-// button can never drift out of sync with the checkbox.
-function syncSubmitEnabled() {
-  var box = document.getElementById('ackDeliveryEstimate');
-  var btn = document.getElementById('submitOrderBtn');
-  // A volume (freight) order isn't paid here -- it goes to a custom quote --
-  // so the payment acknowledgement doesn't gate it.
-  if (box && btn) btn.disabled = !window._rrsFreightQuote && !box.checked;
-}
-document.addEventListener('DOMContentLoaded', syncSubmitEnabled);
-</script>
 <style>
   /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
      CHECKOUT — MODERNIZED UI v2") instead of the standalone bordered box
-     this used to be -- that box had its own margin/padding disconnected
-     from the card's real spacing system, which is what made it read as
-     cramped against the total above it and the button below. A plain
-     top border (matching .summary-price p's own row dividers) separates
-     it from .summary-note above without a second nested "card" fighting
-     the outer one for visual attention. */
-  .ack-check {
-    display: flex; align-items: flex-start; gap: 10px;
+     this used to be -- a plain top border (matching .summary-price p's
+     own row dividers) separates the acknowledgment from .summary-note
+     above without a second nested "card" fighting the outer one for
+     visual attention. */
+  #ackDeliveryEstimateText.cart-delivery-ack {
     margin: 0;
-    padding: 16px 22px 18px;
+    border-radius: 0;
+    border: none;
     border-top: 1.5px solid var(--rrs-border, #e4e9f0);
-    font-size: 12.5px; line-height: 1.55; color: var(--rrs-muted, #6b7280);
-    cursor: pointer;
+    background: transparent;
+    padding: 16px 22px 18px;
   }
-  .ack-check input { flex-shrink: 0; margin-top: 2px; width: 16px; height: 16px; accent-color: var(--rrs-orange, #ED7226); cursor: pointer; }
-  .ack-check:hover { background: #fafbfd; }
   .submit-order-btn:disabled { opacity: .55; cursor: not-allowed; }
 </style>
 <script>
@@ -536,8 +507,7 @@ async function saveCheckoutAndProceed() {
   if (btn) btn.disabled = true;
   let isVolume = false;
   try { isVolume = await checkoutNeedsFreightQuote(); } catch (e) {}
-  syncSubmitEnabled();
-  if (isVolume) { openVolumeQuoteModal(); return; }
+  if (isVolume) { openVolumeQuoteModal(); if (btn) btn.disabled = false; return; }
 
   // Warehouse pickup is no longer offered at checkout (see the comment
   // above #fulfillShip) -- every new order ships. This stays a variable
@@ -578,24 +548,24 @@ async function saveCheckoutAndProceed() {
     reorderFrequency, reorderNextDate, reorderCustomDates,
     referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',
     fulfillmentMethod,
-    // Carried through to api/create-order.js, which writes the audit row.
-    // The wording travels with it so the record shows what was on screen.
-    deliveryAck: !!document.getElementById('ackDeliveryEstimate')?.checked,
+    // No longer a checkbox the buyer ticks (CEO request, 2026-10-13) -- the
+    // notice is always shown on this page before Continue to Payment, so
+    // reaching this point IS the acknowledgment. Still carried through to
+    // api/create-order.js with the exact wording so the order's audit row
+    // shows what was on screen.
+    deliveryAck: true,
     deliveryAckText: document.getElementById('ackDeliveryEstimateText')?.textContent || '',
   };
-  if (!data.deliveryAck) {
-    alert('Please acknowledge the delivery estimate notice before submitting.');
-    return;
-  }
   // Business name is optional -- RRS sells to homes, rentals and salons too.
   // A contact name is required instead so every order still has a human name
   // attached to it for support calls and the packing slip.
   if (!data.business && !data.contact) {
     alert('Please enter either a business name or a contact name.');
+    if (btn) btn.disabled = false;
     return;
   }
-  if (!data.phone)    { alert('Please enter your phone number.'); return; }
-  if (!data.street) { alert('Please enter your delivery address.'); return; }
+  if (!data.phone)    { alert('Please enter your phone number.'); if (btn) btn.disabled = false; return; }
+  if (!data.street) { alert('Please enter your delivery address.'); if (btn) btn.disabled = false; return; }
 
   // Cart persists in localStorage across visits, and a Mix & Match minimum
   // can change (or a group member can be removed) after items were added,
@@ -613,6 +583,7 @@ async function saveCheckoutAndProceed() {
         ? `${g.group} MOQ not met: Required ${g.min} combined units, cart has ${g.have}. Add ${g.needed} more from this group before checking out.`
         : `${g.group} must be ordered in multiples of ${g.min}: cart has ${g.have} combined units. Add ${g.needed} more (to reach ${g.nextTarget}) or remove some before checking out.`
       ).join('\n'));
+      if (btn) btn.disabled = false;
       return;
     }
   }
