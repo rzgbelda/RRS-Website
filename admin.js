@@ -238,7 +238,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 // account/user management and the dev ticket board.
 const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "visitor-insights", "products", "inventory", "mix-match", "product-families", "orders",
-  "quote-requests", "manage-hero", "manage-about", "best-deals",
+  "quote-requests", "price-match-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
 ];
 
