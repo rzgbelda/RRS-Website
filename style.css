@@ -6079,6 +6079,16 @@ span.flatpickr-weekday {
   margin-top: 12px;
 }
 
+.payment-brand-badges--compact {
+  margin-top: 8px;
+  gap: 4px;
+}
+
+.payment-brand-badges--compact .brand-badge {
+  padding: 2px 7px;
+  font-size: 10px;
+}
+
 .brand-badge {
   display: inline-flex;
   align-items: center;
