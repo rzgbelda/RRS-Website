@@ -131,7 +131,7 @@ module.exports = async (req, res) => {
     if (priced.needsFreightQuote) {
       return res.status(409).json({
         freightQuote: true,
-        error: 'This is a volume order that ships by freight. Please request a custom quote so we can secure the best freight rate and volume pricing for you.',
+        error: 'This is a 50+ case order that ships by freight. Please request a custom quote so we can secure the best freight rate and 50+ case pricing for you.',
       });
     }
     if (priced.amountCents < 50) {

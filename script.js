@@ -1418,15 +1418,6 @@ function renderSingleCard(product) {
           >
             ${product.inStock === false ? "Out of Stock" : "Add to Order"}
           </button>
-          <button
-            class="quote-add-btn"
-            data-item="${product.itemNumber}"
-            data-name="${escAttr(product.name)}"
-            data-image="${product.image}"
-            title="Request volume pricing for this product"
-          >
-            Get Volume Price
-          </button>
           ${priceCtaButton(product.name)}
         </div>
       </div>
@@ -1719,15 +1710,6 @@ function renderVariantCard(variants) {
             ${v.inStock === false ? "disabled" : ""}
           >
             ${v.inStock === false ? "Out of Stock" : "Add to Order"}
-          </button>
-          <button
-            class="quote-add-btn"
-            data-item="${v.itemNumber}"
-            data-name="${escAttr(v.name)}"
-            data-image="${v.image}"
-            title="Request volume pricing for this product"
-          >
-            Get Volume Price
           </button>
           ${priceCtaButton(v.productFamily || v.name)}
         </div>
@@ -3198,17 +3180,17 @@ function renderProductFaq(product) {
   if (hasGroup && product.moqGroupMin > 0) {
     q1Answer = `This item is sold by the ${unitRaw} and is part of a Mix &amp; Match group -- `
       + `combine it with other products in the same group to reach the group's combined minimum of `
-      + `${product.moqGroupMin} units. Volume pricing applies automatically as the group's total grows.`;
+      + `${product.moqGroupMin} units. 50+ case pricing applies automatically as the group's total grows.`;
   } else if (dozen && moq > 1) {
-    q1Answer = `This item is sold by the case, with ${moq} dozen in each case &mdash; a convenient bulk quantity for restocking. Volume pricing applies automatically as you order more cases.`;
+    q1Answer = `This item is sold by the case, with ${moq} dozen in each case &mdash; a convenient bulk quantity for restocking. 50+ case pricing applies automatically as you order more cases.`;
   } else if (isEach) {
     q1Answer = `This item is sold individually, so you can order exactly what you need &mdash; starting from just 1. `
-      + `Volume pricing applies automatically as you order more of this item.`;
+      + `50+ case pricing applies automatically as you order more of this item.`;
   } else if (caseQty && caseQty !== "1") {
     q1Answer = `Each ${unitRaw} contains ${caseQty}${product.size && product.size !== caseQty ? ` (${product.size})` : ""}. `
-      + `Order as few as 1 ${unitRaw}, and volume pricing applies automatically as you order more of this item.`;
+      + `Order as few as 1 ${unitRaw}, and 50+ case pricing applies automatically as you order more of this item.`;
   } else {
-    q1Answer = `This item ships as a single unit per ${unitRaw}. Order as few as 1, and volume pricing applies automatically as you order more of this item.`;
+    q1Answer = `This item ships as a single unit per ${unitRaw}. Order as few as 1, and 50+ case pricing applies automatically as you order more of this item.`;
   }
   const q1 = {
     q: isEach
@@ -3760,7 +3742,7 @@ function setupQuoteButtons() {
       const basket = getQuoteBasket();
       const alreadyIn = basket.find(i => i.itemNumber === item.itemNumber);
       if (alreadyIn) {
-        showVpToast(`"${item.name}" is already in your Volume Pricing List.`, "warn");
+        showVpToast(`"${item.name}" is already in your 50+ Case Pricing List.`, "warn");
         openMobileFilterDrawerIfNeeded();
         requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
         return;
@@ -3771,10 +3753,10 @@ function setupQuoteButtons() {
       openMobileFilterDrawerIfNeeded();
       // Wait for browser to paint the updated panel before scrolling
       requestAnimationFrame(() => requestAnimationFrame(() => scrollToNewVpItem(item.itemNumber)));
-      showVpToast(`"${item.name}" added to your Volume Pricing List.`);
+      showVpToast(`"${item.name}" added to your 50+ Case Pricing List.`);
       btn.textContent = "✓ Added";
       btn.style.background = "#16a34a";
-      setTimeout(() => { btn.textContent = "Get Volume Price"; btn.style.background = ""; }, 1800);
+      setTimeout(() => { btn.textContent = "Get 50+ Case Price"; btn.style.background = ""; }, 1800);
     };
   });
 }
@@ -4537,7 +4519,7 @@ function setCheckoutFreightMode(on, totals) {
   if (on) {
     if (shipEl) { shipEl.textContent = 'Custom quote'; shipEl.style.color = '#ED7226'; }
     if (totalEl && totals) totalEl.textContent = `$${(totals.discountedSubtotal + totals.tax).toFixed(2)} + freight`;
-    if (noteEl) noteEl.textContent = 'Volume order: we’ll secure your freight rate and best volume pricing in a custom quote. No payment today.';
+    if (noteEl) noteEl.textContent = 'Volume order: we’ll secure your freight rate and best 50+ case pricing in a custom quote. No payment today.';
     if (ack) ack.style.display = 'none';
     if (btn) btn.textContent = 'Get My Volume Quote';
   } else {
