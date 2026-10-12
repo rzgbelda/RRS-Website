@@ -436,7 +436,7 @@ function switchTab(tab) {
       "product-families":"Product Families",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
-      "quote-requests":"Quote Requests", "dev-tickets":"Developer Tickets",
+      "quote-requests":"Quote Requests", "price-match-requests":"Price Match Requests", "dev-tickets":"Developer Tickets",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
       "visitor-insights":"Visitor Insights",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
@@ -456,6 +456,7 @@ function switchTab(tab) {
   if (tab === "sub-distributors") renderSubDistributorsTab();
   if (tab === "sales-team")       renderSalesTeamTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
+  if (tab === "price-match-requests") renderPriceMatchRequestsTable();
   if (tab === "dev-tickets")      renderDevTicketsTab();
   if (tab === "best-deals")       renderBestDealsTab();
   if (tab === "crm")              renderCrmTab();
@@ -11595,6 +11596,10 @@ let allQuoteRequests = [];
 let currentQuoteId   = null;
 let _quoteFiltersWired = false;
 
+let allPriceMatchRequests = [];
+let currentPriceMatchId   = null;
+let _priceMatchFiltersWired = false;
+
 async function renderQuoteRequestsTable() {
   if (!window.sb) return;
   const tbody  = document.getElementById("quoteRequestsTableBody");
@@ -11696,6 +11701,148 @@ async function deleteQuoteRequest(id) {
   if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
   showToast("Quote request deleted.");
   renderQuoteRequestsTable();
+}
+
+// Price Match Requests -- submitted from price-beat.html's "Match My
+// Price" form via the price-beat-request edge function, into the
+// price_beat_requests table. Mirrors renderQuoteRequestsTable's pattern
+// (same table layout, same once-only filter-wiring guard -- see the
+// comment on that function for why the guard exists) but without the
+// quote composer/invoice/PDF machinery, since a price match isn't a
+// priced, sendable quote.
+async function renderPriceMatchRequestsTable() {
+  if (!window.sb) return;
+  const tbody  = document.getElementById("priceMatchRequestsTableBody");
+  const search = (document.getElementById("priceMatchSearch")?.value || "").toLowerCase();
+  const status = document.getElementById("priceMatchStatusFilter")?.value || "";
+
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6" class="a-empty">Loading…</td></tr>`;
+
+  const { data, error } = await window.sb
+    .from("price_beat_requests")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error || !data?.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="a-empty">${error ? "Error loading requests." : "No price match requests yet."}</td></tr>`;
+    return;
+  }
+
+  allPriceMatchRequests = data;
+
+  let rows = data.filter(r => {
+    const hay = `${r.business_name} ${r.contact_name} ${r.email}`.toLowerCase();
+    return (!search || hay.includes(search)) && (!status || r.status === status);
+  });
+
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="6" class="a-empty">No matching requests.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(r => {
+    const date     = new Date(r.created_at).toLocaleDateString();
+    const items    = Array.isArray(r.items) ? r.items : [];
+    const itemsStr = items.length
+      ? items.map(i => `${esc(i.description || "")} &mdash; $${Number(i.current_price || 0).toFixed(2)}`).join("<br>")
+      : "<em style='color:#94a3b8'>No items listed</em>";
+    const badge = {
+      new:      "background:#dbeafe;color:#1d4ed8",
+      reviewed: "background:#fef3c7;color:#92400e",
+      matched:  "background:#d1fae5;color:#065f46",
+      closed:   "background:#f1f5f9;color:#475569",
+    }[r.status] || "";
+
+    return `<tr>
+      <td>${date}</td>
+      <td><strong>${esc(r.business_name)}</strong></td>
+      <td>${esc(r.contact_name)}</td>
+      <td><a href="mailto:${esc(r.email)}">${esc(r.email)}</a></td>
+      <td style="max-width:260px;font-size:12px;line-height:1.5">${itemsStr}</td>
+      <td><span style="padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;${badge}">${r.status||"new"}</span></td>
+      <td>
+        <button class="a-btn a-btn-sm" onclick="openPriceMatchDetail('${r.id}')">View</button>
+        <button class="a-btn a-btn-sm" onclick="deletePriceMatchRequest('${r.id}')" style="color:#dc2626;border-color:#fecaca;margin-left:4px">Delete</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  if (!_priceMatchFiltersWired) {
+    document.getElementById("priceMatchSearch")?.addEventListener("input", renderPriceMatchRequestsTable);
+    document.getElementById("priceMatchStatusFilter")?.addEventListener("change", renderPriceMatchRequestsTable);
+    _priceMatchFiltersWired = true;
+  }
+}
+
+function openPriceMatchDetail(id) {
+  const r = allPriceMatchRequests.find(x => x.id === id);
+  if (!r) return;
+  currentPriceMatchId = id;
+
+  const titleEl = document.getElementById("priceMatchDetailTitle");
+  if (titleEl) titleEl.textContent = r.business_name || "Price Match Request";
+
+  const items = Array.isArray(r.items) ? r.items : [];
+  const itemsHtml = items.length
+    ? `<div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
+        <div style="display:grid;grid-template-columns:1fr 110px;background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
+          <span>Item / Case &amp; Pack Details</span><span style="text-align:right">Current Price</span>
+        </div>
+        ${items.map(i => `
+          <div style="display:grid;grid-template-columns:1fr 110px;padding:10px 14px;font-size:13px;border-top:1px solid #f1f5f9">
+            <span>${esc(i.description || "")}</span>
+            <span style="text-align:right;font-weight:700">$${Number(i.current_price || 0).toFixed(2)}</span>
+          </div>`).join("")}
+      </div>`
+    : `<p style="color:#94a3b8;font-size:13px;margin-top:8px">No items listed.</p>`;
+
+  const body = document.getElementById("priceMatchDetailBody");
+  if (body) {
+    body.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:4px">
+        <div>
+          <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:0 0 3px">Contact</p>
+          <p style="margin:0;font-size:14px;color:#0d1f38">${esc(r.contact_name || "")}</p>
+        </div>
+        <div>
+          <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:0 0 3px">Email</p>
+          <p style="margin:0;font-size:14px"><a href="mailto:${esc(r.email)}" style="color:#e8621a">${esc(r.email)}</a></p>
+        </div>
+      </div>
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:16px 0 3px">Items &amp; Current Pricing</p>
+      ${itemsHtml}
+      ${r.notes ? `<p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin:16px 0 3px">Notes</p><p style="margin:0;font-size:13px;color:#374151;white-space:pre-wrap">${esc(r.notes)}</p>` : ""}
+    `;
+  }
+
+  const statusSelect = document.getElementById("priceMatchStatusSelect");
+  if (statusSelect) statusSelect.value = r.status || "new";
+
+  document.getElementById("priceMatchDetailModal").style.display = "flex";
+}
+
+async function savePriceMatchStatus() {
+  if (!currentPriceMatchId) return;
+  const status = document.getElementById("priceMatchStatusSelect")?.value || "new";
+  const { error } = await window.sb
+    .from("price_beat_requests")
+    .update({ status })
+    .eq("id", currentPriceMatchId);
+  if (error) { showToast("Couldn't save: " + friendlyDbError(error)); return; }
+  showToast("Status updated.");
+  document.getElementById("priceMatchDetailModal").style.display = "none";
+  renderPriceMatchRequestsTable();
+}
+
+async function deletePriceMatchRequest(id) {
+  const r = allPriceMatchRequests.find(x => x.id === id);
+  if (!r) return;
+  if (!confirm(`Delete the price match request from "${r.business_name || r.contact_name || "this customer"}"? This can't be undone.`)) return;
+  const { error } = await window.sb.from("price_beat_requests").delete().eq("id", id);
+  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
+  showToast("Price match request deleted.");
+  renderPriceMatchRequestsTable();
 }
 
 // r.terms_status/terms_sent_at/terms_accepted_at are populated by
