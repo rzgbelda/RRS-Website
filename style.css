@@ -6072,6 +6072,97 @@ span.flatpickr-weekday {
   font-size: 14px;
 }
 
+.payment-brand-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.brand-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid #d9e0e8;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #0B1F38;
+  background: #fff;
+}
+
+.brand-badge--visa { color: #1a1f71; }
+.brand-badge--mc { color: #eb001b; }
+.brand-badge--amex { color: #2e77bc; }
+.brand-badge--discover { color: #e8621a; }
+
+.stripe-processed-by {
+  margin: 10px 0 0 !important;
+  font-size: 12px !important;
+  color: #8a97a8 !important;
+}
+
+.terms-link-btn {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: #ED7226;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.terms-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 31, 56, 0.55);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.terms-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: min(760px, 100%);
+  height: min(80vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.terms-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e6eaf0;
+  color: #002b5c;
+  font-size: 16px;
+}
+
+.terms-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  color: #506176;
+  padding: 4px 8px;
+}
+
+.terms-modal-frame {
+  flex: 1;
+  border: none;
+  width: 100%;
+}
+
 /* HELP BOX */
 
 .help-box {
