@@ -3973,6 +3973,16 @@ function loadCartPage() {
 
   if (!cartItemsContainer || !subtotalEl || !estimatedTotalEl) return;
 
+  // Always a range, never a single date (CEO instruction, 2026-10-13) --
+  // see delivery-estimate.js for the formula and why it's a flat 4-7
+  // business-day conservative default rather than real per-ZIP transit
+  // data (none exists in this codebase yet).
+  const estimateEl = document.getElementById("cart-delivery-estimate");
+  if (estimateEl && typeof window.getDeliveryEstimateRange === "function") {
+    const est = window.getDeliveryEstimateRange();
+    estimateEl.textContent = `Estimated delivery: ${est.rangeLabel}`;
+  }
+
   const cart = getCart();
   cartItemsContainer.innerHTML = "";
 
@@ -4418,6 +4428,21 @@ function loadCheckoutProducts() {
       shippingEl.style.color = '';
       shippingEl.style.fontWeight = '800';
       shippingEl.style.fontSize = '';
+    }
+  }
+
+  // Always a range, never a single date (CEO instruction, 2026-10-13) --
+  // see delivery-estimate.js for the formula and why it's a flat 4-7
+  // business-day conservative default rather than real per-ZIP transit
+  // data (none exists in this codebase yet). No estimate for pickup --
+  // there's no carrier transit leg to estimate.
+  const estimateEl = document.getElementById('summary-delivery-estimate');
+  if (estimateEl) {
+    if (isPickup || window._rrsFreightQuote) {
+      estimateEl.textContent = '';
+    } else if (typeof window.getDeliveryEstimateRange === 'function') {
+      const est = window.getDeliveryEstimateRange();
+      estimateEl.textContent = `Estimated delivery: ${est.rangeLabel}`;
     }
   }
 

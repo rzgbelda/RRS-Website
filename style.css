@@ -9477,6 +9477,18 @@ input.qty-input:focus {
   line-height: 1.6;
 }
 
+/* Estimated delivery DATE RANGE next to the dollar Delivery line --
+   never a single date (CEO instruction, 2026-10-13). Empty string when
+   there's nothing to show (pickup, or a freight/volume order going to
+   a custom quote instead) collapses to zero height on its own, no JS
+   needed to hide it. */
+.delivery-estimate-row {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--rrs-muted, #6b7280);
+  font-weight: 600;
+}
+
 /* Submit action block — lives inside .checkout-summary aside */
 .submit-order-actions {
   display: flex;

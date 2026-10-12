@@ -1,4 +1,5 @@
 const { Resend } = require('resend');
+const { getDeliveryEstimateRange } = require('../../delivery-estimate');
 
 // Resend's constructor throws when the API key is missing. Building it at
 // module load meant a missing RESEND_API_KEY crashed this file on import --
@@ -46,6 +47,7 @@ function customerEmailHtml(order) {
   var tax = order.tax_amount || 0;
   var subtotal = amountTotal - tax;
   var itemRows = buildItemRows(order.items);
+  var deliveryEstimate = getDeliveryEstimateRange();
 
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">' +
@@ -88,13 +90,19 @@ function customerEmailHtml(order) {
     '<tr style="border-top:2px solid #e2e8f0;"><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;">Total Charged</td><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;text-align:right;">' + formatCurrency(amountTotal) + '</td></tr>' +
     '</table>' +
 
-    // Delivery info
+    // Delivery info. Estimated delivery is always a RANGE, never a single
+    // date (CEO instruction, 2026-10-13) -- see delivery-estimate.js for
+    // the formula (a flat 4-7 business-day conservative default; no real
+    // per-ZIP transit data exists in this codebase yet). Computed from
+    // "now" since this fires synchronously right after the Stripe charge
+    // succeeds, so it lines up with the range shown at checkout.
     '<div style="background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px;margin-bottom:28px;">' +
     '<h2 style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin:0 0 14px;">Delivery Information</h2>' +
     '<p style="font-size:14px;color:#334155;margin:0 0 6px;"><strong>Business:</strong> ' + (order.business_name || '—') + '</p>' +
     '<p style="font-size:14px;color:#334155;margin:0 0 6px;"><strong>Contact:</strong> ' + (order.customer_name || '—') + '</p>' +
     '<p style="font-size:14px;color:#334155;margin:0 0 6px;"><strong>Phone:</strong> ' + (order.phone || '—') + '</p>' +
-    '<p style="font-size:14px;color:#334155;margin:0;"><strong>Ship to:</strong> ' + addrStr + '</p>' +
+    '<p style="font-size:14px;color:#334155;margin:0 0 6px;"><strong>Ship to:</strong> ' + addrStr + '</p>' +
+    '<p style="font-size:14px;color:#334155;margin:0;"><strong>Estimated delivery:</strong> ' + deliveryEstimate.rangeLabel + '</p>' +
     '</div>' +
 
     // What's next
