@@ -204,24 +204,24 @@
             <span>Your payment information is secure and encrypted. We never store your card details &mdash; payments are processed directly by Stripe.</span>
           </div>
 
-        </div>
+          <div id="payment-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-top:18px;font-size:14px;color:#dc2626;font-weight:600;"></div>
 
-        <div id="payment-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;color:#dc2626;font-weight:600;"></div>
-        <p class="cart-delivery-ack">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
-        <div class="payment-actions">
-          <a href="/checkout" class="back-link">&larr; Back to Customer Details</a>
-          <div class="submit-order-group">
-            <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
-              <span id="submitBtnText">Submit Order &rarr;</span>
-              <span id="submitBtnLoading" style="display:none;">Processing&hellip;</span>
-            </button>
-            <p class="submit-order-note">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3L19 6V11C19 16 15.5 19.5 12 21C8.5 19.5 5 16 5 11V6L12 3Z"/></svg>
-              Secured &amp; encrypted by Stripe
-            </p>
+          <div class="payment-submit-row">
+            <p class="cart-delivery-ack">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+            <div class="submit-order-group">
+              <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+                <span id="submitBtnText">Submit Order &rarr;</span>
+                <span id="submitBtnLoading" style="display:none;">Processing&hellip;</span>
+              </button>
+              <p class="submit-order-note">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3L19 6V11C19 16 15.5 19.5 12 21C8.5 19.5 5 16 5 11V6L12 3Z"/></svg>
+                Secured &amp; encrypted by Stripe
+              </p>
+            </div>
           </div>
-      </div>
+
+        </div>
 
       <aside class="payment-summary">
 
@@ -344,6 +344,8 @@
 </div>
 
 </div>
+
+        <a href="/checkout" class="back-link payment-back-link">&larr; Back to Customer Details</a>
 
       </aside>
 

@@ -5964,6 +5964,39 @@ span.flatpickr-weekday {
   line-height: 1.55;
 }
 
+/* Side-by-side acknowledgment + Submit Order button, inside the Payment
+   Method card itself rather than below it. The ack text flexes to fill
+   the remaining width so it reads as a caption for the button next to
+   it, not a separate disclosure block. */
+.payment-submit-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid #eef1f5;
+}
+
+.payment-submit-row .cart-delivery-ack {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+.payment-submit-row .submit-order-group {
+  flex-shrink: 0;
+}
+
+/* Moved out of the card's own action row and down into the sidebar,
+   after Need Help, per CEO layout request -- a plain text link at the
+   end of the page flow rather than competing with the Submit button
+   for attention. */
+.payment-back-link {
+  display: inline-block;
+  margin-top: 18px;
+  font-size: 13.5px;
+}
+
 .secure-note svg {
   flex-shrink: 0;
   margin-top: 2px;
@@ -6935,6 +6968,11 @@ span.flatpickr-weekday {
   }
 
   .payment-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .payment-submit-row {
     flex-direction: column;
     align-items: stretch;
   }
