@@ -293,19 +293,7 @@
 
         <div class="order-options">
   <label class="order-option">
-    <input type="radio" name="orderType" id="reorderOption" checked>
-    <div class="option-card">
-      <span class="radio-circle"></span>
-
-      <div class="option-content">
-        <h4>Set Up Reorder</h4>
-        <p>Schedule automatic reorders with approval before proceeding.</p>
-      </div>
-    </div>
-  </label>
-
-  <label class="order-option">
-    <input type="radio" name="orderType" id="oneTimeOption">
+    <input type="radio" name="orderType" id="oneTimeOption" checked>
     <div class="option-card">
       <span class="radio-circle"></span>
 
@@ -315,9 +303,21 @@
       </div>
     </div>
   </label>
+
+  <label class="order-option">
+    <input type="radio" name="orderType" id="reorderOption">
+    <div class="option-card">
+      <span class="radio-circle"></span>
+
+      <div class="option-content">
+        <h4>Set Up Reorder</h4>
+        <p>Schedule automatic reorders with approval before proceeding.</p>
+      </div>
+    </div>
+  </label>
 </div>
 
-<div id="reorderFrequencySection" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:16px 18px;margin:14px 0 0">
+<div id="reorderFrequencySection" style="display:none;background:#f8fafc;border:1.5px solid #e2e8f0;border-radius:12px;padding:20px 22px;margin:16px 0 28px">
   <label style="display:block;font-size:13px;font-weight:700;color:#0d2c50;margin-bottom:8px">How often should we reorder this?</label>
   <select id="checkoutReorderFrequency" class="a-select" style="width:100%;max-width:320px">
     <option value="weekly">Weekly</option>
@@ -400,7 +400,7 @@
            wording shown (see api/create-order.js / deliveryAckText) so
            there is evidence of what was on screen, even though it's no
            longer gating submission. -->
-      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I understand my order is confirmed when my payment is accepted, and it is sent to the supplier within 1&ndash;2 business days. Delivery time is additional and varies by destination. Delivery is quoted per shipment and billed on my invoice, and delivery dates are estimates &mdash; carrier delays, weather, holidays, and conditions beyond Room Ready Supply's control can affect them.</p>
 
       <div class="submit-order-actions">
         <button

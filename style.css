@@ -9260,7 +9260,25 @@ input.qty-input:focus {
   color: var(--rrs-muted);
   text-transform: uppercase;
   letter-spacing: .07em;
-  margin: 0 0 12px;
+  margin: 24px 0 12px;
+}
+
+/* The empty-cart <p> injected by script.js has no class of its own, so
+   the site-wide "* { margin:0 }" reset left it with zero breathing room
+   above/below -- it sat flush against the Product List label and the
+   Add More Products row (reported as text crowding the container).
+   Styled by context here rather than giving script.js's injected markup
+   a dedicated class, since every "cart is empty" message across the
+   site (cart-items on cart.html, checkout-products/summary-items on
+   checkout.html, payment-summary-items on payment.html) shares this
+   exact plain-<p>-inside-a-known-container shape. */
+#cart-items p,
+#checkout-products p,
+#summary-items p,
+#payment-summary-items p {
+  padding: 16px 0;
+  color: var(--rrs-muted, #6b7280);
+  font-size: 14px;
 }
 
 .checkout-product {
