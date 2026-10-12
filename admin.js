@@ -2639,12 +2639,27 @@ const CVT_BED_SIZE_RE = /\b(California King|Hotel King|King Extra-Wide XL|Queen 
 // remainder AFTER bed size has already been stripped out above -- so this
 // list only ever needs the bare type ("Flat Sheet"), never a sized
 // variant ("Queen Flat Sheet"), unlike an earlier version of this list.
+//
+// "Washcloth" (one word) covers the real spelling -- confirmed live, every
+// Starlinen row writes it as one word, never the two-word "Wash Cloth" this
+// list originally only had. The \s? in the pattern below additionally
+// tolerates either spacing without needing a second list entry.
 const CVT_PRODUCT_TYPE_NOUNS = [
-  "Wash Cloth", "Hand Towel", "Bath Towel", "Bath Mat",
+  "Washcloth", "Hand Towel", "Bath Towel", "Bath Mat",
   "Flat Sheet", "Fitted Sheet", "Pillowcase",
 ].sort((a, b) => b.length - a.length);
+// A trailing "s?" on the whole match handles the plural form every one of
+// these nouns can appear in ("Bath Mats", "Hand Towels", "Washcloths") --
+// confirmed live this was the actual reason the whole point of this list
+// (letting different tiers of one product type converge on one family)
+// never engaged: EVERY real row is plural, so an anchored match with no
+// plural tolerance missed every single one and silently fell back to the
+// un-normalised remainder, which still carried per-tier brand/material
+// words ("Grand Ring-Spun...", "Optima Long-Staple...") that differ by
+// tier -- the opposite of convergence, four separate one-member families
+// instead of one four-tier family.
 const CVT_PRODUCT_TYPE_RE = new RegExp(
-  "(" + CVT_PRODUCT_TYPE_NOUNS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\s*$",
+  "(" + CVT_PRODUCT_TYPE_NOUNS.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/ /g, "\\s?")).join("|") + ")s?\\s*$",
   "i"
 );
 
@@ -2860,16 +2875,49 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
     if (sku && seenSku.has(sku)) continue;
     if (sku) seenSku.add(sku);
-    // Counted per family+color, not family alone: two colors of the same
-    // product share identical size labels ("Small", "Medium", ...), so
-    // grouping them into ONE size-family would immediately collide on
-    // every label. Each color gets its own size-family (its own dropdown);
-    // sharing one product_family STRING across colors is what the color
-    // picker (colorGroup/colorLabel, assigned below) is for instead.
+    // Counted per family+tier+color, not family alone:
+    //  - two colors of the same product share identical size labels
+    //    ("Small", "Medium", ...), so grouping them into ONE size-family
+    //    would immediately collide on every label. Each color gets its own
+    //    size-family (its own dropdown); sharing one product_family STRING
+    //    across colors is what the color picker (colorGroup/colorLabel,
+    //    assigned below) is for instead.
+    //  - two THREAD-COUNT tiers of the same product type (confirmed live:
+    //    Starlinen's "Cotton Blend" line ships T180/T200/T250 fitted
+    //    sheets that all converge on family="Fitted Sheet" once tier is
+    //    stripped) can share the exact same bed size + dims + pack, so a
+    //    "Full - 54 x 80 in. - Case of 12" label collided across three
+    //    different thread counts and dropped the whole family. script.js's
+    //    product page already has its own two-step Tier-then-Size picker
+    //    keyed on product_tier independently of variant_label, so scoping
+    //    the SIZE grouping by tier here (rather than folding tier into the
+    //    label text) matches what the picker already expects: one
+    //    size-dropdown per tier, not tier text duplicated inside every
+    //    size option.
     if (d.family && d.label) {
-      const key = d.family + "\u0001" + d.color;
+      const key = d.family + "\u0001" + d.tier + "\u0001" + d.color;
       famCount[key] = (famCount[key] || 0) + 1;
     }
+  }
+
+  // Tier-only families: a tiered line (Economy/Premium/Luxury/Ultra Luxury
+  // Bath Mat, Hand Towel, Washcloth, ...) can have just ONE size per tier --
+  // there's nothing to put in a size dropdown within a single tier, but the
+  // family is still worth forming because the TIER itself is the picker
+  // dimension (same two-step Tier-then-Size UI used for sheets). Confirmed
+  // live: every one of these rows was otherwise correctly computing
+  // family="Bath Mat" etc. and then getting dropped by the "needs 2+
+  // members" rule below, because that rule only ever looked at one tier's
+  // own size count, never at how many tiers the family spans. Counted
+  // separately, keyed by family+color only (collapsing tier), so a family
+  // with 2+ DISTINCT tiers survives even when none of them individually
+  // has a second size.
+  const tiersByFamilyColor = new Map();
+  for (const [, d] of derived) {
+    if (!d.family || !d.label || !d.tier) continue;
+    const fcKey = d.family + "\u0001" + d.color;
+    if (!tiersByFamilyColor.has(fcKey)) tiersByFamilyColor.set(fcKey, new Set());
+    tiersByFamilyColor.get(fcKey).add(d.tier);
   }
 
   // Two members can still land on the SAME label after bed size/pocket/pack
@@ -2884,7 +2932,7 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   const labelsByFamily = new Map();
   for (const [, d] of derived) {
     if (!d.family || !d.label) continue;
-    const famKey = d.family + "\u0001" + d.color;
+    const famKey = d.family + "\u0001" + d.tier + "\u0001" + d.color;
     if (!labelsByFamily.has(famKey)) labelsByFamily.set(famKey, new Map());
     const m = labelsByFamily.get(famKey);
     if (!m.has(d.label)) m.set(d.label, []);
@@ -2899,15 +2947,15 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
     }
   }
 
-  // Drop any family+color with fewer than 2 members, or where two members
-  // still land on the SAME label after the dimension pass above -- an
-  // unresolved collision means nothing left to safely distinguish two real
-  // SKUs, and a dropdown that can't tell two options apart is worse than
-  // no dropdown.
+  // Drop any family+tier+color with fewer than 2 members, or where two
+  // members still land on the SAME label after the dimension pass above --
+  // an unresolved collision means nothing left to safely distinguish two
+  // real SKUs, and a dropdown that can't tell two options apart is worse
+  // than no dropdown.
   const finalLabelsByFamily = new Map();
   for (const [, d] of derived) {
     if (!d.family || !d.label) continue;
-    const famKey = d.family + "\u0001" + d.color;
+    const famKey = d.family + "\u0001" + d.tier + "\u0001" + d.color;
     if (!finalLabelsByFamily.has(famKey)) finalLabelsByFamily.set(famKey, new Map());
     const m = finalLabelsByFamily.get(famKey);
     m.set(d.label, (m.get(d.label) || 0) + 1);
@@ -2930,8 +2978,11 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   }
 
   for (const [r, d] of derived) {
-    const famKey = d.family + "\u0001" + d.color;
-    if (!d.family || !d.label || famCount[famKey] < 2 || collidedFamilies.has(famKey)) {
+    const famKey = d.family + "\u0001" + d.tier + "\u0001" + d.color;
+    const fcKey = d.family + "\u0001" + d.color;
+    const hasSizeSiblings = famCount[famKey] >= 2;
+    const hasTierSiblings = d.tier && (tiersByFamilyColor.get(fcKey)?.size || 0) >= 2;
+    if (!d.family || !d.label || (!hasSizeSiblings && !hasTierSiblings) || collidedFamilies.has(famKey)) {
       derived.set(r, { family: "", label: "", tier: "" });
       continue;
     }
