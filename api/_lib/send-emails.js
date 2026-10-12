@@ -48,6 +48,16 @@ function customerEmailHtml(order) {
   var subtotal = amountTotal - tax;
   var itemRows = buildItemRows(order.items);
   var deliveryEstimate = getDeliveryEstimateRange();
+  // freight_fee is in whole dollars (not cents, unlike amount_total/tax_amount
+  // above) -- see orderData.freight_fee in api/stripe-webhook.js. Not every
+  // caller's DB select includes this column (the existing-order fallback
+  // path at stripe-webhook.js:295 doesn't), so a missing/undefined value
+  // falls back to a neutral line instead of showing "$NaN" or repeating the
+  // old "Freight quote to follow" text that no longer matches checkout,
+  // where a shipping charge is shown and charged up front for most orders.
+  var shippingCellHtml = (order.freight_fee !== undefined && order.freight_fee !== null)
+    ? '$' + Number(order.freight_fee).toFixed(2)
+    : '<span style="color:#94a3b8;">See your invoice</span>';
 
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">' +
@@ -69,7 +79,7 @@ function customerEmailHtml(order) {
     // Body
     '<div style="padding:32px 40px;">' +
 
-    '<p style="font-size:15px;color:#334155;line-height:1.6;margin:0 0 28px;">Hi ' + (order.customer_name || 'there') + ', thanks for your order! Here\'s a summary of what you ordered. Our team will be in touch shortly to confirm availability and provide a freight quote.</p>' +
+    '<p style="font-size:15px;color:#334155;line-height:1.6;margin:0 0 28px;">Hi ' + (order.customer_name || 'there') + ', thanks for your order! Here\'s a summary of what you ordered. Our team will be in touch shortly to confirm availability.</p>' +
 
     // Items table
     '<h2 style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#94a3b8;margin:0 0 12px;">Items Ordered</h2>' +
@@ -86,7 +96,7 @@ function customerEmailHtml(order) {
     '<table style="width:100%;border-collapse:collapse;margin-bottom:28px;">' +
     '<tr><td style="padding:6px 0;font-size:14px;color:#64748b;">Subtotal</td><td style="padding:6px 0;font-size:14px;color:#334155;text-align:right;">$' + (subtotal / 100).toFixed(2) + '</td></tr>' +
     '<tr><td style="padding:6px 0;font-size:14px;color:#64748b;">Tax</td><td style="padding:6px 0;font-size:14px;color:#334155;text-align:right;">$' + (tax / 100).toFixed(2) + '</td></tr>' +
-    '<tr><td style="padding:6px 0;font-size:14px;color:#64748b;">Shipping</td><td style="padding:6px 0;font-size:13px;color:#94a3b8;text-align:right;">Freight quote to follow</td></tr>' +
+    '<tr><td style="padding:6px 0;font-size:14px;color:#64748b;">Shipping</td><td style="padding:6px 0;font-size:14px;color:#334155;text-align:right;">' + shippingCellHtml + '</td></tr>' +
     '<tr style="border-top:2px solid #e2e8f0;"><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;">Total Charged</td><td style="padding:12px 0 0;font-size:16px;font-weight:900;color:#0B1F38;text-align:right;">' + formatCurrency(amountTotal) + '</td></tr>' +
     '</table>' +
 
@@ -109,18 +119,18 @@ function customerEmailHtml(order) {
     '<div style="background:#fffbf7;border:1.5px solid #fde8d4;border-radius:12px;padding:20px;margin-bottom:28px;">' +
     '<h2 style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#ED7226;margin:0 0 14px;">What Happens Next</h2>' +
     '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x2705; <strong>Order received</strong> — we\'re reviewing your order now.</p>' +
-    '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x1F4E6; <strong>Freight quote</strong> — we\'ll email you a shipping cost before finalizing.</p>' +
+    '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x1F4E6; <strong>Order transmitted to supplier</strong> — within 1&ndash;2 business days of payment.</p>' +
     '<p style="font-size:14px;color:#334155;margin:0;">&#x1F69A; <strong>Dispatch & tracking</strong> — you\'ll get tracking info when your order ships.</p>' +
     '</div>' +
 
     // Help line
-    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions? Reply to this email or call us at <strong style="color:#334155;">(916) 572-2888</strong></p>' +
+    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions? Reply to this email or call us at <strong style="color:#334155;">(252) 227-0073</strong></p>' +
 
     '</div>' +
 
     // Footer
     '<div style="background:#f8fafc;border-top:1.5px solid #e2e8f0;padding:20px 40px;text-align:center;">' +
-    '<p style="font-size:12px;color:#94a3b8;margin:0;">Room Ready Supply &bull; Sacramento, CA &bull; <a href="https://www.roomreadysupply.com" style="color:#ED7226;text-decoration:none;">roomreadysupply.com</a></p>' +
+    '<p style="font-size:12px;color:#94a3b8;margin:0;">Room Ready Supply &bull; Plymouth, NC &bull; <a href="https://www.roomreadysupply.com" style="color:#ED7226;text-decoration:none;">roomreadysupply.com</a></p>' +
     '</div>' +
 
     '</div></body></html>';
