@@ -155,11 +155,19 @@
 
         <div class="payment-card">
 
-          <h2>Payment Method</h2>
+          <div class="payment-card-head">
+            <h2>Payment Method</h2>
+            <span class="stripe-powered-badge">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3L19 6V11C19 16 15.5 19.5 12 21C8.5 19.5 5 16 5 11V6L12 3Z"/></svg>
+              Powered by Stripe
+            </span>
+          </div>
 
-          <label class="payment-option" id="cardOptionLabel" for="cardRadio">
+          <label class="payment-option selected" id="cardOptionLabel" for="cardRadio">
             <input type="radio" name="paymentMethod" value="card" id="cardRadio" checked>
-            <div class="payment-icon">&#128179;</div>
+            <div class="payment-icon">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#ED7226" stroke-width="1.8"><rect x="2" y="5" width="20" height="14" rx="2.5"/><line x1="2" y1="10" x2="22" y2="10"/><line x1="6" y1="15" x2="10" y2="15"/></svg>
+            </div>
             <div class="payment-option-content">
               <h3>Credit / Debit Card</h3>
               <p>Securely pay with your credit or debit card via Stripe.</p>
@@ -191,17 +199,27 @@
                supabase/migrations/20260919_net30_owner_only.sql), working
                a specific customer's quote -- never self-service. -->
 
-          <p class='secure-note'>&#128274; Your payment information is secure and encrypted.</p>
+          <div class='secure-note'>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#15803d" stroke-width="2.2"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span>Your payment information is secure and encrypted. We never store your card details &mdash; payments are processed directly by Stripe.</span>
+          </div>
 
         </div>
 
         <div id="payment-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-bottom:16px;font-size:14px;color:#dc2626;font-weight:600;"></div>
         <div class="payment-actions">
           <a href="/checkout" class="back-link">&larr; Back to Customer Details</a>
-          <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
-            <span id="submitBtnText">Submit Order &rarr;</span>
-            <span id="submitBtnLoading" style="display:none;">Processing&hellip;</span>
-          </button>
+          <div class="submit-order-group">
+            <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span id="submitBtnText">Submit Order &rarr;</span>
+              <span id="submitBtnLoading" style="display:none;">Processing&hellip;</span>
+            </button>
+            <p class="submit-order-note">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 3L19 6V11C19 16 15.5 19.5 12 21C8.5 19.5 5 16 5 11V6L12 3Z"/></svg>
+              Secured &amp; encrypted by Stripe
+            </p>
+          </div>
       </div>
 
       <aside class="payment-summary">

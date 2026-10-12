@@ -5820,31 +5820,66 @@ span.flatpickr-weekday {
   margin-bottom: 20px;
 }
 
+.payment-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.payment-card-head h2 {
+  margin-bottom: 0;
+}
+
+.stripe-powered-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  background: #eef3fa;
+  color: #163a63;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .payment-option {
   display: grid;
   grid-template-columns: 24px 50px minmax(0, 1fr);
   gap: 18px;
   align-items: flex-start;
-  border: 1px solid #d9e0e8;
-  border-radius: 8px;
+  border: 1.5px solid #d9e0e8;
+  border-radius: 10px;
   padding: 20px;
   margin-bottom: 16px;
   cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
 }
 
 .payment-option.selected {
   border-color: #ed7226;
   background: #fff7f2;
+  box-shadow: 0 0 0 3px rgba(237, 114, 38, 0.1);
 }
 
 .payment-option input {
   margin-top: 8px;
   accent-color: #ed7226;
+  width: 18px;
+  height: 18px;
 }
 
 .payment-icon {
-  font-size: 30px;
-  line-height: 1;
+  width: 50px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #ecd4c0;
+  border-radius: 8px;
 }
 
 .payment-option h3 {
@@ -5902,7 +5937,21 @@ span.flatpickr-weekday {
 
 .secure-note {
   margin-top: 18px;
-  color: #4b5b70;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 15px;
+  background: #f0fdf4;
+  border: 1px solid #bbf0cb;
+  border-radius: 8px;
+  color: #15803d;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.secure-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .payment-actions {
@@ -5920,14 +5969,56 @@ span.flatpickr-weekday {
   font-weight: 700;
 }
 
+.submit-order-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
 .review-btn {
-  background: #ed7226;
+  background: linear-gradient(180deg, #f2813a 0%, #ed7226 100%);
   color: #fff;
   text-decoration: none;
-  padding: 16px 55px;
-  border-radius: 7px;
+  padding: 17px 42px;
+  border: none;
+  border-radius: 9px;
   font-weight: 800;
+  font-size: 16px;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(237, 114, 38, 0.32);
+  transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+}
+
+.review-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(237, 114, 38, 0.4);
+  filter: brightness(1.04);
+}
+
+.review-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 12px rgba(237, 114, 38, 0.3);
+}
+
+.review-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.submit-order-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  color: #8a97a8;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 /* RIGHT SUMMARY COLUMN */
@@ -6835,6 +6926,17 @@ span.flatpickr-weekday {
 
   .review-btn {
     text-align: center;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .submit-order-group {
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .submit-order-note {
+    justify-content: center;
   }
 
   .help-grid {
