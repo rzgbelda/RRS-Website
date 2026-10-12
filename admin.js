@@ -2563,17 +2563,46 @@ function cvtUpdateMappedCount() {
 
    Returns {family, label}; blank family means "leave this row ungrouped". */
 const CVT_NAME_SEP = /\s[–—-]\s/;  // en dash, em dash, or hyphen, space-padded
-const CVT_PACK_RE  = /\b(Case of \d+ Sets|Case of \d+ Pairs|Case of \d+|Individual Set|Individual Pair|Individually|Individual|Open Stock|Pack of \d+|Box of \d+|1 Piece|1 Set|1 Pair)\b/i;
+// "N Boxes/Case", "N Rolls/Case" etc (count-then-unit, reversed from "Case
+// of N") is a second pack phrasing some vendor feeds use instead of
+// "Case of N" -- confirmed live: Kleenline Select Premium Facial Tissue
+// ("36 Boxes/Case", "30 Boxes/Case") never matched the original
+// CVT_PACK_RE at all, so cvtDeriveVariantComma's own "no recognised pack"
+// guard silently left both rows ungrouped despite them being a genuine
+// two-option (Cube Box / Flat Box) family. Tried as the LAST alternative,
+// after the more specific "Case of N ..." forms, so a name using both
+// phrasings elsewhere doesn't have this generic one win first.
+const CVT_PACK_RE  = /\b(Case of \d+ Sets|Case of \d+ Pairs|Case of \d+|Individual Set|Individual Pair|Individually|Individual|Open Stock|Pack of \d+|Box of \d+|1 Piece|1 Set|1 Pair|\d+\s+\w+\/Case)\b/i;
 const CVT_UNAVAIL_RE = /\s*[–-]\s*Currently Unavailable\s*$/i;
+
+// A trailing comma-separated package-format descriptor ("Cube Box", "Flat
+// Box") sitting BEFORE the dash gets trapped inside cvtDeriveVariant's
+// family string, since that function only ever splits on the dash --
+// "Kleenline Select Premium 2-Ply Facial Tissue, Cube Box" and "...Flat
+// Box" never shared a family at all. Confirmed live this is the same
+// physical tissue in two box shapes (same brand, same sheet-count range),
+// a genuine buyer choice, not a different product the way CVT_FORMAT_
+// CHANGE_RE's spray/pump/refill words can be -- narrow on purpose (two
+// known box shapes only) rather than a general trailing-comma strip, so
+// this never swallows a real brand/material word some other product
+// happens to put after a comma.
+const CVT_BOX_FORMAT_RE = /,\s*(Cube Box|Flat Box)\s*$/i;
 
 function cvtDeriveVariant(name) {
   const s = String(name || "").trim();
   const m = s.match(CVT_NAME_SEP);
   if (!m) return { family: "", label: "" };
 
-  const family = s.slice(0, m.index).trim();
+  let family = s.slice(0, m.index).trim();
   const rest   = s.slice(m.index + m[0].length).trim();
   if (!family || !rest) return { family: "", label: "" };
+
+  let boxFormat = "";
+  const boxMatch = family.match(CVT_BOX_FORMAT_RE);
+  if (boxMatch) {
+    boxFormat = boxMatch[1];
+    family = family.slice(0, boxMatch.index).trim();
+  }
 
   const parts = rest.split(",").map(x => x.trim());
   let size = parts[0] || "";
@@ -2592,6 +2621,7 @@ function cvtDeriveVariant(name) {
   if (pack && pack.toLowerCase() !== size.toLowerCase()) {
     label = size ? `${size} - ${pack}` : pack;
   }
+  if (boxFormat) label = label ? `${boxFormat} - ${label}` : boxFormat;
   return { family, label: label.trim() };
 }
 
