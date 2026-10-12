@@ -19,17 +19,22 @@ const CORS = {
 // client payload: this is what actually gets emailed to the customer and
 // snapshotted as the quote's official total, so it has to be right
 // regardless of what the browser sent.
+//
+// Room Ready Supply only has nexus in North Carolina (confirmed by the
+// owner 2026-10-13), so every other state is 0% here on purpose -- these
+// are NOT real published rates. If nexus is ever established elsewhere,
+// update that state's rate here AND in /tax-rates.js at the repo root.
 const TAX_RATES: Record<string, number> = {
-  AL: 0.0400, AK: 0.0000, AZ: 0.0560, AR: 0.0650, CA: 0.0725,
-  CO: 0.0290, CT: 0.0635, DE: 0.0000, FL: 0.0600, GA: 0.0400,
-  HI: 0.0400, ID: 0.0600, IL: 0.0625, IN: 0.0700, IA: 0.0600,
-  KS: 0.0650, KY: 0.0600, LA: 0.0500, ME: 0.0550, MD: 0.0600,
-  MA: 0.0625, MI: 0.0600, MN: 0.0688, MS: 0.0700, MO: 0.0423,
-  MT: 0.0000, NE: 0.0550, NV: 0.0685, NH: 0.0000, NJ: 0.0663,
-  NM: 0.0488, NY: 0.0400, NC: 0.0475, ND: 0.0500, OH: 0.0575,
-  OK: 0.0450, OR: 0.0000, PA: 0.0600, RI: 0.0700, SC: 0.0600,
-  SD: 0.0420, TN: 0.0700, TX: 0.0625, UT: 0.0610, VT: 0.0600,
-  VA: 0.0530, WA: 0.0650, WV: 0.0600, WI: 0.0500, WY: 0.0400,
+  AL: 0.0000, AK: 0.0000, AZ: 0.0000, AR: 0.0000, CA: 0.0000,
+  CO: 0.0000, CT: 0.0000, DE: 0.0000, FL: 0.0000, GA: 0.0000,
+  HI: 0.0000, ID: 0.0000, IL: 0.0000, IN: 0.0000, IA: 0.0000,
+  KS: 0.0000, KY: 0.0000, LA: 0.0000, ME: 0.0000, MD: 0.0000,
+  MA: 0.0000, MI: 0.0000, MN: 0.0000, MS: 0.0000, MO: 0.0000,
+  MT: 0.0000, NE: 0.0000, NV: 0.0000, NH: 0.0000, NJ: 0.0000,
+  NM: 0.0000, NY: 0.0000, NC: 0.0475, ND: 0.0000, OH: 0.0000,
+  OK: 0.0000, OR: 0.0000, PA: 0.0000, RI: 0.0000, SC: 0.0000,
+  SD: 0.0000, TN: 0.0000, TX: 0.0000, UT: 0.0000, VT: 0.0000,
+  VA: 0.0000, WA: 0.0000, WV: 0.0000, WI: 0.0000, WY: 0.0000,
 };
 function getTaxRate(stateCode?: string): number {
   return TAX_RATES[String(stateCode || "").trim().toUpperCase()] || 0;
