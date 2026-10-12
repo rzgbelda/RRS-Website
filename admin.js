@@ -2155,6 +2155,7 @@ const CVT_COLS = [
 let _cvtSourceCols = [];
 let _cvtSourceRows = [];
 let _cvtMapping    = {};
+let _cvtSourceFileName = "";
 
 function showCvtPanel() {
   const csvSection = document.getElementById("csvSection");
@@ -2325,6 +2326,7 @@ function cvtHandleFile(file) {
       _cvtSourceCols = Object.keys(rows[0]);
       _cvtSourceRows = rows;
       _cvtMapping    = cvtAutoMap(_cvtSourceCols);
+      _cvtSourceFileName = file.name;
       document.getElementById("cvtFileName").textContent      = file.name;
       document.getElementById("cvtRowCountLabel").textContent = rows.length.toLocaleString();
       cvtRenderMappingGrid();
@@ -3564,9 +3566,36 @@ function cvtBuildAndDownload() {
   const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
   const url  = URL.createObjectURL(blob);
   const a    = document.createElement("a");
-  a.href = url; a.download = "rrs_products_import.csv"; a.click();
+  a.href = url; a.download = cvtDownloadFileName(); a.click();
   URL.revokeObjectURL(url);
   showCvtStep(3);
+}
+
+// Every converted file used to download as the same literal
+// "rrs_products_import.csv" regardless of which distributor it came from --
+// converting two files back to back (confirmed live: Wraptite then Imperial
+// Brady) left indistinguishable "rrs_products_import.csv" and
+// "rrs_products_import (1).csv" in Downloads, with nothing in either name
+// saying which was which. That's how Imperial Brady's own converted file
+// got silently skipped in favor of re-uploading Wraptite's a second time --
+// not a bug in the conversion itself, a filename collision that made the
+// wrong file indistinguishable from the right one. Named from whichever
+// distributor value the converted rows actually carry (the slug the import
+// keys shipping off of, not the display string), falling back to the
+// source file's own name for a mapping that has no distributor column at
+// all, plus today's date so re-converting the same distributor later still
+// produces a new, non-colliding name.
+function cvtDownloadFileName() {
+  const distCol = _cvtMapping.distributor;
+  let dist = "";
+  if (distCol && _cvtSourceRows.length) {
+    dist = distributorSlug(_cvtSourceRows[0][distCol]) || "";
+  }
+  if (!dist && _cvtSourceFileName) {
+    dist = _cvtSourceFileName.replace(/\.[^.]+$/, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+  const date = new Date().toISOString().slice(0, 10);
+  return `rrs_products_import_${dist || "unknown"}_${date}.csv`;
 }
 
 /* Show/hide the inline CSV section inside the Products tab */
