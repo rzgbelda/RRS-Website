@@ -3031,8 +3031,18 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   // real SKUs, and a dropdown that can't tell two options apart is worse
   // than no dropdown.
   const finalLabelsByFamily = new Map();
-  for (const [, d] of derived) {
+  const seenSkuForCollision = new Set();
+  for (const [r, d] of derived) {
     if (!d.family || !d.label) continue;
+    // Skip a row whose SKU repeats a prior row (vendor feed duplicate rows,
+    // confirmed live in InnStyle's export -- two full duplicate rows for
+    // the same SKU) so the duplicate doesn't fake a label collision and
+    // drop the whole family. Rows with no SKU column still count normally.
+    const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
+    if (sku) {
+      if (seenSkuForCollision.has(sku)) continue;
+      seenSkuForCollision.add(sku);
+    }
     const famKey = d.family + "\u0001" + d.tier + "\u0001" + d.color;
     if (!finalLabelsByFamily.has(famKey)) finalLabelsByFamily.set(famKey, new Map());
     const m = finalLabelsByFamily.get(famKey);
