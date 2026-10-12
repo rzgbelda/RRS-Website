@@ -2689,16 +2689,29 @@ function cvtStripColorPrefix(family) {
 // duplicate-catalog-card problem family_key/product_tier exist to solve.
 // Longest tier name first, same reasoning as PRODUCT_TIERS' own ordering:
 // "Ultra Luxury" must be tried before "Luxury" so it isn't half-stripped.
+// NOT anchored at ^ -- confirmed live against a third vendor naming
+// convention this was missing: Starlinen's own "Cotton Blend" sheet line
+// writes bed size BEFORE the tier/thread-count word ("Full T180 Cotton
+// Blend Fitted Sheets"), opposite of the InnStyle Prestige convention this
+// was originally built against ("T200 Hospitality Full Flat Sheet", tier
+// word leads). An anchored match only ever found the tier word when it
+// happened to lead, so every "<BedSize> T<nnn> ..." name fell through this
+// function's own early-return below with tier/bedSize both still blank --
+// not a data problem, a word-order assumption baked into the regex itself.
+// Matching anywhere and removing just the matched word (not everything
+// before it, the way the anchored version implicitly did) keeps this
+// correct regardless of which word order a given vendor uses.
 const CVT_TIER_PREFIX_RE = new RegExp(
-  "^(" + [...PRODUCT_TIERS].sort((a, b) => b.length - a.length)
+  "\\b(" + [...PRODUCT_TIERS].sort((a, b) => b.length - a.length)
     .map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") +
-  ")\\s+", "i"
+  ")\\b\\s*", "i"
 );
-// "T180"/"T200"/"T250" (Starlinen's thread-count prefix) map to the "180"/
-// "200"/"250" product_tier values -- not a plain word match against
-// PRODUCT_TIERS, since the name carries a "T" the stored tier value
-// doesn't.
-const CVT_THREAD_COUNT_PREFIX_RE = /^T(180|200|250)\s+/i;
+// "T180"/"T200"/"T250"/"T300"/"T600" (the thread-count prefix several
+// vendor feeds use) map to the matching numeric product_tier values -- not
+// a plain word match against PRODUCT_TIERS, since the name carries a "T"
+// the stored tier value doesn't. Also not anchored, same reasoning as
+// CVT_TIER_PREFIX_RE above.
+const CVT_THREAD_COUNT_PREFIX_RE = /\bT(180|200|250|300|600)\b\s*/i;
 
 function cvtStripTierPrefix(family) {
   let tier = "";
@@ -2707,12 +2720,12 @@ function cvtStripTierPrefix(family) {
   const threadMatch = family.match(CVT_THREAD_COUNT_PREFIX_RE);
   if (threadMatch) {
     tier = threadMatch[1];
-    rest = family.slice(threadMatch[0].length).trim();
+    rest = (family.slice(0, threadMatch.index) + family.slice(threadMatch.index + threadMatch[0].length)).trim();
   } else {
     const m = family.match(CVT_TIER_PREFIX_RE);
     if (m) {
       tier = PRODUCT_TIERS.find(t => t.toLowerCase() === m[1].toLowerCase()) || "";
-      rest = family.slice(m[0].length).trim();
+      rest = (family.slice(0, m.index) + family.slice(m.index + m[0].length)).trim();
     }
   }
   if (!tier) return { family, tier: "", bedSize: "" };
