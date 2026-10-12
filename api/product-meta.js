@@ -179,20 +179,14 @@ function computeTitleParts(p) {
   return { prefix, cleanName };
 }
 
-// "Bulk Pallet" when sold by the pallet (own minimum above 1, or a Mix &
-// Match pallet group), otherwise "Bulk Case". Mirrors script.js bulkLead().
-function bulkLead(p) {
-  const moq = Number(p && p.moq);
-  // A dozen-priced product's minimum (Starlinen: 6 dozen) is one case, not
-  // a pallet.
-  const dozen = String(p && p.unit || '').trim().toLowerCase() === 'dozen';
-  const pallet = !dozen && ((Number.isFinite(moq) && moq > 1) || !!(p && p.moq_group));
-  return pallet ? 'Bulk Pallet ' : 'Bulk Case ';
-}
-
+// Previously led with a "Bulk Case "/"Bulk Pallet " prefix on every
+// product regardless of how it's actually sold -- including single-unit
+// "1 Piece" items, where it read as self-contradictory. Removed outright;
+// the product's own name/variant label already says "Case of 12" or
+// "1 Piece" where that matters. Mirrors script.js buildSeoTitle.
 function buildSeoTitle(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  return `${bulkLead(p)}${prefix}${cleanName}`;
+  return `${prefix}${cleanName}`;
 }
 
 function detectLeadingSizeToken(name) {
@@ -211,7 +205,6 @@ function detectLeadingSizeToken(name) {
 
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  const lead = bulkLead(p);
 
   let effectivePrefix = prefix;
   let effectiveName = cleanName;
@@ -220,9 +213,9 @@ function buildSeoTitleTag(p) {
     if (reserved) { effectivePrefix = reserved + ' '; effectiveName = rest; }
   }
 
-  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - effectivePrefix.length;
+  const nameBudget = SEO_TITLE_BASE_BUDGET - effectivePrefix.length;
   const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(effectiveName), nameBudget);
-  return `${lead}${effectivePrefix}${trimmedName}`;
+  return `${effectivePrefix}${trimmedName}`;
 }
 
 // A hard slice(0, 155) cut mid-word on effectively every product

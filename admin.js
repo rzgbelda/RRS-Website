@@ -2140,6 +2140,15 @@ const CVT_COLS = [
   { key:"product_family",label:"Product Family (groups sizes into one card)" },
   { key:"variant_label", label:"Variant Label (the dropdown option)" },
   { key:"product_tier",  label:"Product Tier (Economy / Premium / Luxury — optional)" },
+  // Added alongside product_family/variant_label -- these two existed on
+  // the IMPORT side (runCsvImport, TEXT_UPDATE_COLS) and on products_public
+  // since 2026-10-07, but were never added to the Converter's own output
+  // columns, so no Converter-built CSV could ever carry a color picker no
+  // matter what admin.js's grouping logic derived. Confirmed live: the
+  // Wraptite glove line shipped as separate full catalog cards per color
+  // with this column simply missing from the download, not blank in it.
+  { key:"color_group",   label:"Color Group (groups colors of the same product together)" },
+  { key:"color_label",   label:"Color Label (the color-picker option)" },
   { key:"images",        label:"Gallery Images (pipe-separated)" },
 ];
 
@@ -2415,6 +2424,8 @@ function cvtAutoMap(cols) {
     product_family:["productfamily","family","variantgroup","groupname","parentproduct"],
     variant_label: ["variantlabel","variant","option","optionlabel","sizelabel","variantname"],
     product_tier:  ["producttier","tier","grade","quality","qualitytier","line","productline","collection"],
+    color_group:   ["colorgroup","colorfamily"],
+    color_label:   ["colorlabel","color","colour","colourlabel"],
   };
   // Two passes, exact before fuzzy. The fuzzy rule is a substring test, so
   // a single pass lets a longer header be claimed by a shorter alias that
@@ -2635,6 +2646,36 @@ const CVT_PRODUCT_TYPE_RE = new RegExp(
   "i"
 );
 
+// Strips a LEADING color word off an auto-derived family name, so "Blue
+// Barrier Nitrile Powder-Free Examination Gloves" and "Black Barrier
+// Nitrile Powder-Free Examination Gloves" converge on one family ("Barrier
+// Nitrile Powder-Free Examination Gloves") instead of two separate cards
+// with no way to pick a color -- confirmed live: this was shipping as two
+// full four-size catalog cards per color, every color, for every product
+// whose own name leads with its color the way these do.
+//
+// Only a LEADING match counts (anchored ^...), never a substring anywhere
+// else in the name -- "Pacific Blue® Hardwound Paper Towels" must not have
+// "Blue" stripped out of its own brand name just because the word exists
+// in the string. A color word elsewhere in the name was never the problem
+// this is fixing, and stripping it there risks mangling real brand names.
+//
+// Runs independently of cvtStripTierPrefix (which returns the family
+// untouched whenever no TIER word matches) -- these gloves have no tier
+// word in their name at all, so color extraction cannot be a side effect
+// of tier extraction the way bed size is; it needs its own unconditional
+// pass before tier-stripping even runs.
+const CVT_COLOR_PREFIX_RE = /^(white|brown|black|blue|green|yellow|clear|grey|gray|natural|tan)\s+/i;
+
+function cvtStripColorPrefix(family) {
+  const m = family.match(CVT_COLOR_PREFIX_RE);
+  if (!m) return { family, color: "" };
+  const color = m[1].charAt(0).toUpperCase() + m[1].slice(1).toLowerCase();
+  const rest = family.slice(m[0].length).trim();
+  if (!rest) return { family, color: "" }; // whole name was just the color word -- nothing left to group on
+  return { family: rest, color };
+}
+
 // Strips a leading tier word off an auto-derived family name and returns
 // it separately, so "Ultra Luxury White Long-Staple Cotton Wash Cloth"
 // groups under the same family as "Economy White Cotton Wash Cloth"
@@ -2784,21 +2825,36 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
     let raw = cvtDeriveVariant(r[nameCol]);
     let d;
     if (raw.family) {
-      // Dash path: keep its existing tier-separate convention.
-      const { family, tier, bedSize } = cvtStripTierPrefix(raw.family);
+      // Dash path: strip color BEFORE tier, since cvtStripTierPrefix exits
+      // early with the family untouched whenever no tier word matches --
+      // color-only names (these gloves have no tier word at all) would
+      // never reach a color check if it only ran as part of tier-stripping.
+      const colorStripped = cvtStripColorPrefix(raw.family);
+      const { family, tier, bedSize } = cvtStripTierPrefix(colorStripped.family);
       const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
-      d = { family, label, tier };
+      d = { family, label, tier, color: colorStripped.color };
     } else {
       // Comma path: family already carries tier/brand/type as-is (see
-      // cvtDeriveVariantComma above); nothing further to strip.
+      // cvtDeriveVariantComma above); still strip a leading color the same
+      // way the dash path does, for comma-named lines that lead with color.
       const comma = cvtDeriveVariantComma(r[nameCol]);
-      d = { family: comma.family, label: comma.label, tier: "", dims: comma.dims || "" };
+      const colorStripped = cvtStripColorPrefix(comma.family);
+      d = { family: colorStripped.family, label: comma.label, tier: "", dims: comma.dims || "", color: colorStripped.color };
     }
     derived.set(r, d);
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
     if (sku && seenSku.has(sku)) continue;
     if (sku) seenSku.add(sku);
-    if (d.family && d.label) famCount[d.family] = (famCount[d.family] || 0) + 1;
+    // Counted per family+color, not family alone: two colors of the same
+    // product share identical size labels ("Small", "Medium", ...), so
+    // grouping them into ONE size-family would immediately collide on
+    // every label. Each color gets its own size-family (its own dropdown);
+    // sharing one product_family STRING across colors is what the color
+    // picker (colorGroup/colorLabel, assigned below) is for instead.
+    if (d.family && d.label) {
+      const key = d.family + "\u0001" + d.color;
+      famCount[key] = (famCount[key] || 0) + 1;
+    }
   }
 
   // Two members can still land on the SAME label after bed size/pocket/pack
@@ -2813,8 +2869,9 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   const labelsByFamily = new Map();
   for (const [, d] of derived) {
     if (!d.family || !d.label) continue;
-    if (!labelsByFamily.has(d.family)) labelsByFamily.set(d.family, new Map());
-    const m = labelsByFamily.get(d.family);
+    const famKey = d.family + "\u0001" + d.color;
+    if (!labelsByFamily.has(famKey)) labelsByFamily.set(famKey, new Map());
+    const m = labelsByFamily.get(famKey);
     if (!m.has(d.label)) m.set(d.label, []);
     m.get(d.label).push(d);
   }
@@ -2827,26 +2884,45 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
     }
   }
 
-  // Drop any family with fewer than 2 members, or where two members still
-  // land on the SAME label after the dimension pass above -- an unresolved
-  // collision means nothing left to safely distinguish two real SKUs, and a
-  // dropdown that can't tell two options apart is worse than no dropdown.
+  // Drop any family+color with fewer than 2 members, or where two members
+  // still land on the SAME label after the dimension pass above -- an
+  // unresolved collision means nothing left to safely distinguish two real
+  // SKUs, and a dropdown that can't tell two options apart is worse than
+  // no dropdown.
   const finalLabelsByFamily = new Map();
   for (const [, d] of derived) {
     if (!d.family || !d.label) continue;
-    if (!finalLabelsByFamily.has(d.family)) finalLabelsByFamily.set(d.family, new Map());
-    const m = finalLabelsByFamily.get(d.family);
+    const famKey = d.family + "\u0001" + d.color;
+    if (!finalLabelsByFamily.has(famKey)) finalLabelsByFamily.set(famKey, new Map());
+    const m = finalLabelsByFamily.get(famKey);
     m.set(d.label, (m.get(d.label) || 0) + 1);
   }
   const collidedFamilies = new Set(
     [...finalLabelsByFamily.entries()]
       .filter(([, m]) => [...m.values()].some(c => c > 1))
-      .map(([fam]) => fam)
+      .map(([famKey]) => famKey)
   );
 
+  // Color grouping key: every color-variant of the SAME product shares this
+  // (independent of the per-color size-family key above), so switchProductVariant
+  // and the Color picker in script.js can find every sibling color regardless
+  // of which color is currently active. Assigned only to families that
+  // actually HAD a color stripped -- a colorless product gets no color axis.
+  const colorGroupKeys = new Map(); // family -> stable group key
+  for (const [, d] of derived) {
+    if (!d.family || !d.color) continue;
+    if (!colorGroupKeys.has(d.family)) colorGroupKeys.set(d.family, slugifyFamilyKey(d.family) + "-color");
+  }
+
   for (const [r, d] of derived) {
-    if (!d.family || !d.label || famCount[d.family] < 2 || collidedFamilies.has(d.family)) {
+    const famKey = d.family + "\u0001" + d.color;
+    if (!d.family || !d.label || famCount[famKey] < 2 || collidedFamilies.has(famKey)) {
       derived.set(r, { family: "", label: "", tier: "" });
+      continue;
+    }
+    if (d.color) {
+      d.colorGroup = colorGroupKeys.get(d.family) || "";
+      d.colorLabel = d.color;
     }
   }
   return derived;
@@ -3447,6 +3523,14 @@ function cvtBuildAndDownload() {
   // file can supply its own family/label mapping and still need the tier
   // word stripped out of the name for badging/grouping.
   const autoTier = !_cvtMapping.product_tier;
+  // color_group/color_label likewise -- a product whose name leads with its
+  // color ("Blue Barrier Nitrile...") needs that word pulled out into its
+  // own picker axis, same as autoVariants does for size, or every color
+  // ships as a separate full catalog card with no way to switch between
+  // them (confirmed live against the Wraptite glove line before adding
+  // this). Independent flags because a vendor file can map its own color
+  // columns while still needing size auto-derived, or vice versa.
+  const autoColor = !_cvtMapping.color_group && !_cvtMapping.color_label;
 
   for (const srcRow of _cvtSourceRows) {
     const vals = headers.map(h => {
@@ -3458,6 +3542,10 @@ function cvtBuildAndDownload() {
       }
       if (!srcCol && autoTier && h === "product_tier") {
         v = (derived.get(srcRow) || {}).tier || "";
+      }
+      if (!srcCol && autoColor && (h === "color_group" || h === "color_label")) {
+        const d = derived.get(srcRow) || {};
+        v = h === "color_group" ? (d.colorGroup || "") : (d.colorLabel || "");
       }
       v = cvtNormalizeValue(h, v, srcRow);
       return `"${v.replace(/"/g,'""')}"`;

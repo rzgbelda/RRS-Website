@@ -2555,25 +2555,21 @@ function computeTitleParts(p) {
   return { prefix, cleanName };
 }
 
-// "Wholesale" leads because that is how B2B buyers search. Full,
-// untruncated -- this is what actually identifies the product, so it's
-// used everywhere except the <title> element itself (see
+// Full, untruncated name -- this is what actually identifies the product,
+// so it's used everywhere except the <title> element itself (see
 // buildSeoTitleTag below).
-// "Bulk Pallet" when sold by the pallet (own minimum above 1, or a Mix &
-// Match pallet group), otherwise "Bulk Case". Mirrored in
+//
+// Previously led with a "Bulk Case "/"Bulk Pallet " prefix on every
+// product regardless of how it's actually sold -- including single-unit
+// "1 Piece" items, where "Bulk Case Prestige Luxury Turkish Bath Sheet..."
+// read as self-contradictory. Removed outright rather than conditioned on
+// case_qty: the product's own name/variant label already says "Case of 12"
+// or "1 Piece" where that matters, so a separate always-on prefix was
+// redundant even on the rows where it wasn't actively wrong. Mirrored in
 // api/product-meta.js.
-function bulkLead(p) {
-  const moq = Number(p && p.moq);
-  // A dozen-priced product's minimum (Starlinen: 6 dozen) is one CASE, not
-  // a pallet.
-  const dozen = String(p && (p.priceBy || p.unit) || "").trim().toLowerCase() === "dozen";
-  const pallet = !dozen && ((Number.isFinite(moq) && moq > 1) || !!(p && (p.moqGroup || p.moq_group)));
-  return pallet ? "Bulk Pallet " : "Bulk Case ";
-}
-
 function buildSeoTitle(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  return `${bulkLead(p)}${prefix}${cleanName}`;
+  return `${prefix}${cleanName}`;
 }
 
 // The <title> element specifically. Google displays only ~60 chars of it
@@ -2609,7 +2605,6 @@ function detectLeadingSizeToken(name) {
 
 function buildSeoTitleTag(p) {
   const { prefix, cleanName } = computeTitleParts(p);
-  const lead = bulkLead(p);
 
   let effectivePrefix = prefix;
   let effectiveName = cleanName;
@@ -2618,9 +2613,9 @@ function buildSeoTitleTag(p) {
     if (reserved) { effectivePrefix = reserved + " "; effectiveName = rest; }
   }
 
-  const nameBudget = SEO_TITLE_BASE_BUDGET - lead.length - effectivePrefix.length;
+  const nameBudget = SEO_TITLE_BASE_BUDGET - effectivePrefix.length;
   const trimmedName = trimTitleKeepingEnds(stripTitleSpecClause(effectiveName), nameBudget);
-  return `${lead}${effectivePrefix}${trimmedName}`;
+  return `${effectivePrefix}${trimmedName}`;
 }
 
 function selectProductImage(thumbEl, src) {
@@ -2800,8 +2795,17 @@ function populateProductPage(product) {
 
   renderProductDealBanner(product);
 
-  setText("productDescription", product.description);
-  setText("overviewDescription", product.overview || product.description);
+  // #productDescription is the only element this ever renders into (the
+  // Overview card in product-template.html) -- "overviewDescription" was a
+  // leftover target id from an earlier layout that no longer exists, so its
+  // setText() call was always a silent no-op. Every Converter-sourced
+  // import leaves "description" blank and puts the real copy in
+  // "overview" (confirmed against the CSV Converter's own output columns),
+  // so overview must be read FIRST, not as the empty-description fallback
+  // it was written as -- the old order showed a blank Overview card on
+  // every Converter-imported product, not just the ones with no overview
+  // text at all.
+  setText("productDescription", product.overview || product.description);
 
   // Day 19 internal link: a "Read our buying guide" callout under the
   // description, only when this product's category actually has one.
