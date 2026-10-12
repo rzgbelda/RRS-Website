@@ -2042,7 +2042,7 @@ let _csvRunning = false;
    a towel family is picked by quality tier, and the existing tier-grouped
    selector (both the catalog card's modal and the product page's two-step
    Tier-then-Size picker) already does exactly that grouping for free. */
-const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250"];
+const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250","300","600","1.0 Mil","1.25 Mil","1.5 Mil","2 Mil"];
 
 /* Maps a spreadsheet cell to a valid product_tier, or null.
    Anything unrecognized becomes null rather than being passed through: the
@@ -2550,7 +2550,7 @@ function cvtUpdateMappedCount() {
 
    Returns {family, label}; blank family means "leave this row ungrouped". */
 const CVT_NAME_SEP = /\s[–—-]\s/;  // en dash, em dash, or hyphen, space-padded
-const CVT_PACK_RE  = /\b(Case of \d+ Sets|Case of \d+ Pairs|Case of \d+|Individual Set|Individual Pair|Individually|Individual|Open Stock|Pack of \d+|Box of \d+)\b/i;
+const CVT_PACK_RE  = /\b(Case of \d+ Sets|Case of \d+ Pairs|Case of \d+|Individual Set|Individual Pair|Individually|Individual|Open Stock|Pack of \d+|Box of \d+|1 Piece|1 Set|1 Pair)\b/i;
 const CVT_UNAVAIL_RE = /\s*[–-]\s*Currently Unavailable\s*$/i;
 
 function cvtDeriveVariant(name) {
@@ -2615,8 +2615,12 @@ function cvtDeriveVariant(name) {
 // its two picker dimensions (thread count reuses product_tier; bed size
 // becomes variant_label, same slot a towel's inches-size normally fills).
 // Longest first so "Full XL" matches before the bare "Full" would only
-// grab part of it.
-const CVT_BED_SIZE_RE = /\b(Full XL|Queen XL|King XL|Full|Queen|King|Standard)\s+/i;
+// grab part of it -- same reasoning extends to the Prestige/InnStyle comma
+// names' wider bed-size vocabulary (California King, Hotel King, King
+// Extra-Wide XL, Queen Extra-Wide, Standard/Queen pillowcase pairs, Twin/
+// Twin XL), confirmed against every distinct bed-size word in that live
+// catalog before adding them here.
+const CVT_BED_SIZE_RE = /\b(California King|Hotel King|King Extra-Wide XL|Queen Extra-Wide|Standard\/Queen|Full XL|Queen XL|King XL|Twin XL|Full|Queen|King|Twin|Standard)\s+/i;
 
 // Product-type nouns, checked as a trailing match against the family
 // remainder AFTER bed size has already been stripped out above -- so this
@@ -2698,6 +2702,78 @@ function cvtStripTierPrefix(family) {
   return { family: resolvedFamily, tier, bedSize };
 }
 
+// Pocket depth ("12 in. Pocket", "15 in. Pocket") -- a fitted-sheet-only
+// spec that can differ between two rows with the SAME bed size (Starlinen
+// and InnStyle both ship a 12" and a 15"/16" pocket option per size). Needed
+// in the label whenever it does, or two different SKUs collapse onto one
+// indistinguishable dropdown option -- see cvtGroupVariants' dedupe pass.
+const CVT_POCKET_RE = /\b\d+\s*in\.?\s*Pocket\b/i;
+
+// Flat-sheet dimensions ("81 x 102 in."). Some vendor feeds (confirmed live
+// against the existing InnStyle batch, not just this import) list more than
+// one dimension spread under the SAME bed size and pack -- e.g. four
+// different "Full Flat Sheet, ..., Case of 24" rows at 81x102/104/109/98in,
+// which are real distinct SKUs despite reading identically once bed size
+// and pack are the only words in the label. Kept OUT of the label by
+// default (matches the old batch's cleaner "Full - Case of 24" style when
+// there's no ambiguity) and only spliced in by cvtGroupVariants, and only
+// for the specific rows whose label would otherwise collide.
+const CVT_DIMS_RE = /\b\d+(\.\d+)?\s*[x×]\s*\d+(\.\d+)?\s*in\.?/i;
+
+/* Second-chance derivation for names that have NO dash separator at all --
+   "Prestige T200 Hospitality Full Flat Sheet, 81 x 102 in., Fresh White,
+   Case of 24 Pieces" -- which cvtDeriveVariant (dash-only) always reads as
+   {family:"", label:""} since CVT_NAME_SEP never matches.
+
+   Unlike the dash path, this does NOT call cvtStripTierPrefix -- that
+   function pulls the tier/thread-count word OUT of the family entirely
+   (Starlinen's "Flat Sheet" convention, tier picked separately). This
+   catalog line's existing (and already-correct) InnStyle batch instead
+   keeps the tier baked into product_family itself ("Prestige 200
+   Hospitality Flat Sheet") with only BED SIZE pulled out into the label --
+   confirmed live against that batch before writing this. Matching that
+   convention means Prestige's whole line reads consistently regardless of
+   which import added a given size, and nothing downstream (card UI,
+   filters) that already expects full descriptive family strings needs to
+   change.
+
+   Only bed size is pulled out of the family candidate; everything else
+   (brand, tier, product type) stays in family verbatim. Pocket depth folds
+   into the label alongside bed size + pack when a row has one, since two
+   rows can share a bed size and still be different SKUs by pocket depth
+   alone -- leaving it out would make their labels collide (see the dedupe
+   pass below). Dimensions and color are left out of both: dimensions vary
+   WITH bed size rather than independently of it, and color is constant
+   within a Prestige family. */
+function cvtDeriveVariantComma(name) {
+  const s = String(name || "").trim();
+  const commaIdx = s.indexOf(",");
+  if (commaIdx === -1) return { family: "", label: "" };
+
+  let familyRaw = s.slice(0, commaIdx).trim();
+  const rest = s.slice(commaIdx + 1);
+  if (!familyRaw || !rest.trim()) return { family: "", label: "" };
+
+  let bedSize = "";
+  const bedMatch = familyRaw.match(CVT_BED_SIZE_RE);
+  if (bedMatch) {
+    bedSize = bedMatch[1].replace(/\s+/g, " ").trim();
+    familyRaw = (familyRaw.slice(0, bedMatch.index) + familyRaw.slice(bedMatch.index + bedMatch[0].length)).trim();
+  }
+  if (!familyRaw) return { family: "", label: "" };
+
+  let pack = "", pocket = "", dims = "";
+  for (const part of rest.split(",").map(x => x.trim())) {
+    if (!pack) { const pm = part.match(CVT_PACK_RE); if (pm) pack = pm[0]; }
+    if (!pocket) { const km = part.match(CVT_POCKET_RE); if (km) pocket = km[0].replace(/\s+/g, " "); }
+    if (!dims) { const dm = part.match(CVT_DIMS_RE); if (dm) dims = dm[0].replace(/\s+/g, " "); }
+  }
+  if (!pack) return { family: "", label: "" }; // no recognised pack -- nothing safe to key a label on
+
+  const labelParts = [bedSize, pocket, pack].filter(Boolean);
+  return { family: familyRaw, label: labelParts.join(" - "), dims, bedSize, pocket, pack };
+}
+
 function cvtGroupVariants(rows, nameCol, skuCol) {
   const derived = new Map();
   if (!nameCol) return derived;
@@ -2705,23 +2781,71 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   const famCount = {};
   const seenSku = new Set();
   for (const r of rows) {
-    const raw = cvtDeriveVariant(r[nameCol]);
-    const { family, tier, bedSize } = raw.family
-      ? cvtStripTierPrefix(raw.family) : { family: raw.family, tier: "", bedSize: "" };
-    // Bed size folded into the label so "81 x 108 in." (ambiguous on its
-    // own -- Full XL and Queen are both roughly that range) reads as
-    // "Full XL - 81 x 108 in." the same way a pack size gets folded in
-    // above in cvtDeriveVariant.
-    const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
-    const d = { family, label, tier };
+    let raw = cvtDeriveVariant(r[nameCol]);
+    let d;
+    if (raw.family) {
+      // Dash path: keep its existing tier-separate convention.
+      const { family, tier, bedSize } = cvtStripTierPrefix(raw.family);
+      const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
+      d = { family, label, tier };
+    } else {
+      // Comma path: family already carries tier/brand/type as-is (see
+      // cvtDeriveVariantComma above); nothing further to strip.
+      const comma = cvtDeriveVariantComma(r[nameCol]);
+      d = { family: comma.family, label: comma.label, tier: "", dims: comma.dims || "" };
+    }
     derived.set(r, d);
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
     if (sku && seenSku.has(sku)) continue;
     if (sku) seenSku.add(sku);
     if (d.family && d.label) famCount[d.family] = (famCount[d.family] || 0) + 1;
   }
+
+  // Two members can still land on the SAME label after bed size/pocket/pack
+  // (confirmed live: some vendor feeds list more than one dimension spread
+  // under one bed size + pack, e.g. four "Full Flat Sheet, ..., Case of 24"
+  // rows at different inches). Where that happens AND the colliding rows
+  // have a recognised dimension string to tell them apart, splice dimensions
+  // into just those rows' labels rather than dropping the whole family --
+  // the family is still valid, it just needed one more distinguishing word.
+  // Any collision that dimensions can't resolve (no dims recognised, or
+  // still equal after adding them) falls through to the drop below.
+  const labelsByFamily = new Map();
+  for (const [, d] of derived) {
+    if (!d.family || !d.label) continue;
+    if (!labelsByFamily.has(d.family)) labelsByFamily.set(d.family, new Map());
+    const m = labelsByFamily.get(d.family);
+    if (!m.has(d.label)) m.set(d.label, []);
+    m.get(d.label).push(d);
+  }
+  for (const famLabels of labelsByFamily.values()) {
+    for (const [label, members] of famLabels) {
+      if (members.length < 2) continue;
+      for (const d of members) {
+        if (d.dims) d.label = `${label} - ${d.dims}`;
+      }
+    }
+  }
+
+  // Drop any family with fewer than 2 members, or where two members still
+  // land on the SAME label after the dimension pass above -- an unresolved
+  // collision means nothing left to safely distinguish two real SKUs, and a
+  // dropdown that can't tell two options apart is worse than no dropdown.
+  const finalLabelsByFamily = new Map();
+  for (const [, d] of derived) {
+    if (!d.family || !d.label) continue;
+    if (!finalLabelsByFamily.has(d.family)) finalLabelsByFamily.set(d.family, new Map());
+    const m = finalLabelsByFamily.get(d.family);
+    m.set(d.label, (m.get(d.label) || 0) + 1);
+  }
+  const collidedFamilies = new Set(
+    [...finalLabelsByFamily.entries()]
+      .filter(([, m]) => [...m.values()].some(c => c > 1))
+      .map(([fam]) => fam)
+  );
+
   for (const [r, d] of derived) {
-    if (!d.family || !d.label || famCount[d.family] < 2) {
+    if (!d.family || !d.label || famCount[d.family] < 2 || collidedFamilies.has(d.family)) {
       derived.set(r, { family: "", label: "", tier: "" });
     }
   }
