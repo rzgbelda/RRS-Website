@@ -5949,6 +5949,21 @@ span.flatpickr-weekday {
   line-height: 1.5;
 }
 
+/* Delivery-timing acknowledgment shown directly above the order-submit
+   button on cart.html and payment.html (RRS cart-acknowledgment spec,
+   2026-10-12): always visible, no expand/collapse, no hover-only, and
+   sized to stay readable without zooming on mobile. */
+.cart-delivery-ack {
+  margin: 14px 0;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
 .secure-note svg {
   flex-shrink: 0;
   margin-top: 2px;
