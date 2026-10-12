@@ -2791,31 +2791,56 @@ const CVT_POCKET_RE = /\b\d+\s*in\.?\s*Pocket\b/i;
 // for the specific rows whose label would otherwise collide.
 const CVT_DIMS_RE = /\b\d+(\.\d+)?\s*[x×]\s*\d+(\.\d+)?\s*in\.?/i;
 
+// InnStyle's Prestige line prefixes every comma-named row with
+// "<Brand> T<threadCount> <SubLine>" (e.g. "Prestige T200 Hospitality",
+// "Prestige T600 Luxury Blend", "Prestige T600 Wrinkle-Free") ahead of the
+// bed size and product type. Confirmed live: the four sub-lines are the
+// SAME physical product TYPE (Fitted Sheet / Flat Sheet / Pillowcase) at
+// different thread counts/finishes, sold by the same supplier (same
+// innstyle.com image host) -- they belong in one family with the sub-line
+// as a Tier picker option, not four separate storefront cards. Matched and
+// removed here (before CVT_BED_SIZE_RE) so family collapses to just
+// "<Brand> <ProductType>" ("Prestige Flat Sheet") and the sub-line becomes
+// its own tier value ("200 Hospitality", "600 Luxury Blend", ...) --
+// mirrors the four matching values added to the product_tier CHECK
+// constraint in 20261012c_prestige_combined_tier_values.sql. A row with no
+// match here (a brand/line this pattern doesn't recognise) falls through
+// with tier "" unchanged, same as before this was added.
+const CVT_INNSTYLE_SUBLINE_RE = /^(.*?)\s+T(200|300|600)\s+(Hospitality|Luxury Blend|Wrinkle-Free)\s+/i;
+
 /* Second-chance derivation for names that have NO dash separator at all --
    "Prestige T200 Hospitality Full Flat Sheet, 81 x 102 in., Fresh White,
    Case of 24 Pieces" -- which cvtDeriveVariant (dash-only) always reads as
    {family:"", label:""} since CVT_NAME_SEP never matches.
 
-   Unlike the dash path, this does NOT call cvtStripTierPrefix -- that
-   function pulls the tier/thread-count word OUT of the family entirely
-   (Starlinen's "Flat Sheet" convention, tier picked separately). This
-   catalog line's existing (and already-correct) InnStyle batch instead
-   keeps the tier baked into product_family itself ("Prestige 200
-   Hospitality Flat Sheet") with only BED SIZE pulled out into the label --
-   confirmed live against that batch before writing this. Matching that
-   convention means Prestige's whole line reads consistently regardless of
-   which import added a given size, and nothing downstream (card UI,
-   filters) that already expects full descriptive family strings needs to
-   change.
+   Extracts the InnStyle sub-line (CVT_INNSTYLE_SUBLINE_RE) into its own
+   tier value when present, same two-step Tier-then-Size shape the dash
+   path already uses for Starlinen -- confirmed live this is the right
+   convention after finding four of InnStyle's own Prestige sub-lines
+   (T200 Hospitality, T300 Hospitality, T600 Luxury Blend, T600
+   Wrinkle-Free) sitting as four separate one-tier families for the same
+   physical product type, with no way to switch between them. An earlier
+   version of this function kept the sub-line baked into product_family
+   instead (so each sub-line was its own family) -- that was a deliberate
+   choice at the time, reversed once the four-way split it produced on
+   every Fitted Sheet/Flat Sheet/Pillowcase was confirmed live, not
+   something this function was getting wrong by accident.
 
-   Only bed size is pulled out of the family candidate; everything else
-   (brand, tier, product type) stays in family verbatim. Pocket depth folds
-   into the label alongside bed size + pack when a row has one, since two
-   rows can share a bed size and still be different SKUs by pocket depth
-   alone -- leaving it out would make their labels collide (see the dedupe
-   pass below). Dimensions and color are left out of both: dimensions vary
-   WITH bed size rather than independently of it, and color is constant
-   within a Prestige family. */
+   Bed size is pulled out of the family candidate the same way as before;
+   whatever's left after both bed size and sub-line are removed is resolved
+   through CVT_PRODUCT_TYPE_RE the same way cvtStripTierPrefix does for the
+   dash path, so "Prestige T200 Hospitality Full Flat Sheet" converges on
+   family "Prestige Flat Sheet" regardless of which sub-line or bed size a
+   given row is. A brand/line this regex doesn't recognise falls through
+   with tier "" and the OLD behaviour (full remainder kept as family)
+   unchanged -- this never makes an unrecognised product worse than before.
+
+   Pocket depth folds into the label alongside bed size + pack when a row
+   has one, since two rows can share a bed size and still be different SKUs
+   by pocket depth alone -- leaving it out would make their labels collide
+   (see the dedupe pass below). Dimensions and color are left out of both:
+   dimensions vary WITH bed size rather than independently of it, and color
+   is constant within a Prestige family. */
 function cvtDeriveVariantComma(name) {
   const s = String(name || "").trim();
   const commaIdx = s.indexOf(",");
@@ -2825,6 +2850,13 @@ function cvtDeriveVariantComma(name) {
   const rest = s.slice(commaIdx + 1);
   if (!familyRaw || !rest.trim()) return { family: "", label: "" };
 
+  let tier = "";
+  const sublineMatch = familyRaw.match(CVT_INNSTYLE_SUBLINE_RE);
+  if (sublineMatch) {
+    tier = `${sublineMatch[2]} ${sublineMatch[3]}`;
+    familyRaw = (sublineMatch[1] + " " + familyRaw.slice(sublineMatch[0].length)).trim();
+  }
+
   let bedSize = "";
   const bedMatch = familyRaw.match(CVT_BED_SIZE_RE);
   if (bedMatch) {
@@ -2832,6 +2864,21 @@ function cvtDeriveVariantComma(name) {
     familyRaw = (familyRaw.slice(0, bedMatch.index) + familyRaw.slice(bedMatch.index + bedMatch[0].length)).trim();
   }
   if (!familyRaw) return { family: "", label: "" };
+
+  // Only resolve the trailing product-type noun when a sub-line was
+  // actually found above -- unrecognised brands/lines keep their full
+  // (bed-size-stripped) remainder as family, same as this function's
+  // behaviour before the sub-line extraction was added.
+  if (tier) {
+    const typeMatch = familyRaw.match(CVT_PRODUCT_TYPE_RE);
+    if (typeMatch) {
+      const noun = CVT_PRODUCT_TYPE_NOUNS.find(t => t.toLowerCase() === typeMatch[1].toLowerCase().trim());
+      if (noun) {
+        const brand = familyRaw.slice(0, typeMatch.index).trim();
+        familyRaw = (brand ? brand + " " : "") + noun;
+      }
+    }
+  }
 
   let pack = "", pocket = "", dims = "";
   for (const part of rest.split(",").map(x => x.trim())) {
@@ -2842,7 +2889,7 @@ function cvtDeriveVariantComma(name) {
   if (!pack) return { family: "", label: "" }; // no recognised pack -- nothing safe to key a label on
 
   const labelParts = [bedSize, pocket, pack].filter(Boolean);
-  return { family: familyRaw, label: labelParts.join(" - "), dims, bedSize, pocket, pack };
+  return { family: familyRaw, label: labelParts.join(" - "), dims, bedSize, pocket, pack, tier };
 }
 
 function cvtGroupVariants(rows, nameCol, skuCol) {
@@ -2864,12 +2911,13 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
       const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
       d = { family, label, tier, color: colorStripped.color };
     } else {
-      // Comma path: family already carries tier/brand/type as-is (see
-      // cvtDeriveVariantComma above); still strip a leading color the same
-      // way the dash path does, for comma-named lines that lead with color.
+      // Comma path: family already carries brand/type as-is, with the
+      // sub-line (if any) pulled into comma.tier by cvtDeriveVariantComma
+      // above; still strip a leading color the same way the dash path
+      // does, for comma-named lines that lead with color.
       const comma = cvtDeriveVariantComma(r[nameCol]);
       const colorStripped = cvtStripColorPrefix(comma.family);
-      d = { family: colorStripped.family, label: comma.label, tier: "", dims: comma.dims || "", color: colorStripped.color };
+      d = { family: colorStripped.family, label: comma.label, tier: comma.tier || "", dims: comma.dims || "", color: colorStripped.color };
     }
     derived.set(r, d);
     const sku = skuCol ? String(r[skuCol] ?? "").trim() : "";
