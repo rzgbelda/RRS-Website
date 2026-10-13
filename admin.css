@@ -4587,3 +4587,7 @@ th.fam-num { text-align: right; }
   .vi-cart-value { font-size: 16px; }
   .vi-avatar { display: none; }
 }
+
+/* Converter preview: remove-from-import button */
+.cvt-remove-btn { flex: 0 0 auto; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; color: #94a3b8; cursor: pointer; transition: .15s; }
+.cvt-remove-btn:hover { color: #dc2626; border-color: #fecaca; background: #fef2f2; }

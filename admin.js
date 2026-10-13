@@ -2160,6 +2160,10 @@ let _cvtSourceCols = [];
 let _cvtSourceRows = [];
 let _cvtMapping    = {};
 let _cvtSourceFileName = "";
+// Source-row indexes removed in the preview (trash button). Left out of
+// the converted file, so they are never imported; restorable until a new
+// file is loaded.
+let _cvtExcluded = new Set();
 
 function showCvtPanel() {
   const csvSection = document.getElementById("csvSection");
@@ -2331,6 +2335,7 @@ function cvtHandleFile(file) {
       if (!rows.length) { showToast("No data rows found."); return; }
       _cvtSourceCols = Object.keys(rows[0]);
       _cvtSourceRows = rows;
+      _cvtExcluded = new Set();
       _cvtMapping    = cvtAutoMap(_cvtSourceCols);
       _cvtSourceFileName = file.name;
       document.getElementById("cvtFileName").textContent      = file.name;
@@ -3715,7 +3720,7 @@ function cvtBuildRows() {
   // them -- an explicit mapping always wins over anything guessed here.
   const autoVariants = !_cvtMapping.product_family && !_cvtMapping.variant_label;
   const derived = autoVariants
-    ? cvtGroupVariants(_cvtSourceRows, _cvtMapping.name, _cvtMapping.sku)
+    ? cvtGroupVariants(_cvtSourceRows.filter((_, i) => !_cvtExcluded.has(i)), _cvtMapping.name, _cvtMapping.sku)
     : new Map();
   // product_tier is auto-filled from the same derivation, independently of
   // whether product_family/variant_label were auto-derived too -- a vendor
@@ -3732,7 +3737,8 @@ function cvtBuildRows() {
   const autoColor = !_cvtMapping.color_group && !_cvtMapping.color_label;
 
   const rowObjs = [];
-  for (const srcRow of _cvtSourceRows) {
+  _cvtSourceRows.forEach((srcRow, srcIdx) => {
+    if (_cvtExcluded.has(srcIdx)) return; // removed in the preview
     const obj = {};
     headers.forEach(h => {
       const srcCol = _cvtMapping[h] || "";
@@ -3750,8 +3756,10 @@ function cvtBuildRows() {
       }
       obj[h] = cvtNormalizeValue(h, v, srcRow);
     });
+    // The file row it came from, for the preview (not a CSV column).
+    Object.defineProperty(obj, "_srcIdx", { value: srcIdx });
     rowObjs.push(obj);
-  }
+  });
   const casePackCount = cvtApplyCasePacks(rowObjs);
   return { headers, rowObjs, casePackCount, autoVariants, derived };
 }
@@ -3790,6 +3798,15 @@ function cvtCheckRow(r) {
   return { errors, warns };
 }
 
+function cvtExcludeRow(idx) {
+  _cvtExcluded.add(idx);
+  cvtRenderPreview();
+  const nameCol = _cvtMapping.name;
+  showToast(`Removed row #${idx + 2}${nameCol && _cvtSourceRows[idx]?.[nameCol] ? ` (${String(_cvtSourceRows[idx][nameCol]).slice(0, 40)})` : ""} from the import`);
+}
+function cvtRestoreRow(idx) { _cvtExcluded.delete(idx); cvtRenderPreview(); }
+function cvtRestoreAllRows() { _cvtExcluded.clear(); cvtRenderPreview(); }
+
 function cvtPreviewFilter(f) {
   _cvtPreviewFilter = f;
   cvtRenderPreview();
@@ -3804,7 +3821,7 @@ function cvtRenderPreview() {
   catch (err) { box.innerHTML = `<div style="padding:12px;color:#b91c1c">Preview failed: ${escHtml(err.message)}</div>`; return; }
 
   const money = v => { const n = parseFloat(v); return Number.isFinite(n) ? "$" + n.toFixed(2) : ""; };
-  const rows = built.rowObjs.map((r, i) => ({ r, i, c: cvtCheckRow(r) }));
+  const rows = built.rowObjs.map(r => ({ r, i: r._srcIdx, c: cvtCheckRow(r) }));
   const nErr = rows.filter(x => x.c.errors.length).length;
   const nWarn = rows.filter(x => !x.c.errors.length && x.c.warns.length).length;
   const nOk = rows.length - nErr - nWarn;
@@ -3852,9 +3869,31 @@ function cvtRenderPreview() {
       <td style="padding:9px 8px;white-space:nowrap"><div style="font-size:15px;font-weight:800;color:#0f2b50">${money(r.price) || "—"}</div><div style="font-size:11.5px;color:#475569;white-space:normal;max-width:210px">${tierLadder(r)}</div></td>
       <td style="padding:9px 8px;font-size:12px;color:#475569;white-space:nowrap">${money(r.cost_per_case) || "—"}${margin ? `<div style="font-weight:700;color:${parseFloat(margin) < 15 ? "#b45309" : "#15803d"}">${margin} margin</div>` : ""}</td>
       <td style="padding:9px 8px;font-size:12px;color:#475569;max-width:200px">${pack || "—"}</td>
-      <td style="padding:9px 8px;font-size:12px;max-width:260px">${issues || `<span style="color:#15803d">Ready</span>`}</td>
+      <td style="padding:9px 8px;font-size:12px;min-width:220px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+          <div>${issues || `<span style="color:#15803d">Ready</span>`}</div>
+          <button type="button" class="cvt-remove-btn" onclick="cvtExcludeRow(${i})" title="Remove this product from the import" aria-label="Remove row ${i + 2} from the import">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+          </button>
+        </div>
+      </td>
     </tr>`;
   };
+
+  // Rows removed with the trash button, each restorable.
+  const nameCol = _cvtMapping.name;
+  const removed = [..._cvtExcluded].sort((a, b) => a - b);
+  const removedHtml = removed.length ? `
+      <div style="padding:10px 16px;background:#f8fafc;border-bottom:1px solid #eef1f5;font-size:12.5px;color:#475569">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+          <strong style="color:#0f2b50">${removed.length} removed — won't be imported</strong>
+          <button type="button" onclick="cvtRestoreAllRows()" style="background:none;border:none;padding:0;color:#0B2F63;font-weight:700;font-size:12.5px;cursor:pointer;text-decoration:underline">Restore all</button>
+        </div>
+        ${removed.map(idx => `<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0">
+          <span style="text-decoration:line-through;color:#94a3b8">#${idx + 2} ${escHtml(String((nameCol && _cvtSourceRows[idx]?.[nameCol]) || "(no name)"))}</span>
+          <button type="button" onclick="cvtRestoreRow(${idx})" style="background:none;border:none;padding:0;color:#0B2F63;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap">Restore</button>
+        </div>`).join("")}
+      </div>` : "";
 
   box.innerHTML = `
     <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:22px;background:#fff">
@@ -3870,13 +3909,14 @@ function cvtRenderPreview() {
           ${pill(nErr, "❌ Problem", "#b91c1c", "#fef2f2", "err")}
         </div>
       </div>
+      ${removedHtml}
       ${mappingProblems.length ? `<div style="padding:10px 16px;background:#fef2f2;color:#b91c1c;font-size:12.5px;font-weight:700;border-bottom:1px solid #fecaca">${mappingProblems.map(escHtml).join("<br>")}</div>` : ""}
       <div style="max-height:560px;overflow:auto">
         <table style="width:100%;border-collapse:collapse;font-size:13px">
           <thead><tr style="background:#f8fafc;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0">
             <th style="padding:8px">Row</th><th style="padding:8px">Product</th><th style="padding:8px">Price · tiers</th><th style="padding:8px">Cost</th><th style="padding:8px">Pack · weight</th><th style="padding:8px">Checks</th>
           </tr></thead>
-          <tbody>${shown.map(rowHtml).join("") || `<tr><td colspan="6" style="padding:16px;color:#64748b">No rows in this view.</td></tr>`}</tbody>
+          <tbody>${shown.map(rowHtml).join("") || `<tr><td colspan="6" style="padding:16px;color:#64748b">No rows in this view.${_cvtPreviewFilter !== "all" ? ` <button type="button" onclick="cvtPreviewFilter('all')" style="background:none;border:none;padding:0;color:#0B2F63;font-weight:700;cursor:pointer;text-decoration:underline">Show all products</button>` : ""}</td></tr>`}</tbody>
         </table>
       </div>
     </div>`;
