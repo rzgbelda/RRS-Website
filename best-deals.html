@@ -480,7 +480,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20261013r"></script>
+  <script src="script.js?v=20261014a"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
   <script>
     // Renders whatever the admin "Best Deals" tab currently has active --
@@ -569,8 +569,8 @@
       // pairing (same one product-detail breadcrumbs use) rather than a
       // second slug scheme that could drift out of sync with it.
       const BD_CATEGORY_PAGES = [
-        "bed-sheets-linens", "towels", "paper-products", "cleaning-chemicals",
-        "pillows-mattress-protectors", "trash-liners-can-liners", "gloves-ppe", "guest-amenities",
+        "paper-products", "towels", "bed-sheets-linens", "foodservice-disposables",
+        "foodservice-linens", "trash-liners-can-liners", "cleaning-chemicals", "gloves-ppe", "laundry-cleaning-chemicals",
       ];
       const catSlug = typeof categorySlug === "function" ? categorySlug(p.category_name || "") : "";
       const catHref = BD_CATEGORY_PAGES.includes(catSlug) ? `/category/${catSlug}` : (catSlug ? `/catalog?category=${encodeURIComponent(catSlug)}` : "");

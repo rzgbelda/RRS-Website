@@ -24,8 +24,8 @@ const PUBLIC_PAGES = [
 ];
 
 const CATEGORY_SLUGS = [
-  'bed-sheets-linens', 'cleaning-chemicals', 'laundry-cleaning-chemicals', 'gloves-ppe',
-  'guest-amenities', 'paper-products', 'pillows-mattress-protectors', 'towels', 'trash-liners-can-liners',
+  'paper-products', 'towels', 'bed-sheets-linens', 'foodservice-disposables',
+  'foodservice-linens', 'trash-liners-can-liners', 'cleaning-chemicals', 'gloves-ppe', 'laundry-cleaning-chemicals',
 ];
 
 // Pages that must NOT be indexed -- private, transactional, or per-customer.

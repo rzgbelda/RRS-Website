@@ -18,8 +18,8 @@ const SEO_PAGES = [
 // Day 10) if it had existed then: it's now audited the same as every
 // other category, not silently skipped.
 const CATEGORY_SLUGS = [
-  "bed-sheets-linens", "cleaning-chemicals", "laundry-cleaning-chemicals", "gloves-ppe",
-  "guest-amenities", "paper-products", "pillows-mattress-protectors", "towels", "trash-liners-can-liners",
+  "paper-products", "towels", "bed-sheets-linens", "foodservice-disposables",
+  "foodservice-linens", "trash-liners-can-liners", "cleaning-chemicals", "gloves-ppe", "laundry-cleaning-chemicals",
 ];
 
 // How many real product pages to sample per run -- checking all ~145 on

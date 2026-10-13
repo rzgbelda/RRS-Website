@@ -94,6 +94,16 @@
   ],
   "redirects": [
     {
+      "source": "/category/guest-amenities",
+      "destination": "/catalog",
+      "permanent": true
+    },
+    {
+      "source": "/category/pillows-mattress-protectors",
+      "destination": "/catalog",
+      "permanent": true
+    },
+    {
       "source": "/volume-pricing",
       "destination": "/quote",
       "permanent": true

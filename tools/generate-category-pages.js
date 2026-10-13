@@ -13,6 +13,11 @@
  * come from the database at page load.
  *
  * Run: node tools/generate-category-pages.js
+ *
+ * WARNING (2026-10-14): out of date. The pages under /category/ have been
+ * edited by hand since (pricing copy, other-category links, and the
+ * laundry and foodservice pages are not defined here). Running this
+ * overwrites those edits -- update this file to match the pages first.
  */
 const fs = require('fs');
 const path = require('path');
@@ -94,23 +99,6 @@ const CATEGORIES = [
     ],
   },
   {
-    slug: 'pillows-mattress-protectors',
-    name: 'Pillows & Mattress Protectors',
-    h1: 'Wholesale Hotel Pillows & Mattress Protectors',
-    title: 'Wholesale Pillows & Mattress Protectors',
-    description: 'Bulk hotel pillows, waterproof mattress protectors and pillow protectors in Standard, Queen and King. Protect mattress investment with case pricing.',
-    intro: [
-      'A waterproof protector costs a fraction of the mattress it saves, which makes this the highest-return category most properties under-buy. We stock 100% waterproof mattress protectors and pillow protectors in Full XL, Queen and King, plus poly-fill pillows in Standard, Queen and King.',
-      'Protectors use a breathable membrane, so they block spills and moisture without the crinkle that generates guest complaints. All are machine washable and rated for commercial laundry cycles.',
-      'Replacing protectors across a whole property at once? Volume pricing at 30 cases makes a full-property refresh considerably cheaper than replacing piecemeal.',
-    ],
-    faq: [
-      { q: 'Are your mattress protectors actually waterproof?', a: 'Yes, 100% waterproof with a breathable membrane, so they block spills and moisture without the crinkle sound that generates guest complaints. All are machine washable and rated for commercial laundry cycles.' },
-      { q: 'What pillow sizes do you carry?', a: 'Standard, Queen, and King poly-fill pillows, sized to match our protector sizing.' },
-      { q: 'Is there a bulk discount for a full-property refresh?', a: 'Yes, pricing steps down significantly at higher case volumes -- replacing protectors across a whole property at once is considerably cheaper than piecemeal reordering.' },
-    ],
-  },
-  {
     slug: 'trash-liners-can-liners',
     name: 'Trash Liners & Can Liners',
     h1: 'Wholesale Can Liners & Trash Bags in Bulk',
@@ -142,23 +130,6 @@ const CATEGORIES = [
       { q: 'What sizes do your nitrile gloves come in?', a: 'Small, Medium, Large, and XL, in powder-free Barrier nitrile examination gloves (blue and black) and powder-free vinyl gloves for general-use tasks.' },
       { q: 'What is the difference between your nitrile and vinyl gloves?', a: 'Our 3.5 mil Barrier nitrile gloves are powder-free examination gloves, a durable choice for housekeeping, cleaning and more demanding tasks. Our 3 mil vinyl gloves are powder-free, non-examination gloves, an economical choice for everyday general-use tasks. Both are packed ten boxes of 100 per master case.' },
       { q: 'Can I set up a recurring glove order?', a: 'Yes -- glove usage is predictable, which makes it a natural fit for a standing reorder so your team never opens the last case.' },
-    ],
-  },
-  {
-    slug: 'guest-amenities',
-    name: 'Guest Amenities',
-    h1: 'Wholesale Hotel Amenities — Soap, Shampoo & Lotion',
-    title: 'Wholesale Hotel Amenities & Toiletries',
-    description: 'Bulk hotel guest amenities — 15g soap bars, 30mL shampoo, conditioner, body wash and lotion. Individually wrapped, case pricing for hotels and motels.',
-    intro: [
-      'Guest amenities are the least expensive way to signal the quality of a room. We supply a coordinated single-stay set — 15 gram soap bars and 30 mL shampoo, conditioner, body wash and lotion — so every bathroom in the property presents consistently.',
-      'Individually wrapped and sized for a single stay, which keeps housekeeping restocking simple and amenity cost per occupied room predictable.',
-      'Buying the full set together is the cheapest way to standardize a property. Send us your room count and average occupancy and we will work out how many cases a quarter actually costs you.',
-    ],
-    faq: [
-      { q: 'What\'s included in the amenity set?', a: '15 gram soap bars and 30 mL shampoo, conditioner, body wash, and lotion -- individually wrapped and sized for a single guest stay.' },
-      { q: 'Can I order just one item, like soap, instead of the full set?', a: 'Yes, each amenity is sold separately, though most properties order the full coordinated set so every bathroom presents consistently.' },
-      { q: 'How do I estimate how many cases I need per quarter?', a: 'Send us your room count and average occupancy and we will work out the case volume that actually covers a quarter, so you are not over- or under-ordering.' },
     ],
   },
 ];

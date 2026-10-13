@@ -2739,12 +2739,11 @@ function populateProductPage(product) {
   setText("breadcrumbProductName", product.productFamily || product.name);
 
   // Link the breadcrumb's category segment to its landing page, but only
-  // for categories that actually have one -- the thinner categories
-  // (Housekeeping, Furniture) are filterable in the catalog without
-  // warranting a page of their own.
+  // for categories that actually have one -- Housekeeping Supplies is
+  // filterable in the catalog without warranting a page of its own.
   const CATEGORY_PAGES = [
-    "bed-sheets-linens", "towels", "paper-products", "cleaning-chemicals",
-    "pillows-mattress-protectors", "trash-liners-can-liners", "gloves-ppe", "guest-amenities",
+    "paper-products", "towels", "bed-sheets-linens", "foodservice-disposables",
+    "foodservice-linens", "trash-liners-can-liners", "cleaning-chemicals", "gloves-ppe", "laundry-cleaning-chemicals",
   ];
   const catWrap = document.getElementById("breadcrumbCategoryWrap");
   const catLink = document.getElementById("breadcrumbCategory");
