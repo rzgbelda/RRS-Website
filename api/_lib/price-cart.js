@@ -327,7 +327,14 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
     const unitWeight = Number(row.weight);
     const lineWeight = Number.isFinite(unitWeight) && unitWeight > 0 ? unitWeight * qty : 0;
     totalWeightLb += lineWeight;
-    shipLines.push({ distributor: row.distributor || null, weightLb: lineWeight, length: row.length, width: row.width, height: row.height });
+    // caseQty: pieces per case from the name ("Case of 48 Pieces"). The
+    // stored dimensions are the CASE box, so they only apply to a full case
+    // (see usableDims() in shipping.js).
+    const caseMatch = String(row.name || '').match(/Case of (\d+)/i);
+    shipLines.push({
+      distributor: row.distributor || null, weightLb: lineWeight, length: row.length, width: row.width, height: row.height,
+      quantity: qty, caseQty: caseMatch ? Number(caseMatch[1]) : null,
+    });
 
     lines.push({ sku, name: row.name, quantity: qty, unitPrice });
   }

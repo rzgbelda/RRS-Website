@@ -66,6 +66,11 @@ const DEFAULT_BOX = { length: 14, width: 12, height: 10 };
 const UPS_MAX_LONGEST = 108, UPS_MAX_LENGTH_GIRTH = 165;
 
 function usableDims(l) {
+  // A product sold by the piece but listed by the case (InnStyle: "Case of
+  // 48 Pieces", dimensions = the case box) ordered in less than a full case
+  // does not ship in that box: rating 1 towel as a 24x18x13 carton charged
+  // ~$50 by dimensional weight. Below a full case, the standard carton is used.
+  if (l.caseQty > 1 && Number(l.quantity) < l.caseQty) return null;
   const d = [Number(l.length), Number(l.width), Number(l.height)];
   if (!d.every(x => Number.isFinite(x) && x > 0)) return null;
   const s = [...d].sort((a, b) => b - a);
