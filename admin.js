@@ -3617,6 +3617,11 @@ function cvtNormalizeValue(key, value, srcRow) {
   // separately. Only the casing is touched: Pack/Set/Box/Pair/Bucket are
   // genuinely different pack forms a buyer sees, not noise.
   if (key === "unit" && v) {
+    // InnStyle's 2026-10 masterlist abbreviates "EA": same unit as the
+    // "Each" already on the live products, and the case-pack rule below
+    // only recognises the full word -- unmapped, it skipped every EA row and
+    // the import put per-case weights and piece-count tiers back.
+    if (/^(ea|pc|pcs)$/i.test(v)) return "Each";
     return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
@@ -3946,7 +3951,7 @@ function cvtApplyCasePacks(rowObjs) {
   for (const r of rowObjs) {
     const m = String(r.name || "").match(CVT_CASE_PACK_RE);
     const unit = String(r.unit || "").trim().toLowerCase();
-    if (!m || !["each", "set", "pair", "piece"].includes(unit)) continue;
+    if (!m || !["each", "ea", "pc", "set", "pair", "piece"].includes(unit)) continue;
     const n = parseInt(m[1], 10);
     if (!(n > 1)) continue;
     const per = x => { const f = parseFloat(x); return Number.isFinite(f) ? String(Math.round(f / n * 1000) / 1000) : x; };
