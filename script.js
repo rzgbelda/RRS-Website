@@ -3576,6 +3576,10 @@ function setupAddToCartButtons() {
       const itemMoq = Math.max(1, parseInt(button.dataset.moq) || 1);
       if (qtyValue && button.id === "productAddToCart") {
         quantity = Math.max(itemMoq, parseInt(qtyValue.value || qtyValue.textContent) || itemMoq);
+        // Whole multiples of the minimum only, even if the box was never
+        // left (Enter key, or a click that didn't blur it first).
+        quantity = Math.ceil(quantity / itemMoq) * itemMoq;
+        if (String(qtyValue.value) !== String(quantity)) qtyValue.value = quantity;
       } else {
         // Adding straight from a catalog tile skips the quantity box, so
         // start at the minimum rather than at 1 -- otherwise a dozen-sold
