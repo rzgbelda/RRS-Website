@@ -8374,90 +8374,164 @@ async function deleteAutomation(id) {
    above) acts on.
 ============================================================ */
 
+// Funnel steps, in order. A session counts toward a step when it reached
+// that step OR ANY LATER ONE (its furthest step), so the funnel can only
+// narrow -- a visitor who adds to cart from a Google result without ever
+// opening /catalog still "browsed products". catalog_view and
+// product_view are one step for the same reason: most visitors land on a
+// product page directly, and as separate steps "Viewed the catalog" read
+// as a false drop-off. Every session counts as a visit, whatever its
+// first event was (a landing on /catalog logs catalog_view, not
+// page_view, and used to be missing from "Visited").
 const VISITOR_FUNNEL_STEPS = [
-  { type: "page_view",        label: "Visited the site" },
-  { type: "catalog_view",     label: "Viewed the catalog" },
-  { type: "product_view",     label: "Viewed a product" },
-  { type: "add_to_cart",      label: "Added to cart" },
-  { type: "checkout_start",   label: "Started checkout" },
-  { type: "checkout_complete", label: "Completed an order" },
+  { types: ["page_view", "catalog_view", "product_view", "add_to_cart", "checkout_start", "checkout_complete"], label: "Visited the site" },
+  { types: ["catalog_view", "product_view"], label: "Browsed products" },
+  { types: ["add_to_cart"],       label: "Added to cart" },
+  { types: ["checkout_start"],    label: "Started checkout" },
+  { types: ["checkout_complete"], label: "Completed an order" },
 ];
 
 async function renderVisitorInsightsTab() {
   const panel = document.getElementById("tab-visitor-insights");
   if (!panel) return;
-  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading…</div>`;
-
   panel.innerHTML = `
-   <div class="camp-page">
-    <div class="camp-header">
+   <div class="camp-page vi-page">
+    <div class="vi-header">
       <div>
-        <h1 class="camp-title">Visitor Insights</h1>
-        <p class="camp-subtitle">Where visitors drop off, and signed-in carts sitting untouched.</p>
+        <h1 class="vi-title">Visitor Insights</h1>
+        <p class="vi-subtitle">How visitors move from the site to an order, and signed-in customers with items left in their cart.</p>
       </div>
-      <div class="camp-header-actions">
+      <label class="vi-range">
+        <span>Period</span>
         <select id="viFunnelRange" class="camp-select" onchange="renderVisitorFunnel()">
           <option value="7">Last 7 days</option>
           <option value="30" selected>Last 30 days</option>
           <option value="90">Last 90 days</option>
         </select>
-      </div>
+      </label>
     </div>
 
-    <div class="camp-formdivider"><span>Visitor Funnel</span></div>
-    <div id="viFunnelBox" class="camp-funnel"><div class="a-empty" style="padding:30px;grid-column:1/-1">Loading…</div></div>
+    <div id="viKpis" class="vi-kpis"><div class="vi-loading">Loading…</div></div>
 
-    <div class="camp-formdivider" style="margin-top:28px"><span>Abandoned Carts</span></div>
-    <p class="camp-subtitle" style="margin:-6px 0 14px">Signed-in users with items still in their cart. The "Abandoned Cart Reminder" automation (see Automations in Campaigns) emails these automatically once a cart crosses its configured age.</p>
-    <div id="viCartsBox" class="camp-cartgrid"><div class="a-empty" style="padding:30px;grid-column:1/-1">Loading…</div></div>
-   </div>
-  `;
+    <section class="vi-card">
+      <div class="vi-card-head">
+        <h2>Visitor funnel</h2>
+        <p>Each step counts visitors who got at least that far.</p>
+      </div>
+      <div id="viFunnelBox" class="vi-funnel"><div class="vi-loading">Loading…</div></div>
+    </section>
+
+    <section class="vi-card">
+      <div class="vi-card-head">
+        <h2>Abandoned carts <span id="viCartCount" class="vi-chip"></span></h2>
+        <p>Signed-in customers with items still in their cart. The "Abandoned Cart Reminder" automation (Campaigns → Automations) emails them once a cart reaches its set age.</p>
+      </div>
+      <div id="viCartsBox" class="vi-carts"><div class="vi-loading">Loading…</div></div>
+    </section>
+   </div>`;
 
   renderVisitorFunnel();
   renderAbandonedCarts();
 }
 
+// PostgREST caps an unbounded select at 1000 rows -- with a few hundred
+// visitors a month, page views alone filled that and every later event
+// type (product views, orders) silently counted 0. Paged until exhausted.
+async function viFetchAllEvents(since) {
+  const PAGE = 1000, rows = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await window.sb.from("page_events")
+      .select("session_id, event_type")
+      .gte("occurred_at", since)
+      .order("occurred_at", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) return { error };
+    rows.push(...(data || []));
+    if (!data || data.length < PAGE) return { data: rows };
+    if (from > 200000) return { data: rows }; // safety stop
+  }
+}
+
+function viPct(n, d) {
+  if (!d) return "—";
+  const p = (n / d) * 100;
+  return (p > 0 && p < 1 ? p.toFixed(1) : Math.round(p)) + "%";
+}
+
 async function renderVisitorFunnel() {
   const box = document.getElementById("viFunnelBox");
+  const kpis = document.getElementById("viKpis");
   if (!box) return;
   const days = parseInt(document.getElementById("viFunnelRange")?.value || "30");
   const since = new Date(Date.now() - days * 86400000).toISOString();
+  box.innerHTML = `<div class="vi-loading">Loading…</div>`;
 
-  const { data, error } = await window.sb.from("page_events")
-    .select("session_id, event_type").gte("occurred_at", since);
+  const { data, error } = await viFetchAllEvents(since);
   if (error) {
-    box.innerHTML = `<p class="camp-dr-hint" style="grid-column:1/-1">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    box.innerHTML = `<p class="vi-error">Couldn't load: ${escHtml(error.message)}<br><span>If this says a table is missing, run the 20261009 migration.</span></p>`;
+    if (kpis) kpis.innerHTML = "";
     return;
   }
 
-  // Funnel counting is per-session (a visitor can load several pages
-  // without that meaning several "visits"), and deliberately NOT a strict
-  // "did they do step N before step N+1" funnel -- a visitor can view a
-  // product straight from a Google result with no catalog_view at all.
-  // Each step instead counts how many sessions reached at least that far,
-  // which is the honest shape of this site's real entry points.
-  const sessionsByStep = VISITOR_FUNNEL_STEPS.map(() => new Set());
-  for (const row of (data || [])) {
-    const idx = VISITOR_FUNNEL_STEPS.findIndex(s => s.type === row.event_type);
-    if (idx >= 0) sessionsByStep[idx].add(row.session_id);
+  // Furthest step reached per session.
+  const furthest = new Map();
+  for (const row of data) {
+    let idx = -1;
+    VISITOR_FUNNEL_STEPS.forEach((s, i) => { if (i > 0 && s.types.includes(row.event_type)) idx = i; });
+    if (idx < 0 && !VISITOR_FUNNEL_STEPS[0].types.includes(row.event_type)) continue;
+    const prev = furthest.get(row.session_id);
+    furthest.set(row.session_id, Math.max(prev ?? 0, Math.max(idx, 0)));
   }
-  const counts = sessionsByStep.map(s => s.size);
-  const maxCount = Math.max(1, counts[0]);
+  const counts = VISITOR_FUNNEL_STEPS.map((_, i) => [...furthest.values()].filter(f => f >= i).length);
+  const visitors = counts[0];
+
+  if (kpis) {
+    const tile = (label, value, sub) => `<div class="vi-kpi"><p class="vi-kpi-label">${label}</p><p class="vi-kpi-value">${value}</p><p class="vi-kpi-sub">${sub}</p></div>`;
+    kpis.innerHTML =
+      tile("Visitors", visitors.toLocaleString(), `last ${days} days`) +
+      tile("Added to cart", counts[2].toLocaleString(), `${viPct(counts[2], visitors)} of visitors`) +
+      tile("Orders", counts[4].toLocaleString(), `${viPct(counts[4], visitors)} conversion rate`) +
+      `<div class="vi-kpi" id="viKpiCarts"><p class="vi-kpi-label">Left in carts</p><p class="vi-kpi-value">…</p><p class="vi-kpi-sub">signed-in customers</p></div>`;
+    viUpdateCartKpi();
+  }
+
+  if (!visitors) {
+    box.innerHTML = `<p class="vi-empty-line">No visits recorded in the last ${days} days.</p>`;
+    return;
+  }
 
   box.innerHTML = VISITOR_FUNNEL_STEPS.map((step, i) => {
     const count = counts[i];
-    const pctOfTotal = Math.round((count / maxCount) * 100);
-    const dropFromPrev = i === 0 ? null : (counts[i - 1] ? Math.round((1 - count / counts[i - 1]) * 100) : null);
+    const width = Math.max(count ? 2 : 0, Math.round((count / visitors) * 100));
+    const fromPrev = i === 0 ? "" : (counts[i - 1]
+      ? `<span class="vi-step-conv${counts[i - 1] && count / counts[i - 1] < 0.1 ? " is-low" : ""}">${viPct(count, counts[i - 1])} of previous step</span>` : "");
     return `
-    <div class="camp-funnel-step">
-      <p class="camp-funnel-label">${escHtml(step.label)}</p>
-      <div class="camp-funnel-count">${count.toLocaleString()}</div>
-      <div class="camp-funnel-bar"><div class="camp-funnel-bar-fill" style="width:${pctOfTotal}%"></div></div>
-      ${dropFromPrev !== null
-        ? `<p class="camp-funnel-drop" style="color:${dropFromPrev > 50 ? "#dc2626" : "#94a3b8"}">&minus;${dropFromPrev}% from prior step</p>`
-        : `<p class="camp-funnel-drop" style="color:transparent">&nbsp;</p>`}
-    </div>`;
+      <div class="vi-step">
+        <div class="vi-step-top">
+          <span class="vi-step-num">${i + 1}</span>
+          <span class="vi-step-label">${escHtml(step.label)}</span>
+          <span class="vi-step-count">${count.toLocaleString()}</span>
+        </div>
+        <div class="vi-step-bar"><div style="width:${width}%"></div></div>
+        <div class="vi-step-meta"><span>${i === 0 ? "100% of visitors" : viPct(count, visitors) + " of visitors"}</span>${fromPrev}</div>
+      </div>`;
   }).join("");
+}
+
+let _viCartsTotal = null;
+function viUpdateCartKpi() {
+  const el = document.getElementById("viKpiCarts");
+  if (!el || _viCartsTotal == null) return;
+  el.querySelector(".vi-kpi-value").textContent = "$" + _viCartsTotal.value.toFixed(2);
+  el.querySelector(".vi-kpi-sub").textContent = `${_viCartsTotal.carts} cart${_viCartsTotal.carts === 1 ? "" : "s"} · signed-in customers`;
+}
+
+function viAgo(iso) {
+  const ms = Date.now() - new Date(iso).getTime();
+  const h = Math.floor(ms / 3600000), d = Math.floor(h / 24);
+  if (h < 1) return "less than an hour ago";
+  if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  return `${d} day${d === 1 ? "" : "s"} ago`;
 }
 
 async function renderAbandonedCarts() {
@@ -8468,27 +8542,15 @@ async function renderAbandonedCarts() {
     .select("user_id, product_name, quantity, price_snapshot, updated_at")
     .order("updated_at", { ascending: false });
   if (error) {
-    box.innerHTML = `<p class="camp-dr-hint" style="grid-column:1/-1">Couldn't load: ${escHtml(error.message)}<br><span style="font-size:11px">If this says a table is missing, run the 20261009 migration.</span></p>`;
+    box.innerHTML = `<p class="vi-error">Couldn't load: ${escHtml(error.message)}<br><span>If this says a table is missing, run the 20261009 migration.</span></p>`;
     return;
   }
 
-  if (!data || !data.length) {
-    box.innerHTML = `<div class="camp-empty" style="grid-column:1/-1">
-      <div class="camp-empty-icon">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-      </div>
-      <h3>No abandoned carts</h3>
-      <p>No signed-in user currently has items sitting in their cart.</p>
-    </div>`;
-    return;
-  }
-
-  // Grouped client-side by user: cart_mirror is one row per SKU, but this
-  // view is about a user's cart as a whole (total value, how long since
-  // they last touched it), the same unit the cart_abandoned automation
-  // itself reasons about.
+  // Grouped by user: cart_mirror is one row per SKU, but this view is about
+  // a customer's cart as a whole (total value, how long since they last
+  // touched it), the same unit the cart_abandoned automation reasons about.
   const byUser = new Map();
-  for (const row of data) {
+  for (const row of (data || [])) {
     if (!byUser.has(row.user_id)) byUser.set(row.user_id, { items: [], lastUpdated: row.updated_at });
     const bucket = byUser.get(row.user_id);
     bucket.items.push(row);
@@ -8496,25 +8558,52 @@ async function renderAbandonedCarts() {
   }
 
   const userIds = [...byUser.keys()];
-  const { data: profiles } = await window.sb.from("profiles").select("id, full_name, email").in("id", userIds);
+  const { data: profiles } = userIds.length
+    ? await window.sb.from("profiles").select("id, full_name, email").in("id", userIds)
+    : { data: [] };
   const profileById = new Map((profiles || []).map(p => [p.id, p]));
 
   const rows = [...byUser.entries()].map(([userId, bucket]) => {
     const profile = profileById.get(userId);
     const value = bucket.items.reduce((sum, i) => sum + (Number(i.price_snapshot) || 0) * (Number(i.quantity) || 1), 0);
-    const itemSummary = bucket.items.map(i => `${i.quantity} x ${escHtml(i.product_name)}`).join(", ");
-    return { userId, profile, value, itemSummary, lastUpdated: bucket.lastUpdated, itemCount: bucket.items.length };
+    const units = bucket.items.reduce((sum, i) => sum + (Number(i.quantity) || 1), 0);
+    return { userId, profile, value, units, items: bucket.items, lastUpdated: bucket.lastUpdated };
   }).sort((a, b) => new Date(b.lastUpdated) - new Date(a.lastUpdated));
 
-  box.innerHTML = rows.map(r => `
-    <div class="camp-cart-card">
-      <div class="camp-cart-card-top">
-        <span class="camp-cart-name">${escHtml(r.profile?.full_name || r.profile?.email || "Unknown user")}</span>
-        <span class="camp-cart-value">$${r.value.toFixed(2)}</span>
-      </div>
-      <p class="camp-cart-items">${r.itemSummary}</p>
-      <p class="camp-cart-meta">${r.itemCount} item${r.itemCount === 1 ? "" : "s"} &middot; Last touched ${fmt(r.lastUpdated)}</p>
-    </div>`).join("");
+  _viCartsTotal = { value: rows.reduce((s, r) => s + r.value, 0), carts: rows.length };
+  viUpdateCartKpi();
+  const chip = document.getElementById("viCartCount");
+  if (chip) chip.textContent = rows.length ? String(rows.length) : "";
+
+  if (!rows.length) {
+    box.innerHTML = `<p class="vi-empty-line">No signed-in customer has items sitting in their cart right now.</p>`;
+    return;
+  }
+
+  box.innerHTML = rows.map(r => {
+    const name = r.profile?.full_name || "";
+    const email = r.profile?.email || "";
+    const title = name || email || "Unknown customer";
+    const items = r.items.map(i => `<li><span class="vi-qty">${escHtml(i.quantity)}×</span> ${escHtml(i.product_name)}</li>`).join("");
+    return `
+      <article class="vi-cart">
+        <div class="vi-cart-head">
+          <div class="vi-cart-who">
+            <span class="vi-avatar">${escHtml((title.trim()[0] || "?").toUpperCase())}</span>
+            <div>
+              <p class="vi-cart-name">${escHtml(title).replace("@", "@<wbr>")}</p>
+              ${name && email ? `<p class="vi-cart-email">${escHtml(email).replace("@", "@<wbr>")}</p>` : ""}
+            </div>
+          </div>
+          <p class="vi-cart-value">$${r.value.toFixed(2)}</p>
+        </div>
+        <ul class="vi-cart-items">${items}</ul>
+        <div class="vi-cart-foot">
+          <span>${r.units} unit${r.units === 1 ? "" : "s"} · last touched ${viAgo(r.lastUpdated)}</span>
+          ${email ? `<a class="vi-cart-mail" href="mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent("Your Room Ready Supply cart")}">Email</a>` : ""}
+        </div>
+      </article>`;
+  }).join("");
 }
 
 /* ============================================================
