@@ -2965,7 +2965,9 @@ function populateProductPage(product) {
     }
     const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0 || (isCasePack && m === 1));
     // A case pack's price is per piece/set/pair, not per case.
-    const unitLower = isCasePack ? moqUnitWord(product) : unitWord.toLowerCase();
+    // A dozen-sold product (Starlinen) is priced per dozen and its counts
+    // are in dozens: "1 case = 6 dozen", not "1 case = 6 case".
+    const unitLower = isCasePack || isSoldByDozen(product) ? moqUnitWord(product) : unitWord.toLowerCase();
     // What the tiers count: whole pallets for a case-priced pallet product
     // (NPS), whole cases for a dozen-priced one (Starlinen) or a case pack.
     const orderWord = isSoldByDozen(product) || isCasePack ? "Case" : "Pallet";
@@ -6563,38 +6565,47 @@ function updateMiniCart() {
   // Named after the specific product it's talking about, so "add 4 more"
   // is an instruction the customer can actually act on and that actually
   // produces the promised price.
+  //
+  // Driven only by this product's own tiers and selling unit. It used to
+  // assume every quantity was cases and that 30 was the top tier, so 30
+  // PIECES of a per-piece listing (tiers at 1,800 / 9,000 pieces) said
+  // "You've reached 30+ case pricing" while still, correctly, charging the
+  // first-tier price. A tier counts only if it lowers the price.
   let tierNote = "";
-  // 30+ cases is the best volume price the drawer points to (final update
-  // package, 2026-10-13: 30+ is the top tier in the cart). Pooled groups
-  // have their own tiers, so they're only ever pointed at the next tier.
-  const BEST_VOLUME_CASES = 30;
-  if (!topIsGroup && topLineQty >= BEST_VOLUME_CASES) {
-    tierNote = `<p class="mc-tier mc-tier-ship">
-        You've reached 30+ case pricing &mdash; our best volume price.
-      </p>`;
-  } else if (topLineQty > 0) {
-    // Next breakpoint comes from this product's own thresholds (see
-    // getTierPrice); only tiers that actually lower the price count. If the
-    // 30+ best volume price is closer, or the product has no further tier, point there.
-    const currentRate = getTierPrice(topLine, cart);
-    const nextTierQty = [1, 2, 3]
+  if (topLineQty > 0) {
+    const unitWord = topIsGroup ? (topLine.unit || "unit").toLowerCase().replace(/s$/, "") : moqUnitWord(topLine);
+    const plural = n => (unitWord === "dozen" ? unitWord : unitWord + (n === 1 ? "" : "s"));
+    const casePack = Number((String(topLine.name || "").match(/Case of (\d+)/i) || [])[1]) || 0;
+    const firstRate = cleanPrice(topLine.price1) || cleanPrice(topLine.price);
+    const tiers = [1, 2, 3]
       .map(n => ({ min: tierMinQty(topLine, `tier${n}_min_qty`, `tier${n}MinQty`), price: cleanPrice(topLine[`price${n}`]) }))
-      .filter(t => t.min && t.min > topLineQty && t.price && t.price < currentRate)
-      .reduce((lo, t) => Math.min(lo, t.min), Infinity);
-    const target = topIsGroup ? nextTierQty : Math.min(nextTierQty, BEST_VOLUME_CASES);
-    const toNext = target - topLineQty;
-    const unitWord = topIsGroup ? (topLine.unit || "unit").toLowerCase().replace(/s$/, "") : "case";
-    const nextLabel = !topIsGroup && target === BEST_VOLUME_CASES
-      ? "30+ case pricing &mdash; our best volume price"
-      : `${target}+ ${unitWord} pricing`;
+      .filter(t => t.min && t.price && t.price < firstRate);
+    const bestRate = tiers.reduce((lo, t) => Math.min(lo, t.price), Infinity);
+    const currentRate = getTierPrice(topLine, cart);
+    const tierLabel = t => {
+      const qty = casePack > 1 && unitWord === "piece" && t.min % casePack === 0
+        ? `${(t.min / casePack).toLocaleString()}+ case`
+        : `${t.min.toLocaleString()}+ ${unitWord}`;
+      return `${qty} pricing ($${t.price.toFixed(2)}/${unitWord})` +
+        (t.price === bestRate ? " &mdash; our best volume price" : "");
+    };
     const shortName = escapeMiniCart((topLine.name || "this item").split(",")[0]).slice(0, 38);
     const what = topIsGroup
       ? `from the <strong>${escapeMiniCart(topLine.moqGroup)}</strong> Mix &amp; Match group`
       : `of <strong>${shortName}</strong>`;
-    if (Number.isFinite(target)) {
+    const next = tiers
+      .filter(t => t.min > topLineQty && t.price < currentRate)
+      .sort((x, y) => x.min - y.min)[0];
+    if (tiers.length && currentRate <= bestRate) {
+      const best = tiers.find(t => t.price === bestRate);
+      tierNote = `<p class="mc-tier mc-tier-ship">
+          You've reached ${tierLabel(best)}.
+        </p>`;
+    } else if (next) {
+      const toNext = next.min - topLineQty;
       tierNote = `<p class="mc-tier">
-          Add <strong>${toNext} more ${unitWord}${toNext === 1 ? "" : "s"}</strong> ${what}
-          to reach ${nextLabel}.
+          Add <strong>${toNext.toLocaleString()} more ${plural(toNext)}</strong> ${what}
+          to reach ${tierLabel(next)}.
         </p>`;
     }
   }
@@ -6613,7 +6624,7 @@ function updateMiniCart() {
 
   const rows = cart.map(i => {
     const qty = Number(i.quantity) || 0;
-    const unit = isSoldByDozen(i) ? "dz" : "cs";
+    const unit = { dozen: "dz", case: "cs", piece: "pc" }[moqUnitWord(i)] || moqUnitWord(i);
     return `
       <li class="mc-row">
         <img src="${i.image || "/assets/img/product-placeholder.svg"}" alt=""

@@ -3758,6 +3758,7 @@ function cvtBuildRows() {
     rowObjs.push(obj);
   });
   const casePackCount = cvtApplyCasePacks(rowObjs);
+  cvtApplyDozenTiers(rowObjs);
   return { headers, rowObjs, casePackCount, autoVariants, derived };
 }
 
@@ -3963,6 +3964,31 @@ function cvtApplyCasePacks(rowObjs) {
   }
   // Every other row in a file that has case packs is a single item.
   if (changed) for (const r of rowObjs) if (!String(r.moq || "").trim()) r.moq = "1";
+  return changed;
+}
+
+/* Dozen-priced feeds (Starlinen). The masterlist says "Dz", which the site
+   does not read as dozen (it only knows "Dozen"), and gives the 6 / 30
+   volume breaks in CASES while the cart counts the quantity in dozens. A
+   pillowcase with 6 dozen per case then got its "6 cases" price at 6 dozen
+   (1 case). Unit becomes "Dozen", and when a case holds more than one dozen
+   (minimum order = dozens per case) breaks still in case counts (tier 2 at
+   most 6, tier 3 at most 30) are multiplied out to dozens. Already-converted
+   values are left alone. */
+function cvtApplyDozenTiers(rowObjs) {
+  let changed = 0;
+  for (const r of rowObjs) {
+    const unit = String(r.unit || "").trim().toLowerCase();
+    if (unit !== "dz" && unit !== "dozen") continue;
+    r.unit = "Dozen";
+    const perCase = parseInt(r.moq, 10);
+    if (perCase > 1) {
+      const t2 = parseInt(r.tier2_min_qty, 10), t3 = parseInt(r.tier3_min_qty, 10);
+      if (t2 > 0 && t2 <= 6) r.tier2_min_qty = String(t2 * perCase);
+      if (t3 > 0 && t3 <= 30) r.tier3_min_qty = String(t3 * perCase);
+    }
+    changed++;
+  }
   return changed;
 }
 
