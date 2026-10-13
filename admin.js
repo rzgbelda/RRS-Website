@@ -2542,17 +2542,21 @@ function cvtRenderMappingGrid() {
     </div>
   `).join("");
   cvtUpdateMappedCount();
+  cvtRenderPreview();
 }
 
 function cvtUpdateMapping(key, val) {
   _cvtMapping[key] = val;
   cvtUpdateMappedCount();
+  cvtRenderPreview();
 }
 
 function cvtUpdateMappedCount() {
   const count = CVT_COLS.filter(c => _cvtMapping[c.key]).length;
   const el = document.getElementById("cvtMappedCount");
   if (el) el.textContent = count;
+  const tot = document.getElementById("cvtTotalCols");
+  if (tot) tot.textContent = CVT_COLS.length;
 }
 
 /* Derives product_family / variant_label from a product NAME, so a vendor
@@ -3678,8 +3682,34 @@ function cvtBuildAndDownload() {
   }
 
   const BOM = "﻿";
-  const headers = CVT_COLS.map(c => c.key);
+  const { headers, rowObjs, casePackCount, autoVariants, derived } = cvtBuildRows();
   const lines = [headers.map(h => `"${h}"`).join(",")];
+  for (const obj of rowObjs) {
+    lines.push(headers.map(h => `"${String(obj[h] ?? "").replace(/"/g,'""')}"`).join(","));
+  }
+  if (casePackCount) showToast(`Case-pack rules applied to ${casePackCount} rows (per-piece weight, case tiers, minimums)`);
+
+  if (autoVariants) {
+    const groupedRows = [...derived.values()].filter(d => d.family).length;
+    const famTotal = new Set([...derived.values()].filter(d => d.family).map(d => d.family)).size;
+    if (groupedRows) {
+      showToast(`Auto-grouped ${groupedRows} rows into ${famTotal} size-variant families`);
+    }
+  }
+  const csv  = BOM + lines.join("\r\n");
+  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href = url; a.download = cvtDownloadFileName(); a.click();
+  URL.revokeObjectURL(url);
+  showCvtStep(3);
+}
+
+/* The converted rows, exactly as the downloaded CSV will contain them. Shared
+   by the download and the on-screen preview (cvtRenderPreview), so what the
+   preview shows is what gets imported. */
+function cvtBuildRows() {
+  const headers = CVT_COLS.map(c => c.key);
 
   // Auto-derive the variant columns only when the vendor file didn't supply
   // them -- an explicit mapping always wins over anything guessed here.
@@ -3723,25 +3753,133 @@ function cvtBuildAndDownload() {
     rowObjs.push(obj);
   }
   const casePackCount = cvtApplyCasePacks(rowObjs);
-  for (const obj of rowObjs) {
-    lines.push(headers.map(h => `"${String(obj[h] ?? "").replace(/"/g,'""')}"`).join(","));
-  }
-  if (casePackCount) showToast(`Case-pack rules applied to ${casePackCount} rows (per-piece weight, case tiers, minimums)`);
+  return { headers, rowObjs, casePackCount, autoVariants, derived };
+}
 
-  if (autoVariants) {
-    const groupedRows = [...derived.values()].filter(d => d.family).length;
-    const famTotal = new Set([...derived.values()].filter(d => d.family).map(d => d.family)).size;
-    if (groupedRows) {
-      showToast(`Auto-grouped ${groupedRows} rows into ${famTotal} size-variant families`);
-    }
+/* ── Converter preview ──────────────────────────────────────────────
+   Shows, before anything is downloaded, what each product will look like
+   once imported: price and tier ladder, cost and margin, pack and weight,
+   and a ready / check / problem verdict per row with the reasons. Built
+   from cvtBuildRows(), the same rows the download writes. */
+let _cvtPreviewFilter = "all";
+
+function cvtCheckRow(r) {
+  const errors = [], warns = [];
+  const num = v => { const n = parseFloat(v); return Number.isFinite(n) ? n : null; };
+  const price = num(r.price);
+  if (!String(r.name || "").trim()) errors.push("No name — row will be skipped");
+  if (!(price > 0)) errors.push("No price — row will be skipped");
+  if (/�/.test(r.name || "")) errors.push("Broken characters (�) in the name");
+  if (!String(r.distributor || "").trim()) errors.push("No supplier — delivery can't be quoted, so it can't be bought");
+  if (!String(r.sku || "").trim()) warns.push("No SKU — every import adds it again as a new product");
+  if (!String(r.category_name || "").trim()) warns.push("No category — won't appear on any category page");
+  if (!num(r.weight)) warns.push("No weight — delivery price will be inaccurate");
+  if (!String(r.case_qty || "").trim()) warns.push("Case quantity missing");
+  if (!String(r.image_url || "").trim()) warns.push("No image");
+  const t1 = num(r.price_tier1), t2 = num(r.price_tier2), t3 = num(r.price_tier3);
+  if ((t2 && t1 && t2 > t1) || (t3 && t2 && t3 > t2) || (t3 && t1 && !t2 && t3 > t1)) warns.push("Tier prices go up instead of down");
+  const cost = num(r.cost_per_case);
+  if (price > 0 && cost > 0) {
+    const m = (price - cost) / price;
+    if (m < 0) errors.push(`Price is below cost (${Math.round(m * 100)}% margin)`);
+    // Price == cost is the signature of Price mapped to the supplier's own
+    // "Price" column (their cost to RRS) instead of "Selling Price".
+    else if (m < 0.005) errors.push("Sells at cost (0% margin) — is Price mapped to the supplier's cost column instead of Selling Price?");
+    else if (m < 0.15) warns.push(`Low margin: ${Math.round(m * 100)}%`);
   }
-  const csv  = BOM + lines.join("\r\n");
-  const blob = new Blob([csv], { type:"text/csv;charset=utf-8;" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href = url; a.download = cvtDownloadFileName(); a.click();
-  URL.revokeObjectURL(url);
-  showCvtStep(3);
+  return { errors, warns };
+}
+
+function cvtPreviewFilter(f) {
+  _cvtPreviewFilter = f;
+  cvtRenderPreview();
+}
+
+function cvtRenderPreview() {
+  const box = document.getElementById("cvtPreview");
+  if (!box) return;
+  if (!_cvtSourceRows.length) { box.innerHTML = ""; return; }
+  let built;
+  try { built = cvtBuildRows(); }
+  catch (err) { box.innerHTML = `<div style="padding:12px;color:#b91c1c">Preview failed: ${escHtml(err.message)}</div>`; return; }
+
+  const money = v => { const n = parseFloat(v); return Number.isFinite(n) ? "$" + n.toFixed(2) : ""; };
+  const rows = built.rowObjs.map((r, i) => ({ r, i, c: cvtCheckRow(r) }));
+  const nErr = rows.filter(x => x.c.errors.length).length;
+  const nWarn = rows.filter(x => !x.c.errors.length && x.c.warns.length).length;
+  const nOk = rows.length - nErr - nWarn;
+  const mappingProblems = cvtPriceMappingProblems(_cvtMapping);
+  const margins = rows.map(x => { const p = parseFloat(x.r.price), c = parseFloat(x.r.cost_per_case); return p > 0 && c > 0 ? (p - c) / p : null; }).filter(m => m != null);
+  const families = new Set(rows.map(x => x.r.product_family).filter(Boolean)).size;
+  const suppliers = [...new Set(rows.map(x => x.r.distributor).filter(Boolean))];
+
+  const pill = (n, label, fg, bg, f) => `<button type="button" onclick="cvtPreviewFilter('${f}')" style="border:1.5px solid ${_cvtPreviewFilter === f ? fg : "transparent"};background:${bg};color:${fg};border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:700;cursor:pointer">${label} ${n}</button>`;
+
+  const shown = rows.filter(x => _cvtPreviewFilter === "all" ? true
+    : _cvtPreviewFilter === "err" ? x.c.errors.length
+    : _cvtPreviewFilter === "warn" ? (!x.c.errors.length && x.c.warns.length)
+    : (!x.c.errors.length && !x.c.warns.length));
+
+  const tierLadder = r => {
+    const steps = [[r.tier1_min_qty || 1, r.price_tier1 || r.price], [r.tier2_min_qty, r.price_tier2], [r.tier3_min_qty, r.price_tier3]]
+      .filter(([q, p]) => q && p);
+    if (!steps.length) return "";
+    // Ranges as the product page shows them: "1–5 cases · 6–29 · 30+".
+    // Case packs priced per piece (InnStyle) count in pieces.
+    const perPiece = /case of \d+/i.test(r.name || "") && /^(each|set|pair|piece)$/i.test(String(r.unit || "").trim());
+    return steps.map(([q, p], k) => {
+      const lo = parseInt(q, 10), next = steps[k + 1] ? parseInt(steps[k + 1][0], 10) : null;
+      const range = next ? (next - 1 > lo ? `${lo}–${next - 1}` : `${lo}`) : `${lo}+`;
+      return `<span style="white-space:nowrap">${range}${k === 0 ? (perPiece ? " pcs" : " cases") : ""}: <b>${money(p)}</b></span>`;
+    }).join(" · ");
+  };
+
+  const rowHtml = ({ r, i, c }) => {
+    const status = c.errors.length ? ["❌", "#fef2f2"] : c.warns.length ? ["⚠️", "#fffbeb"] : ["✅", "#fff"];
+    const cost = parseFloat(r.cost_per_case), price = parseFloat(r.price);
+    const margin = price > 0 && cost > 0 ? Math.round((price - cost) / price * 100) + "%" : "";
+    const pack = [r.case_qty ? `${escHtml(r.case_qty)} per case` : "", r.unit ? escHtml(r.unit) : "", r.weight ? `${escHtml(r.weight)} lb` : "",
+      r.length && r.width && r.height ? `${escHtml(r.length)}×${escHtml(r.width)}×${escHtml(r.height)} in` : "",
+      parseInt(r.moq) > 1 ? `<b>min ${escHtml(r.moq)}</b>` : ""].filter(Boolean).join(" · ");
+    const issues = [...c.errors.map(t => `<div style="color:#b91c1c">● ${escHtml(t)}</div>`), ...c.warns.map(t => `<div style="color:#92400e">● ${escHtml(t)}</div>`)].join("");
+    return `<tr style="background:${status[1]};border-top:1px solid #eef1f5;vertical-align:top">
+      <td style="padding:9px 8px;text-align:center;font-size:15px">${status[0]}<div style="font-size:10.5px;color:#94a3b8">#${i + 2}</div></td>
+      <td style="padding:9px 8px;min-width:240px">
+        <div style="font-weight:700;color:#0f2b50;line-height:1.35">${escHtml(r.name || "(no name)")}</div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:2px">${escHtml(r.sku || "no SKU")} · ${escHtml(r.category_name || "no category")} · ${escHtml(r.distributor || "no supplier")}</div>
+        ${r.product_family ? `<div style="font-size:11.5px;color:#64748b">Grouped in “${escHtml(r.product_family)}” as “${escHtml(r.variant_label)}”</div>` : ""}
+      </td>
+      <td style="padding:9px 8px;white-space:nowrap"><div style="font-size:15px;font-weight:800;color:#0f2b50">${money(r.price) || "—"}</div><div style="font-size:11.5px;color:#475569;white-space:normal;max-width:210px">${tierLadder(r)}</div></td>
+      <td style="padding:9px 8px;font-size:12px;color:#475569;white-space:nowrap">${money(r.cost_per_case) || "—"}${margin ? `<div style="font-weight:700;color:${parseFloat(margin) < 15 ? "#b45309" : "#15803d"}">${margin} margin</div>` : ""}</td>
+      <td style="padding:9px 8px;font-size:12px;color:#475569;max-width:200px">${pack || "—"}</td>
+      <td style="padding:9px 8px;font-size:12px;max-width:260px">${issues || `<span style="color:#15803d">Ready</span>`}</td>
+    </tr>`;
+  };
+
+  box.innerHTML = `
+    <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:22px;background:#fff">
+      <div style="padding:14px 16px;border-bottom:1px solid #eef1f5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between">
+        <div>
+          <div style="font-size:14px;font-weight:800;color:#0f2b50">Preview — what will be imported</div>
+          <div style="font-size:12px;color:#64748b;margin-top:2px">${rows.length} products · supplier: ${escHtml(suppliers.join(", ") || "none")} · ${families} size groups${margins.length ? ` · margin ${Math.round(Math.min(...margins) * 100)}%–${Math.round(Math.max(...margins) * 100)}%` : ""}${built.casePackCount ? ` · case-pack rules on ${built.casePackCount}` : ""}</div>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          ${pill(rows.length, "All", "#0f2b50", "#f1f5f9", "all")}
+          ${pill(nOk, "✅ Ready", "#15803d", "#ecfdf3", "ok")}
+          ${pill(nWarn, "⚠️ Check", "#92400e", "#fffbeb", "warn")}
+          ${pill(nErr, "❌ Problem", "#b91c1c", "#fef2f2", "err")}
+        </div>
+      </div>
+      ${mappingProblems.length ? `<div style="padding:10px 16px;background:#fef2f2;color:#b91c1c;font-size:12.5px;font-weight:700;border-bottom:1px solid #fecaca">${mappingProblems.map(escHtml).join("<br>")}</div>` : ""}
+      <div style="max-height:560px;overflow:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead><tr style="background:#f8fafc;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.04em;position:sticky;top:0">
+            <th style="padding:8px">Row</th><th style="padding:8px">Product</th><th style="padding:8px">Price · tiers</th><th style="padding:8px">Cost</th><th style="padding:8px">Pack · weight</th><th style="padding:8px">Checks</th>
+          </tr></thead>
+          <tbody>${shown.map(rowHtml).join("") || `<tr><td colspan="6" style="padding:16px;color:#64748b">No rows in this view.</td></tr>`}</tbody>
+        </table>
+      </div>
+    </div>`;
 }
 
 /* Case packs priced per piece (InnStyle: "Prestige Ringspun Cotton Bath

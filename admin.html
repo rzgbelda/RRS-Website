@@ -808,13 +808,17 @@
         <div id="cvtStep2" class="csv-step-panel" style="display:none">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <div>
-              <p style="font-size:13px;color:#888">File: <strong id="cvtFileName"></strong> · <span id="cvtRowCountLabel"></span> rows · <span id="cvtMappedCount"></span> / 15 columns mapped</p>
+              <p style="font-size:13px;color:#888">File: <strong id="cvtFileName"></strong> · <span id="cvtRowCountLabel"></span> rows · <span id="cvtMappedCount"></span> / <span id="cvtTotalCols"></span> columns mapped</p>
             </div>
             <button class="csv-change-file-btn" onclick="showCvtStep(1)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               Change File
             </button>
           </div>
+          <!-- What the converted products will look like (cvtRenderPreview). -->
+          <div id="cvtPreview"></div>
+          <p style="font-size:14px;font-weight:800;color:#0f2b50;margin:0 0 4px">Column mapping</p>
+          <p style="font-size:12px;color:#64748b;margin:0 0 12px">Which column of your file fills each RRS field. The preview above updates as you change these.</p>
           <div id="cvtMappingGrid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:24px"></div>
           <button class="a-btn-primary" style="width:auto;padding:10px 28px" onclick="cvtBuildAndDownload()">
             &darr; Download Converted CSV
@@ -3623,7 +3627,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=114"></script>
+<script src="admin.js?v=115"></script>
 <script src="admin-seo.js?v=5"></script>
 <script>
   function toggleSidebar() {
