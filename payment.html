@@ -360,7 +360,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20261013p"></script>
+  <script src="script.js?v=20261013q"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -758,6 +758,9 @@
           // products table. See api/create-payment-intent.js.
           items: cartLineItems(),
           state: checkout.state || '',
+          // Signed delivery price from checkout (api/_lib/quote-token.js):
+          // charges the delivery the buyer was shown, not a fresh re-quote.
+          shipping_token: (function () { try { return localStorage.getItem('rrs_ship_token') || undefined; } catch (e) { return undefined; } })(),
           metadata: {
             order_number: orderNumber,
             customer_name: checkout.contact || '',

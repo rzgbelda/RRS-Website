@@ -2,6 +2,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { getTaxRate } = require('../../tax-rates');
 const { computeShipping, groupByDistributor, classifyShipment } = require('./shipping');
 const { deliveryDaysForCart } = require('./delivery-days');
+const { issueShippingToken, readShippingToken } = require('./quote-token');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -164,7 +165,10 @@ async function loadVendors(supabase, shipLines) {
   return map;
 }
 
-async function priceCart(items, state, fulfillmentMethod, destination) {
+// opts.shippingToken: a signed delivery-price ticket from an earlier quote
+// of this same cart + ZIP (_lib/quote-token.js); while valid its amount is
+// used instead of asking WARP again, so the price shown is the price charged.
+async function priceCart(items, state, fulfillmentMethod, destination, opts = {}) {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, error: 'Cart is empty.' };
   }
@@ -392,10 +396,14 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   // (create-payment-intent.js) and Eric is emailed (_lib/shipping-alert.js).
   const warpOn = String(process.env.WARP_RATING_ENABLED || '').toLowerCase() === 'true';
   let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'unpriced'
+  let ticketShipping = null;
   if (!isPickup && warpOn) {
     if (!dest) {
       shipping = 0;
       shippingUnavailable = 'zip';
+    } else if ((ticketShipping = readShippingToken(opts.shippingToken, wanted, dest.zip)) != null) {
+      shipping = ticketShipping;
+      console.log('[shipping] reused quoted delivery', shipping, 'for ZIP', dest.zip);
     } else {
       const vendorsBySlug = await loadVendors(supabase, shipLines);
       const { rateWarp } = require('./warp');
@@ -457,6 +465,8 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
     ok: true,
     needsFreightQuote,
     shippingUnavailable,
+    // Ticket for this exact delivery price (WARP only), sent back by the page.
+    shippingToken: warpOn && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, dest.zip, shipping) : null,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,

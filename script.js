@@ -4560,6 +4560,15 @@ function rememberShipZip(zip) {
   try { localStorage.setItem('rrs_ship_zip', zip); } catch (e) {}
 }
 
+// The server's signed ticket for the last delivery price it quoted
+// (api/_lib/quote-token.js). Sent with every later quote and with the
+// payment request, so the same cart + ZIP keeps the same delivery price
+// from cart to checkout to payment. The server ignores it for any other
+// cart or ZIP, or once it expires.
+function savedShipToken() {
+  try { return localStorage.getItem('rrs_ship_token') || ''; } catch (e) { return ''; }
+}
+
 function fetchCheckoutQuote() {
   const zipRaw = (document.getElementById('checkout-zip')?.value
     || document.getElementById('cart-zip')?.value
@@ -4587,6 +4596,7 @@ function fetchCheckoutQuote() {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       quote_only: true,
+      shipping_token: savedShipToken() || undefined,
       items,
       state,
       metadata: { fulfillment_method: 'ship', shipping_address: JSON.stringify(addr) },
@@ -4595,6 +4605,7 @@ function fetchCheckoutQuote() {
     .then(r => r.json())
     .catch(() => null);
   _shipQuoteCache[key] = p;
+  p.then(d => { if (d && d.shippingToken) { try { localStorage.setItem('rrs_ship_token', d.shippingToken); } catch (e) {} } });
   // A failed lookup, an error or an unpriced delivery is not cached, so the
   // next render (or the buyer trying again) asks again.
   p.then(d => { if (!d || d.error || d.shippingUnavailable === 'unpriced') delete _shipQuoteCache[key]; });
