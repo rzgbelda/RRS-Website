@@ -47,7 +47,9 @@ function customerEmailHtml(order) {
   var tax = order.tax_amount || 0;
   var subtotal = amountTotal - tax;
   var itemRows = buildItemRows(order.items);
-  var deliveryEstimate = getDeliveryEstimateRange();
+  // Per-supplier business days when the caller has them (see
+  // api/_lib/delivery-days.js); otherwise the flat fallback.
+  var deliveryEstimate = getDeliveryEstimateRange(null, order.delivery_days);
   // freight_fee is in whole dollars (not cents, unlike amount_total/tax_amount
   // above) -- see orderData.freight_fee in api/stripe-webhook.js. Not every
   // caller's DB select includes this column (the existing-order fallback

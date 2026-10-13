@@ -92,9 +92,9 @@ module.exports = async (req, res) => {
       // Volume (freight) orders get no delivery figure: they go to a custom
       // quote instead (see needsFreightQuote in _lib/price-cart.js).
       if (q.needsFreightQuote) {
-        return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal });
+        return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal, deliveryDays: q.deliveryDays });
       }
-      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal });
+      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, deliveryDays: q.deliveryDays });
     }
   } catch (err) {
     console.error('[quote]', err && err.message);
@@ -168,6 +168,10 @@ module.exports = async (req, res) => {
         // Same reasoning as tax_amount: the webhook writes orders.shipping
         // from the pass that set the charge, not from a browser figure.
         shipping_amount: String(Math.round(priced.shipping * 100)),
+        // Per-supplier delivery estimate (business days after payment), so
+        // the confirmation email shows the same range as checkout.
+        delivery_days_min: String(priced.deliveryDays.min),
+        delivery_days_max: String(priced.deliveryDays.max),
       },
     });
 

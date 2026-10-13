@@ -401,7 +401,7 @@
            wording shown (see api/create-order.js / deliveryAckText) so
            there is evidence of what was on screen, even though it's no
            longer gating submission. -->
-      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I understand my order is confirmed when my payment is accepted, and it is sent to the supplier within 1&ndash;2 business days. Delivery time is additional and varies by destination. Delivery is quoted per shipment and billed on my invoice, and delivery dates are estimates &mdash; carrier delays, weather, holidays, and conditions beyond Room Ready Supply's control can affect them.</p>
+      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
 
       <div class="submit-order-actions">
         <button
@@ -411,9 +411,23 @@
         >
           Continue to Payment
         </button>
-        <span class="security-note">
-          &#128274; Your information is secure and confidential.
-        </span>
+      </div>
+
+      <!-- Same trust block as cart.html, line for line (final update
+           package, 2026-10-13), so the card brands and the Stripe line are
+           in front of the buyer at the step where they pay. -->
+      <div class="checkout-trust-block">
+        <strong>Secure Checkout</strong>
+        <p>Your information is safe and protected.</p>
+        <div class="payment-brand-badges payment-brand-badges--compact">
+          <span class="brand-badge brand-badge--visa">VISA</span>
+          <span class="brand-badge brand-badge--mc">Mastercard</span>
+          <span class="brand-badge brand-badge--amex">AMEX</span>
+          <span class="brand-badge brand-badge--discover">DISCOVER</span>
+          <span class="brand-badge">ACH</span>
+        </div>
+        <p class="stripe-processed-by">Payments securely processed by <strong>Stripe</strong></p>
+        <p class="stripe-processed-by bank-transfer-line">To use bank-to-bank transfer or ACH, give us a call &#9742; <a href="tel:+12526160088" style="color:inherit;font-weight:700;white-space:nowrap">252-616-0088</a></p>
       </div>
 
     </aside>
@@ -429,8 +443,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
-<script src="delivery-estimate.js?v=20261013"></script>
-<script src="script.js?v=20261013m"></script>
+<script src="delivery-estimate.js?v=20261013n"></script>
+<script src="script.js?v=20261013n"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
@@ -448,6 +462,15 @@
     padding: 16px 22px 18px;
   }
   .submit-order-btn:disabled { opacity: .55; cursor: not-allowed; }
+  .checkout-trust-block {
+    margin: 18px 22px 18px;
+    padding-top: 16px;
+    border-top: 1.5px solid var(--rrs-border, #e4e9f0);
+    text-align: center;
+  }
+  .checkout-trust-block > strong { display: block; color: #0B1F38; font-size: 14px; }
+  .checkout-trust-block > p { margin: 4px 0 0; color: #506176; font-size: 13px; line-height: 1.45; }
+  .checkout-trust-block .payment-brand-badges { justify-content: center; }
 </style>
 <script>
 // Fires once the checkout page actually loads with a non-empty cart, rather

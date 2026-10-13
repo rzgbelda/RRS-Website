@@ -1,6 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 const { getTaxRate } = require('../../tax-rates');
 const { computeShipping, groupByDistributor, classifyShipment } = require('./shipping');
+const { deliveryDaysForCart } = require('./delivery-days');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -402,6 +403,11 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
 
+  // Estimated delivery, in business days after payment, from each line's
+  // supplier (see _lib/delivery-days.js). Only the numbers leave the server;
+  // supplier names never do.
+  const deliveryDays = deliveryDaysForCart(shipLines.map(l => l.distributor), (dest && dest.state) || state);
+
   return {
     ok: true,
     needsFreightQuote,
@@ -414,6 +420,7 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
     shipping,
     totalWeightLb: Math.round(totalWeightLb * 100) / 100,
     total,
+    deliveryDays,
     lines,
   };
 }

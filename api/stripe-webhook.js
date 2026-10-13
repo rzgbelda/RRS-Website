@@ -271,7 +271,12 @@ module.exports = async (req, res) => {
       // which staff enter in admin (see order_shipments). There is no
       // carrier for this handler to book with.
       if (createdHere) {
-        const emailOrder = { ...orderData, items: parsedItems, amount_total: pi.amount };
+        // delivery_days rides only on the email (no orders column): the
+        // per-supplier range create-payment-intent.js stored in metadata.
+        const emailOrder = {
+          ...orderData, items: parsedItems, amount_total: pi.amount,
+          delivery_days: { min: Number(meta.delivery_days_min), max: Number(meta.delivery_days_max) },
+        };
 
         Promise.all([
           orderData.customer_email

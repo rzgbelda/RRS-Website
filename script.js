@@ -3985,13 +3985,19 @@ function loadCartPage() {
   if (!cartItemsContainer || !subtotalEl || !estimatedTotalEl) return;
 
   // Always a range, never a single date (CEO instruction, 2026-10-13) --
-  // see delivery-estimate.js for the formula and why it's a flat 4-7
-  // business-day conservative default rather than real per-ZIP transit
-  // data (none exists in this codebase yet).
+  // see delivery-estimate.js. Calculated per supplier on the server (the
+  // supplier is internal, so only day counts come back); until that answer
+  // arrives, the last known range or the flat fallback shows.
   const estimateEl = document.getElementById("cart-delivery-estimate");
   if (estimateEl && typeof window.getDeliveryEstimateRange === "function") {
-    const est = window.getDeliveryEstimateRange();
+    const est = window.getDeliveryEstimateRange(null, window._rrsDeliveryDays);
     estimateEl.textContent = `Estimated delivery: ${est.rangeLabel}`;
+    fetchCheckoutQuote().then(d => {
+      if (!d || !d.deliveryDays) return;
+      window._rrsDeliveryDays = d.deliveryDays;
+      const e = window.getDeliveryEstimateRange(null, d.deliveryDays);
+      estimateEl.textContent = `Estimated delivery: ${e.rangeLabel}`;
+    });
   }
 
   const cart = getCart();
@@ -4443,16 +4449,16 @@ function loadCheckoutProducts() {
   }
 
   // Always a range, never a single date (CEO instruction, 2026-10-13) --
-  // see delivery-estimate.js for the formula and why it's a flat 4-7
-  // business-day conservative default rather than real per-ZIP transit
-  // data (none exists in this codebase yet). No estimate for pickup --
-  // there's no carrier transit leg to estimate.
+  // see delivery-estimate.js. Per supplier, from the server's quote (see
+  // refreshCheckoutShippingQuote); the flat fallback shows until the first
+  // answer. No estimate for pickup -- there's no carrier transit leg to
+  // estimate.
   const estimateEl = document.getElementById('summary-delivery-estimate');
   if (estimateEl) {
     if (isPickup || window._rrsFreightQuote) {
       estimateEl.textContent = '';
     } else if (typeof window.getDeliveryEstimateRange === 'function') {
-      const est = window.getDeliveryEstimateRange();
+      const est = window.getDeliveryEstimateRange(null, window._rrsDeliveryDays);
       estimateEl.textContent = `Estimated delivery: ${est.rangeLabel}`;
     }
   }
@@ -4572,6 +4578,14 @@ function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping
   fetchCheckoutQuote().then(d => {
     // A newer request (another keystroke) supersedes this one.
     if (!d || seq !== _shipQuoteSeq) return;
+    // Per-supplier delivery range (business days after payment).
+    if (d.deliveryDays) {
+      window._rrsDeliveryDays = d.deliveryDays;
+      const estEl = document.getElementById('summary-delivery-estimate');
+      if (estEl && estEl.textContent && typeof window.getDeliveryEstimateRange === 'function') {
+        estEl.textContent = `Estimated delivery: ${window.getDeliveryEstimateRange(null, d.deliveryDays).rangeLabel}`;
+      }
+    }
     if (d.freightQuote) { setCheckoutFreightMode(true, { discountedSubtotal, tax }); return; }
     if (window._rrsFreightQuote) setCheckoutFreightMode(false);
     if (typeof d.shipping !== 'number') return;
@@ -6447,26 +6461,29 @@ function updateMiniCart() {
   // is an instruction the customer can actually act on and that actually
   // produces the promised price.
   let tierNote = "";
-  // The 50+ negotiated offer is about cases of one item; pooled groups
+  // 30+ cases is the best volume price the drawer points to (final update
+  // package, 2026-10-13: there is no 50+ tier in the cart). Pooled groups
   // have their own tiers, so they're only ever pointed at the next tier.
-  if (!topIsGroup && topLineQty >= BULK_VOLUME_MIN_CASES) {
-    tierNote = `<a class="mc-tier mc-tier-bulk" href="/quote">
-        <strong>${topLineQty} cases of one item &mdash; you qualify for extra pricing</strong>
-        <span>Send us your list for even better pricing &rsaquo;</span>
-      </a>`;
+  const BEST_VOLUME_CASES = 30;
+  if (!topIsGroup && topLineQty >= BEST_VOLUME_CASES) {
+    tierNote = `<p class="mc-tier mc-tier-ship">
+        You've reached 30+ case pricing &mdash; our best volume price.
+      </p>`;
   } else if (topLineQty > 0) {
     // Next breakpoint comes from this product's own thresholds (see
     // getTierPrice); only tiers that actually lower the price count. If the
-    // 50+ bulk offer is closer, or the product has no further tier, point there.
+    // 30+ best volume price is closer, or the product has no further tier, point there.
     const currentRate = getTierPrice(topLine, cart);
     const nextTierQty = [1, 2, 3]
       .map(n => ({ min: tierMinQty(topLine, `tier${n}_min_qty`, `tier${n}MinQty`), price: cleanPrice(topLine[`price${n}`]) }))
       .filter(t => t.min && t.min > topLineQty && t.price && t.price < currentRate)
       .reduce((lo, t) => Math.min(lo, t.min), Infinity);
-    const target = topIsGroup ? nextTierQty : Math.min(nextTierQty, BULK_VOLUME_MIN_CASES);
+    const target = topIsGroup ? nextTierQty : Math.min(nextTierQty, BEST_VOLUME_CASES);
     const toNext = target - topLineQty;
     const unitWord = topIsGroup ? (topLine.unit || "unit").toLowerCase().replace(/s$/, "") : "case";
-    const nextLabel = target === nextTierQty ? `${target}+ ${unitWord} pricing` : "extra 50+ case pricing";
+    const nextLabel = !topIsGroup && target === BEST_VOLUME_CASES
+      ? "30+ case pricing &mdash; our best volume price"
+      : `${target}+ ${unitWord} pricing`;
     const shortName = escapeMiniCart((topLine.name || "this item").split(",")[0]).slice(0, 38);
     const what = topIsGroup
       ? `from the <strong>${escapeMiniCart(topLine.moqGroup)}</strong> Mix &amp; Match group`
