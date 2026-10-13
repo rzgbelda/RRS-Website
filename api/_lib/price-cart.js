@@ -377,7 +377,44 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   // weight estimate.
   const upsOn = String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true';
   const tforceOn = String(process.env.TFORCE_RATING_ENABLED || '').toLowerCase() === 'true';
-  if (!isPickup && dest && (upsOn || tforceOn)) {
+  // WARP (final update package, 2026-10-13): every order, at every weight,
+  // is quoted by the WARP API from each supplier's warehouse and paid at
+  // checkout. Takes over from UPS/TForce while WARP_RATING_ENABLED=true.
+  // Strict: no estimate is ever charged in its place -- if WARP cannot
+  // price a shipment, shippingUnavailable is set, payment is refused
+  // (create-payment-intent.js) and Eric is emailed (_lib/shipping-alert.js).
+  const warpOn = String(process.env.WARP_RATING_ENABLED || '').toLowerCase() === 'true';
+  let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'unpriced'
+  if (!isPickup && warpOn) {
+    if (!dest) {
+      shipping = 0;
+      shippingUnavailable = 'zip';
+    } else {
+      const vendorsBySlug = await loadVendors(supabase, shipLines);
+      const { rateWarp } = require('./warp');
+      const carrier = {
+        name: 'warp',
+        rateParcel: a => rateWarp({ mode: 'parcel', origin: a.origin, dest: a.dest, packages: a.packages }),
+        rateFreight: a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb }),
+      };
+      const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier, strict: true });
+      console.log('[shipping]', JSON.stringify(r.shipments));
+      if (r.unpriced) {
+        shipping = 0;
+        shippingUnavailable = 'unpriced';
+        await require('./shipping-alert').sendShippingAlert({
+          context: 'checkout',
+          failed: r.shipments.filter(x => x.amount == null),
+          destination: dest,
+          items: Array.from(wanted, ([sku, quantity]) => ({ sku, quantity })),
+        });
+      } else {
+        // Shipping Policy section 5: a minimum shipping charge applies to
+        // every order -- the same per-order floor as the formula above.
+        shipping = Math.max(r.total, SHIPPING_MIN_CHARGE);
+      }
+    }
+  } else if (!isPickup && dest && (upsOn || tforceOn)) {
     const vendorsBySlug = await loadVendors(supabase, shipLines);
     const carrier = {};
     if (upsOn) carrier.rateParcel = a => require('./ups').rateParcelCheapest(a);
@@ -398,7 +435,8 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   // ships separately. Set FREIGHT_CHECKOUT_ENABLED=true to let freight orders
   // pay online again (e.g. once TForce rating is live).
   const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
-  const needsFreightQuote = !isPickup && !freightCheckoutOn &&
+  // Never with WARP on: WARP prices freight at the cart like any order.
+  const needsFreightQuote = !isPickup && !warpOn && !freightCheckoutOn &&
     groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
@@ -411,6 +449,7 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
   return {
     ok: true,
     needsFreightQuote,
+    shippingUnavailable,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,

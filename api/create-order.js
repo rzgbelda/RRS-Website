@@ -88,7 +88,12 @@ module.exports = async (req, res) => {
     const automationResult = await runDueAutomations(supabase);
     const scheduledResult = await runDueScheduledSends(supabase);
     const purgedResult = await runDueOrderPurge(supabase);
-    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult, purged_orders: purgedResult });
+    // Daily WARP test quotes from every supplier warehouse; emails Eric on
+    // any failure so it is fixed before a buyer meets it at checkout.
+    let warpHealth;
+    try { warpHealth = await require('./_lib/warp-health').runWarpHealthCheck(supabase); }
+    catch (err) { warpHealth = { error: err.message }; }
+    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult, purged_orders: purgedResult, warp_health: warpHealth });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });

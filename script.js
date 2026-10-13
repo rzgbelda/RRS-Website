@@ -4087,10 +4087,62 @@ function loadCartPage() {
   }
 
   estimatedTotalEl.textContent = `$${(subtotal - discount).toFixed(2)}`;
+  refreshCartDelivery(subtotal - discount);
 
   setupCartButtons();
   setupReorderDropdowns();
   setupCartCalendarButtons();
+}
+
+// Cart Delivery line: the WARP price for the ZIP in the cart's box, added
+// into the Estimated Total (tax is still added at checkout). Same server
+// quote and same rules as checkout -- no ZIP, no price; no WARP price,
+// "Unavailable" and the buyer is told to try again or call.
+let _cartDeliverySeq = 0;
+function refreshCartDelivery(itemsTotal) {
+  const el = document.getElementById('cart-delivery');
+  const totalEl = document.getElementById('estimated-total');
+  const zipEl = document.getElementById('cart-zip');
+  const problem = document.getElementById('cart-delivery-problem');
+  if (!el || !zipEl) return;
+  if (!zipEl.dataset.bound) {
+    zipEl.dataset.bound = '1';
+    if (!zipEl.value) zipEl.value = savedShipZip();
+    let t;
+    zipEl.addEventListener('input', () => {
+      zipEl.value = zipEl.value.replace(/\D/g, '').slice(0, 5);
+      clearTimeout(t);
+      t = setTimeout(() => refreshCartDelivery(Number(zipEl.dataset.itemsTotal) || 0), 400);
+    });
+  }
+  zipEl.dataset.itemsTotal = String(itemsTotal);
+  // Items only until a delivery price for THIS ZIP comes back -- never a
+  // total carrying an earlier ZIP's price.
+  if (totalEl) totalEl.textContent = `$${itemsTotal.toFixed(2)}`;
+  if (problem) problem.style.display = 'none';
+  el.style.color = '';
+  if (!/^\d{5}$/.test(zipEl.value.trim())) {
+    el.textContent = 'Enter ZIP';
+    return;
+  }
+  el.textContent = 'Calculating…';
+  const seq = ++_cartDeliverySeq;
+  fetchCheckoutQuote().then(d => {
+    if (seq !== _cartDeliverySeq) return;
+    if (d && !d.error && typeof d.shipping === 'number' && !d.shippingUnavailable) {
+      el.textContent = `$${d.shipping.toFixed(2)}`;
+      if (totalEl) totalEl.textContent = `$${(itemsTotal + d.shipping).toFixed(2)}`;
+      return;
+    }
+    el.textContent = 'Unavailable';
+    el.style.color = '#b91c1c';
+    if (problem && !(d && d.error && /^Almost there/.test(d.error))) {
+      problem.innerHTML = (d && d.error)
+        ? escapeMiniCart(d.error)
+        : 'We couldn&rsquo;t calculate delivery right now. Please try again in a minute, or call <a href="tel:+12526160088" style="color:inherit;font-weight:700">(252) 616-0088</a>.';
+      problem.style.display = '';
+    }
+  });
 }
 
 function setupCartButtons() {
@@ -4255,6 +4307,11 @@ function setupCartCalendarButtons() {
 let checkoutOrderType = "reorder";
 
 function loadCheckoutProducts() {
+  const coZip = document.getElementById('checkout-zip');
+  if (coZip && !coZip.value && !coZip.dataset.zipPrefilled) {
+    coZip.dataset.zipPrefilled = '1';
+    coZip.value = savedShipZip();
+  }
   const checkoutProducts = document.getElementById("checkout-products");
   const summaryItems = document.getElementById("summary-items");
   const subtotalEl = document.getElementById("summary-subtotal");
@@ -4405,28 +4462,23 @@ function loadCheckoutProducts() {
     coDiscountRow.style.display = "none";
   }
 
-  // Delivery. Warehouse pickup is never freighted, so it shows Free rather
-  // than an allowance. Only the resulting dollar amount is ever shown --
-  // never the per-pound rate or the order's weight.
-  //
-  // This is a preview: api/_lib/price-cart.js recomputes it from the
-  // database and that figure is what's charged. The two use the same rate,
-  // but a stale cart line (an old weight cached in localStorage) would only
-  // affect what's displayed here, never the amount billed.
+  // Delivery. Priced only by the server (api/_lib/price-cart.js -- the WARP
+  // quote from each supplier's warehouse, final update package 2026-10-13):
+  // the delivery charge shown is the charge, so the page never paints a
+  // formula guess. "Calculating..." until refreshCheckoutShippingQuote()
+  // fills in the real figure and the total.
   const isPickup = !!document.getElementById('fulfillPickup')?.checked;
-  const shipping = isPickup ? 0 : shippingFeeForCart(cart);
+  const shipping = 0;
   const shippingEl = document.getElementById('summary-shipping');
   if (shippingEl) {
+    shippingEl.style.fontWeight = '800';
+    shippingEl.style.fontSize = '';
     if (isPickup) {
       shippingEl.textContent = 'Free — pickup';
       shippingEl.style.color = '#15803d';
-      shippingEl.style.fontWeight = '800';
-      shippingEl.style.fontSize = '';
     } else {
-      shippingEl.textContent = `$${shipping.toFixed(2)}`;
+      shippingEl.textContent = 'Calculating…';
       shippingEl.style.color = '';
-      shippingEl.style.fontWeight = '800';
-      shippingEl.style.fontSize = '';
     }
   }
 
@@ -4437,7 +4489,7 @@ function loadCheckoutProducts() {
   // estimate.
   const estimateEl = document.getElementById('summary-delivery-estimate');
   if (estimateEl) {
-    if (isPickup || window._rrsFreightQuote) {
+    if (isPickup) {
       estimateEl.textContent = '';
     } else if (typeof window.getDeliveryEstimateRange === 'function') {
       const est = window.getDeliveryEstimateRange(null, window._rrsDeliveryDays);
@@ -4447,12 +4499,11 @@ function loadCheckoutProducts() {
 
   if (countEl) countEl.textContent = `${itemCount} Items`;
   if (subtotalEl) subtotalEl.textContent = `$${subtotal.toFixed(2)}`;
-  if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + shipping).toFixed(2)}`;
+  if (totalEl) totalEl.textContent = isPickup ? `$${(discountedSubtotal + tax + shipping).toFixed(2)}` : 'Calculating…';
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // The formula above is only the first paint. With a full ZIP, swap in the
-  // carrier rate the server will actually charge.
-  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping: shipping });
+  // Delivery and the total come from the server's quote.
+  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax });
 
   // Recalculate tax live as the customer picks/changes their state. Bound
   // once (not on every loadCheckoutProducts() call, which would stack a
@@ -4484,8 +4535,21 @@ let _shipQuoteSeq = 0;
 // payment). Resolves to its JSON, or null on any failure. Cached per
 // cart+state+ZIP. A ZIP is optional: without one the server still says
 // whether the order is a freight-size volume order.
+// Last delivery ZIP the buyer entered (cart or checkout), so the cart and
+// checkout price delivery to the same place without asking twice.
+function savedShipZip() {
+  try { return localStorage.getItem('rrs_ship_zip') || ''; } catch (e) { return ''; }
+}
+function rememberShipZip(zip) {
+  if (!/^\d{5}$/.test(zip)) return;
+  try { localStorage.setItem('rrs_ship_zip', zip); } catch (e) {}
+}
+
 function fetchCheckoutQuote() {
-  const zipRaw = (document.getElementById('checkout-zip')?.value || '').trim();
+  const zipRaw = (document.getElementById('checkout-zip')?.value
+    || document.getElementById('cart-zip')?.value
+    || (document.getElementById('checkout-zip') ? '' : savedShipZip())
+    || '').trim();
   const zip = /^\d{5}$/.test(zipRaw) ? zipRaw : '';
   const oneTime = checkoutOrderType === 'one-time';
   const items = getCart().map(i => ({
@@ -4500,6 +4564,7 @@ function fetchCheckoutQuote() {
     city: document.getElementById('checkout-city')?.value || '',
     state, zip,
   };
+  rememberShipZip(zip);
   const key = JSON.stringify([items, state, zip]);
   if (_shipQuoteCache[key]) return _shipQuoteCache[key];
   const p = fetch('/api/create-payment-intent', {
@@ -4515,69 +4580,66 @@ function fetchCheckoutQuote() {
     .then(r => r.json())
     .catch(() => null);
   _shipQuoteCache[key] = p;
-  // A failed lookup is not cached, so the next render retries it.
-  p.then(d => { if (!d) delete _shipQuoteCache[key]; });
+  // A failed lookup, an error or an unpriced delivery is not cached, so the
+  // next render (or the buyer trying again) asks again.
+  p.then(d => { if (!d || d.error || d.shippingUnavailable === 'unpriced') delete _shipQuoteCache[key]; });
   return p;
 }
 
-// True when the server says this cart is a volume (freight) order that goes
-// to a custom quote instead of online payment.
-async function checkoutNeedsFreightQuote() {
-  const d = await fetchCheckoutQuote();
-  return !!(d && d.freightQuote);
-}
-
-// Switches the checkout summary between normal payment and "volume quote"
-// mode. In quote mode Delivery reads "Custom quote", the total excludes
-// freight, the payment acknowledgement is hidden (nothing is being paid),
-// and the button opens the volume-quote modal (see checkout.html).
-function setCheckoutFreightMode(on, totals) {
-  window._rrsFreightQuote = !!on;
-  const shipEl = document.getElementById('summary-shipping');
+// What the checkout shows for delivery, from the server's quote:
+//   { shipping: n }                   -> "$n", total includes it
+//   { shippingUnavailable: 'zip' }    -> "Enter ZIP code"
+//   { shippingUnavailable: 'unpriced' } or no answer -> "Unavailable", with
+//     a try-again / call line, and Continue to Payment is blocked
+// There is no pay-later or custom-quote path (final update package,
+// 2026-10-13): no price, no payment.
+function applyCheckoutDelivery(d, { discountedSubtotal, tax }) {
+  const el = document.getElementById('summary-shipping');
   const totalEl = document.getElementById('summary-total');
-  const noteEl = document.querySelector('.summary-note');
-  const ack = document.querySelector('.ack-check');
   const btn = document.getElementById('submitOrderBtn');
-  if (noteEl && !noteEl.dataset.defaultText) noteEl.dataset.defaultText = noteEl.textContent.trim();
-  if (btn && !btn.dataset.defaultText) btn.dataset.defaultText = btn.textContent.trim();
-  if (on) {
-    if (shipEl) { shipEl.textContent = 'Custom quote'; shipEl.style.color = '#ED7226'; }
-    if (totalEl && totals) totalEl.textContent = `$${(totals.discountedSubtotal + totals.tax).toFixed(2)} + freight`;
-    if (noteEl) noteEl.textContent = 'Volume order: we’ll secure your freight rate in a custom quote. No payment today.';
-    if (ack) ack.style.display = 'none';
-    if (btn) btn.textContent = 'Get My Volume Quote';
-  } else {
-    if (shipEl) shipEl.style.color = '';
-    if (noteEl && noteEl.dataset.defaultText) noteEl.textContent = noteEl.dataset.defaultText;
-    if (ack) ack.style.display = '';
-    if (btn && btn.dataset.defaultText) btn.textContent = btn.dataset.defaultText;
+  let note = document.getElementById('summary-shipping-problem');
+  const priced = !!d && !d.error && typeof d.shipping === 'number' && !d.shippingUnavailable;
+  const needZip = !!d && d.shippingUnavailable === 'zip';
+  if (el) {
+    el.style.color = priced || needZip ? '' : '#b91c1c';
+    el.textContent = priced ? `$${d.shipping.toFixed(2)}` : needZip ? 'Enter ZIP code' : 'Unavailable';
   }
-  if (typeof syncSubmitEnabled === 'function') syncSubmitEnabled();
+  if (totalEl) totalEl.textContent = priced ? `$${(discountedSubtotal + tax + d.shipping).toFixed(2)}` : '—';
+  if (!priced && !needZip) {
+    if (!note && el) {
+      note = document.createElement('p');
+      note.id = 'summary-shipping-problem';
+      note.style.cssText = 'color:#b91c1c;font-size:12.5px;line-height:1.5;margin:6px 22px 0;';
+      el.closest('p')?.after(note);
+    }
+    if (note) {
+      note.style.display = '';
+      note.innerHTML = (d && d.error)
+        ? escapeMiniCart(d.error)
+        : 'We couldn&rsquo;t calculate delivery right now. Please try again in a minute, or call <a href="tel:+12526160088" style="color:inherit;font-weight:700">(252) 616-0088</a>.';
+      note.innerHTML += ' <button type="button" onclick="loadCheckoutProducts()" style="background:none;border:none;padding:0;color:inherit;font:inherit;font-weight:700;text-decoration:underline;cursor:pointer">Try again</button>';
+    }
+  } else if (note) {
+    note.style.display = 'none';
+  }
+  window._rrsDeliveryPriced = priced;
+  if (btn) btn.disabled = !priced;
 }
 
-function refreshCheckoutShippingQuote({ discountedSubtotal, tax, formulaShipping }) {
+function refreshCheckoutShippingQuote({ discountedSubtotal, tax }) {
   const seq = ++_shipQuoteSeq;
   fetchCheckoutQuote().then(d => {
     // A newer request (another keystroke) supersedes this one.
-    if (!d || seq !== _shipQuoteSeq) return;
+    if (seq !== _shipQuoteSeq) return;
     // Per-supplier delivery range (business days after payment).
-    if (d.deliveryDays) {
+    if (d && d.deliveryDays) {
       window._rrsDeliveryDays = d.deliveryDays;
       const estEl = document.getElementById('summary-delivery-estimate');
       if (estEl && estEl.textContent && typeof window.getDeliveryEstimateRange === 'function') {
         estEl.textContent = `Estimated delivery: ${window.getDeliveryEstimateRange(null, d.deliveryDays).rangeLabel}`;
       }
     }
-    if (d.freightQuote) { setCheckoutFreightMode(true, { discountedSubtotal, tax }); return; }
-    if (window._rrsFreightQuote) setCheckoutFreightMode(false);
-    if (typeof d.shipping !== 'number') return;
-    // Real carrier rates need a full ZIP; without one the formula stays.
-    const zip = (document.getElementById('checkout-zip')?.value || '').trim();
-    if (!/^\d{5}$/.test(zip)) return;
-    const el = document.getElementById('summary-shipping');
-    if (el) el.textContent = `$${d.shipping.toFixed(2)}`;
-    const totalEl = document.getElementById('summary-total');
-    if (totalEl) totalEl.textContent = `$${(discountedSubtotal + tax + d.shipping).toFixed(2)}`;
+    applyCheckoutDelivery(d, { discountedSubtotal, tax });
   });
 }
 
@@ -5104,8 +5166,10 @@ function loadPaymentSummary() {
     : shippingFeeForCart(cart);
   const shipEl = document.getElementById('payment-shipping');
   const shipLine = document.getElementById('payment-shipping-line');
+  // No formula guess for delivery (final update package, 2026-10-13): the
+  // server's WARP price replaces this via payment.html's applyServerTotals().
   if (shipEl && shipLine) {
-    shipEl.textContent = shippingCost > 0 ? `$${shippingCost.toFixed(2)}` : 'Free';
+    shipEl.textContent = shippingCost === 0 && String(checkoutData.fulfillmentMethod || '').toLowerCase() === 'pickup' ? 'Free' : 'Calculating…';
     shipLine.style.display = '';
   }
 
@@ -5120,7 +5184,9 @@ function loadPaymentSummary() {
   const taxEl = document.getElementById('payment-tax');
   if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
 
-  totalEl.textContent = `$${(subtotal + shippingCost + tax).toFixed(2)}`;
+  totalEl.textContent = String(checkoutData.fulfillmentMethod || '').toLowerCase() === 'pickup'
+    ? `$${(subtotal + shippingCost + tax).toFixed(2)}`
+    : 'Calculating…';
 }
 
 

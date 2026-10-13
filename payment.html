@@ -635,8 +635,11 @@
         : shippingFeeForCart(cart);
       var shipLine0 = document.getElementById('payment-shipping-line');
       var shipEl0 = document.getElementById('payment-shipping');
+      // The delivery figure shown is the charge (final update package,
+      // 2026-10-13), so no formula guess is painted: "Calculating..." until
+      // applyServerTotals() writes the server's WARP price and the total.
       if (shipLine0 && shipEl0) {
-        shipEl0.textContent = shipping > 0 ? '$' + shipping.toFixed(2) : 'Free';
+        shipEl0.textContent = isPickup ? 'Free' : 'Calculating…';
         shipLine0.style.display = '';
       }
 
@@ -645,7 +648,7 @@
       document.getElementById('payment-tax').textContent = '$' + tax.toFixed(2);
       var taxRateEl = document.getElementById('payment-tax-rate');
       if (taxRateEl) taxRateEl.textContent = checkoutForTax.state ? ' (' + checkoutForTax.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
-      document.getElementById('payment-total').textContent = '$' + total.toFixed(2);
+      document.getElementById('payment-total').textContent = isPickup ? '$' + total.toFixed(2) : 'Calculating…';
       window._orderSubtotal = subtotal;
       window._orderTax = tax;
       window._orderShipping = shipping;
@@ -780,9 +783,9 @@
           }
         })
       }).then(function(res) { return res.json(); }).then(function(data) {
-        // Volume (freight) order: not paid online. Back to checkout, which
-        // opens the custom-quote modal.
-        if (data.freightQuote) { window.location.href = 'checkout.html?volume=1'; return; }
+        // No WARP delivery price: no payment (final update package,
+        // 2026-10-13). Show the server's reason -- try again or call.
+        if (data.shippingUnavailable) { showError(data.error); return; }
         if (data.error) throw new Error(data.error);
         applyServerTotals(data);
         clientSecret = data.clientSecret;

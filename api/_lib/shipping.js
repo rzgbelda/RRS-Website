@@ -114,60 +114,89 @@ function groupByDistributor(lines, vendorsBySlug) {
   return [...groups.values()];
 }
 
-// Rates the shipment from every complete warehouse and returns the cheapest
-// { amount, origin } -- or null if none of them produced a rate.
+// Rates the shipment from every complete warehouse and returns
+// { best: { amount, origin } | null, errors: [message] } -- best is null if
+// none of them produced a rate.
 async function cheapestAcrossOrigins(origins, rateFn, args) {
+  const errors = [];
   const settled = await Promise.all(origins.map(async o => {
     try {
       const r = await rateFn({ ...args, origin: o });
-      return r && r.amount > 0 ? { amount: round2(r.amount), origin: o } : null;
+      if (r && r.amount > 0) return { amount: round2(r.amount), origin: o };
+      errors.push(`no rate from ${o.city || o.zip}`);
+      return null;
     } catch (err) {
       console.warn('[shipping] rate failed from', o.city || o.zip, '-', err.message);
+      errors.push(`${o.city || o.zip}: ${err.message}`);
       return null;
     }
   }));
   const ok = settled.filter(Boolean);
-  if (!ok.length) return null;
+  if (!ok.length) return { best: null, errors };
   // Ties keep the earlier (primary-first) warehouse.
-  return ok.reduce((best, r) => (r.amount < best.amount ? r : best), ok[0]);
+  return { best: ok.reduce((best, r) => (r.amount < best.amount ? r : best), ok[0]), errors };
 }
 
 /**
- * Returns { total, shipments: [{ distributor, mode, weightLb, amount, method, from }] }.
+ * Returns { total, shipments: [{ distributor, mode, weightLb, amount, method, from, error? }], unpriced }.
  * `carrier` = { rateParcel(args) -> {amount}, rateFreight?(args) -> {amount} }
- * Any carrier error, missing address or missing freight API falls back to the
- * weight estimate for that shipment only -- checkout never dead-ends on a
- * carrier problem.
+ *
+ * Default: any carrier error, missing address or missing freight API falls
+ * back to the weight estimate for that shipment only -- checkout never
+ * dead-ends on a carrier problem.
+ *
+ * strict (WARP, final update package 2026-10-13): the buyer pays the quoted
+ * delivery price and nothing is billed later, so a guessed figure is not
+ * allowed. A shipment that cannot be rated gets amount null and method
+ * 'unpriced' with the reason, `unpriced` counts them, and the caller must
+ * not take payment.
+ *
+ * Shipments are rated in parallel: each distributor is its own warehouse
+ * and its own carrier call.
  */
-async function computeShipping({ lines, vendorsBySlug, destination, carrier }) {
+async function computeShipping({ lines, vendorsBySlug, destination, carrier, strict = false }) {
   const groups = groupByDistributor(lines, vendorsBySlug);
-  const shipments = [];
 
-  for (const g of groups) {
+  const shipments = await Promise.all(groups.map(async g => {
     const mode = classifyShipment(g.weightLb);
-    const origins = g.origins.filter(originComplete);
+    // Strict (WARP): orders ship from the supplier's warehouse, never from
+    // Plymouth, so a product with no distributor has no origin to quote from.
+    const origins = strict && !g.distributor ? [] : g.origins.filter(originComplete);
     let amount = null;
     let method = 'estimate';
+    let error = null;
     let from = origins[0] ? `${origins[0].city} ${origins[0].state}` : null;
 
     const canRate = carrier && destination && destination.zip && origins.length > 0;
+    let r = null;
     if (canRate && mode === 'parcel' && carrier.rateParcel) {
-      const best = await cheapestAcrossOrigins(origins, carrier.rateParcel, { dest: destination, packages: buildPackages(g) });
-      if (best) { amount = best.amount; method = 'ups-parcel'; from = `${best.origin.city} ${best.origin.state}`; }
+      r = await cheapestAcrossOrigins(origins, carrier.rateParcel, { dest: destination, packages: buildPackages(g) });
+      if (r.best) { amount = r.best.amount; method = carrier.name ? carrier.name + '-parcel' : 'ups-parcel'; }
     } else if (canRate && mode === 'freight' && carrier.rateFreight) {
-      const best = await cheapestAcrossOrigins(origins, carrier.rateFreight, { dest: destination, weightLb: g.weightLb, lines: g.lines });
-      if (best) { amount = best.amount; method = 'freight'; from = `${best.origin.city} ${best.origin.state}`; }
+      r = await cheapestAcrossOrigins(origins, carrier.rateFreight, { dest: destination, weightLb: g.weightLb, lines: g.lines });
+      if (r.best) { amount = r.best.amount; method = carrier.name ? carrier.name + '-freight' : 'freight'; }
     }
+    if (r && r.best) from = `${r.best.origin.city} ${r.best.origin.state}`;
 
     if (amount == null) {
-      amount = estimateShipment(g.weightLb);
-      method = !origins.length ? 'estimate-no-origin'
-        : (mode === 'freight' && !(carrier && carrier.rateFreight) ? 'estimate-freight' : 'estimate');
+      error = !origins.length ? `no warehouse address for distributor "${g.distributor || '(none)'}"`
+        : !(destination && destination.zip) ? 'no destination ZIP'
+        : (r && r.errors.length ? r.errors.join('; ') : `no ${mode} rating available`);
+      if (strict) {
+        method = 'unpriced';
+      } else {
+        amount = estimateShipment(g.weightLb);
+        method = !origins.length ? 'estimate-no-origin'
+          : (mode === 'freight' && !(carrier && carrier.rateFreight) ? 'estimate-freight' : 'estimate');
+      }
     }
-    shipments.push({ distributor: g.distributor, mode, weightLb: round2(g.weightLb), amount, method, from });
-  }
+    const s = { distributor: g.distributor, mode, weightLb: round2(g.weightLb), amount, method, from };
+    if (error) s.error = error;
+    return s;
+  }));
 
-  return { total: round2(shipments.reduce((s, x) => s + x.amount, 0)), shipments };
+  const unpriced = shipments.filter(x => x.amount == null).length;
+  return { total: round2(shipments.reduce((s, x) => s + (x.amount || 0), 0)), shipments, unpriced };
 }
 
 module.exports = {

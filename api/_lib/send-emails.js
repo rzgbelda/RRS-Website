@@ -59,7 +59,7 @@ function customerEmailHtml(order) {
   // where a shipping charge is shown and charged up front for most orders.
   var shippingCellHtml = (order.freight_fee !== undefined && order.freight_fee !== null)
     ? '$' + Number(order.freight_fee).toFixed(2)
-    : '<span style="color:#94a3b8;">See your invoice</span>';
+    : '<span style="color:#94a3b8;">Included in total</span>';
 
   return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' +
     '<body style="margin:0;padding:0;background:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,\'Segoe UI\',sans-serif;">' +

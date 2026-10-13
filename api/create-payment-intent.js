@@ -94,7 +94,12 @@ module.exports = async (req, res) => {
       if (q.needsFreightQuote) {
         return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal, deliveryDays: q.deliveryDays });
       }
-      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, deliveryDays: q.deliveryDays });
+      // WARP could not price delivery yet ('zip': no destination entered;
+      // 'unpriced': no rate came back). No figure is shown or charged.
+      if (q.shippingUnavailable) {
+        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, shipping: null, tax: q.tax, subtotal: q.subtotal, discount: q.discount, deliveryDays: q.deliveryDays });
+      }
+      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, discount: q.discount, deliveryDays: q.deliveryDays });
     }
   } catch (err) {
     console.error('[quote]', err && err.message);
@@ -132,6 +137,16 @@ module.exports = async (req, res) => {
       return res.status(409).json({
         freightQuote: true,
         error: 'This order ships by freight. Please request a custom quote so we can secure the best freight rate for you.',
+      });
+    }
+    // The delivery charge shown is the charge (final update package,
+    // 2026-10-13): payment is never taken without a real WARP price.
+    if (priced.shippingUnavailable) {
+      return res.status(409).json({
+        shippingUnavailable: priced.shippingUnavailable,
+        error: priced.shippingUnavailable === 'zip'
+          ? 'Please enter your delivery ZIP code so we can price delivery.'
+          : "We couldn't calculate delivery for this order right now. Please try again in a minute, or call (252) 616-0088 and we'll help you complete your order.",
       });
     }
     if (priced.amountCents < 50) {

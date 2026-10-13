@@ -3,6 +3,9 @@
   "functions": {
     "api/product-meta.js": {
       "includeFiles": "{product-template.html,article-template.html}"
+    },
+    "api/create-payment-intent.js": {
+      "maxDuration": 30
     }
   },
   "crons": [

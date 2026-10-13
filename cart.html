@@ -135,6 +135,19 @@
       <span id="discount">-$0.00</span>
     </div>
 
+    <!-- Delivery: the WARP quote for this order from each supplier's
+         warehouse to the buyer's ZIP (final update package, 2026-10-13),
+         the same figure checkout charges. Needs a ZIP to price. -->
+    <div class="summary-row" id="cartDeliveryRow">
+      <span>Delivery</span>
+      <span id="cart-delivery">Enter ZIP</span>
+    </div>
+    <div class="cart-zip-row">
+      <label for="cart-zip" class="sr-only">Delivery ZIP code</label>
+      <input id="cart-zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" placeholder="Delivery ZIP code">
+    </div>
+    <p id="cart-delivery-problem" style="display:none;color:#b91c1c;font-size:12.5px;line-height:1.5;margin:-4px 0 10px"></p>
+
     <div class="summary-total">
       <span>Estimated Total</span>
       <span id="estimated-total">$349.90</span>
@@ -153,17 +166,17 @@
 
     <div class="summary-benefits">
 
-    <!-- Free shipping is off site-wide (2026-09-22) -- see
-         FREE_SHIPPING_ENABLED in warp-freight.js. This tile used to
+    <!-- Free shipping is off site-wide (2026-09-22). This tile used to
          promise "$3,000 or more and shipping is on us", which nothing
          now honours, so it states the real benefit instead: one order,
-         one invoice, freight quoted per shipment. -->
+         one invoice, delivery priced in the cart (final update package,
+         2026-10-13, Change 6). -->
     <div class="benefit-item">
         <img src="assets/icons/fs.svg" alt="" loading="lazy">
 
         <div>
             <strong>One Order, One Invoice</strong>
-            <p>Combine paper products, cleaning supplies, liners, soaps, and laundry essentials into one easier business order. Delivery is quoted per shipment and billed on your invoice.</p>
+            <p>Combine paper products, cleaning supplies, liners, soaps, and laundry essentials into one easier business order. Delivery is priced in your cart and included in your checkout total &mdash; one order, one payment.</p>
         </div>
     </div>
 
@@ -201,6 +214,12 @@
 
 
 <script src="delivery-estimate.js?v=20261013n"></script>
+<style>
+  .cart-zip-row { margin: -2px 0 12px; }
+  .cart-zip-row input { width: 100%; box-sizing: border-box; padding: 9px 12px; border: 1.5px solid #d9e0e8; border-radius: 9px; font-size: 14px; }
+  .cart-zip-row input:focus { outline: none; border-color: #ED7226; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
 <script src="script.js?v=20261013n"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>

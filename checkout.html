@@ -390,7 +390,7 @@
 </div>
 
       <p class="summary-note">
-        Includes items, sales tax and delivery. Final delivery charges are confirmed on your invoice.
+        Includes items, sales tax, and the delivery charge shown above &mdash; paid at checkout. No shipping charges are billed later.
       </p>
 
       <!-- Restates shipping-policy.html section 7 at the moment of decision.
@@ -524,15 +524,26 @@ function computeFirstReorderDate(frequency) {
 }
 
 async function saveCheckoutAndProceed() {
-  // Volume orders (a shipment over the UPS parcel limit) go to a custom
-  // quote, not to payment. Asked of the server every time -- it knows each
-  // product's warehouse -- so a slow summary refresh can't let one through.
-  // The payment API refuses these orders too.
+  // Every order, at every weight, is priced by the WARP API and paid here
+  // in full (final update package, 2026-10-13) -- no custom-quote path. So
+  // payment only starts once the server has a real delivery price for this
+  // address. Asked again on click, so a stale summary can't let an
+  // unpriced order through; the payment API refuses one as well.
   const btn = document.getElementById('submitOrderBtn');
   if (btn) btn.disabled = true;
-  let isVolume = false;
-  try { isVolume = await checkoutNeedsFreightQuote(); } catch (e) {}
-  if (isVolume) { openVolumeQuoteModal(); if (btn) btn.disabled = false; return; }
+  const zipVal = document.getElementById('checkout-zip')?.value.trim() || '';
+  if (!/^\d{5}$/.test(zipVal)) {
+    alert('Please enter your 5-digit delivery ZIP code so we can price delivery.');
+    if (btn) btn.disabled = false;
+    return;
+  }
+  let quote = null;
+  try { quote = await fetchCheckoutQuote(); } catch (e) {}
+  if (!quote || quote.error || quote.shippingUnavailable || typeof quote.shipping !== 'number') {
+    alert((quote && quote.error) || "We couldn't calculate delivery right now. Please try again in a minute, or call (252) 616-0088.");
+    loadCheckoutProducts();
+    return;
+  }
 
   // Warehouse pickup is no longer offered at checkout (see the comment
   // above #fulfillShip) -- every new order ships. This stays a variable
@@ -619,144 +630,8 @@ async function saveCheckoutAndProceed() {
   }
   window.location.href = 'payment.html';
 }
-
-/* ── Volume order → custom quote ──────────────────────────────── */
-// Per CEO direction (2026-10-09): clicking the checkout page's own "Get
-// My Volume Quote" button (set by setCheckoutFreightMode() in script.js)
-// used to just open this modal and stop, requiring a second click on the
-// modal's OWN "Get My Volume Quote" button to actually go anywhere -- the
-// same action asked for twice. The volume-pricing/shipping-fee
-// explanation itself is still shown (nothing here was cut), but it's now
-// a brief, auto-advancing notice rather than a second confirmation gate:
-// it counts down and calls startVolumeQuote() on its own, while the
-// button stays clickable to skip the wait immediately. "Back to
-// Checkout" still cancels the whole thing if the buyer wants to review
-// their cart first.
-const VQM_AUTO_ADVANCE_SECONDS = 5;
-let _vqmCountdownTimer = null;
-let _vqmCountdownRemaining = VQM_AUTO_ADVANCE_SECONDS;
-
-function openVolumeQuoteModal() {
-  const m = document.getElementById('volumeQuoteModal');
-  if (!m) return;
-  m.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-  setTimeout(() => document.getElementById('vqmPrimary')?.focus(), 50);
-  startVqmCountdown();
-}
-
-function startVqmCountdown() {
-  stopVqmCountdown();
-  _vqmCountdownRemaining = VQM_AUTO_ADVANCE_SECONDS;
-  updateVqmCountdownLabel();
-  _vqmCountdownTimer = setInterval(() => {
-    _vqmCountdownRemaining--;
-    if (_vqmCountdownRemaining <= 0) { stopVqmCountdown(); startVolumeQuote(); return; }
-    updateVqmCountdownLabel();
-  }, 1000);
-}
-
-function stopVqmCountdown() {
-  if (_vqmCountdownTimer) { clearInterval(_vqmCountdownTimer); _vqmCountdownTimer = null; }
-}
-
-function updateVqmCountdownLabel() {
-  const btn = document.getElementById('vqmPrimary');
-  if (btn) btn.textContent = `Get My Volume Quote (${_vqmCountdownRemaining})`;
-}
-
-function closeVolumeQuoteModal() {
-  stopVqmCountdown();
-  const m = document.getElementById('volumeQuoteModal');
-  if (m) m.style.display = 'none';
-  document.body.style.overflow = '';
-}
-
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape' && document.getElementById('volumeQuoteModal')?.style.display === 'flex') closeVolumeQuoteModal();
-});
-
-// Sent back from payment.html because the server flagged a volume order.
-document.addEventListener('DOMContentLoaded', () => {
-  if (new URLSearchParams(location.search).get('volume') === '1') openVolumeQuoteModal();
-});
-
-// Hands the cart and what the customer already typed to the quote form
-// (quote.html reads 'vq_pending' on load and pre-fills itself), so they
-// don't re-enter anything.
-function startVolumeQuote() {
-  stopVqmCountdown(); // button click skips the rest of the auto-advance wait
-  const v = id => document.getElementById(id)?.value.trim() || '';
-  const items = getCart().map(i => ({
-    name: (i.name || 'Item') + (i.itemNumber ? ` (Item #${i.itemNumber})` : ''),
-    quantity: parseInt(i.quantity) || 1,
-    source: 'catalog',
-  }));
-  const phone = v('checkout-phone');
-  const noteParts = ['Volume order from checkout (ships by freight).'];
-  if (phone) noteParts.push('Phone: ' + phone + '.');
-  if (v('checkout-notes')) noteParts.push(v('checkout-notes'));
-  try {
-    localStorage.setItem('vq_pending', JSON.stringify({
-      items,
-      business_name: v('checkout-business'),
-      contact_name: v('checkout-contact'),
-      email: v('checkout-email'),
-      shipping_street: v('checkout-street'),
-      shipping_city: v('checkout-city'),
-      shipping_state: document.getElementById('checkout-state')?.value || '',
-      shipping_zip: v('checkout-zip'),
-      notes: noteParts.join(' '),
-    }));
-  } catch (e) {}
-  window.location.href = '/quote';
-}
 </script>
 
-<!-- Volume order modal: shown instead of payment when a shipment is over
-     the UPS parcel limit and needs freight (see needsFreightQuote in
-     api/_lib/price-cart.js). -->
-<div id="volumeQuoteModal" class="vqm-overlay" role="dialog" aria-modal="true" aria-labelledby="vqmTitle" style="display:none" onclick="if (event.target === this) closeVolumeQuoteModal()">
-  <div class="vqm-modal">
-    <button class="vqm-close" onclick="closeVolumeQuoteModal()" aria-label="Close">&times;</button>
-    <div class="vqm-badge">Volume Order</div>
-    <h2 class="vqm-title" id="vqmTitle">Your order ships by freight</h2>
-    <p class="vqm-lead">
-      An order this size ships by freight, and that's where we can do the most for you. Instead of charging a standard delivery fee, our team will build you a <strong>custom quote</strong> that secures the most competitive freight rate for your delivery.
-    </p>
-    <ul class="vqm-points">
-      <li><strong>Freight rates compared</strong> to get you the lowest delivery cost</li>
-      <li><strong>No payment today.</strong> Review and approve your quote first</li>
-    </ul>
-    <p class="vqm-small" id="vqmAutoAdvanceNote" aria-live="polite">Your cart and delivery details carry over, so it only takes a moment &mdash; taking you to your quote request automatically.</p>
-    <div class="vqm-actions">
-      <button type="button" class="vqm-secondary" onclick="closeVolumeQuoteModal()">Back to Checkout</button>
-      <button type="button" class="vqm-primary" id="vqmPrimary" onclick="startVolumeQuote()">Get My Volume Quote</button>
-    </div>
-  </div>
-</div>
-<style>
-  .vqm-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(11,31,56,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
-  .vqm-modal { position: relative; background: #fff; border-radius: 18px; max-width: 520px; width: 100%; padding: 32px 30px 26px; box-shadow: 0 24px 80px rgba(0,0,0,.25); max-height: 92vh; overflow-y: auto; }
-  .vqm-close { position: absolute; top: 14px; right: 14px; width: 34px; height: 34px; border-radius: 50%; border: 1px solid #e4e9f0; background: #f8fafc; font-size: 20px; line-height: 1; color: #64748b; cursor: pointer; }
-  .vqm-badge { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: #ED7226; background: #fff4eb; border: 1px solid #fed7aa; padding: 5px 12px; border-radius: 999px; margin-bottom: 14px; }
-  .vqm-title { font-size: 22px; font-weight: 800; line-height: 1.3; color: #0B1F38; margin: 0 0 12px; padding-right: 30px; }
-  .vqm-lead { font-size: 14.5px; line-height: 1.65; color: #3A4A5C; margin: 0 0 16px; }
-  .vqm-points { list-style: none; padding: 0; margin: 0 0 16px; display: flex; flex-direction: column; gap: 10px; }
-  .vqm-points li { position: relative; padding-left: 28px; font-size: 14px; line-height: 1.5; color: #334155; }
-  .vqm-points li::before { content: "\2713"; position: absolute; left: 0; top: 0; width: 20px; height: 20px; border-radius: 50%; background: #dcfce7; color: #15803d; font-size: 12px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
-  .vqm-small { font-size: 12.5px; color: #8A99AB; margin: 0 0 22px; }
-  .vqm-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
-  .vqm-primary { background: #ED7226; color: #fff; border: none; border-radius: 10px; padding: 13px 22px; font-size: 14.5px; font-weight: 700; cursor: pointer; }
-  .vqm-primary:hover { background: #d9621a; }
-  .vqm-secondary { background: #fff; color: #0B1F38; border: 1.5px solid #d0d7e0; border-radius: 10px; padding: 12px 18px; font-size: 14px; font-weight: 600; cursor: pointer; }
-  @media (max-width: 480px) {
-    .vqm-modal { padding: 26px 20px 20px; }
-    .vqm-title { font-size: 19px; }
-    .vqm-actions { flex-direction: column-reverse; }
-    .vqm-actions button { width: 100%; }
-  }
-</style>
 </body>
 
 

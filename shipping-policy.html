@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Shipping Policy — Room Ready Supply</title>
-  <meta name="description" content="Room Ready Supply shipping policy: order processing times, delivery timeframes, tracking, freight delivery requirements, and how shipping is calculated instantly at checkout for hospitality supply orders." />
+  <meta name="description" content="Room Ready Supply shipping policy: orders ship direct from supplier warehouses, delivery is quoted in the cart and paid at checkout, delivery estimates, freight requirements, and damage reporting." />
   <link rel="canonical" href="https://www.roomreadysupply.com/shipping-policy" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Room Ready Supply" />
@@ -79,9 +79,9 @@
   <main class="policy-wrap">
     <a href="/" class="policy-back">← Back to Home</a>
     <h1>Shipping Policy</h1>
-    <p class="updated">Last Updated: September 23, 2026</p>
+    <p class="updated">Last Updated: October 13, 2026</p>
 
-    <p>This Shipping Policy explains how Room Ready Supply ("Room Ready Supply," "we," "us," or "our") processes, ships, and delivers orders placed through our website.</p>
+    <p>This Shipping Policy explains how Room Ready Supply ("Room Ready Supply," "we," "us," or "our") processes, ships, and delivers orders placed through our website. It matches our Terms of Service and the language shown in our cart and checkout.</p>
     <p>By placing an order with Room Ready Supply, you agree to the terms outlined in this Shipping Policy.</p>
 
     <h2>1. Shipping Area</h2>
@@ -92,17 +92,16 @@
     <hr class="policy-divider">
 
     <h2>2. Shipping Origin</h2>
-    <p>Room Ready Supply works with a network of hospitality-supply distributors, and most orders ship directly from the distributor's own warehouse to your delivery address rather than through a single Room Ready Supply location. This lets us keep a broad catalog in stock and get orders moving quickly.</p>
-    <p>The shipping origin may affect the estimated delivery time and shipping cost for your order. If your order includes items from more than one distributor, it may arrive in separate shipments with separate tracking numbers.</p>
+    <p>All orders ship direct from our supplier warehouses via commercial carrier. Room Ready Supply does not offer local delivery or warehouse pickup.</p>
+    <p>Because orders ship from the supplier warehouse nearest your items, the shipping origin may affect the estimated delivery time and shipping cost for your order. If your order includes items from more than one supplier, it may arrive in separate shipments with separate tracking numbers.</p>
 
     <hr class="policy-divider">
 
-    <h2>3. Order Processing</h2>
-    <p>Most orders are processed within 1–2 business days after payment has been successfully received and the order has been confirmed.</p>
-    <p>Business days are Monday through Friday, excluding federal holidays and other days when our distributors or shipping carriers are closed.</p>
-    <p>Orders placed on weekends, holidays, or after normal business hours will begin processing on the next business day.</p>
-    <p>Processing time is separate from transit time. Processing within 1–2 business days does not guarantee that an order will be delivered within that window.</p>
-    <p>Processing may be delayed because of:</p>
+    <h2>3. Order Confirmation and Handling</h2>
+    <p><strong>Your order is confirmed when your payment is accepted.</strong> You will receive an order confirmation by email with your RRS order number.</p>
+    <p>Confirmed orders are transmitted to the supplier within 1–2 business days after payment is confirmed. Transit time is additional and varies by destination and shipping method.</p>
+    <p>Business days are Monday through Friday, excluding federal holidays and other days when our suppliers or shipping carriers are closed. Orders placed on weekends, holidays, or after normal business hours begin handling on the next business day.</p>
+    <p>Handling may be delayed because of:</p>
     <ul>
       <li>High order volume</li>
       <li>Inventory availability</li>
@@ -118,7 +117,7 @@
     <hr class="policy-divider">
 
     <h2>4. Shipping Carriers and Services</h2>
-    <p>Because orders ship directly from the distributor's warehouse, each distributor selects the carrier and service level best suited to your order — typically a national parcel carrier for standard-size orders, or an LTL freight carrier for large, heavy, or palletized orders.</p>
+    <p>Because orders ship directly from the supplier's warehouse, each supplier selects the carrier and service level best suited to your order — typically a national parcel carrier for standard-size orders, or an LTL freight carrier for large, heavy, or palletized orders.</p>
     <p>The carrier used for an order may depend on:</p>
     <ul>
       <li>Product type</li>
@@ -130,39 +129,46 @@
       <li>Freight-service requirements</li>
       <li>Carrier availability</li>
     </ul>
-    <p>The distributor may select or change the carrier or service level when reasonably necessary to complete delivery.</p>
+    <p>The supplier may select or change the carrier or service level when reasonably necessary to complete delivery.</p>
 
     <hr class="policy-divider">
 
-    <h2>5. Shipping Charges</h2>
-    <p>Shipping is calculated automatically at checkout, based on the total weight of the items in your order, so you know your delivery cost before you pay — no waiting on a separate quote. Shipping is shown as its own line item and is not included in the item prices shown on the site.</p>
-    <p>A minimum shipping charge applies to every order. Orders below that minimum are still charged the minimum rather than a lower weight-based amount; larger or heavier orders are charged based on total weight, which may exceed the minimum. The exact charge for your order is shown at checkout before you complete payment.</p>
-    <p>For most orders, the amount shown at checkout is the final shipping charge. Where a customer requests a non-standard service — such as expedited delivery, inside delivery, liftgate service at a location that does not require it, or delivery to a limited-access or remote location — the distributor or carrier may apply an additional fee, and Room Ready Supply may contact the customer to discuss those specific costs before the order ships.</p>
-    <p>Customers remain responsible for entering complete and accurate shipping information at checkout. An incorrect or incomplete address that causes a reshipment or a carrier address-correction charge may result in an additional fee.</p>
+    <h2>5. Shipping Charges — One Order, One Payment</h2>
+    <p>Paper products, cleaning supplies, liners, soaps, and laundry essentials combine into one business order and one invoice.</p>
+    <ul>
+      <li><strong>Every order, at any weight:</strong> shipping is quoted in the cart (through our shipping-quote API) and listed automatically as a Delivery line in your checkout total, before you pay.</li>
+      <li>You pay the full total — items, sales tax, and delivery — <strong>at checkout</strong>. There is no separate shipping invoice and no pay-later shipping charge.</li>
+      <li>After payment is accepted, your order is confirmed and the shipping process starts (see section 3).</li>
+      <li>Shipping is shown as its own line item and is not included in the item prices shown on the site. A minimum shipping charge applies to every order.</li>
+    </ul>
+    <p>Fees in this section and sections 9–12 are customer-requested or customer-caused extras only — they are not the standard delivery charge. The standard delivery charge is always the one quoted in your cart and paid at checkout, and it does not change after you pay.</p>
+    <p>Where a customer requests a non-standard service — such as expedited delivery, inside delivery, liftgate service at a location that does not require it, or delivery to a limited-access or remote location — the supplier or carrier may apply an additional fee, and Room Ready Supply may contact the customer to discuss those specific costs before the order ships.</p>
+    <p>Customers are responsible for entering complete and accurate shipping information at checkout. An incorrect or incomplete address that causes a reshipment or a carrier address-correction charge may result in an additional fee.</p>
 
     <hr class="policy-divider">
 
     <h2>6. Shipping Promotions</h2>
-    <p>Room Ready Supply does not currently offer free shipping. Shipping is calculated automatically at checkout as described in section 5.</p>
+    <p>Room Ready Supply does not currently offer free shipping. Shipping charges apply as described in section 5.</p>
     <p>If a shipping promotion is offered in the future, its terms will be published on this page. Any change applies only to orders placed after the change is published; an order already placed ships on the terms shown at the time it was placed.</p>
 
     <hr class="policy-divider">
 
-    <h2>7. Estimated Delivery Times</h2>
-    <p>Estimated delivery dates shown during checkout or provided after shipment are estimates only. Delivery time begins after the order has been processed and transferred to the carrier.</p>
-    <p>Room Ready Supply does not guarantee a specific delivery date unless a written delivery guarantee has been expressly provided by us.</p>
-    <p>We are not responsible for carrier delays after the shipment has been accepted by the carrier, but we may assist customers with available tracking and claim information.</p>
+    <h2>7. Estimated Delivery Dates</h2>
+    <p>At checkout and in your order confirmation email, your delivery estimate is shown as a date range — for example, "Estimated delivery: Thu, Oct 22 – Mon, Oct 26." The range is calculated from the order date, the 1–2 business day supplier handling window, and the carrier transit time to your destination.</p>
+    <p>Delivery estimates are estimates only. Any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control. Room Ready Supply does not guarantee a specific delivery date unless a written delivery guarantee has been expressly provided by us.</p>
+    <p>We are not responsible for carrier delays after the shipment has been accepted by the carrier, but we will assist customers with available tracking and claim information.</p>
 
     <hr class="policy-divider">
 
     <h2>8. Parcel Shipments</h2>
-    <p>Smaller orders are typically shipped as standard parcel shipments through the distributor's carrier of choice. Parcel deliveries may be left at the delivery location according to the carrier's procedures unless a signature is required.</p>
+    <p>Smaller orders are typically shipped as standard parcel shipments through the supplier's carrier of choice. Parcel deliveries may be left at the delivery location according to the carrier's procedures unless a signature is required.</p>
     <p>Customers are responsible for ensuring that the delivery address is secure and accessible. Room Ready Supply is not responsible for packages that are stolen, misplaced, or damaged after the carrier records the shipment as successfully delivered, except where required by applicable law.</p>
+    <p>Risk of loss transfers to you when the carrier takes possession of the shipment.</p>
 
     <hr class="policy-divider">
 
     <h2>9. Freight and Pallet Shipments</h2>
-    <p>Large, heavy, oversized, palletized, or bulk orders may ship via LTL freight through the distributor's freight carrier.</p>
+    <p>Large, heavy, oversized, palletized, or bulk orders may ship via LTL freight through the supplier's freight carrier.</p>
     <p>Freight shipments may require a scheduled delivery appointment, a valid telephone number, a loading dock, a forklift, a pallet jack, liftgate service, residential delivery service, limited-access delivery service, or inside-delivery service.</p>
     <p>Customers must accurately state whether the delivery location is residential or commercial. A location may be treated as residential by the carrier even when a business operates from the property. Additional charges may apply when the delivery classification entered during checkout is incorrect.</p>
 
@@ -200,20 +206,20 @@
     <hr class="policy-divider">
 
     <h2>15. Damaged Shipments</h2>
-    <p>Shipping damage must be reported to Room Ready Supply within <strong>28 business hours after delivery</strong>.</p>
+    <p>Inspect your shipment on delivery. Report any damage, shortage, or incorrect items to us within <strong>5 business days</strong> of delivery, with photos, so we can file the carrier claim.</p>
     <p>Damage reports should include the order number, customer name, delivery address, description of the damage, affected quantity, photographs or videos, a copy of the delivery receipt, and details of any damage or shortage noted with the carrier.</p>
     <p>Customers must retain all products, cartons, pallets, wrapping, labels, and packaging materials until the claim has been reviewed. Do not discard, repair, use, resell, or alter damaged products before receiving instructions from Room Ready Supply.</p>
-    <p>Failure to report shipping damage within 28 business hours or failure to retain the packaging may limit our ability to submit or support a carrier claim.</p>
+    <p>Claims reported after this period may not be honored.</p>
 
     <hr class="policy-divider">
 
     <h2>16. Concealed Damage</h2>
-    <p>Concealed damage is damage that was not reasonably visible when the shipment was delivered. Concealed damage must also be reported within 28 business hours after delivery. Customers should open and inspect shipments as soon as reasonably possible after receipt.</p>
+    <p>Concealed damage is damage that was not reasonably visible when the shipment was delivered. For concealed damage discovered on opening, notify us within <strong>5 business days</strong> of receipt, with photos. Customers should open and inspect shipments as soon as reasonably possible after receipt.</p>
 
     <hr class="policy-divider">
 
     <h2>17. Missing Items and Shortages</h2>
-    <p>Missing products, missing cartons, and quantity shortages must be reported within 28 business hours after delivery. For freight shipments, visible shortages should be noted on the delivery receipt before it is signed.</p>
+    <p>Missing products, missing cartons, and quantity shortages must be reported within <strong>5 business days</strong> after delivery, with photos. For freight shipments, visible shortages should be noted on the delivery receipt before it is signed.</p>
     <p>Confirmed shortages may be addressed through replacement, store credit, refund, or another reasonable resolution determined by Room Ready Supply.</p>
 
     <hr class="policy-divider">
@@ -236,7 +242,7 @@
     <hr class="policy-divider">
 
     <h2>21. Backorders and Out-of-Stock Products</h2>
-    <p>If a product becomes unavailable after an order is placed, Room Ready Supply may contact the customer to discuss available options, which may include delaying the shipment, shipping available products separately, offering a substitute, issuing a partial refund, or canceling the affected item.</p>
+    <p>If a product becomes unavailable after an order is confirmed, Room Ready Supply may contact the customer to discuss available options, which may include delaying the shipment, shipping available products separately, offering a substitute (only with your prior approval), issuing a partial refund, or canceling the affected item.</p>
 
     <hr class="policy-divider">
 
@@ -246,12 +252,12 @@
     <hr class="policy-divider">
 
     <h2>23. Changes and Cancellations</h2>
-    <p>Order changes and cancellation requests must be submitted as soon as possible. Because orders are generally processed within 1–2 business days, we cannot guarantee that an order can be changed or canceled after it has been submitted. Once an order has shipped or been tendered to a carrier, it cannot normally be canceled.</p>
+    <p>Order changes and cancellation requests must be submitted as soon as possible. Because confirmed orders are transmitted to the supplier within 1–2 business days after payment is confirmed, we cannot guarantee that an order can be changed or canceled after it has been submitted. Before shipment, you may cancel any order for a full refund. Once an order has shipped or been tendered to a carrier, it cannot normally be canceled.</p>
 
     <hr class="policy-divider">
 
-    <h2>24. Shipping Policy and Returns</h2>
-    <p>This Shipping Policy should be read together with Room Ready Supply's <a href="/terms" style="color:#ed7226;">Terms of Service</a> and <a href="/privacy" style="color:#ed7226;">Privacy Policy</a>.</p>
+    <h2>24. Shipping Policy, Terms, and Returns</h2>
+    <p>This Shipping Policy should be read together with Room Ready Supply's Terms of Service and Privacy Policy.</p>
     <p>Reporting a shipping issue under this policy does not automatically authorize a return. Products must not be returned without prior authorization from Room Ready Supply.</p>
 
     <hr class="policy-divider">
@@ -263,9 +269,10 @@
 
     <h2>26. Contact Information</h2>
     <p>For shipping questions, delivery concerns, freight requirements, damage reports, or tracking assistance, please contact:</p>
-    <p><strong>Room Ready Supply</strong><br>609 Washington St<br>Plymouth, NC 27962<br>United States</p>
-    <p>Email: <a href="mailto:sales@roomreadysupply.com" style="color:#ed7226;">sales@roomreadysupply.com</a><br>Phone: <a href="tel:2522270073" style="color:#ed7226;">(252) 227-0073</a></p>
-    <p>Please include your order number, customer name, contact information, and a clear description of the issue.</p>
+    <p><strong>Room Ready Supply LLC</strong></p>
+    <p>609 Washington St, Plymouth, NC 27962</p>
+    <p>Phone: <a href="tel:+12526160088" style="color:#ed7226;">(252) 616-0088</a> — Mon–Fri, 8 AM–5 PM ET</p>
+    <p>Email: <a href="mailto:sales@roomreadysupply.com" style="color:#ed7226;">sales@roomreadysupply.com</a></p>
 
     <div class="policy-footer">
       <a href="/terms">Terms of Service</a>
