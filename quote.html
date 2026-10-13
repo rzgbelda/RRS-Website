@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="google-site-verification" content="AXPrsnw1E_hnTWco7kxGaF36gdqOJVkJ5nAtzYcaadM" />
   <title>Volume Pricing | Room Ready Supply</title>
-  <meta name="description" content="Volume pricing on hospitality and facility supplies applies automatically as your case count grows — 1-5, 6-29 and 30-49 case tiers, no request needed. Ordering 50+ cases? Send us your list for additional pricing." />
+  <meta name="description" content="Volume pricing on hospitality and facility supplies applies automatically as your case count grows — 1-5, 6-29 and 30+ case tiers, no request needed. Have a large list? Send it to us for pricing." />
   <link rel="canonical" href="https://www.roomreadysupply.com/quote" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Room Ready Supply" />
@@ -115,7 +115,7 @@
       <a href="/catalog">Catalog</a>
       <a href="/best-deals">Best Deals</a>
       <a href="/#reorder-header">Reorder Program</a>
-      <a href="/quote" class="active">50+ Case Pricing</a>
+      <a href="/quote" class="active">Volume Pricing</a>
       <a href="/price-beat" class="nav-link-highlight">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
         Price Match
@@ -164,7 +164,7 @@
     <a href="/catalog">Catalog</a>
     <a href="/best-deals">Best Deals</a>
     <a href="/#reorder-header">Reorder Program</a>
-    <a href="/quote" class="active">50+ Case Pricing</a>
+    <a href="/quote" class="active">Volume Pricing</a>
     <a href="/price-beat" class="nav-link-highlight">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
       Price Match
@@ -190,15 +190,14 @@
     </div>
     <div class="qhero-inner">
         <div class="qhero-left qhero-fade-in">
-            <!-- Volume pricing is automatic in the cart (1-5 / 6-29 / 30-49
+            <!-- Volume pricing is automatic in the cart (1-5 / 6-29 / 30+
                  cases), so this page leads with that rather than asking for
                  a quote request: most buyers never need to fill anything in.
-                 The form below is for the 50+ case orders that carry an
-                 additional negotiated discount, and for lists we need to
-                 price by hand. -->
+                 The form below is for large lists we price by hand. There is
+                 no 50+ tier (final update package, 2026-10-13). -->
             <span class="qhero-eyebrow">VOLUME PRICING MADE SIMPLE</span>
-            <h2 class="qhero-heading"><span class="qhero-accent">50+ Case Pricing</span></h2>
-            <p class="qhero-body">Our 50+ case pricing is automatic. Add your products to the cart and the price drops as your case count grows &mdash; no request, no back-and-forth. Ordering <strong>50 cases or more</strong>? Send us the list below and we'll come back with additional pricing on top of that.</p>
+            <h2 class="qhero-heading"><span class="qhero-accent">Volume Pricing</span></h2>
+            <p class="qhero-body">Our volume pricing is automatic. Add your products to the cart and the price drops at 6+ cases of the same item, and again at 30+ &mdash; no request, no back-and-forth. Have a large list? Send it below and we'll come back with pricing.</p>
             <div class="qhero-ctas">
                 <a href="/catalog" class="qhero-btn-primary">
                     Shop the Catalog
@@ -206,7 +205,7 @@
                 </a>
                 <a href="#uq-form" class="qhero-btn-secondary" onclick="event.preventDefault();document.getElementById('uq-form').scrollIntoView({behavior:'smooth'})">
                     <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
-                    Ordering 50+ Cases
+                    Send Us Your List
                 </a>
             </div>
         </div>
@@ -307,7 +306,7 @@
             </div>
             <div>
                 <div class="qfeat-title">Automatic Tiers</div>
-                <div class="qfeat-sub">1&ndash;5, 6&ndash;29 and 30&ndash;49 cases &mdash; applied in the cart</div>
+                <div class="qfeat-sub">1&ndash;5, 6&ndash;29 and 30+ cases &mdash; applied in the cart</div>
             </div>
         </div>
         <div class="qfeat-sep" aria-hidden="true"></div>
@@ -317,7 +316,7 @@
             </div>
             <div>
                 <div class="qfeat-title">Fast &amp; Easy</div>
-                <div class="qfeat-sub">We reply to 50+ case requests within 1 business day</div>
+                <div class="qfeat-sub">We reply to pricing requests within 1 business day</div>
             </div>
         </div>
     </div>
@@ -505,7 +504,7 @@
             <!-- Submit -->
             <div class="uq-submit-block">
                 <button type="submit" class="uq-submit-btn" id="quoteSubmitBtn">
-                    Send My 50+ Case Pricing Request
+                    Send My Pricing Request
                     <svg class="uq-submit-arrow" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
                 </button>
                 <p class="uq-response-note">Typically responded within 1 business day</p>
@@ -1012,7 +1011,7 @@
       msgEl.style.border = '1px solid #fca5a5';
     } finally {
       submitBtn.disabled = false;
-      submitBtn.innerHTML = 'Send My 50+ Case Pricing Request <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
+      submitBtn.innerHTML = 'Send My Pricing Request <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" style="vertical-align:middle;margin-left:8px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>';
     }
   });
 
