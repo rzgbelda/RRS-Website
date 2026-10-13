@@ -2439,7 +2439,7 @@ document.addEventListener('change', e => {
 // cut titles from 140-160 chars down to ~60-85 -- an improvement, but a
 // site-wide audit (tools/seo-audit.js) still found 94 of 120 product
 // titles running over Google's ~60-char display limit, since many product
-// names are themselves 50+ chars once brand + descriptor + type are all
+// names are themselves over 50 chars once brand + descriptor + type are all
 // included. " | Room Ready Supply" (appended where this is used) is 20 of
 // those 60 chars, leaving a 40-char budget for this function's own output.
 //
@@ -6536,7 +6536,7 @@ function updateMiniCart() {
   // produces the promised price.
   let tierNote = "";
   // 30+ cases is the best volume price the drawer points to (final update
-  // package, 2026-10-13: there is no 50+ tier in the cart). Pooled groups
+  // package, 2026-10-13: 30+ is the top tier in the cart). Pooled groups
   // have their own tiers, so they're only ever pointed at the next tier.
   const BEST_VOLUME_CASES = 30;
   if (!topIsGroup && topLineQty >= BEST_VOLUME_CASES) {
