@@ -959,29 +959,8 @@
               });
             }
           }
-          // Send receipt email
-          if (checkout.email) {
-            fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN',
-              },
-              body: JSON.stringify({
-                order_number:   orderNum,
-                customer_name:  checkout.contact  || checkout.business || '',
-                customer_email: checkout.email,
-                business_name:  checkout.business || '',
-                phone:          checkout.phone    || '',
-                shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-                subtotal:       window._orderSubtotal || window._orderTotal,
-                total:          window._orderTotal,
-                payment_method: method,
-                items:          window._orderItems || [],
-                created_at:     new Date().toISOString(),
-              }),
-            }).catch(function(err) { console.error('[receipt] send error:', err); });
-          }
+          // The confirmation email + PDF receipt is sent by api/create-order.js
+          // once Stripe has confirmed the payment (see api/_lib/receipt.js).
 
           localStorage.setItem('rrs_last_order', JSON.stringify({ orderNumber: orderNum, paymentMethod: method, total: window._orderTotal, items: window._orderItems, checkout: checkout }));
           document.getElementById('orderRef').textContent = orderNum;
@@ -1126,29 +1105,8 @@
               // to the customer and emails a tracking number, which staff
               // enter in admin against order_shipments. Nothing is booked
               // from the browser at payment time any more.
-              // Send receipt email
-              if (checkout.email) {
-                fetch('https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/send-receipt', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN',
-                  },
-                  body: JSON.stringify({
-                    order_number:   orderNum,
-                    customer_name:  checkout.contact  || checkout.business || '',
-                    customer_email: checkout.email,
-                    business_name:  checkout.business || '',
-                    phone:          checkout.phone    || '',
-                    shipping_address: checkout.fulfillmentMethod === 'pickup' ? null : { street: checkout.street, city: checkout.city, state: checkout.state, zip: checkout.zip },
-                    subtotal:       window._orderSubtotal || window._orderTotal,
-                    total:          window._orderTotal,
-                    payment_method: method,
-                    items:          window._orderItems || [],
-                    created_at:     new Date().toISOString(),
-                  }),
-                }).catch(function(err) { console.error('[receipt] send error:', err); });
-              }
+              // The confirmation email + PDF receipt is sent by api/create-order.js
+              // once Stripe has confirmed the payment (see api/_lib/receipt.js).
               if (checkout.referral) {
                 // Look up sub-distributor by referral code and save to
                 // order_referrals. Via lookup_referral_code() -- the base

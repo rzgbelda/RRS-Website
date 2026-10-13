@@ -4,6 +4,9 @@ const sendInvoiceHandler = require('./send-invoice.js');
 const { buildUnsubscribeUrl } = require('./product-meta.js');
 const { recordAcknowledgement } = require('./_lib/acknowledgements');
 const rateLimit = require('./_lib/rate-limit');
+const { priceCart } = require('./_lib/price-cart');
+const { sendReceipt } = require('./_lib/receipt');
+const { getDeliveryEstimateRange } = require('../delivery-estimate');
 
 // Gmail/Yahoo's Feb 2024 bulk-sender rules require a one-click
 // List-Unsubscribe header (RFC 8058) plus a visible unsubscribe link in
@@ -251,8 +254,60 @@ module.exports = async (req, res) => {
     }
   }
 
+  // Order confirmation email + PDF receipt, only for an order whose payment
+  // Stripe itself confirmed above -- never on the browser's say-so (the old
+  // browser-called send-receipt function let anyone send branded mail).
+  // Awaited, best-effort: the order is already saved, so a mail failure is
+  // logged, never returned as an error.
+  if (orderData.stripe_payment_intent_id && ['paid', 'authorized', 'processing'].includes(orderData.payment_status)) {
+    try {
+      await sendOrderReceipt(orderData, b);
+    } catch (err) {
+      console.error('[create-order] receipt email failed for', orderData.order_number, '-', err.message);
+    }
+  }
+
   res.status(200).json({ id: data.id });
 };
+
+// Prices the lines with the same code that set the charge (price-cart.js,
+// as 'pickup' so no carrier is called), takes the total from Stripe, and
+// derives delivery as total - items - tax. Product names come from the
+// database, not the browser.
+async function sendOrderReceipt(orderData, b) {
+  const email = String(orderData.customer_email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const oneTime = orderData.order_type !== 'reorder';
+  const items = (Array.isArray(b.cart_items) ? b.cart_items : [])
+    .map(i => ({ sku: String(i.itemNumber || i.sku || '').trim(), quantity: parseInt(i.quantity, 10) || 0, reorder: oneTime ? 'Once' : (i.reorder || '') }))
+    .filter(i => i.sku && i.quantity > 0);
+  if (!items.length) return;
+
+  const addr = orderData.shipping_address || {};
+  const priced = await priceCart(items, addr.state, 'pickup', addr);
+  if (!priced.ok) throw new Error('could not price receipt lines: ' + priced.error);
+  const total = Number(orderData.total) || 0;
+  const delivery = Math.max(0, Math.round((total - priced.discountedSubtotal - priced.tax) * 100) / 100);
+
+  await sendReceipt({
+    order_number: orderData.order_number,
+    created_at: new Date().toISOString(),
+    customer_name: orderData.customer_name,
+    business_name: orderData.business_name === 'N/A' ? '' : orderData.business_name,
+    customer_email: email,
+    phone: orderData.phone,
+    shipping_address: addr,
+    payment_method: orderData.payment_method,
+    payment_status: orderData.payment_status,
+    items: priced.lines.map(l => ({ name: l.name || l.sku, quantity: l.quantity, price: l.unitPrice })),
+    subtotal: priced.subtotal,
+    discount: priced.discount,
+    tax: priced.tax,
+    delivery,
+    total,
+    deliveryRange: getDeliveryEstimateRange(null, priced.deliveryDays).rangeLabel,
+  });
+}
 
 async function flagPossibleStockouts(supabase, orderId, cartItems) {
   const skus = [...new Set(cartItems.map(i => i.sku || i.itemNumber).filter(Boolean))];
