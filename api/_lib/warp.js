@@ -13,6 +13,14 @@
 //   200:  { quote_id, price: { amount, currency_code }, transit_time, ... }
 // PARCEL returns a single WARP Parcel rate.
 //
+// Freight (LTL) also asks POST /freights/freight-quote, which lists every
+// carrier option (body uses `items`, each option has `rate`). On some lanes
+// the single /quote rate is WARP's own network price and far above the
+// market -- tested 2026-10-13, 345 lb pallet Port Wentworth GA -> Raleigh
+// NC: /quote $1,081.26, cheapest option $251.52 -- so the lower valid price
+// of the two is used. Either one alone is enough to price the order; the
+// options endpoint is marked experimental by WARP and fails on some lanes.
+//
 // Only quotes are requested here -- nothing is booked with WARP. RRS
 // dropships: the supplier ships the order.
 //
@@ -28,6 +36,8 @@
 //                           LTL quote (e.g. "liftgate-delivery"), default none
 
 const TIMEOUT_MS = 6000;
+// /freights/freight-quote polls many carriers and took ~9 s in testing.
+const OPTIONS_TIMEOUT_MS = 15000;
 const RETRY_DELAY_MS = 400;
 
 function base() {
@@ -85,11 +95,11 @@ function palletItems(weightLb) {
   }];
 }
 
-async function postOnce(body) {
+async function postOnce(body, pathName = '/freights/quote', timeoutMs = TIMEOUT_MS) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const resp = await fetch(base() + '/freights/quote', {
+    const resp = await fetch(base() + pathName, {
       method: 'POST',
       headers: { apikey: String(process.env.WARP_API_KEY || '').trim(), 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify(body),
@@ -130,22 +140,42 @@ async function rateWarp({ mode, origin, dest, packages, weightLb }) {
   const services = String(process.env.WARP_DELIVERY_SERVICES || '').split(',').map(s => s.trim()).filter(Boolean);
   if (mode !== 'parcel' && services.length) body.deliveryServices = services.map(service => ({ service, quantity: 1 }));
 
-  let data;
-  try {
-    data = await postOnce(body);
-  } catch (err) {
-    if (!err.retryable) throw err;
-    await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
-    data = await postOnce(body);
-  }
-  const amount = Number(data && data.price && data.price.amount);
-  if (!(amount > 0)) throw new Error('WARP returned no price' + (data && data.status ? ` (status ${data.status})` : ''));
-  return {
-    amount: round2(amount),
-    transitDays: data.transit_time == null ? null : Number(data.transit_time),
-    quoteId: data.quote_id || null,
-    mode,
-  };
+  const single = (async () => {
+    let data;
+    try {
+      data = await postOnce(body);
+    } catch (err) {
+      if (!err.retryable) throw err;
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+      data = await postOnce(body);
+    }
+    const amount = Number(data && data.price && data.price.amount);
+    if (!(amount > 0)) throw new Error('WARP returned no price' + (data && data.status ? ` (status ${data.status})` : ''));
+    return { amount: round2(amount), transitDays: data.transit_time == null ? null : Number(data.transit_time), quoteId: data.quote_id || null, mode };
+  })();
+
+  if (mode === 'parcel') return single;
+
+  // Freight: the cheapest LTL option from /freights/freight-quote as well.
+  const options = (async () => {
+    const { listItems, shipmentType, ...rest } = body;
+    const data = await postOnce({ ...rest, items: listItems }, '/freights/freight-quote', OPTIONS_TIMEOUT_MS);
+    const best = (data && Array.isArray(data.options) ? data.options : [])
+      .filter(o => Number(o.rate) > 0 && (!o.shipmentType || o.shipmentType === 'LTL'))
+      .sort((a, b) => Number(a.rate) - Number(b.rate))[0];
+    if (!best) throw new Error('WARP freight-quote returned no LTL option');
+    return {
+      amount: round2(Number(best.rate)),
+      transitDays: best.transitTime ? Math.round(Number(best.transitTime) / 86400) : null,
+      quoteId: best.id || null,
+      mode,
+    };
+  })();
+
+  const [a, b] = await Promise.allSettled([single, options]);
+  const ok = [a, b].filter(r => r.status === 'fulfilled').map(r => r.value);
+  if (!ok.length) throw new Error([a, b].map(r => r.reason && r.reason.message).join(' | '));
+  return ok.reduce((lo, r) => (r.amount < lo.amount ? r : lo));
 }
 
 module.exports = { rateWarp, pickupDate, parcelItems, palletItems };
