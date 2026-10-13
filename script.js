@@ -271,12 +271,21 @@ function syncCartPricesToCatalog() {
     );
     if (!match) return;
 
-    ["price", "price1", "price2", "price3", "tier1MinQty", "tier2MinQty", "tier3MinQty", "moqGroup", "image", "description"].forEach(field => {
+    // Minimum, unit and name too, not just prices: a cart saved before a
+    // product's minimum or unit changed (Prestige case packs, Starlinen
+    // "Dz" -> "Dozen", 2026-10-13/14) kept the old rules, so the cart page
+    // accepted a quantity the server then refused at payment.
+    ["price", "price1", "price2", "price3", "tier1MinQty", "tier2MinQty", "tier3MinQty", "moqGroup", "moqGroupMin", "moq", "name", "image", "description"].forEach(field => {
       if (match[field] !== undefined && item[field] !== match[field]) {
         item[field] = match[field];
         changed = true;
       }
     });
+    // Cart lines carry the selling unit as `unit`; the catalog as priceBy.
+    if (match.priceBy !== undefined && item.unit !== match.priceBy) {
+      item.unit = match.priceBy;
+      changed = true;
+    }
   });
 
   if (changed) saveCart(cart);
@@ -3152,7 +3161,11 @@ function populateProductPage(product) {
     if (show) {
       moqNote.textContent = isSoldByDozen(product)
         ? `Sold by the case — ${moq} dozen per case (${moq}, ${moq * 2}, ${moq * 3}…)`
-        : `Pallet pricing: ${moq} cases per pallet (${moq}, ${moq * 2}, ${moq * 3}\u2026)`;
+        : moqUnitWord(product) === "case"
+          // "Pallet" only for case-priced products (NPS: N cases per pallet);
+          // a piece/set/pair listing with a minimum is sold in full cases.
+          ? `Pallet pricing: ${moq} cases per pallet (${moq}, ${moq * 2}, ${moq * 3}\u2026)`
+          : `Sold by the case — ${moq} ${moqUnitWord(product)}s per case (${moq}, ${moq * 2}, ${moq * 3}\u2026)`;
     }
   }
 
@@ -3888,7 +3901,13 @@ function setupProductQuantity() {
   // should move 50 at a time, not 1, so every reachable quantity is one
   // the customer can actually buy.
   const stepSize = () => Math.max(1, parseInt(addBtn.dataset.moq) || 1);
-  function getQty() { return Math.max(stepSize(), parseInt(qtyValue.value) || stepSize()); }
+  // Rounded UP to a whole multiple of the minimum: typing 30 for a
+  // 24-minimum item used to be accepted here and only refused in the cart.
+  function getQty() {
+    const step = stepSize();
+    const typed = Math.max(step, parseInt(qtyValue.value) || step);
+    return Math.ceil(typed / step) * step;
+  }
 
   function updateProductPagePrice() {
     const qty = getQty();
@@ -3976,6 +3995,7 @@ function setupProductQuantity() {
     const step = stepSize();
     const q = getQty();
     if (q - step >= step) { qtyValue.value = q - step; updateProductPagePrice(); }
+    else if (String(qtyValue.value) !== String(q)) { qtyValue.value = q; updateProductPagePrice(); }
   };
 
   qtyValue.addEventListener("input", () => {
@@ -4199,8 +4219,10 @@ function setupCartButtons() {
 
       if (!cart[index]) return;
 
+      // Next whole multiple, so a line sitting off-multiple steps back onto one.
       const step = productMoq(cart[index]);
-      cart[index].quantity = (Number(cart[index].quantity) || step) + step;
+      const cur = Number(cart[index].quantity) || 0;
+      cart[index].quantity = Math.floor(cur / step) * step + step;
 
       saveCart(cart);
       updateCartBadge();
@@ -4219,8 +4241,9 @@ function setupCartButtons() {
       // 50-dozen-minimum wash cloth can't sit at 49, only 0/50/100/...
       const step = productMoq(cart[index]);
       const floor = step;
-      if ((Number(cart[index].quantity) || step) > floor) {
-        cart[index].quantity -= step;
+      const cur = Number(cart[index].quantity) || step;
+      if (cur > floor) {
+        cart[index].quantity = Math.max(floor, Math.ceil(cur / step) * step - step);
       }
 
       saveCart(cart);
@@ -6430,8 +6453,12 @@ function miniCartSetQty(itemNumber, delta) {
   const item = cart.find(i => String(i.itemNumber) === String(itemNumber));
   if (!item) return;
 
+  // Steps land on whole multiples of the minimum, even from an off-multiple
+  // quantity left by an older cart.
   const step = productMoq(item) || 1;
-  const next = (Number(item.quantity) || 0) + (delta * step);
+  const cur = Number(item.quantity) || 0;
+  const next = delta > 0 ? Math.floor(cur / step) * step + delta * step
+    : Math.ceil(cur / step) * step + delta * step;
 
   const remaining = next > 0
     ? cart.map(i => (String(i.itemNumber) === String(itemNumber) ? { ...i, quantity: next } : i))
