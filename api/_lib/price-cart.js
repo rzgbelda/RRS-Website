@@ -30,6 +30,17 @@ function isSoldByDozen(row) {
   return String(row && row.unit || '').trim().toLowerCase() === 'dozen';
 }
 
+// The word a minimum is counted in: the product's own selling unit, so a
+// case-only product sold per piece (InnStyle: 48 towels per case) reads
+// "48 pieces", not "48 cases". Mirrors moqUnitWord() in script.js.
+function moqUnitWord(row) {
+  const u = String(row && row.unit || '').trim().toLowerCase();
+  if (u === 'dozen') return 'dozen';
+  if (u === 'each' || u === 'ea' || u === 'piece' || u === 'pc') return 'piece';
+  if (u === 'set' || u === 'pair' || u === 'pail' || u === 'roll' || u === 'box') return u;
+  return 'case';
+}
+
 // Mirrors cleanPrice() in script.js.
 function cleanPrice(v) {
   return Number(String(v == null ? '' : v).replace('$', '').replace(',', '').trim()) || 0;
@@ -289,7 +300,7 @@ async function priceCart(items, state, fulfillmentMethod, destination) {
     // enforceCartMinimums()/moqShortfallText() in script.js.
     const moq = Math.max(1, Math.floor(Number(row.moq) || 1));
     if (moq > 1 && (qty < moq || qty % moq !== 0)) {
-      const unit = isSoldByDozen(row) ? 'dozen' : 'case';
+      const unit = moqUnitWord(row);
       const plural = n => (unit === 'dozen' ? unit : unit + (n === 1 ? '' : 's'));
       const next = qty < moq ? moq : Math.ceil(qty / moq) * moq;
       const need = next - qty;

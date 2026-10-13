@@ -903,10 +903,21 @@ function productMoq(p) {
 // must be a whole multiple of it (30, 60, 90...), same rule as dozen lines
 // and Mix & Match groups. Mirrored server-side in api/_lib/price-cart.js,
 // which is what actually stops the payment.
+// The word a minimum is counted in: the product's own selling unit, so a
+// case-only product sold per piece (InnStyle: 48 towels per case) reads
+// "48 pieces", not "48 cases". Mirrors moqUnitWord() in api/_lib/price-cart.js.
+function moqUnitWord(p) {
+  const u = String(p && (p.priceBy || p.unit) || "").trim().toLowerCase();
+  if (u === "dozen") return "dozen";
+  if (u === "each" || u === "ea" || u === "piece" || u === "pc") return "piece";
+  if (u === "set" || u === "pair" || u === "pail" || u === "roll" || u === "box") return u;
+  return "case";
+}
+
 function moqShortfallText(i, short) {
   const moq = productMoq(i);
   const qty = Number(i.quantity) || 0;
-  const unit = isSoldByDozen(i) ? "dozen" : "case";
+  const unit = moqUnitWord(i);
   const plural = n => (unit === "dozen" ? unit : unit + (n === 1 ? "" : "s"));
   const next = qty < moq ? moq : Math.ceil(qty / moq) * moq;
   const need = next - qty;
