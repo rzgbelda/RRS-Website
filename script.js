@@ -2900,16 +2900,27 @@ function populateProductPage(product) {
     // "180-269 Cases" reads as a huge order where "6-8 Pallets" does not.
     // Prices stay per case; only the wording changes. If any threshold is
     // not a whole number of pallets the cards fall back to case counts.
-    const palletQty = product.moqGroup
+    let palletQty = product.moqGroup
       ? Number(product.moqGroupMin) || 0
       : (productMoq(product) > 1 ? productMoq(product) : 0);
+    // Case packs (InnStyle): priced per piece, named "Case of 48 Pieces",
+    // tiers set at 6 and 30 CASES counted in pieces (288, 1440). Labelled in
+    // cases, like the pallet products below, so the card reads "6-29 Cases"
+    // and not "288-1439 Cases" (or "Pallets" when the minimum is a case).
+    // Sold from 1 piece or from 1 case; either way the group is the case.
+    const casePackMatch = String(product.name || "").match(/Case of (\d+)/i);
+    const casePack = casePackMatch ? Number(casePackMatch[1]) : 0;
+    const isCasePack = casePack > 1 && !product.moqGroup && !isSoldByDozen(product) &&
+      (productMoq(product) <= 1 || productMoq(product) === casePack);
+    if (isCasePack) palletQty = casePack;
     // The converter drops a tier priced the same as the base (a tier that is
     // not a discount), so a pallet product whose first tier equals the base
     // price arrives with NO tier 1 -- and its first card vanished. The base
     // price IS the tier 1 price from the minimum order (1 pallet), so the
     // card is rebuilt from it.
     if (palletQty > 1 && !mins[0] && cleanPrice(product.price)) {
-      mins[0] = palletQty;
+      // A case pack sold from 1 piece starts at 1, not at a full case.
+      mins[0] = isCasePack && productMoq(product) <= 1 ? 1 : palletQty;
       prices[0] = cleanPrice(product.price);
       if (product.isBestDeal) regs[0] = cleanPrice(product.regularPrice);
     }
@@ -2923,11 +2934,12 @@ function populateProductPage(product) {
       prices[0] = cleanPrice(product.price);
       if (product.isBestDeal) regs[0] = cleanPrice(product.regularPrice);
     }
-    const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0);
-    const unitLower = unitWord.toLowerCase();
+    const byPallet = palletQty > 1 && mins.every(m => !m || m % palletQty === 0 || (isCasePack && m === 1));
+    // A case pack's price is per piece/set/pair, not per case.
+    const unitLower = isCasePack ? moqUnitWord(product) : unitWord.toLowerCase();
     // What the tiers count: whole pallets for a case-priced pallet product
-    // (NPS), whole cases for a dozen-priced one (Starlinen).
-    const orderWord = isSoldByDozen(product) ? "Case" : "Pallet";
+    // (NPS), whole cases for a dozen-priced one (Starlinen) or a case pack.
+    const orderWord = isSoldByDozen(product) || isCasePack ? "Case" : "Pallet";
     const unitsLower = isSoldByDozen(product) ? unitLower : unitLower + "s";
     const headEl = document.querySelector(".tier-cards-head");
     if (headEl) {
@@ -2958,13 +2970,16 @@ function populateProductPage(product) {
       // that equals this tier's price (NPS: tier 1 = base) the card really
       // covers everything from the minimum order, so it starts at 1 pallet
       // rather than implying 1-2 pallets cost something else.
-      const coversFromMinimum = byPallet && i === 0 && cleanPrice(product.price) === price;
+      const coversFromMinimum = byPallet && i === 0 && cleanPrice(product.price) === price &&
+        !(isCasePack && productMoq(product) <= 1);
       const startQty = coversFromMinimum ? palletQty : min;
       if (byPallet) {
         const lo = startQty / palletQty;
         const hi = nextMin ? nextMin / palletQty - 1 : null;
         const plural = n => `${orderWord}${n === 1 ? "" : "s"}`;
-        label = hi == null ? `${lo}+ ${plural(2)}`
+        // Case pack sold from 1 piece: the first card runs up to the next tier.
+        if (startQty < palletQty) label = hi == null ? `Any quantity` : `Up to ${hi} ${plural(hi)}`;
+        else label = hi == null ? `${lo}+ ${plural(2)}`
           : hi === lo ? `${lo} ${plural(lo)}`
           : `${lo}–${hi} ${plural(hi)}`;
       } else {
