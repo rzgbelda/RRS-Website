@@ -697,6 +697,14 @@
                columns (name/sku/category/price/unit/featured/active), so
                there was no way to confirm an optional column matched at all. -->
           <div id="csvColsDetected" style="display:none;margin:0 0 14px;padding:10px 14px;border:1px solid #dbeafe;border-radius:8px;background:#eff6ff;font-size:12.5px;color:#1e40af;line-height:1.6"></div>
+          <!-- Re-import safety (2026-10-14): existing products keep their
+               hand-edited catalog content unless this is ticked. See
+               CSV_PRESERVED_ON_UPDATE in admin.js. -->
+          <label style="display:flex;gap:10px;align-items:flex-start;margin:0 0 14px;padding:10px 14px;border:1px solid #e5e7eb;border-radius:8px;background:#f9fafb;font-size:12.5px;color:#374151;line-height:1.5;cursor:pointer">
+            <input type="checkbox" id="csvOverwriteContent" style="margin-top:3px">
+            <span><strong>Also overwrite names, descriptions, images, category, grouping and visibility</strong> on products already on the site.
+            Leave unticked for a normal supplier update: existing products keep everything staff edited by hand (including products hidden on purpose); only prices, tiers, costs, stock, weight, size and minimums are refreshed. New products always get everything from the file.</span>
+          </label>
           <div class="csv-preview-table-wrap">
             <table class="a-table" id="csvPreviewTable" style="font-size:12px;min-width:600px">
               <thead id="csvPreviewHead"></thead>
@@ -3615,7 +3623,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=113"></script>
+<script src="admin.js?v=114"></script>
 <script src="admin-seo.js?v=5"></script>
 <script>
   function toggleSidebar() {

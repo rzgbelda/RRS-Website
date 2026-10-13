@@ -2043,7 +2043,10 @@ let _csvRunning = false;
    a towel family is picked by quality tier, and the existing tier-grouped
    selector (both the catalog card's modal and the product page's two-step
    Tier-then-Size picker) already does exactly that grouping for free. */
-const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250","300","600","1.0 Mil","1.25 Mil","1.5 Mil","2 Mil"];
+// The four combined values were added to the DB CHECK constraint by
+// 20261012c_prestige_combined_tier_values.sql; without them here an import
+// silently nulled product_tier on every Prestige sheet/set product.
+const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250","300","600","1.0 Mil","1.25 Mil","1.5 Mil","2 Mil","200 Hospitality","300 Hospitality","600 Luxury Blend","600 Wrinkle-Free"];
 
 /* Maps a spreadsheet cell to a valid product_tier, or null.
    Anything unrecognized becomes null rather than being passed through: the
@@ -2071,7 +2074,7 @@ function normalizeProductTier(raw) {
 const DISTRIBUTOR_SLUGS = [
   [/star\s*linen/, "starlinen"], [/wraptite/, "wraptite"], [/sasso/, "sasso"],
   [/^nps\b|nps holdings/, "nps"], [/imperial/, "imperial-brady"],
-  [/restaurant\s*store/, "restaurant-store"],
+  [/restaurant\s*store/, "restaurant-store"], [/inn\s*style/, "innstyle"], [/bargoose/, "bargoose"],
 ];
 function distributorSlug(raw) {
   const s = String(raw || "").trim().toLowerCase();
@@ -2245,7 +2248,7 @@ async function adminAuthHeaders() {
 const TEXT_UPDATE_COLS = ["name", "description", "overview", "feature1", "feature2", "feature3", "feature4", "product_family", "variant_label", "color_group", "color_label", "product_tier", "case_qty"];
 async function runProductTextUpdate(file) {
   if (!file) return;
-  const raw = parseCsvRows(stripBom(await file.text()));
+  const raw = parseCsvRows(stripBom(decodeCsvBytes(await file.arrayBuffer())));
   // File headers are normalized (spaces/underscores/hyphens stripped) so
   // "Product Family", "product-family" and "productfamily" all match --
   // but TEXT_UPDATE_COLS' own entries (e.g. "product_family") must go
@@ -2312,12 +2315,14 @@ function cvtHandleFile(file) {
       } else {
         /* CSV — re-use the same full-text tokenizer as parseCsv, just
            without requiring a "name" column. */
-        const rawRows = parseCsvRows(stripBom(e.target.result));
+        const rawRows = parseCsvRows(stripBom(decodeCsvBytes(e.target.result)));
         const headers = (rawRows[0] || []).map(h => h.trim());
         rows = [];
         for (let i = 1; i < rawRows.length; i++) {
           const vals = rawRows[i];
-          if (vals.length === 1 && vals[0].trim() === "") continue;
+          // Blank lines AND rows of empty cells (",,,,," -- spreadsheets
+          // export trailing rows like that; InnStyle's file ends with 16).
+          if (vals.every(v => !String(v).trim())) continue;
           const obj = {};
           headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
           rows.push(obj);
@@ -2344,7 +2349,11 @@ function cvtHandleFile(file) {
   // database a few clicks later. Confirmed live: 202 products imported
   // through this exact path show U+FFFD (the "unknown character"
   // replacement glyph) in place of × in their names.
-  isXlsx ? reader.readAsArrayBuffer(file) : reader.readAsText(file, "UTF-8");
+  //
+  // Read as bytes for CSV too and decoded by decodeCsvBytes(): forcing
+  // UTF-8 turned "×" into "�" in every name from the Starlinen, Wraptite
+  // and Sasso feeds, which are saved as Windows-1252, not UTF-8.
+  reader.readAsArrayBuffer(file);
 }
 
 function cvtAutoMap(cols) {
@@ -3527,15 +3536,20 @@ function cvtNormalizeValue(key, value, srcRow) {
 
     if (v) {
       const n = parseInt(v.replace(/[^0-9]/g, ""), 10) || "";
-      // Wraptite's quantity block holds each range's UPPER end for tiers 1
-      // and 2 (5 / 29) and the START of tier 3 (30): 1-5, 6-29, 30+. A tier 2
-      // value sitting exactly one below tier 3 can only be that upper end
-      // (a range starting at 29 would be one case wide), so tier 2 starts
-      // one above tier 1's end instead.
+      const num = k => parseInt(String(srcRow[_cvtMapping[k]] ?? "").replace(/[^0-9]/g, ""), 10);
+      // Wraptite's (and InnStyle's) quantity block holds each range's UPPER
+      // end for tiers 1 and 2 (5 / 29) and the START of tier 3 (30): 1-5,
+      // 6-29, 30+. A tier 2 value sitting exactly one below tier 3 can only
+      // be that upper end (a range starting at 29 would be one case wide),
+      // so tier 2 starts one above tier 1's end instead...
       if (key === "tier2_min_qty" && n) {
-        const num = k => parseInt(String(srcRow[_cvtMapping[k]] ?? "").replace(/[^0-9]/g, ""), 10);
         const t1 = num("tier1_min_qty"), t3 = num("tier3_min_qty");
         if (t3 && n === t3 - 1 && t1 && t1 < n) return String(t1 + 1);
+      }
+      // ...and tier 1 then starts at 1, not at its own upper end (5).
+      if (key === "tier1_min_qty" && n > 1) {
+        const t2 = num("tier2_min_qty"), t3 = num("tier3_min_qty");
+        if (t3 && t2 === t3 - 1 && n < t2) return "1";
       }
       return String(n);
     }
@@ -3687,8 +3701,10 @@ function cvtBuildAndDownload() {
   // columns while still needing size auto-derived, or vice versa.
   const autoColor = !_cvtMapping.color_group && !_cvtMapping.color_label;
 
+  const rowObjs = [];
   for (const srcRow of _cvtSourceRows) {
-    const vals = headers.map(h => {
+    const obj = {};
+    headers.forEach(h => {
       const srcCol = _cvtMapping[h] || "";
       let v = srcCol ? String(srcRow[srcCol] ?? "") : "";
       if (!srcCol && autoVariants && (h === "product_family" || h === "variant_label")) {
@@ -3702,11 +3718,15 @@ function cvtBuildAndDownload() {
         const d = derived.get(srcRow) || {};
         v = h === "color_group" ? (d.colorGroup || "") : (d.colorLabel || "");
       }
-      v = cvtNormalizeValue(h, v, srcRow);
-      return `"${v.replace(/"/g,'""')}"`;
+      obj[h] = cvtNormalizeValue(h, v, srcRow);
     });
-    lines.push(vals.join(","));
+    rowObjs.push(obj);
   }
+  const casePackCount = cvtApplyCasePacks(rowObjs);
+  for (const obj of rowObjs) {
+    lines.push(headers.map(h => `"${String(obj[h] ?? "").replace(/"/g,'""')}"`).join(","));
+  }
+  if (casePackCount) showToast(`Case-pack rules applied to ${casePackCount} rows (per-piece weight, case tiers, minimums)`);
 
   if (autoVariants) {
     const groupedRows = [...derived.values()].filter(d => d.family).length;
@@ -3722,6 +3742,53 @@ function cvtBuildAndDownload() {
   a.href = url; a.download = cvtDownloadFileName(); a.click();
   URL.revokeObjectURL(url);
   showCvtStep(3);
+}
+
+/* Case packs priced per piece (InnStyle: "Prestige Ringspun Cotton Bath
+   Towel, 27 × 50 in., White, Case of 48 Pieces" at $7.78 a towel). The feed
+   gives the WHOLE-CASE weight and tiers counted in cases (6 / 30) while the
+   quantity a buyer orders is in pieces, so imported literally one towel was
+   charged shipping for 48 and the case tiers became 6 and 30 towels. These
+   are the rules set by hand on 2026-10-13 with Jonas Roxas, so a re-import
+   reproduces the live catalog instead of undoing it:
+     - weight            = case weight / N  (per piece)
+     - tier 2 / 3 minimum = cases x N       (counted in pieces)
+     - minimum order      = N when the file also has a "1 Piece/Set/Pair"
+                            listing of the same item (that listing sells
+                            singles), otherwise 1 -- sold by the piece, and
+                            the name says so: "..., Sold by the Piece (Case of N)".
+   Only rows whose unit is a single item (Each/Set/Pair) and whose name ends
+   in "Case of N Pieces/Sets/Pairs"; case-priced and dozen-priced feeds
+   (Wraptite, Starlinen, Sasso) never match. Returns the count changed. */
+const CVT_CASE_PACK_RE = /,\s*Case of (\d+)\s+(Pieces|Sets|Pairs)\s*$/i;
+const CVT_SINGLE_RE = /,\s*1\s+(Piece|Set|Pair)\s*$/i;
+function cvtApplyCasePacks(rowObjs) {
+  const singles = new Set(rowObjs
+    .filter(r => CVT_SINGLE_RE.test(r.name || ""))
+    .map(r => r.name.replace(CVT_SINGLE_RE, "").trim().toLowerCase()));
+  let changed = 0;
+  for (const r of rowObjs) {
+    const m = String(r.name || "").match(CVT_CASE_PACK_RE);
+    const unit = String(r.unit || "").trim().toLowerCase();
+    if (!m || !["each", "set", "pair", "piece"].includes(unit)) continue;
+    const n = parseInt(m[1], 10);
+    if (!(n > 1)) continue;
+    const per = x => { const f = parseFloat(x); return Number.isFinite(f) ? String(Math.round(f / n * 1000) / 1000) : x; };
+    const times = x => { const f = parseInt(x, 10); return Number.isFinite(f) && f > 0 ? String(f * n) : x; };
+    if (r.weight) r.weight = per(r.weight);
+    if (r.tier2_min_qty) r.tier2_min_qty = times(r.tier2_min_qty);
+    if (r.tier3_min_qty) r.tier3_min_qty = times(r.tier3_min_qty);
+    const hasSingle = singles.has(r.name.replace(CVT_CASE_PACK_RE, "").trim().toLowerCase());
+    r.moq = hasSingle ? String(n) : "1";
+    if (!hasSingle) {
+      const one = { pieces: "Piece", sets: "Set", pairs: "Pair" }[m[2].toLowerCase()];
+      r.name = r.name.replace(CVT_CASE_PACK_RE, `, Sold by the ${one} (Case of ${n})`);
+    }
+    changed++;
+  }
+  // Every other row in a file that has case packs is a single item.
+  if (changed) for (const r of rowObjs) if (!String(r.moq || "").trim()) r.moq = "1";
+  return changed;
 }
 
 // Every converted file used to download as the same literal
@@ -3887,7 +3954,7 @@ function handleCsvFile(file) {
   const reader = new FileReader();
   reader.onload = e => {
     try {
-      _csvRows = parseCsv(e.target.result);
+      _csvRows = parseCsv(decodeCsvBytes(e.target.result));
       if (!_csvRows.length) {
         const reason = _csvRows.blankNameSkips?.length
           ? `Every row is missing a "name" value (row ${_csvRows.blankNameSkips.join(", ")}). Add a name to each row and re-upload.`
@@ -3907,7 +3974,22 @@ function handleCsvFile(file) {
   // corrupts every × / – / curly-quote character in the file, with
   // nothing in this preview step to catch it before Import All Rows
   // writes it to the database.
-  reader.readAsText(file, "UTF-8");
+  // Bytes, decoded by decodeCsvBytes() -- UTF-8 when the file is valid
+  // UTF-8, otherwise Windows-1252 (how Excel saves "CSV" on Windows).
+  reader.readAsArrayBuffer(file);
+}
+
+/* Decodes an uploaded CSV. Valid UTF-8 is read as UTF-8; anything else is
+   read as Windows-1252, the encoding Excel's plain "CSV" save uses on
+   Windows. Forcing UTF-8 (the old behaviour) silently replaced every "×",
+   "–" and curly quote in a Windows-1252 file with "�" -- three of the five
+   supplier feeds (Starlinen, Wraptite, Sasso) are saved that way. */
+function decodeCsvBytes(buf) {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(buf);
+  } catch (_) {
+    return new TextDecoder("windows-1252").decode(buf);
+  }
 }
 
 /* Full single-pass RFC 4180 tokenizer. The previous version pre-split the
@@ -3978,7 +4060,7 @@ function parseCsv(text) {
   const blankNameSkips = [];
   for (let i = 1; i < rawRows.length; i++) {
     const vals = rawRows[i];
-    if (vals.length === 1 && vals[0].trim() === "") continue; // fully-blank line
+    if (vals.every(v => !String(v).trim())) continue; // blank line or a row of empty cells
     const obj = {};
     headers.forEach((h, j) => { obj[h] = (vals[j] ?? "").trim(); });
     if (!obj.name) { blankNameSkips.push(i + 1); continue; }
@@ -4042,7 +4124,7 @@ function renderCsvPreview(rows) {
   const withSku = rows.filter(r => r.sku).length;
   const dupNote = document.getElementById("csvDupNote");
   if (dupNote) dupNote.textContent = withSku
-    ? `${withSku} have SKU — existing products with matching SKU will be updated.`
+    ? `${withSku} have SKU — products already on the site are updated (prices, tiers, stock, weight, minimums); new SKUs are added.`
     : "No SKU column — all rows will be inserted as new products.";
 
   /* Which optional columns actually matched a header in this file, and how
@@ -4126,6 +4208,10 @@ async function runCsvImport() {
 
   /* ── For no-SKU rows: skip products that already exist in DB by name ── */
   let existingNames = new Set();
+  // sku -> { name, slug } of products already in the database. An existing
+  // product keeps its slug and (unless "overwrite" is ticked) its name and
+  // the rest of its catalog content -- see CSV_PRESERVED_ON_UPDATE.
+  const existingBySku = new Map();
   // Fetched unconditionally (used to be gated on whether the CSV had any
   // no-SKU rows): a SKU-bearing row can still collide on
   // slug with an existing product, and the disambiguation pass just below
@@ -4136,10 +4222,11 @@ async function runCsvImport() {
     // unbounded select() at 1000 rows, which would silently stop detecting
     // duplicates past the first 1000 products as the catalog grows.
     const { data: existingProds } = await window.sb
-      .from("products").select("name, slug").limit(50000);
+      .from("products").select("sku, name, slug").limit(50000);
     if (existingProds) existingProds.forEach(p => {
       existingNames.add(normName(p.name));
       if (p.slug) existingSlugs.add(p.slug);
+      if (p.sku) existingBySku.set(String(p.sku).trim(), { name: p.name, slug: p.slug });
     });
   }
   const preValidationRows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
@@ -4184,6 +4271,13 @@ async function runCsvImport() {
       errLines.push(`"${r.name}": price is missing — add a price for this row and re-upload.`);
       return;
     }
+    // "0" or a negative number parses fine but would put a live product
+    // on sale for nothing.
+    if (!priceInfo.invalid && !(priceInfo.value > 0)) {
+      invalidValueCount++;
+      errLines.push(`"${r.name}": price "${r.price}" must be greater than 0 — row skipped, nothing imported for it.`);
+      return;
+    }
     const badField =
       priceInfo.invalid  ? "price"        : saleInfo.invalid   ? "sale_price"   :
       retailInfo.invalid ? "retail_price" : tier1Info.invalid  ? "price_tier1"  :
@@ -4225,6 +4319,11 @@ async function runCsvImport() {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")) || "product";
   const usedSlugs = new Set(existingSlugs);
   rows.forEach(r => {
+    // An existing product keeps the slug it has: its own slug is already in
+    // usedSlugs, so recomputing it renamed the product "<sku>-2" on every
+    // re-import.
+    const existing = r.sku ? existingBySku.get(r.sku.trim()) : null;
+    if (existing && existing.slug) { r._resolvedSlug = existing.slug; return; }
     let candidate = slugBase(r);
     let n = 2;
     while (usedSlugs.has(candidate)) {
@@ -4361,44 +4460,79 @@ async function runCsvImport() {
     family_key    : (r.product_family || "").trim() && (r.variant_label || "").trim()
                       ? slugifyFamilyKey(r.product_family) : null,
     product_tier  : normalizeProductTier(r.product_tier),
+    // Color picker (color_group + color_label), all-or-nothing like the
+    // size family above. Emitted by the Converter since 2026-10-07 but never
+    // written by this importer, so imported colors never got a picker.
+    color_group   : (r.color_group || "").trim() && (r.color_label || "").trim() ? r.color_group.trim() : null,
+    color_label   : (r.color_group || "").trim() && (r.color_label || "").trim() ? r.color_label.trim() : null,
     updated_at   : now,
   });
+
+  // Re-importing a supplier file must refresh what the supplier controls
+  // (prices, tiers, costs, stock, weight, size, minimums) without undoing
+  // what staff set by hand on an existing product: its name, copy, images,
+  // category, size/color grouping, tier badge, featured flag and whether it
+  // is shown at all (a product hidden on purpose stayed hidden only until
+  // the next import). New products get everything from the file. Ticking
+  // "overwrite" on the preview screen writes these too.
+  const CSV_PRESERVED_ON_UPDATE = ["description", "overview", "feature1", "feature2", "feature3", "feature4",
+    "category_name", "image_url", "images", "product_family", "variant_label", "family_key", "product_tier",
+    "color_group", "color_label", "is_featured", "is_active"];
+  const overwriteContent = !!document.getElementById("csvOverwriteContent")?.checked;
 
   /* Runs one Supabase call (upsert-by-sku or plain insert) for a group of
      rows that are all the same "kind" (all have a SKU, or none do), and
      folds the result into the running counters/inventory upserts. */
   async function importGroup(groupRows, hasSku, now) {
     if (!groupRows.length) return;
-    const payloads = groupRows.map(r => buildPayload(r, now));
 
-    let result;
-    if (hasSku) {
-      result = await window.sb
-        .from("products")
-        .upsert(payloads, { onConflict: "sku", ignoreDuplicates: false })
-        .select("id, sku");
-    } else {
-      result = await window.sb.from("products").insert(payloads).select("id");
-    }
+    // Existing SKUs and new rows go in separate calls: a bulk upsert fills
+    // any column missing from one object with NULL for every object, so the
+    // trimmed update payloads must never share a call with full ones.
+    const existingRows = hasSku ? groupRows.filter(r => existingBySku.has(r.sku.trim())) : [];
+    const newRows = hasSku ? groupRows.filter(r => !existingBySku.has(r.sku.trim())) : groupRows;
 
-    if (result.error) {
-      errLines.push(`"${groupRows[0].name}"${groupRows.length > 1 ? ` and ${groupRows.length - 1} more` : ""}: ${result.error.message}`);
-      return;
-    }
+    const run = async (subset, isUpdate) => {
+      if (!subset.length) return;
+      const payloads = subset.map(r => {
+        const p = buildPayload(r, now);
+        if (isUpdate && !overwriteContent) {
+          for (const k of CSV_PRESERVED_ON_UPDATE) delete p[k];
+          // name is NOT NULL, so it stays in the payload -- as the name the
+          // product already has.
+          p.name = existingBySku.get(r.sku.trim()).name;
+        }
+        return p;
+      });
+      const result = hasSku
+        ? await window.sb.from("products").upsert(payloads, { onConflict: "sku", ignoreDuplicates: false }).select("id, sku")
+        : await window.sb.from("products").insert(payloads).select("id");
+      if (result.error) {
+        errLines.push(`"${subset[0].name}"${subset.length > 1 ? ` and ${subset.length - 1} more` : ""}: ${result.error.message}`);
+        return;
+      }
+      // Stock rows only when the file actually carries stock data -- a feed
+      // without it used to reset every product's stock to 0.
+      const idBySku = new Map((result.data || []).map(p => [p.sku, p.id]));
+      const invPayloads = subset
+        .map((r, i) => ({ r, id: hasSku ? idBySku.get(r.sku) : result.data?.[i]?.id }))
+        .filter(({ r, id }) => id && (String(r.stock_qty ?? "").trim() !== "" || String(r.stock_status ?? "").trim() !== ""))
+        .map(({ r, id }) => ({
+          product_id : id,
+          stock_qty  : parseInt(r.stock_qty) || 0,
+          status     : r.stock_status || "in_stock",
+          updated_at : now,
+        }));
+      if (invPayloads.length) {
+        const inv = await window.sb.from("inventory").upsert(invPayloads, { onConflict: "product_id" });
+        if (inv.error) errLines.push(`Stock levels not saved for ${invPayloads.length} product(s): ${inv.error.message}`);
+      }
+      if (isUpdate) updated += result.data?.length || subset.length;
+      else          inserted += result.data?.length || subset.length;
+    };
 
-    if (result.data?.length) {
-      const invPayloads = result.data.map((p, i) => ({
-        product_id : p.id,
-        stock_qty  : parseInt(groupRows[i]?.stock_qty)  || 0,
-        status     : groupRows[i]?.stock_status || "in_stock",
-        updated_at : now,
-      }));
-      await window.sb.from("inventory")
-        .upsert(invPayloads, { onConflict: "product_id" });
-    }
-
-    if (hasSku) updated  += result.data?.length || groupRows.length;
-    else        inserted += result.data?.length || groupRows.length;
+    await run(existingRows, true);
+    await run(newRows, false);
   }
 
   /* Process in chunks. Each chunk is split into a with-SKU group (upsert)
