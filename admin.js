@@ -3762,6 +3762,18 @@ function cvtBuildRows() {
     Object.defineProperty(obj, "_srcIdx", { value: srcIdx });
     rowObjs.push(obj);
   });
+  // A Mix & Match minimum with no group to belong to is the product's own
+  // minimum order. InnStyle's masterlist carries its per-product MOQ in the
+  // moq_group_min column (48 for a case of 48, 1 for singles) with
+  // moq_group empty; read as a group minimum it was silently ignored and
+  // every case listing stayed buyable by the piece.
+  for (const r of rowObjs) {
+    const groupMin = parseInt(r.moq_group_min, 10);
+    if (!String(r.moq_group || "").trim() && groupMin > 0) {
+      if (!(parseInt(r.moq, 10) > 0)) r.moq = String(groupMin);
+      r.moq_group_min = "";
+    }
+  }
   const casePackCount = cvtApplyCasePacks(rowObjs);
   cvtApplyDozenTiers(rowObjs);
   return { headers, rowObjs, casePackCount, autoVariants, derived };
@@ -3960,8 +3972,11 @@ function cvtApplyCasePacks(rowObjs) {
     if (r.tier2_min_qty) r.tier2_min_qty = times(r.tier2_min_qty);
     if (r.tier3_min_qty) r.tier3_min_qty = times(r.tier3_min_qty);
     const hasSingle = singles.has(r.name.replace(CVT_CASE_PACK_RE, "").trim().toLowerCase());
-    r.moq = hasSingle ? String(n) : "1";
-    if (!hasSingle) {
+    // A minimum the file states itself (InnStyle: column AF) wins; the
+    // single-listing rule only fills in when the file is silent.
+    const fileMoq = parseInt(r.moq, 10);
+    r.moq = fileMoq > 0 ? String(fileMoq) : (hasSingle ? String(n) : "1");
+    if (r.moq === "1") {
       const one = { pieces: "Piece", sets: "Set", pairs: "Pair" }[m[2].toLowerCase()];
       r.name = r.name.replace(CVT_CASE_PACK_RE, `, Sold by the ${one} (Case of ${n})`);
     }
