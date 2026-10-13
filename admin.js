@@ -8438,14 +8438,11 @@ async function renderVisitorInsightsTab() {
         <h1 class="vi-title">Visitor Insights</h1>
         <p class="vi-subtitle">How visitors move from the site to an order, and signed-in customers with items left in their cart.</p>
       </div>
-      <label class="vi-range">
-        <span>Period</span>
-        <select id="viFunnelRange" class="camp-select" onchange="renderVisitorFunnel()">
-          <option value="7">Last 7 days</option>
-          <option value="30" selected>Last 30 days</option>
-          <option value="90">Last 90 days</option>
-        </select>
-      </label>
+      <div class="vi-range">
+        <label><span>Start</span><input type="date" id="viStart" value="${viIsoDay(-29)}" max="${viIsoDay(0)}"></label>
+        <label><span>End</span><input type="date" id="viEnd" value="${viIsoDay(0)}" max="${viIsoDay(0)}"></label>
+        <button type="button" class="a-btn-sm" id="viRunBtn" onclick="renderVisitorFunnel()">Run Report</button>
+      </div>
     </div>
 
     <div id="viKpis" class="vi-kpis"><div class="vi-loading">Loading…</div></div>
@@ -8474,12 +8471,13 @@ async function renderVisitorInsightsTab() {
 // PostgREST caps an unbounded select at 1000 rows -- with a few hundred
 // visitors a month, page views alone filled that and every later event
 // type (product views, orders) silently counted 0. Paged until exhausted.
-async function viFetchAllEvents(since) {
+async function viFetchAllEvents(since, until) {
   const PAGE = 1000, rows = [];
   for (let from = 0; ; from += PAGE) {
     const { data, error } = await window.sb.from("page_events")
       .select("session_id, event_type")
       .gte("occurred_at", since)
+      .lt("occurred_at", until)
       .order("occurred_at", { ascending: true })
       .range(from, from + PAGE - 1);
     if (error) return { error };
@@ -8487,6 +8485,29 @@ async function viFetchAllEvents(since) {
     if (!data || data.length < PAGE) return { data: rows };
     if (from > 200000) return { data: rows }; // safety stop
   }
+}
+
+// Local calendar day, offset from today, as YYYY-MM-DD (date input value).
+function viIsoDay(offset) {
+  const d = new Date();
+  d.setDate(d.getDate() + offset);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// The chosen Start..End as whole local days: [start 00:00, day after End 00:00).
+function viSelectedRange() {
+  let start = document.getElementById("viStart")?.value || viIsoDay(-29);
+  let end = document.getElementById("viEnd")?.value || viIsoDay(0);
+  if (start > end) [start, end] = [end, start];
+  const [y1, m1, d1] = start.split("-").map(Number);
+  const [y2, m2, d2] = end.split("-").map(Number);
+  const fmt = d => d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const from = new Date(y1, m1 - 1, d1), to = new Date(y2, m2 - 1, d2);
+  return {
+    since: from.toISOString(),
+    until: new Date(y2, m2 - 1, d2 + 1).toISOString(),
+    label: start === end ? fmt(from) : `${fmt(from)} – ${fmt(to)}`,
+  };
 }
 
 function viPct(n, d) {
@@ -8499,11 +8520,13 @@ async function renderVisitorFunnel() {
   const box = document.getElementById("viFunnelBox");
   const kpis = document.getElementById("viKpis");
   if (!box) return;
-  const days = parseInt(document.getElementById("viFunnelRange")?.value || "30");
-  const since = new Date(Date.now() - days * 86400000).toISOString();
+  const range = viSelectedRange();
+  const btn = document.getElementById("viRunBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Loading…"; }
   box.innerHTML = `<div class="vi-loading">Loading…</div>`;
 
-  const { data, error } = await viFetchAllEvents(since);
+  const { data, error } = await viFetchAllEvents(range.since, range.until);
+  if (btn) { btn.disabled = false; btn.textContent = "Run Report"; }
   if (error) {
     box.innerHTML = `<p class="vi-error">Couldn't load: ${escHtml(error.message)}<br><span>If this says a table is missing, run the 20261009 migration.</span></p>`;
     if (kpis) kpis.innerHTML = "";
@@ -8525,7 +8548,7 @@ async function renderVisitorFunnel() {
   if (kpis) {
     const tile = (label, value, sub) => `<div class="vi-kpi"><p class="vi-kpi-label">${label}</p><p class="vi-kpi-value">${value}</p><p class="vi-kpi-sub">${sub}</p></div>`;
     kpis.innerHTML =
-      tile("Visitors", visitors.toLocaleString(), `last ${days} days`) +
+      tile("Visitors", visitors.toLocaleString(), escHtml(range.label)) +
       tile("Added to cart", counts[2].toLocaleString(), `${viPct(counts[2], visitors)} of visitors`) +
       tile("Orders", counts[4].toLocaleString(), `${viPct(counts[4], visitors)} conversion rate`) +
       `<div class="vi-kpi" id="viKpiCarts"><p class="vi-kpi-label">Left in carts</p><p class="vi-kpi-value">…</p><p class="vi-kpi-sub">signed-in customers</p></div>`;
@@ -8533,7 +8556,7 @@ async function renderVisitorFunnel() {
   }
 
   if (!visitors) {
-    box.innerHTML = `<p class="vi-empty-line">No visits recorded in the last ${days} days.</p>`;
+    box.innerHTML = `<p class="vi-empty-line">No visits recorded for ${escHtml(range.label)}.</p>`;
     return;
   }
 

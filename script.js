@@ -625,8 +625,14 @@ function cartValue(cart) {
 function getTrackingSessionId() {
   try {
     let id = localStorage.getItem("rrs_session_id");
-    if (!id) {
-      id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+    if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      // page_events.session_id is a uuid column: the fallback must be
+      // uuid-shaped too, or every insert from that browser is rejected.
+      id = crypto.randomUUID ? crypto.randomUUID()
+        : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+            const r = Math.random() * 16 | 0;
+            return (c === "x" ? r : (r & 3 | 8)).toString(16);
+          });
       localStorage.setItem("rrs_session_id", id);
     }
     return id;
@@ -643,16 +649,40 @@ function getTrackingSessionId() {
 function logPageEvent(eventType, productSku) {
   try {
     const sessionId = getTrackingSessionId();
-    if (!sessionId || !window.sb) return;
+    if (!sessionId) return;
+    const row = {
+      session_id: sessionId,
+      user_id: null,
+      event_type: eventType,
+      path: location.pathname || "/",
+      product_sku: productSku || null,
+      referrer: document.referrer || null,
+    };
+    // Pages that don't load supabase.js (product pages, /catalog, /cart,
+    // the legal pages) have no window.sb. Skipping them here used to drop
+    // every product_view and catalog_view, which is where most search
+    // traffic lands -- Visitor Insights undercounted visitors and showed
+    // "Browsed products" no higher than "Added to cart". Plain REST insert
+    // instead, anonymous (insert-only policy, same as the sb path).
+    if (!window.sb) {
+      fetch(`${PRODUCTS_SUPABASE_URL}/rest/v1/page_events`, {
+        method: "POST",
+        keepalive: true,
+        headers: {
+          apikey: PRODUCTS_SUPABASE_ANON,
+          Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(row),
+      }).then(r => {
+        if (!r.ok) console.warn("[tracking] page_events insert failed:", r.status);
+      }).catch(() => {});
+      return;
+    }
     window.sb.auth.getUser().then(({ data }) => {
-      window.sb.from("page_events").insert({
-        session_id: sessionId,
-        user_id: data?.user?.id || null,
-        event_type: eventType,
-        path: location.pathname || "/",
-        product_sku: productSku || null,
-        referrer: document.referrer || null,
-      }).then(({ error }) => {
+      row.user_id = data?.user?.id || null;
+      window.sb.from("page_events").insert(row).then(({ error }) => {
         if (error) console.warn("[tracking] page_events insert failed:", error.message);
       });
     }).catch(() => {});
