@@ -320,7 +320,7 @@ const PRODUCTS_SUPABASE_ANON = "sb_publishable_B17JFi1RywMYN_a-UN_qzw_sWH_5lDN";
  * 20260930d_site_contact.sql), JSON-LD, meta tags, and server-built emails/
  * PDFs, which still carry the static value.
  */
-const SITE_CONTACT_DEFAULT_PHONE = "(252) 227-0073";
+const SITE_CONTACT_DEFAULT_PHONE = "(252) 616-0088";
 const SITE_CONTACT_DEFAULT_EMAIL = "sales@roomreadysupply.com";
 
 async function applySiteContact() {
@@ -333,9 +333,11 @@ async function applySiteContact() {
     if (!row) return;
 
     const swaps = [];
-    if (row.phone && row.phone !== SITE_CONTACT_DEFAULT_PHONE) {
+    // Compare digits only: the stored row is "252-616-0088" while the
+    // markup ships "(252) 616-0088" -- same number, so leave it alone.
+    if (row.phone && row.phone.replace(/\D/g, "") !== SITE_CONTACT_DEFAULT_PHONE.replace(/\D/g, "")) {
       swaps.push([SITE_CONTACT_DEFAULT_PHONE, row.phone]);
-      swaps.push(["tel:2522270073", "tel:" + row.phone.replace(/\D/g, "")]);
+      swaps.push(["tel:2526160088", "tel:" + row.phone.replace(/\D/g, "")]);
     }
     if (row.email && row.email !== SITE_CONTACT_DEFAULT_EMAIL) {
       swaps.push([SITE_CONTACT_DEFAULT_EMAIL, row.email]);

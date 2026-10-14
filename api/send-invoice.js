@@ -144,7 +144,7 @@ function invoiceEmailHtml(o) {
 
     '<a href="' + esc(o.payment_link) + '" style="display:block;background:' + BRAND.orange + ';color:#fff;text-decoration:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;margin-bottom:24px;">Pay Invoice Now &rarr;</a>' +
 
-    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions about this invoice? Reply to this email or call us at <strong style="color:#334155;">(252) 227-0073</strong></p>' +
+    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions about this invoice? Reply to this email or call us at <strong style="color:#334155;">(252) 616-0088</strong></p>' +
 
     // Restates shipping-policy.html section 7. On the invoice this is a
     // footnote rather than a checkbox: by this point the order already
@@ -451,7 +451,7 @@ module.exports = async (req, res) => {
         to: vendor.contact_email,
         subject: `Purchase Order ${po_number} — Room Ready Supply`,
         html: '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Hi ' + esc(vendor.name) + ' team,</p>' +
-          '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Please find attached purchase order <strong>' + esc(po_number) + '</strong> for fulfillment. Reply to this email or call (252) 227-0073 with any questions.</p>' +
+          '<p style="font-family:sans-serif;font-size:15px;color:#334155;">Please find attached purchase order <strong>' + esc(po_number) + '</strong> for fulfillment. Reply to this email or call (252) 616-0088 with any questions.</p>' +
           '<p style="font-family:sans-serif;font-size:13px;color:#94a3b8;">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962</p>',
         attachments: [{ filename: `RRS-PO-${po_number}.pdf`, content: pdf_base64 }],
       });

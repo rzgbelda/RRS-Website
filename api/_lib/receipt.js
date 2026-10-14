@@ -108,7 +108,7 @@ async function generateReceiptPdf(order) {
     page.drawRectangle({ x: 0, y: 0, width: W, height: FOOTER_H, color: NAVY });
     page.drawRectangle({ x: 0, y: FOOTER_H, width: W, height: 3, color: ORANGE });
     page.drawText('Room Ready Supply  ·  609 Washington St, Plymouth, NC 27962', { x: MARGIN, y: 32, size: 7.5, font: reg, color: rgb(0.62, 0.73, 0.85) });
-    page.drawText('(252) 227-0073  ·  sales@roomreadysupply.com  ·  roomreadysupply.com', { x: MARGIN, y: 20, size: 7.5, font: reg, color: rgb(0.62, 0.73, 0.85) });
+    page.drawText('(252) 616-0088  ·  sales@roomreadysupply.com  ·  roomreadysupply.com', { x: MARGIN, y: 20, size: 7.5, font: reg, color: rgb(0.62, 0.73, 0.85) });
     const thanks = 'Thank you for your business.';
     page.drawText(thanks, { x: RIGHT - reg.widthOfTextAtSize(thanks, 7.5), y: 26, size: 7.5, font: reg, color: rgb(0.50, 0.62, 0.75) });
   }
@@ -279,7 +279,7 @@ function receiptEmailHtml(order) {
       </div>` : ''}
       <p style="font-size:13px;color:#94a3b8;margin:0;">
         Questions? Email us at <a href="mailto:sales@roomreadysupply.com" style="color:#0B1F38;font-weight:600;">sales@roomreadysupply.com</a>
-        or call <strong>(252) 227-0073</strong>.
+        or call <strong>(252) 616-0088</strong>.
       </p>
     </div>
   </div>`;

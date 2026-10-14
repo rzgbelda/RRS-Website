@@ -56,7 +56,7 @@ function generateConfirmToken(): string {
 const RRS = {
   name:    "Room Ready Supply",
   address: "609 Washington St, Plymouth, NC 27962",
-  phone:   "(252) 227-0073",
+  phone:   "(252) 616-0088",
   email:   "sales@roomreadysupply.com",
   website: "www.roomreadysupply.com",
   logo_url: "https://www.roomreadysupply.com/assets/brand/RRS_LOGO_White.png",

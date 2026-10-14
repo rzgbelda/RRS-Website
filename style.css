@@ -526,6 +526,14 @@ padding-top: 20px;
   object-position: center;
 }
 
+/* Eric's supplier-negotiation line, under the hero sub-headline. */
+.hero-content p.hero-negotiation {
+  margin-top: -16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2a37;
+}
+
 /* Directly under the primary button, per RRS-29 item 1. */
 .hero-subcta {
   margin: 10px 0 0;

@@ -66,7 +66,7 @@ function agreementEmailHtml(o) {
 
     '<p style="font-size:13px;color:#94a3b8;line-height:1.6;margin:0 0 24px;">The complete Payment Terms &amp; Conditions governing this and all Room Ready Supply orders is attached to this email. Once delivery is confirmed, we\'ll follow up with your invoice.</p>' +
 
-    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions? Reply to this email or call us at <strong style="color:#334155;">(252) 227-0073</strong></p>' +
+    '<p style="font-size:13px;color:#94a3b8;text-align:center;line-height:1.6;margin:0;">Questions? Reply to this email or call us at <strong style="color:#334155;">(252) 616-0088</strong></p>' +
     '</div>' +
 
     '<div style="background:#f8fafc;border-top:1.5px solid #e2e8f0;padding:20px 40px;text-align:center;">' +

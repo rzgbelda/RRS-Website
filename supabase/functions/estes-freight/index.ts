@@ -207,7 +207,7 @@ async function sendFreightShippingEmail(opts: {
 
       <p style="font-size:13px;color:#94a3b8;margin:0;">
         Questions? Email us at <a href="mailto:sales@roomreadysupply.com" style="color:#0B1F38;font-weight:600;">sales@roomreadysupply.com</a>
-        or call <strong>(252) 227-0073</strong>.
+        or call <strong>(252) 616-0088</strong>.
       </p>
     </div>
   </div>`;

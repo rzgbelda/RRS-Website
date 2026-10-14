@@ -118,7 +118,7 @@ async function buildQuotePdf(q) {
     p.drawText('Room Ready Supply  ·  609 Washington St, Plymouth, NC 27962', {
       x: MARGIN, y: 32, size: 7.5, font: reg, color: rgb(0.62, 0.73, 0.85),
     });
-    p.drawText('(252) 227-0073  ·  sales@roomreadysupply.com  ·  roomreadysupply.com', {
+    p.drawText('(252) 616-0088  ·  sales@roomreadysupply.com  ·  roomreadysupply.com', {
       x: MARGIN, y: 20, size: 7.5, font: reg, color: rgb(0.62, 0.73, 0.85),
     });
     const t = 'Thank you for your business.';
