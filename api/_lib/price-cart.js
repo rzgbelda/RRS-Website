@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const { getTaxRate } = require('../../tax-rates');
+const { taxRateFor } = require('../../tax-rates');
 const { computeShipping, groupByDistributor, classifyShipment } = require('./shipping');
 const { deliveryDaysForCart } = require('./delivery-days');
 const { issueShippingToken, readShippingToken } = require('./quote-token');
@@ -367,7 +367,10 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // computed. NC generally treats delivery charges on taxable goods as
   // taxable, so this may need revisiting -- changing it alters what gets
   // remitted, so it stays as-is until that's confirmed with an accountant.
-  const tax = Math.round(discountedSubtotal * getTaxRate(state) * 100) / 100;
+  // The rate follows the ship-to ZIP (an NC ZIP is NC whatever state was
+  // sent -- the cart sends none), falling back to `state` without a ZIP.
+  const taxZip = (parseDestination(destination) || {}).zip || '';
+  const tax = Math.round(discountedSubtotal * taxRateFor(state, taxZip) * 100) / 100;
 
   // Warehouse pickup is never freighted, so it carries no allowance and
   // no minimum -- the floor exists to cover shipping an order, and a

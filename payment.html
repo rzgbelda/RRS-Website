@@ -360,7 +360,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20261014g"></script>
+  <script src="script.js?v=20261014h"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -622,7 +622,7 @@
           '<span>$' + (price * qty).toFixed(2) + '</span></div>';
       }).join('');
       var checkoutForTax = JSON.parse(localStorage.getItem('rrs_checkout_data') || '{}');
-      var taxRate = checkoutForTax.state ? (window.getTaxRate ? (window.getTaxRate(checkoutForTax.state) || 0) : 0) : 0;
+      var taxRate = window.taxRateFor ? window.taxRateFor(checkoutForTax.state || '', checkoutForTax.zip || '') : (checkoutForTax.state && window.getTaxRate ? (window.getTaxRate(checkoutForTax.state) || 0) : 0);
       var tax = subtotal * taxRate;
 
       // Delivery is included in this pre-server estimate so the total shown
@@ -647,7 +647,8 @@
       document.getElementById('payment-subtotal').textContent = '$' + subtotal.toFixed(2);
       document.getElementById('payment-tax').textContent = '$' + tax.toFixed(2);
       var taxRateEl = document.getElementById('payment-tax-rate');
-      if (taxRateEl) taxRateEl.textContent = checkoutForTax.state ? ' (' + checkoutForTax.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
+      var taxState = window.taxStateFor ? window.taxStateFor(checkoutForTax.state || '', checkoutForTax.zip || '') : (checkoutForTax.state || '');
+      if (taxRateEl) taxRateEl.textContent = taxRate ? ' (' + taxState + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
       document.getElementById('payment-total').textContent = isPickup ? '$' + total.toFixed(2) : 'Calculating…';
       window._orderSubtotal = subtotal;
       window._orderTax = tax;

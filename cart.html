@@ -146,6 +146,12 @@
       <label for="cart-zip" class="sr-only">Delivery ZIP code</label>
       <input id="cart-zip" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="5" pattern="[0-9]{5}" placeholder="Delivery ZIP code">
     </div>
+    <!-- NC sales tax: shown once a North Carolina ZIP is entered, from the
+         same server quote as Delivery (tax follows the ship-to ZIP). -->
+    <div class="summary-row" id="cartTaxRow" style="display:none">
+      <span>NC Sales Tax (4.75%)</span>
+      <span id="cart-tax">$0.00</span>
+    </div>
     <p id="cart-delivery-problem" style="display:none;color:#b91c1c;font-size:12.5px;line-height:1.5;margin:-4px 0 10px"></p>
 
     <div class="summary-total">
@@ -153,7 +159,7 @@
       <span id="estimated-total">$349.90</span>
     </div>
 
-    <p>Taxes calculated at checkout</p>
+    <p id="cart-tax-note">Sales tax applies to North Carolina deliveries only.</p>
     <p id="cart-delivery-estimate" class="delivery-estimate-row"></p>
 
     <p id="cartMoqWarning" style="display:none;background:#fff7ed;border:1.5px solid #fdba74;border-radius:9px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#9a3412;font-weight:600;line-height:1.5"></p>
@@ -220,7 +226,7 @@
   .cart-zip-row input:focus { outline: none; border-color: #ED7226; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
-<script src="script.js?v=20261014g"></script>
+<script src="script.js?v=20261014h"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 

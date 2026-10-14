@@ -4215,6 +4215,8 @@ function refreshCartDelivery(itemsTotal) {
   // total carrying an earlier ZIP's price.
   if (totalEl) totalEl.textContent = `$${itemsTotal.toFixed(2)}`;
   if (problem) problem.style.display = 'none';
+  const taxRow = document.getElementById('cartTaxRow');
+  if (taxRow) taxRow.style.display = 'none';
   el.style.color = '';
   if (!/^\d{5}$/.test(zipEl.value.trim())) {
     el.textContent = 'Enter ZIP';
@@ -4226,7 +4228,14 @@ function refreshCartDelivery(itemsTotal) {
     if (seq !== _cartDeliverySeq) return;
     if (d && !d.error && typeof d.shipping === 'number' && !d.shippingUnavailable) {
       el.textContent = `$${d.shipping.toFixed(2)}`;
-      if (totalEl) totalEl.textContent = `$${(itemsTotal + d.shipping).toFixed(2)}`;
+      // NC ZIP: the server adds NC sales tax (it follows the ship-to ZIP).
+      const tax = Number(d.tax) || 0;
+      const taxRow = document.getElementById('cartTaxRow');
+      if (taxRow) {
+        taxRow.style.display = tax > 0 ? '' : 'none';
+        document.getElementById('cart-tax').textContent = `$${tax.toFixed(2)}`;
+      }
+      if (totalEl) totalEl.textContent = `$${(itemsTotal + d.shipping + tax).toFixed(2)}`;
       return;
     }
     el.textContent = 'Unavailable';
@@ -4519,13 +4528,17 @@ function loadCheckoutProducts() {
 
   // Tax follows the discounted subtotal, matching api/_lib/price-cart.js --
   // taxing the pre-discount figure would charge tax on money never paid.
-  const checkoutState = document.getElementById('checkout-state')?.value || '';
+  // Rate follows the ship-to ZIP, same rule as the server (tax-rates.js).
+  const checkoutZip = document.getElementById('checkout-zip')?.value || '';
+  const checkoutState = window.taxStateFor
+    ? window.taxStateFor(document.getElementById('checkout-state')?.value || '', checkoutZip)
+    : (document.getElementById('checkout-state')?.value || '');
   const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
   const tax = discountedSubtotal * taxRate;
   const taxEl = document.getElementById('summary-tax');
   if (taxEl) taxEl.textContent = `$${tax.toFixed(2)}`;
   const taxRateEl = document.getElementById('summary-tax-rate');
-  if (taxRateEl) taxRateEl.textContent = checkoutState ? ` (${checkoutState} · ${(taxRate * 100).toFixed(2)}%)` : '';
+  if (taxRateEl) taxRateEl.textContent = taxRate ? ` (${checkoutState} · ${(taxRate * 100).toFixed(2)}%)` : '';
 
   // Injected next to the existing subtotal row rather than hardcoded in
   // checkout.html, since it only exists for reorder carts.
@@ -5287,7 +5300,9 @@ function loadPaymentSummary() {
   // actually get charged) -- fixed here anyway so nothing ever flashes a
   // stale/wrong tax figure between the two running, and so this stays
   // correct if it's ever relied on directly for another page.
-  const checkoutState = checkoutData.state || '';
+  const checkoutState = window.taxStateFor
+    ? window.taxStateFor(checkoutData.state || '', checkoutData.zip || '')
+    : (checkoutData.state || '');
   const taxRate = checkoutState ? (window.getTaxRate?.(checkoutState) || 0) : 0;
   const tax = subtotal * taxRate;
   const taxEl = document.getElementById('payment-tax');

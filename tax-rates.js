@@ -39,12 +39,41 @@ function getTaxRate(stateCode) {
   return TAX_RATES[String(stateCode || '').trim().toUpperCase()] || 0;
 }
 
+// North Carolina ZIPs are 270xx-289xx.
+function isNcZip(zip) {
+  const z = String(zip || '').trim();
+  if (!/^\d{5}/.test(z)) return false;
+  const p = Number(z.slice(0, 3));
+  return p >= 270 && p <= 289;
+}
+
+// The state sales tax follows: the ship-to ZIP when there is one, since a
+// buyer can leave the state dropdown blank or pick the wrong one (the cart
+// sends no state at all) and an NC delivery would then go untaxed. An NC
+// ZIP is always NC; a non-NC ZIP is never NC, whatever state was picked.
+// No ZIP falls back to the state given.
+function taxStateFor(stateCode, zip) {
+  const st = String(stateCode || '').trim().toUpperCase();
+  if (!/^\d{5}/.test(String(zip || '').trim())) return st;
+  if (isNcZip(zip)) return 'NC';
+  return st === 'NC' ? '' : st;
+}
+
+function taxRateFor(stateCode, zip) {
+  return getTaxRate(taxStateFor(stateCode, zip));
+}
+
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = TAX_RATES;
   module.exports.TAX_RATES = TAX_RATES;
   module.exports.getTaxRate = getTaxRate;
+  module.exports.isNcZip = isNcZip;
+  module.exports.taxStateFor = taxStateFor;
+  module.exports.taxRateFor = taxRateFor;
 }
 if (typeof window !== 'undefined') {
   window.TAX_RATES = TAX_RATES;
   window.getTaxRate = getTaxRate;
+  window.taxStateFor = taxStateFor;
+  window.taxRateFor = taxRateFor;
 }
