@@ -32,7 +32,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="articleJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261014a" />
+  <link rel="stylesheet" href="style.css?v=20261014b" />
   <style>
     .article-page { max-width: 760px; margin: 0 auto; padding: 40px 24px 90px; }
     .article-page.apg-loading .article-body-wrap { visibility: hidden; }
@@ -109,7 +109,13 @@
 
     <nav class="nav-links">
       <a href="/">Home</a>
-      <a href="/catalog">Catalog</a>
+      <div class="nav-dd">
+        <a href="/catalog">Catalog</a>
+        <div class="nav-dd-menu">
+          <a href="/catalog"><span>All Products</span><small>Every product in the catalog</small></a>
+          <a href="/luxury"><span>Luxury Products<span class="nav-dd-new">NEW</span></span><small>Premium linens &amp; mattress protection</small></a>
+        </div>
+      </div>
       <a href="/best-deals">Best Deals</a>
       <a href="/blog">Blog</a>
       <a href="/#about-us">About Us</a>
@@ -153,6 +159,7 @@
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
     <a href="/catalog">Catalog</a>
+    <a href="/luxury" class="mobile-nav-sub">Luxury Products</a>
     <a href="/best-deals">Best Deals</a>
     <a href="/blog">Blog</a>
     <a href="/#about-us">About Us</a>

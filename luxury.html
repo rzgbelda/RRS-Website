@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-69R8R75Q3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-69R8R75Q3Y');
+  </script>
+
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="/Favicon.png">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Luxury Hotel Linens &amp; Bedding | Room Ready Supply</title>
+  <meta name="description" content="Prestige Turkish and ringspun towels, T200 to T600 hotel sheets, Pima sateen sheet sets, and BedBug, CleanAir and 3-ply mattress protection. Case pricing built in." />
+  <link rel="canonical" href="https://www.roomreadysupply.com/luxury" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Room Ready Supply" />
+  <meta property="og:title" content="Luxury Products | Room Ready Supply" />
+  <meta property="og:description" content="Hotel-grade towels, T600 sheet sets and mattress protection, priced by the case." />
+  <meta property="og:image" content="https://www.roomreadysupply.com/assets/img/luxury/t600-queen-sheet-set.webp" />
+  <meta property="og:url" content="https://www.roomreadysupply.com/luxury" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.roomreadysupply.com/" },
+      { "@type": "ListItem", "position": 2, "name": "Buy Now", "item": "https://www.roomreadysupply.com/catalog" },
+      { "@type": "ListItem", "position": 3, "name": "Luxury Products", "item": "https://www.roomreadysupply.com/luxury" }
+    ]
+  }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="assets/img/luxury/turkish-bath-towel.webp" fetchpriority="high">
+  <link rel="stylesheet" href="style.css?v=20261014b" />
+
+  <style>
+    /* ── Luxury Products page ──────────────────────────────────────
+       Scoped under .lux so nothing here leaks into the shared header,
+       cart drawer or modals that style.css owns. Brand navy/orange,
+       with ivory and sand as the "luxury" neutrals and Cormorant
+       Garamond for display type over the site's Inter body face. */
+    .lux, .lux-modal {
+      --navy: #0B1F38;
+      --navy-2: #1B2B48;
+      --orange: #ED7226;
+      --orange-dk: #D65F15;
+      --ivory: #FAF7F2;
+      --sand: #EFE7DA;
+      --line: #E4DCCD;
+      --slate: #5B6C7E;
+      --ink: #1F2937;
+      --serif: 'Cormorant Garamond', 'Times New Roman', serif;
+      font-variant-numeric: lining-nums;
+      color: var(--ink);
+      font-family: 'Inter', sans-serif;
+    }
+    .lux { background: var(--ivory); }
+    .lux-modal *, .lux-modal *::before, .lux-modal *::after { box-sizing: border-box; }
+    .lux *, .lux *::before, .lux *::after { box-sizing: border-box; }
+    .lux-wrap { width: min(1280px, calc(100% - 48px)); margin: 0 auto; }
+    .lux-eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-size: 11.5px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--orange);
+    }
+    .lux-eyebrow::before { content: ""; width: 28px; height: 1px; background: currentColor; }
+    .lux-h2 {
+      font-family: var(--serif); font-weight: 600; color: var(--navy);
+      font-size: clamp(34px, 4.2vw, 54px); line-height: 1.04; letter-spacing: -.01em; margin: 14px 0 0;
+    }
+    .lux-h2 em { font-style: italic; font-weight: 500; color: var(--orange); }
+    .lux-lede { color: var(--slate); font-size: 16px; line-height: 1.7; max-width: 620px; margin: 16px 0 0; }
+
+    /* Breadcrumb */
+    .lux-crumbs { padding: 18px 0 0; font-size: 12.5px; color: var(--slate); }
+    .lux-crumbs a { color: var(--slate); text-decoration: none; }
+    .lux-crumbs a:hover { color: var(--orange); }
+    .lux-crumbs span { margin: 0 8px; opacity: .5; }
+
+    /* ── Hero carousel ─────────────────────────────────────────── */
+    .lux-hero { padding: 18px 0 0; }
+    .lux-stage {
+      position: relative; overflow: hidden; border-radius: 28px;
+      height: clamp(560px, 76vh, 720px);
+      background: var(--slide-bg, #EDE4D6);
+      transition: background-color .7s cubic-bezier(.2,.7,.2,1);
+      isolation: isolate;
+      box-shadow: 0 30px 80px -40px rgba(11,31,56,.45);
+    }
+    .lux-stage::after { /* soft vignette for depth */
+      content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+      background: radial-gradient(120% 90% at 50% 38%, rgba(255,255,255,.55) 0%, rgba(255,255,255,0) 55%),
+                  linear-gradient(180deg, rgba(11,31,56,0) 60%, rgba(11,31,56,.10) 100%);
+    }
+    .lux-slide { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+    .lux-slide.is-active { pointer-events: auto; }
+    .lux-hero-top {
+      position: absolute; top: 34px; left: 44px; right: 44px; z-index: 3;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
+    }
+    .lux-hero-kicker {
+      font-family: var(--serif); font-style: italic; font-weight: 500;
+      font-size: clamp(20px, 2vw, 28px); color: var(--navy);
+      opacity: 0; transform: translateY(14px);
+      transition: opacity .5s ease, transform .6s cubic-bezier(.2,.7,.2,1);
+    }
+    .lux-hero-kicker small {
+      display: block; font-family: 'Inter', sans-serif; font-style: normal;
+      font-size: 11px; font-weight: 700; letter-spacing: .24em; text-transform: uppercase;
+      color: var(--orange); margin-bottom: 6px;
+    }
+    .lux-slide.is-active .lux-hero-kicker { opacity: 1; transform: none; transition-delay: .15s; }
+    .lux-price-chip {
+      background: rgba(255,255,255,.72); backdrop-filter: blur(8px);
+      border: 1px solid rgba(255,255,255,.9); border-radius: 999px;
+      padding: 10px 18px; font-size: 13px; color: var(--navy); white-space: nowrap;
+      opacity: 0; transform: translateY(-10px);
+      transition: opacity .5s ease, transform .6s cubic-bezier(.2,.7,.2,1);
+    }
+    .lux-price-chip strong { font-family: var(--serif); font-size: 22px; font-weight: 700; margin: 0 2px; }
+    .lux-slide.is-active .lux-price-chip { opacity: 1; transform: none; transition-delay: .25s; }
+
+    .lux-giant {
+      position: absolute; left: 0; right: 0; top: 17%; z-index: 1; text-align: center;
+      font-family: var(--serif); font-weight: 700; text-transform: uppercase;
+      font-size: clamp(76px, 15vw, 230px); line-height: .82; letter-spacing: -.02em;
+      color: var(--navy); white-space: nowrap; overflow: hidden; padding: 0 2vw;
+    }
+    .lux-giant span {
+      display: inline-block; opacity: 0; transform: translateY(55%);
+      transition: opacity .45s ease, transform .65s cubic-bezier(.2,.75,.15,1);
+    }
+    .lux-slide.is-active .lux-giant span { opacity: 1; transform: none; }
+    .lux-slide.is-leaving .lux-giant span { opacity: 0; transform: translateY(-40%); transition-duration: .35s, .45s; }
+
+    .lux-product {
+      position: absolute; z-index: 2; left: 50%; bottom: 21%;
+      width: min(44%, 540px); height: 56%;
+      transform: translate(-28%, 0) scale(.94); opacity: 0;
+      transition: transform .7s cubic-bezier(.2,.75,.15,1), opacity .5s ease;
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .lux-product img {
+      max-width: 100%; max-height: 100%; object-fit: contain;
+      transform: scale(var(--ps, 1)); transform-origin: 50% 100%;
+      filter: drop-shadow(0 34px 34px rgba(11,31,56,.28)) drop-shadow(0 6px 10px rgba(11,31,56,.12));
+    }
+    .lux-slide.is-active .lux-product { transform: translate(-50%, 0) scale(1); opacity: 1; }
+    .lux-slide.is-leaving .lux-product { transform: translate(-78%, 0) scale(.96); opacity: 0; transition-duration: .5s, .35s; }
+
+    .lux-hero-bottom {
+      position: absolute; left: 44px; right: 44px; bottom: 34px; z-index: 3;
+      display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 24px;
+    }
+    .lux-hero-info, .lux-hero-side { opacity: 0; transform: translateY(14px); transition: opacity .5s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+    .lux-slide.is-active .lux-hero-info, .lux-slide.is-active .lux-hero-side { opacity: 1; transform: none; transition-delay: .3s; }
+    .lux-hero-info h3 {
+      font-family: var(--serif); font-weight: 600; font-size: clamp(20px, 1.9vw, 26px);
+      color: var(--navy); margin: 0 0 6px; line-height: 1.15; max-width: 340px;
+    }
+    .lux-hero-info p { margin: 0; font-size: 12.5px; letter-spacing: .04em; color: var(--slate); text-transform: uppercase; line-height: 1.6; max-width: 340px; }
+    .lux-hero-side { text-align: right; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--navy); line-height: 1.7; }
+    .lux-hero-cta { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .lux-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+      height: 52px; padding: 0 28px; border-radius: 999px; border: 0; cursor: pointer;
+      font: 700 14px/1 'Inter', sans-serif; letter-spacing: .04em; text-decoration: none;
+      background: var(--orange); color: #fff;
+      box-shadow: 0 14px 30px -12px rgba(237,114,38,.7);
+      transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .lux-btn:hover { background: var(--orange-dk); transform: translateY(-2px); box-shadow: 0 18px 34px -12px rgba(237,114,38,.8); }
+    .lux-btn svg { transition: transform .2s ease; }
+    .lux-btn:hover svg { transform: translateX(3px); }
+    .lux-btn--ghost { background: transparent; color: var(--navy); box-shadow: inset 0 0 0 1.5px var(--navy); }
+    .lux-btn--ghost:hover { background: var(--navy); color: #fff; box-shadow: none; }
+    .lux-btn--light { background: #fff; color: var(--navy); box-shadow: none; }
+    .lux-btn--light:hover { background: var(--sand); }
+    .lux-hero-cta small { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--navy); font-weight: 700; }
+
+    /* Controls */
+    .lux-arrow {
+      position: absolute; top: 50%; z-index: 4; width: 46px; height: 46px; margin-top: -23px;
+      border-radius: 50%; border: 1px solid rgba(11,31,56,.15); background: rgba(255,255,255,.7);
+      backdrop-filter: blur(6px); color: var(--navy); cursor: pointer;
+      display: grid; place-items: center; transition: background .2s, transform .2s;
+    }
+    .lux-arrow:hover { background: #fff; transform: scale(1.06); }
+    .lux-arrow--prev { left: 18px; } .lux-arrow--next { right: 18px; }
+    .lux-progress {
+      position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); top: 40px;
+      display: flex; gap: 8px; align-items: center;
+    }
+    .lux-progress button {
+      width: 38px; height: 3px; border: 0; padding: 0; border-radius: 3px; cursor: pointer;
+      background: rgba(11,31,56,.16); position: relative; overflow: hidden;
+    }
+    .lux-progress button::before { content: ""; position: absolute; inset: -10px 0; } /* bigger hit area */
+    .lux-progress i {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 100%; background: var(--navy);
+      transform: scaleX(0); transform-origin: left;
+    }
+    .lux-progress button.is-done i { transform: scaleX(1); }
+    .lux-progress button.is-active i { animation: lux-fill var(--hold, 3000ms) linear forwards; animation-delay: var(--enter, 650ms); }
+    .lux-stage.is-paused .lux-progress button.is-active i { animation-play-state: paused; }
+    @keyframes lux-fill { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    .lux-counter { position: absolute; z-index: 4; left: 50%; transform: translateX(-50%); top: 52px; font-family: var(--serif); font-size: 15px; color: var(--navy); letter-spacing: .08em; }
+    .lux-counter b { font-size: 19px; font-weight: 700; }
+
+    /* ── Trust strip ───────────────────────────────────────────── */
+    .lux-trust { padding: 34px 0 10px; }
+    .lux-trust-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 0;
+      border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    }
+    .lux-trust-item { padding: 24px 22px; border-right: 1px solid var(--line); }
+    .lux-trust-item:last-child { border-right: 0; }
+    .lux-trust-item b { display: block; font-family: var(--serif); font-size: 34px; font-weight: 700; color: var(--navy); line-height: 1; }
+    .lux-trust-item span { display: block; margin-top: 8px; font-size: 13px; color: var(--slate); line-height: 1.5; }
+
+    /* ── Department tiles ──────────────────────────────────────── */
+    .lux-depts { padding: 70px 0 20px; }
+    .lux-depts-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; flex-wrap: wrap; }
+    .lux-dept-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; margin-top: 34px; }
+    .lux-dept {
+      position: relative; border-radius: 22px; overflow: hidden; min-height: 300px; cursor: pointer;
+      background: var(--tile, #fff); border: 1px solid var(--line); text-align: left; padding: 28px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease;
+      font: inherit; color: inherit;
+    }
+    .lux-dept:hover { transform: translateY(-6px); box-shadow: 0 26px 50px -30px rgba(11,31,56,.45); }
+    .lux-dept h3 { font-family: var(--serif); font-weight: 600; font-size: 34px; color: var(--navy); margin: 0; line-height: 1; }
+    .lux-dept > div, .lux-dept-link { position: relative; z-index: 1; }
+    .lux-dept p { margin: 10px 0 0; font-size: 13.5px; color: var(--slate); line-height: 1.6; max-width: 205px; }
+    .lux-dept img {
+      position: absolute; right: -4%; bottom: -3%; width: 50%; max-height: 60%; object-fit: contain; z-index: 0;
+      filter: drop-shadow(0 22px 22px rgba(11,31,56,.22));
+      transition: transform .5s cubic-bezier(.2,.7,.2,1);
+    }
+    .lux-dept:hover img { transform: translate(-4%, -4%) rotate(-2deg) scale(1.04); }
+    .lux-dept-link { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--navy); }
+    .lux-dept-count { font-size: 11.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--orange); }
+
+    /* ── Shop: toolbar + grid ──────────────────────────────────── */
+    .lux-shop { padding: 70px 0 40px; scroll-margin-top: 90px; }
+    .lux-toolbar {
+      position: sticky; top: 0; z-index: 20; margin-top: 30px;
+      background: rgba(250,247,242,.92); backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--line); padding: 14px 0;
+    }
+    .lux-tabs { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+    .lux-tab {
+      height: 42px; padding: 0 20px; border-radius: 999px; border: 1px solid var(--line);
+      background: #fff; color: var(--navy); font: 600 13.5px 'Inter', sans-serif; cursor: pointer;
+      transition: all .2s ease;
+    }
+    .lux-tab:hover { border-color: var(--navy); }
+    .lux-tab.is-active { background: var(--navy); color: #fff; border-color: var(--navy); }
+    .lux-tab sup { font-size: 10px; opacity: .7; margin-left: 4px; }
+    .lux-tools { display: flex; gap: 10px; margin-left: auto; align-items: center; }
+    .lux-search { position: relative; }
+    .lux-search input {
+      height: 42px; width: 230px; border-radius: 999px; border: 1px solid var(--line); background: #fff;
+      padding: 0 16px 0 40px; font: 500 13.5px 'Inter', sans-serif; color: var(--ink); outline: none;
+      transition: border-color .2s, width .3s;
+    }
+    .lux-search input:focus { border-color: var(--navy); width: 270px; }
+    .lux-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--slate); }
+    .lux-select {
+      height: 42px; border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--navy);
+      padding: 0 34px 0 16px; font: 600 13px 'Inter', sans-serif; cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%230B1F38' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    .lux-chips { display: flex; gap: 8px; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    .lux-chips::-webkit-scrollbar { display: none; }
+    .lux-chip {
+      flex: none; height: 34px; padding: 0 14px; border-radius: 999px; border: 1px dashed #CFC4B1; background: transparent;
+      color: var(--slate); font: 600 12.5px 'Inter', sans-serif; cursor: pointer; transition: all .2s ease;
+    }
+    .lux-chip:hover { color: var(--navy); border-color: var(--navy); }
+    .lux-chip.is-active { background: #fff; color: var(--orange); border: 1px solid var(--orange); }
+    .lux-results { margin: 22px 0 0; font-size: 13px; color: var(--slate); }
+    .lux-results b { color: var(--navy); }
+
+    .lux-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; margin-top: 18px; }
+    .lux-card {
+      background: #fff; border-radius: 22px; border: 1px solid var(--line); overflow: hidden;
+      display: flex; flex-direction: column;
+      transition: transform .35s cubic-bezier(.2,.7,.2,1), box-shadow .35s ease, border-color .35s;
+      animation: lux-rise .55s cubic-bezier(.2,.7,.2,1) both;
+    }
+    .lux-card:hover { transform: translateY(-5px); box-shadow: 0 28px 56px -34px rgba(11,31,56,.5); border-color: #D8CDB9; }
+    @keyframes lux-rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+    .lux-card-media {
+      position: relative; aspect-ratio: 4 / 3; background: #F1EADF;
+      overflow: hidden; cursor: zoom-in;
+    }
+    .lux-card-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .7s cubic-bezier(.2,.7,.2,1); }
+    .lux-card-media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,31,56,.18) 0%, rgba(11,31,56,0) 28%); pointer-events: none; }
+    .lux-badge, .lux-stock { z-index: 1; }
+    .lux-card:hover .lux-card-media img { transform: scale(1.06); }
+    .lux-badge {
+      position: absolute; left: 16px; top: 16px; padding: 6px 12px; border-radius: 999px;
+      background: var(--navy); color: #fff; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+    }
+    .lux-stock { position: absolute; right: 16px; top: 16px; font-size: 11px; font-weight: 700; color: #15803d; background: #fff; border-radius: 999px; padding: 5px 10px; }
+    .lux-stock.is-out { color: #b91c1c; }
+    .lux-card-body { padding: 22px 22px 24px; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+    .lux-card-kicker { font-size: 11px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; color: var(--orange); }
+    .lux-card h3 { font-family: var(--serif); font-weight: 600; font-size: 28px; color: var(--navy); margin: 4px 0 0; line-height: 1.05; }
+    .lux-specs { display: flex; flex-wrap: wrap; gap: 6px; }
+    .lux-specs span { font-size: 11.5px; font-weight: 600; color: var(--navy-2); background: var(--ivory); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+    .lux-field label { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--slate); margin-bottom: 6px; }
+    .lux-field .lux-select { width: 100%; border-radius: 12px; height: 44px; font-weight: 600; color: var(--ink); }
+    .lux-packs { display: flex; gap: 6px; }
+    .lux-pack {
+      flex: 1; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: #fff; cursor: pointer;
+      font: 600 12.5px 'Inter', sans-serif; color: var(--ink); padding: 6px 10px; line-height: 1.3; transition: all .2s;
+    }
+    .lux-pack small { display: block; font-weight: 500; color: var(--slate); font-size: 11px; }
+    .lux-pack.is-active { border-color: var(--navy); box-shadow: inset 0 0 0 1px var(--navy); background: var(--ivory); }
+    .lux-pack:disabled { opacity: .4; cursor: not-allowed; }
+    .lux-price-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .lux-price { font-family: var(--serif); font-size: 38px; font-weight: 700; color: var(--navy); line-height: 1; }
+    .lux-per { font-size: 13px; color: var(--slate); }
+    .lux-case-total { width: 100%; font-size: 12.5px; color: var(--slate); }
+    .lux-case-total b { color: var(--ink); }
+    .lux-ladder { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+    .lux-ladder div { border-radius: 10px; background: var(--ivory); border: 1px solid var(--line); padding: 8px 6px; text-align: center; }
+    .lux-ladder div:first-child { border-color: var(--navy); }
+    .lux-ladder small { display: block; font-size: 10.5px; color: var(--slate); font-weight: 600; letter-spacing: .04em; }
+    .lux-ladder b { font-size: 13.5px; color: var(--navy); }
+    .lux-ladder .is-save b { color: var(--orange); }
+    .lux-card-actions { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: auto; }
+    .lux-card .add-btn {
+      height: 50px; border-radius: 14px; border: 0; background: var(--orange); color: #fff; cursor: pointer;
+      font: 700 14px 'Inter', sans-serif; letter-spacing: .02em; transition: background .2s, transform .2s;
+      width: 100%; margin: 0;
+    }
+    .lux-card .add-btn:hover { background: var(--orange-dk); transform: translateY(-1px); }
+    .lux-card .add-btn:disabled { background: #cbd5e1; cursor: not-allowed; transform: none; }
+    .lux-icon-btn {
+      width: 50px; height: 50px; border-radius: 14px; border: 1px solid var(--line); background: #fff; color: var(--navy);
+      display: grid; place-items: center; cursor: pointer; transition: all .2s;
+    }
+    .lux-icon-btn:hover { border-color: var(--navy); background: var(--ivory); }
+    .lux-card-foot { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--slate); }
+    .lux-card-foot a { color: var(--navy); font-weight: 700; text-decoration: none; }
+    .lux-card-foot a:hover { color: var(--orange); }
+    .lux-empty { grid-column: 1 / -1; text-align: center; padding: 70px 20px; color: var(--slate); }
+    .lux-empty h3 { font-family: var(--serif); font-size: 30px; color: var(--navy); margin: 0 0 8px; }
+    .lux-skel { border-radius: 22px; height: 640px; background: linear-gradient(100deg, #fff 30%, #F4EEE4 50%, #fff 70%); background-size: 300% 100%; animation: lux-shimmer 1.4s infinite linear; border: 1px solid var(--line); }
+    @keyframes lux-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+    /* ── Compare collections ───────────────────────────────────── */
+    .lux-compare { padding: 80px 0; background: var(--navy); color: #fff; margin-top: 50px; }
+    .lux-compare .lux-h2 { color: #fff; }
+    .lux-compare .lux-lede { color: #B7C3D3; }
+    .lux-seg { display: inline-flex; padding: 5px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14); margin-top: 28px; }
+    .lux-seg button { height: 40px; padding: 0 20px; border-radius: 999px; border: 0; background: transparent; color: #C9D3E0; font: 600 13.5px 'Inter', sans-serif; cursor: pointer; transition: all .2s; }
+    .lux-seg button.is-active { background: #fff; color: var(--navy); }
+    .lux-cmp-grid { display: grid; gap: 18px; margin-top: 30px; }
+    .lux-cmp {
+      border-radius: 20px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.04);
+      padding: 26px 22px; display: flex; flex-direction: column; gap: 16px;
+      transition: transform .3s cubic-bezier(.2,.7,.2,1), background .3s, border-color .3s;
+      animation: lux-rise .5s cubic-bezier(.2,.7,.2,1) both;
+    }
+    .lux-cmp:hover { transform: translateY(-4px); background: rgba(255,255,255,.08); border-color: rgba(237,114,38,.6); }
+    .lux-cmp.is-featured { border-color: var(--orange); background: rgba(237,114,38,.08); }
+    .lux-cmp-tag { align-self: flex-start; font-size: 10.5px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--orange); }
+    .lux-cmp h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; margin: 0; line-height: 1; }
+    .lux-cmp dl { margin: 0; display: grid; gap: 10px; }
+    .lux-cmp dl div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,255,255,.1); padding-bottom: 9px; font-size: 13px; }
+    .lux-cmp dt { color: #93A3B8; }
+    .lux-cmp dd { margin: 0; text-align: right; font-weight: 600; color: #fff; }
+    .lux-cmp .lux-btn { height: 44px; margin-top: auto; font-size: 13px; }
+
+    /* ── CTA band + FAQ ────────────────────────────────────────── */
+    .lux-band { padding: 80px 0 30px; }
+    .lux-band-grid { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 22px; }
+    .lux-band-card {
+      border-radius: 22px; padding: 32px; border: 1px solid var(--line); background: #fff;
+      display: flex; flex-direction: column; gap: 14px; text-decoration: none; color: inherit;
+      transition: transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s;
+    }
+    .lux-band-card:hover { transform: translateY(-5px); box-shadow: 0 26px 50px -32px rgba(11,31,56,.5); }
+    .lux-band-card h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; color: var(--navy); margin: 0; line-height: 1.05; }
+    .lux-band-card p { margin: 0; font-size: 14px; line-height: 1.65; color: var(--slate); }
+    .lux-band-card .lux-link { margin-top: auto; font-size: 13.5px; font-weight: 700; color: var(--orange); display: inline-flex; gap: 8px; align-items: center; }
+    .lux-band-card.is-dark { background: linear-gradient(150deg, var(--navy) 0%, #183A63 100%); border-color: transparent; }
+    .lux-band-card.is-dark h3 { color: #fff; } .lux-band-card.is-dark p { color: #B7C3D3; }
+    .lux-faq { padding: 60px 0 90px; display: grid; grid-template-columns: 1fr 1.4fr; gap: 50px; }
+    .lux-faq details { border-bottom: 1px solid var(--line); padding: 20px 0; }
+    .lux-faq summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 20px; font-family: var(--serif); font-size: 22px; font-weight: 600; color: var(--navy); }
+    .lux-faq summary::-webkit-details-marker { display: none; }
+    .lux-faq summary::after { content: "+"; font-family: 'Inter', sans-serif; font-size: 22px; font-weight: 300; color: var(--orange); transition: transform .25s; }
+    .lux-faq details[open] summary::after { transform: rotate(45deg); }
+    .lux-faq details p { margin: 12px 0 0; color: var(--slate); font-size: 14.5px; line-height: 1.7; }
+
+    /* ── Quick view ────────────────────────────────────────────── */
+    .lux-modal { position: fixed; inset: 0; z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
+    .lux-modal.is-open { display: flex; }
+    .lux-modal-bg { position: absolute; inset: 0; background: rgba(11,31,56,.55); backdrop-filter: blur(4px); animation: lux-fade .25s ease both; }
+    .lux-modal-box {
+      position: relative; width: min(980px, 100%); max-height: calc(100vh - 40px); overflow: auto;
+      background: #fff; border-radius: 26px; display: grid; grid-template-columns: 1fr 1.1fr;
+      animation: lux-pop .35s cubic-bezier(.2,.7,.2,1) both;
+    }
+    @keyframes lux-fade { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes lux-pop { from { opacity: 0; transform: translateY(20px) scale(.98); } to { opacity: 1; transform: none; } }
+    .lux-modal-media { background: linear-gradient(160deg, #FBF9F5 0%, #EDE4D6 100%); display: grid; place-items: center; padding: 30px; min-height: 360px; }
+    .lux-modal-media img { width: 100%; max-height: 460px; object-fit: contain; border-radius: 16px; }
+    .lux-modal-body { padding: 36px 34px; display: flex; flex-direction: column; gap: 16px; }
+    .lux-modal-body h3 { font-family: var(--serif); font-size: 30px; font-weight: 600; color: var(--navy); margin: 0; line-height: 1.1; }
+    .lux-modal-body > p { margin: 0; color: var(--slate); font-size: 14px; line-height: 1.75; }
+    .lux-feat { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+    .lux-feat li { display: flex; gap: 10px; font-size: 14px; color: var(--ink); }
+    .lux-feat li::before { content: ""; flex: none; width: 18px; height: 18px; border-radius: 50%; background: var(--ivory) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='8'%3E%3Cpath d='M1 4l3 3 5-6' stroke='%23ED7226' stroke-width='1.8' fill='none'/%3E%3C/svg%3E") center no-repeat; border: 1px solid var(--line); margin-top: 1px; }
+    .lux-spec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .lux-spec-table td { padding: 9px 0; border-bottom: 1px solid var(--line); }
+    .lux-spec-table td:first-child { color: var(--slate); width: 42%; }
+    .lux-spec-table td:last-child { font-weight: 600; color: var(--ink); text-align: right; }
+    .lux-modal-close { position: absolute; right: 16px; top: 16px; z-index: 2; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: #fff; cursor: pointer; display: grid; place-items: center; color: var(--navy); }
+    .lux-modal .add-btn { height: 52px; border-radius: 14px; border: 0; background: var(--orange); color: #fff; font: 700 14px 'Inter', sans-serif; cursor: pointer; width: 100%; margin: 0; }
+    .lux-modal .add-btn:hover { background: var(--orange-dk); }
+
+    /* ── Responsive ────────────────────────────────────────────── */
+    @media (max-width: 1080px) {
+      .lux-grid { grid-template-columns: repeat(2, 1fr); }
+      .lux-band-grid { grid-template-columns: 1fr 1fr; }
+      .lux-band-grid .lux-band-card:first-child { grid-column: 1 / -1; }
+      .lux-tools { margin-left: 0; width: 100%; }
+      .lux-search { flex: 1; } .lux-search input, .lux-search input:focus { width: 100%; }
+    }
+    @media (max-width: 860px) {
+      .lux-wrap { width: calc(100% - 32px); }
+      .lux-stage { height: 640px; border-radius: 22px; }
+      .lux-hero-top { top: 24px; left: 22px; right: 22px; }
+      .lux-counter { display: none; }
+      .lux-progress { top: auto; bottom: 20px; }
+      .lux-giant { top: 22%; font-size: clamp(56px, 17vw, 120px); }
+      .lux-product { width: 74%; height: 40%; bottom: 33%; }
+      .lux-hero-bottom { left: 22px; right: 22px; bottom: 44px; grid-template-columns: 1fr; gap: 16px; text-align: center; }
+      .lux-hero-info h3, .lux-hero-info p { max-width: none; }
+      .lux-hero-side { display: none; }
+      .lux-arrow { top: 46%; width: 40px; height: 40px; }
+      .lux-arrow--prev { left: 10px; } .lux-arrow--next { right: 10px; }
+      .lux-trust-grid { grid-template-columns: 1fr 1fr; }
+      .lux-trust-item:nth-child(2) { border-right: 0; }
+      .lux-trust-item:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+      .lux-dept-grid { grid-template-columns: 1fr; }
+      .lux-dept { min-height: 220px; }
+      .lux-dept img { width: 46%; }
+      .lux-faq { grid-template-columns: 1fr; gap: 10px; }
+      .lux-modal-box { grid-template-columns: 1fr; }
+      .lux-modal-media { min-height: 240px; }
+      .lux-modal-body { padding: 26px 22px; }
+    }
+    @media (max-width: 640px) {
+      .lux-grid { grid-template-columns: 1fr; }
+      .lux-band-grid { grid-template-columns: 1fr; }
+      .lux-price-chip { padding: 8px 14px; } .lux-price-chip strong { font-size: 18px; }
+      .lux-hero-kicker { font-size: 18px; max-width: 55%; }
+      .lux-toolbar { position: static; }
+      .lux-tab { padding: 0 14px; height: 38px; font-size: 12.5px; }
+      .lux-select.lux-sort { flex: none; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .lux *, .lux *::before, .lux *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="top-bar">
+    <p>Rooms ready. Supplies handled. Reorder made easy.</p>
+    <div class="top-contact">
+      <span>☎ (252) 616-0088</span>
+      <span>✉ sales@roomreadysupply.com</span>
+    </div>
+  </div>
+
+  <header class="navbar">
+    <a href="/" class="logo">
+      <picture><source srcset="assets/img/RR%20logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture>
+    </a>
+
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <div class="nav-dd">
+        <a href="/catalog">Buy Now</a>
+        <div class="nav-dd-menu">
+          <a href="/catalog"><span>All Products</span><small>Every product in the catalog</small></a>
+          <a href="/luxury"><span>Luxury Products<span class="nav-dd-new">NEW</span></span><small>Premium linens &amp; mattress protection</small></a>
+        </div>
+      </div>
+      <a href="/best-deals">Best Deals</a>
+      <a href="/#reorder-header">Reorder Program</a>
+      <a href="/quote">Case Pricing</a>
+      <a href="/price-beat" class="nav-link-highlight">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        Price Match
+      </a>
+      <a href="/#about-us">About Us</a>
+      <a href="/#about-us">Contact</a>
+    </nav>
+
+    <div class="nav-icons">
+      <a href="/catalog">
+        <img src="assets/icons/hl1.svg" alt="Search">
+      </a>
+
+      <a href="/login" class="guest-only login-nav-btn">Login</a>
+
+      <div class="logged-in-only account-dropdown">
+        <button class="account-btn">
+          <img src="assets/icons/hl2.svg" alt="Account">
+        </button>
+
+        <div class="dropdown-menu">
+  <a href="/account">My Account</a>
+  <a href="/account#orders">Order History</a>
+  <a href="/profile?tab=reorder">Reorder Program</a>
+
+  <div class="dropdown-divider"></div>
+
+  <button id="logout-btn">Logout</button>
+</div>
+      </div>
+
+      <div class="cart-container">
+        <a href="/cart">
+          <img src="assets/icons/hl3.svg?v=20260919i" alt="Cart">
+        </a>
+        <span id="cart-count" class="cart-count">0</span>
+      </div>
+    </div>
+    <button class="nav-hamburger" id="navHamburger" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </header>
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+    <a href="/">Home</a>
+    <a href="/catalog">Buy Now</a>
+    <a href="/luxury" class="mobile-nav-sub">Luxury Products</a>
+    <a href="/best-deals">Best Deals</a>
+    <a href="/#reorder-header">Reorder Program</a>
+    <a href="/quote">Case Pricing</a>
+    <a href="/price-beat" class="nav-link-highlight">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+      Price Match
+    </a>
+    <a href="/#about-us">About Us</a>
+    <a href="/#about-us">Contact</a>
+    <a href="/cart">My Cart</a>
+  </nav>
+
+  <main class="lux">
+    <div class="lux-wrap">
+      <nav class="lux-crumbs" aria-label="Breadcrumb">
+        <a href="/">Home</a><span>/</span><a href="/catalog">Buy Now</a><span>/</span>Luxury Products
+      </nav>
+    </div>
+
+    <!-- ── Hero carousel ──────────────────────────────────────── -->
+    <section class="lux-hero" aria-roledescription="carousel" aria-label="Featured luxury products">
+      <div class="lux-wrap">
+        <div class="lux-stage" id="luxStage">
+          <div id="luxSlides"></div>
+          <div class="lux-progress" id="luxDots" role="tablist" aria-label="Choose a featured product"></div>
+          <div class="lux-counter" id="luxCounter" aria-hidden="true"></div>
+          <button class="lux-arrow lux-arrow--prev" id="luxPrev" aria-label="Previous product">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+          </button>
+          <button class="lux-arrow lux-arrow--next" id="luxNext" aria-label="Next product">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Trust strip ────────────────────────────────────────── -->
+    <section class="lux-trust">
+      <div class="lux-wrap">
+        <div class="lux-trust-grid">
+          <div class="lux-trust-item"><b id="luxStatSkus">150+</b><span>Hotel-grade sizes and pack options in the luxury line</span></div>
+          <div class="lux-trust-item"><b>T600</b><span>Pima cotton sateen and luxury-blend sheet sets</span></div>
+          <div class="lux-trust-item"><b>OEKO-TEX&reg;</b><span>Standard 100 certified Suites towel collection</span></div>
+          <div class="lux-trust-item"><b>Direct</b><span>Ships direct from supplier warehouses across the East Coast</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Departments ────────────────────────────────────────── -->
+    <section class="lux-depts">
+      <div class="lux-wrap">
+        <div class="lux-depts-head">
+          <div>
+            <span class="lux-eyebrow">Shop by room need</span>
+            <h2 class="lux-h2">Three departments.<br><em>One standard of comfort.</em></h2>
+          </div>
+          <p class="lux-lede" style="max-width:420px">Everything a guest touches, from the first towel to the last pillow, chosen for hotel laundries and priced for case buyers.</p>
+        </div>
+        <div class="lux-dept-grid">
+          <button class="lux-dept" data-dept="bath" style="--tile:#F3ECE1">
+            <div><span class="lux-dept-count" data-count="bath">Bath</span><h3>Bath Linens</h3><p>Ringspun, combed Suites and Turkish cotton towels, washcloths and bath mats.</p></div>
+            <span class="lux-dept-link">Shop bath <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+            <img src="assets/img/luxury/turkish-bath-towel.webp" alt="" loading="lazy">
+          </button>
+          <button class="lux-dept" data-dept="bed" style="--tile:#E6EBF1">
+            <div><span class="lux-dept-count" data-count="bed">Bedding</span><h3>Sheets &amp; Sets</h3><p>T200 to T600 flat and fitted sheets, pillowcases and complete sheet sets.</p></div>
+            <span class="lux-dept-link">Shop bedding <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+            <img src="assets/img/luxury/t600-queen-sheet-set.webp" alt="" loading="lazy">
+          </button>
+          <button class="lux-dept" data-dept="protect" style="--tile:#EEF0EE">
+            <div><span class="lux-dept-count" data-count="protect">Protection</span><h3>Mattress &amp; Pillow</h3><p>Zippered bed bug encasements, allergy pillow protectors and waterproof pads.</p></div>
+            <span class="lux-dept-link">Shop protection <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+            <img src="assets/img/luxury/bedbug-encasement.webp" alt="" loading="lazy">
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Shop ───────────────────────────────────────────────── -->
+    <section class="lux-shop" id="shop">
+      <div class="lux-wrap">
+        <span class="lux-eyebrow">The luxury collection</span>
+        <h2 class="lux-h2">Choose your size. <em>We handle the rest.</em></h2>
+        <p class="lux-lede">Pick a size and a pack, and the price updates live, including the volume price you unlock by ordering more.</p>
+      </div>
+      <div class="lux-toolbar" id="luxToolbar">
+        <div class="lux-wrap">
+          <div class="lux-tabs" role="tablist" aria-label="Department">
+            <button class="lux-tab is-active" data-dept="all" role="tab" aria-selected="true">All<sup data-count="all"></sup></button>
+            <button class="lux-tab" data-dept="bath" role="tab" aria-selected="false">Bath Linens<sup data-count="bath"></sup></button>
+            <button class="lux-tab" data-dept="bed" role="tab" aria-selected="false">Sheets &amp; Sets<sup data-count="bed"></sup></button>
+            <button class="lux-tab" data-dept="protect" role="tab" aria-selected="false">Mattress &amp; Pillow<sup data-count="protect"></sup></button>
+            <div class="lux-tools">
+              <label class="lux-search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+                <input type="search" id="luxSearch" placeholder="Search towels, queen, T600…" aria-label="Search luxury products">
+              </label>
+              <select class="lux-select lux-sort" id="luxSort" aria-label="Sort">
+                <option value="featured">Featured</option>
+                <option value="low">Price: low to high</option>
+                <option value="high">Price: high to low</option>
+              </select>
+            </div>
+          </div>
+          <div class="lux-chips" id="luxChips" aria-label="Collection"></div>
+        </div>
+      </div>
+      <div class="lux-wrap">
+        <p class="lux-results" id="luxResults" aria-live="polite"></p>
+        <div class="lux-grid" id="luxGrid">
+          <div class="lux-skel"></div><div class="lux-skel"></div><div class="lux-skel"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Compare ────────────────────────────────────────────── -->
+    <section class="lux-compare" id="compare">
+      <div class="lux-wrap">
+        <span class="lux-eyebrow">Compare collections</span>
+        <h2 class="lux-h2">Find the right tier <em>for every room.</em></h2>
+        <p class="lux-lede">Side by side, straight from the supplier spec sheets. Pick a collection to shop it.</p>
+        <div class="lux-seg" role="tablist" aria-label="Compare">
+          <button class="is-active" data-cmp="bed">Sheets</button>
+          <button data-cmp="bath">Towels</button>
+          <button data-cmp="protect">Protection</button>
+        </div>
+        <div class="lux-cmp-grid" id="luxCmp"></div>
+      </div>
+    </section>
+
+    <!-- ── CTA band ───────────────────────────────────────────── -->
+    <section class="lux-band">
+      <div class="lux-wrap">
+        <div class="lux-band-grid">
+          <a class="lux-band-card is-dark" href="/quote">
+            <span class="lux-eyebrow">Outfitting a property?</span>
+            <h3>Refresh every room for less with case pricing.</h3>
+            <p>Volume pricing is built into every product on this page. Ordering for a renovation or a new opening? Send us your list and we'll price the whole order.</p>
+            <span class="lux-link">Get case pricing <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </a>
+          <a class="lux-band-card" href="/price-beat">
+            <span class="lux-eyebrow">Price Match</span>
+            <h3>Found it for less?</h3>
+            <p>Send us the quote and we'll review it against our price.</p>
+            <span class="lux-link">Request a price match <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </a>
+          <a class="lux-band-card" href="/auto-reorder">
+            <span class="lux-eyebrow">Reorder Program</span>
+            <h3>Never run out of linens.</h3>
+            <p>Set your schedule and we keep the orders coming, with your approval before every one.</p>
+            <span class="lux-link">How reorder works <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></span>
+          </a>
+        </div>
+
+        <div class="lux-faq">
+          <div>
+            <span class="lux-eyebrow">Good to know</span>
+            <h2 class="lux-h2">Before you <em>order.</em></h2>
+          </div>
+          <div>
+            <details>
+              <summary>Do I have to buy a full case?</summary>
+              <p>Many items come in both a single piece and a full case. Choose the pack on each product. Case packs carry the lower per-piece price, and items sold only by the case say so next to the price.</p>
+            </details>
+            <details>
+              <summary>How does volume pricing work?</summary>
+              <p>Each product shows its price ladder. Order past a step and the lower price applies to the whole line automatically in your cart. No quote needed.</p>
+            </details>
+            <details>
+              <summary>How is delivery priced?</summary>
+              <p>Orders ship direct from supplier warehouses. Delivery is calculated for every order and shown in your total before you pay, at any order weight.</p>
+            </details>
+            <details>
+              <summary>What's the difference between T200, T300 and T600?</summary>
+              <p>Thread count and fabric. T200 and T300 are durable 60/40 cotton-poly percale. T600 Luxury Blend adds lyocell for a softer, wrinkle-resistant hand, and T600 Wrinkle-Free is 100% Pima cotton sateen that needs no ironing. See the comparison above.</p>
+            </details>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Quick view -->
+  <div class="lux-modal" id="luxModal" role="dialog" aria-modal="true" aria-labelledby="luxModalTitle">
+    <div class="lux-modal-bg" data-close></div>
+    <div class="lux-modal-box">
+      <button class="lux-modal-close" data-close aria-label="Close">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+      <div class="lux-modal-media"><img id="luxModalImg" alt=""></div>
+      <div class="lux-modal-body" id="luxModalBody"></div>
+    </div>
+  </div>
+
+  <footer class="site-legal-footer">
+    <nav aria-label="Legal">
+      <a href="/terms">Terms of Service</a>
+      <a href="/privacy">Privacy Policy</a>
+      <a href="/shipping-policy">Shipping Policy</a>
+    </nav>
+    <p>Room Ready Supply &middot; 609 Washington St, Plymouth, NC 27962</p>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+  <script src="supabase.js"></script>
+  <script src="script.js?v=20261014h"></script>
+  <script src="ghl-chat.js?v=20260930a" defer></script>
+  <script>
+  (function () {
+    "use strict";
+
+    /* ── Collections ────────────────────────────────────────────
+       The page reads the live catalog and keeps only these lines, so
+       prices, stock and new sizes stay in step with admin. `strip` is
+       the name prefix before the bed size / product type. */
+    const COLLECTIONS = [
+      { id: "ringspun", dept: "bath", name: "Ringspun Cotton", strip: "Prestige Ringspun Cotton ", badge: "Hotel Standard",
+        specs: { "Fiber": "100% ringspun cotton", "Border": "Classic or double dobby", "Finish": "Crisp white", "Best for": "High-turnover rooms" } },
+      { id: "suites", dept: "bath", name: "Suites", strip: "Prestige Suites ", badge: "OEKO-TEX®",
+        specs: { "Fiber": "100% combed cotton", "Yarn": "3-ply construction", "Border": "Pique dobby", "Certified": "OEKO-TEX Standard 100" } },
+      { id: "turkish", dept: "bath", name: "Luxury Turkish", strip: "Prestige Luxury Turkish ", badge: "Made in Turkey", featured: true,
+        specs: { "Fiber": "Premium Turkish cotton", "Feel": "Plush, quick absorbing", "Drying": "Faster drying", "Origin": "Made in Turkey" } },
+      { id: "t200", dept: "bed", name: "T200 Hospitality", strip: "Prestige T200 Hospitality ", badge: "T200",
+        specs: { "Thread count": "200", "Fabric": "60% cotton / 40% poly", "Weave": "Percale", "Hem": "3″, color-coded thread" } },
+      { id: "t300", dept: "bed", name: "T300 Hospitality", strip: "Prestige T300 Hospitality ", badge: "T300",
+        specs: { "Thread count": "300", "Fabric": "60% cotton / 40% poly", "Weave": "Percale", "Hem": "4″, color-coded thread" } },
+      { id: "t600b", dept: "bed", name: "T600 Luxury Blend", strip: "Prestige T600 Luxury Blend ", badge: "T600", featured: true,
+        specs: { "Thread count": "600", "Fabric": "52% cotton / 43% poly / 5% lyocell", "Care": "Wrinkle-resistant", "Hem": "Elegant hem detailing" } },
+      { id: "t600w", dept: "bed", name: "T600 Pima Wrinkle-Free", strip: "Prestige T600 Wrinkle-Free ", badge: "Pima Sateen",
+        specs: { "Thread count": "600", "Fabric": "100% Pima cotton", "Weave": "Sateen", "Care": "No ironing required" } },
+      { id: "bedbug", dept: "protect", name: "BedBug Solution Elite", strip: "BedBug Solution Elite Zippered Waterproof ", badge: "BugStop Seal", featured: true,
+        specs: { "Coverage": "Six-sided, fully zippered", "Barrier": "Waterproof polyurethane", "Seal": "Patented BugStop Seal", "Warranty": "Limited lifetime" } },
+      { id: "cleanair", dept: "protect", name: "CleanAir Allergy Relief", strip: "CleanAir Allergy Relief Zippered Waterproof ", badge: "Allergen Barrier",
+        specs: { "Coverage": "Fully zippered enclosure", "Barrier": "Allergen fabric + urethane", "Zipper": "Self-locking, rust-resistant", "Warranty": "Limited lifetime" } },
+      { id: "ply3", dept: "protect", name: "3-Ply Quilted Pad", strip: "3-Ply Quilted Waterproof ", badge: "Waterproof",
+        specs: { "Layers": "3-ply, quilted", "Core": "Heavy-gauge vinyl", "Fit": "16″ fitted skirt", "Care": "Commercially washable" } },
+    ];
+    const DEPTS = { bath: "Bath Linens", bed: "Sheets & Sets", protect: "Mattress & Pillow" };
+    const TYPES = ["Sheet Set", "Flat Sheet", "Fitted Sheet", "Pillowcase Pair", "Pillowcase", "Bath Sheet", "Bath Towel",
+                   "Hand Towel", "Washcloth", "Bath Mat", "Mattress Encasement", "Pillow Protector", "Mattress Pad"];
+    const SIZE_ORDER = ["Twin", "Twin XL", "Full", "Full XL", "Queen", "Queen XL", "Queen Extra-Wide", "Standard",
+                        "Standard/Queen", "King", "Hotel King", "King XL", "King Extra-Wide XL", "California King"];
+
+    /* ── Hero slides (SKUs from the request; prices read live) ─── */
+    const SLIDES = [
+      { sku: "BT2758LC14", img: "turkish-bath-towel", bg: "#EDE3D3", word: "Turkish",
+        kicker: "The Luxury Turkish Collection", title: "Prestige Luxury Turkish Bath Towel",
+        line: "27 × 58 in. · 18 lb/dozen · Case of 14", side: "Made in Turkey<br>Plush &amp; quick drying", coll: "turkish" },
+      { sku: "SSQLC4", img: "t600-queen-sheet-set", bg: "#E1E7EE", word: "T600",
+        kicker: "Luxury Blend Bedding", title: "Prestige T600 Luxury Blend Queen Sheet Set",
+        line: "Fresh White · Wrinkle-resistant · Case of 4 sets", side: "Cotton, poly &amp; lyocell<br>Easy-care softness", coll: "t600b" },
+      { sku: "96080Z-12T", img: "bedbug-encasement", bg: "#E5E9E8", word: "Sealed",
+        kicker: "Total Mattress Protection", title: "BedBug Solution Elite Mattress Encasement",
+        line: "Queen · 60 × 80 in. · Fits up to 12 in. deep", side: "Patented BugStop Seal<br>Limited lifetime warranty", coll: "bedbug" },
+      { sku: "9221", img: "cleanair-pillow-protector", bg: "#E8E6F0", word: "Clean Air",
+        kicker: "Allergy Relief Pillows", title: "CleanAir Allergy Relief Pillow Protector",
+        line: "Queen · 21 × 31 in. · Fully zippered", side: "Allergen barrier<br>Waterproof &amp; quiet", coll: "cleanair", scale: 1.35 },
+      { sku: "14071", img: "3ply-mattress-pad", bg: "#EFE6DA", word: "3-Ply",
+        kicker: "Quilted Comfort Layer", title: "3-Ply Quilted Waterproof Mattress Pad",
+        line: "Queen · 60 × 80 in. · 16 in. fitted skirt", side: "Heavy-gauge vinyl core<br>Commercially washable", coll: "ply3" },
+    ];
+    const ENTER_MS = 650, HOLD_MS = 3000;
+
+    const $ = (s, el = document) => el.querySelector(s);
+    const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
+    const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const money = n => "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const unitWord = p => ({ EA: "each", EACH: "each", SET: "set", PAIR: "pair" }[String(p.priceBy || "").toUpperCase()] || String(p.priceBy || "each").toLowerCase());
+    const unitPlural = p => ({ each: "pieces", set: "sets", pair: "pairs" }[unitWord(p)] || "units");
+
+    /* ── Parse a live product into collection / type / size / pack ── */
+    function parseProduct(p) {
+      const coll = COLLECTIONS.find(c => p.name.startsWith(c.strip));
+      if (!coll) return null;
+      let rest = p.name.slice(coll.strip.length).trim();
+      let parts;
+      if (/ - /.test(rest)) {               // Bargoose: "<Type> - Queen, 60 x 80 in., ..., 1 Each"
+        const [head, tail] = rest.split(" - ");
+        parts = tail.split(",").map(s => s.trim());
+        rest = head + ", " + tail;
+        const type = TYPES.find(t => head.endsWith(t)) || head;
+        const pack = parts.pop();
+        const size = parts.shift();
+        return finish(p, coll, type, size, parts, pack);
+      }
+      parts = rest.split(",").map(s => s.trim());
+      const head = parts.shift();           // "Queen XL Flat Sheet" / "Bath Towel" / "Double-Dobby Bath Towel"
+      const type = TYPES.find(t => head.endsWith(t)) || head;
+      let size = head.slice(0, head.length - type.length).trim();
+      const pack = parts.pop();
+      if (size === "Double-Dobby") { parts.unshift("Double dobby"); size = ""; }
+      return finish(p, coll, type, size, parts, pack);
+    }
+    function finish(p, coll, type, size, details, pack) {
+      // Colour words describe the item, not an option to pick; keep them
+      // for the detail view but out of the size label.
+      const color = details.filter(d => /white|cream/i.test(d)).join(", ");
+      const dims = details.filter(d => !/white|cream/i.test(d));
+      const sizeLabel = [size, ...dims].filter(Boolean).join(" · ").replace(/ in\./g, "″").replace(/″ Pocket/, "″ pocket").replace(/Fits Up to/i, "fits up to");
+      const isCase = /^Case of/i.test(pack || "");
+      return { p, coll, type, size, sizeLabel: sizeLabel || "One size", color, pack: pack || "", isCase,
+               moq: productMoq(p), key: coll.id + "|" + type };
+    }
+
+    /* Price the line exactly as the cart will: the cart's own tier
+       function, at the minimum order and at each volume step. */
+    function priceAt(p, qty) { return getTierPrice(Object.assign({}, p, { quantity: qty }), []); }
+    function ladder(v) {
+      const p = v.p, moq = v.moq;
+      const steps = [moq];
+      [tierMinQty(p, "tier2_min_qty", "tier2MinQty"), tierMinQty(p, "tier3_min_qty", "tier3MinQty")].forEach(t => {
+        if (t) steps.push(Math.max(moq, Math.ceil(t / moq) * moq));
+      });
+      const out = [];
+      [...new Set(steps)].sort((a, b) => a - b).forEach(q => {
+        const pr = priceAt(p, q);
+        if (!out.length || pr < out[out.length - 1].price) out.push({ qty: q, price: pr });
+      });
+      return out.slice(0, 3);
+    }
+    const qtyLabel = (v, q) => v.moq > 1 ? `${q / v.moq} case${q / v.moq > 1 ? "s" : ""}` : `${q}+ ${unitPlural(v.p)}`;
+
+    /* ── State ──────────────────────────────────────────────── */
+    let LINES = [];            // [{ key, coll, type, variants: [...] }]
+    let BY_SKU = {};
+    const state = { dept: "all", coll: "", q: "", sort: "featured" };
+    const pick = {};           // line key -> selected sku
+
+    function buildLines(products) {
+      const map = new Map();
+      products.forEach(p => {
+        const v = parseProduct(p);
+        if (!v) return;
+        BY_SKU[p.itemNumber] = v;
+        if (!map.has(v.key)) map.set(v.key, { key: v.key, coll: v.coll, type: v.type, variants: [] });
+        map.get(v.key).variants.push(v);
+      });
+      const sizeRank = s => { const i = SIZE_ORDER.indexOf(s); return i < 0 ? 99 : i; };
+      map.forEach(line => {
+        line.variants.sort((a, b) => sizeRank(a.size) - sizeRank(b.size) || a.sizeLabel.localeCompare(b.sizeLabel, undefined, { numeric: true }) || (a.isCase - b.isCase));
+        line.sizes = [...new Set(line.variants.map(v => v.sizeLabel))];
+        line.minPrice = Math.min(...line.variants.map(v => priceAt(v.p, v.moq)));
+        const def = line.variants.find(v => v.p.inStock !== false && v.isCase) || line.variants.find(v => v.p.inStock !== false) || line.variants[0];
+        pick[line.key] = def.p.itemNumber;
+      });
+      const typeRank = t => TYPES.indexOf(t);
+      LINES = [...map.values()].sort((a, b) =>
+        COLLECTIONS.indexOf(a.coll) - COLLECTIONS.indexOf(b.coll) || typeRank(a.type) - typeRank(b.type));
+    }
+
+    /* ── Card ───────────────────────────────────────────────── */
+    function cardHtml(line, i) {
+      const v = BY_SKU[pick[line.key]];
+      const p = v.p;
+      const packs = line.variants.filter(x => x.sizeLabel === v.sizeLabel);
+      const lad = ladder(v);
+      const unit = unitWord(p);
+      const now = lad[0] ? lad[0].price : priceAt(p, v.moq);
+      const out = p.inStock === false;
+      const feats = [p.feature1, p.feature2, p.feature3].filter(Boolean).slice(0, 3);
+      return `
+      <article class="lux-card" data-line="${esc(line.key)}" style="animation-delay:${Math.min(i, 8) * 45}ms">
+        <div class="lux-card-media" data-quick="${esc(line.key)}" role="button" tabindex="0" aria-label="Quick view ${esc(line.coll.name)} ${esc(line.type)}">
+          <span class="lux-badge">${esc(line.coll.badge)}</span>
+          <span class="lux-stock${out ? " is-out" : ""}">${out ? "Out of stock" : "● In stock"}</span>
+          <img src="${esc(cardImageUrl(p.image, 600) || "/assets/img/product-placeholder.svg")}" alt="${esc(p.name)}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
+        </div>
+        <div class="lux-card-body">
+          <div>
+            <div class="lux-card-kicker">${esc(line.coll.name)}</div>
+            <h3>${esc(line.type)}</h3>
+          </div>
+          ${feats.length ? `<div class="lux-specs">${feats.map(f => `<span>${esc(f)}</span>`).join("")}</div>` : ""}
+          ${line.sizes.length > 1 ? `
+          <div class="lux-field">
+            <label for="sz-${i}">Size</label>
+            <select class="lux-select" id="sz-${i}" data-size="${esc(line.key)}">
+              ${line.sizes.map(s => `<option${s === v.sizeLabel ? " selected" : ""}>${esc(s)}</option>`).join("")}
+            </select>
+          </div>` : `<div class="lux-field"><label>Size</label><div style="font-size:14px;font-weight:600">${esc(v.sizeLabel)}</div></div>`}
+          ${packs.length > 1 ? `
+          <div class="lux-field">
+            <label>Pack</label>
+            <div class="lux-packs">
+              ${packs.map(x => `<button type="button" class="lux-pack${x === v ? " is-active" : ""}" data-pick="${esc(x.p.itemNumber)}" data-line-key="${esc(line.key)}">
+                ${esc(x.isCase ? x.pack.replace(/ Pieces?$/, " pcs") : "Single")}<small>${money(priceAt(x.p, x.moq))} / ${unitWord(x.p)}</small></button>`).join("")}
+            </div>
+          </div>` : ""}
+          <div class="lux-price-row">
+            <span class="lux-price">${money(now)}</span><span class="lux-per">/ ${unit}</span>
+            ${v.moq > 1 ? `<span class="lux-case-total">Sold by the case of ${v.moq} · <b>${money(now * v.moq)}</b> per case</span>` : `<span class="lux-case-total">${esc(v.pack || "Sold individually")}</span>`}
+          </div>
+          ${lad.length > 1 ? `<div class="lux-ladder" aria-label="Volume pricing">
+            ${lad.map((s, k) => `<div class="${k ? "is-save" : ""}"><small>${esc(qtyLabel(v, s.qty))}</small><b>${money(s.price)}</b></div>`).join("")}
+          </div>` : ""}
+          <div class="lux-card-actions">
+            ${addBtnHtml(p, v)}
+            <button type="button" class="lux-icon-btn" data-quick="${esc(line.key)}" aria-label="Quick view">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+          <div class="lux-card-foot"><span>SKU ${esc(p.itemNumber)}</span><a href="/product?item=${encodeURIComponent(p.slug)}">Full details →</a></div>
+        </div>
+      </article>`;
+    }
+
+    // Same data-* contract as the catalog tile, so script.js's
+    // setupAddToCartButtons() adds it with tiers, minimum and weight.
+    function addBtnHtml(p, v) {
+      const out = p.inStock === false;
+      const label = out ? "Out of stock" : (v.moq > 1 ? `Add 1 case (${v.moq})` : "Add to Order");
+      return `<button class="add-btn"
+        data-item="${esc(p.itemNumber)}" data-name="${escAttr(p.name)}" data-description="${escAttr(p.description)}"
+        data-price="${cleanPrice(p.price1) || cleanPrice(p.price)}" data-price1="${cleanPrice(p.price1)}"
+        data-price2="${cleanPrice(p.price2)}" data-price3="${cleanPrice(p.price3)}" ${tierMinAttrs(p)}
+        data-unit="${esc(p.priceBy || "")}" data-moq="${v.moq}" data-moq-group="${esc(p.moqGroup || "")}"
+        data-moq-group-min="${p.moqGroupMin || ""}" data-weight="${p.weight || ""}"
+        data-in-stock="${out ? "false" : "true"}" data-image="${esc(p.image)}" ${out ? "disabled" : ""}>${label}</button>`;
+    }
+
+    /* ── Filtering + render ─────────────────────────────────── */
+    function visibleLines() {
+      const q = state.q.trim().toLowerCase();
+      let list = LINES.filter(l =>
+        (state.dept === "all" || l.coll.dept === state.dept) &&
+        (!state.coll || l.coll.id === state.coll) &&
+        (!q || (l.coll.name + " " + l.type + " " + l.variants.map(v => v.p.name + " " + v.p.itemNumber).join(" ")).toLowerCase().includes(q)));
+      if (state.sort === "low") list = list.slice().sort((a, b) => a.minPrice - b.minPrice);
+      if (state.sort === "high") list = list.slice().sort((a, b) => b.minPrice - a.minPrice);
+      return list;
+    }
+    function render() {
+      const grid = $("#luxGrid");
+      const list = visibleLines();
+      const skus = list.reduce((n, l) => n + l.variants.length, 0);
+      $("#luxResults").innerHTML = list.length
+        ? `Showing <b>${list.length}</b> product${list.length > 1 ? "s" : ""} · <b>${skus}</b> sizes &amp; packs`
+        : "";
+      grid.innerHTML = list.length ? list.map(cardHtml).join("") :
+        `<div class="lux-empty"><h3>Nothing matches that yet.</h3><p>Try another size or collection, or <a href="#" data-reset style="color:#ED7226;font-weight:700">clear the filters</a>.</p></div>`;
+      if (typeof setupAddToCartButtons === "function") setupAddToCartButtons();
+    }
+    function renderChips() {
+      const colls = COLLECTIONS.filter(c => (state.dept === "all" || c.dept === state.dept) && LINES.some(l => l.coll === c));
+      $("#luxChips").innerHTML = [`<button class="lux-chip${state.coll ? "" : " is-active"}" data-coll="">All collections</button>`]
+        .concat(colls.map(c => `<button class="lux-chip${state.coll === c.id ? " is-active" : ""}" data-coll="${c.id}">${esc(c.name)}</button>`)).join("");
+    }
+    function setDept(dept, scroll) {
+      state.dept = dept; state.coll = "";
+      $$(".lux-tab").forEach(t => { const on = t.dataset.dept === dept; t.classList.toggle("is-active", on); t.setAttribute("aria-selected", on); });
+      renderChips(); render();
+      if (scroll) $("#shop").scrollIntoView({ behavior: "smooth" });
+    }
+    function setColl(id, scroll) {
+      const c = COLLECTIONS.find(x => x.id === id);
+      if (c) { state.dept = c.dept; $$(".lux-tab").forEach(t => { const on = t.dataset.dept === c.dept; t.classList.toggle("is-active", on); t.setAttribute("aria-selected", on); }); }
+      state.coll = id; renderChips(); render();
+      if (scroll) $("#shop").scrollIntoView({ behavior: "smooth" });
+    }
+
+    /* ── Compare ────────────────────────────────────────────── */
+    function renderCompare(dept) {
+      $$(".lux-seg button").forEach(b => b.classList.toggle("is-active", b.dataset.cmp === dept));
+      const colls = COLLECTIONS.filter(c => c.dept === dept);
+      const grid = $("#luxCmp");
+      grid.style.gridTemplateColumns = `repeat(auto-fit, minmax(${colls.length > 3 ? 240 : 280}px, 1fr))`;
+      grid.innerHTML = colls.map((c, i) => {
+        const lines = LINES.filter(l => l.coll === c);
+        const from = lines.length ? Math.min(...lines.map(l => l.minPrice)) : 0;
+        return `<div class="lux-cmp${c.featured ? " is-featured" : ""}" style="animation-delay:${i * 60}ms">
+          <span class="lux-cmp-tag">${c.featured ? "Featured · " + esc(c.badge) : esc(c.badge)}</span>
+          <h3>${esc(c.name)}</h3>
+          <dl>${Object.entries(c.specs).map(([k, val]) => `<div><dt>${esc(k)}</dt><dd>${esc(val)}</dd></div>`).join("")}
+            ${from ? `<div><dt>From</dt><dd>${money(from)}</dd></div>` : ""}</dl>
+          <button class="lux-btn${c.featured ? "" : " lux-btn--light"}" data-shop-coll="${c.id}">Shop this collection</button>
+        </div>`;
+      }).join("");
+    }
+
+    /* ── Quick view ─────────────────────────────────────────── */
+    function openQuick(key) {
+      const line = LINES.find(l => l.key === key);
+      if (!line) return;
+      const v = BY_SKU[pick[key]], p = v.p;
+      const lad = ladder(v);
+      $("#luxModalImg").src = cardImageUrl(p.image, 800) || "/assets/img/product-placeholder.svg";
+      $("#luxModalImg").alt = p.name;
+      const rows = [["SKU", p.itemNumber], ["Size", v.sizeLabel], ["Pack", v.moq > 1 ? `Case of ${v.moq} ${unitPlural(p)}` : (v.pack || "Single")],
+                    v.color ? ["Color", v.color] : null, p.weight ? ["Shipping weight", `${p.weight} lb per ${unitWord(p) === "each" ? "piece" : unitWord(p)}`] : null,
+                    ["Collection", line.coll.name]].filter(Boolean);
+      $("#luxModalBody").innerHTML = `
+        <span class="lux-eyebrow">${esc(line.coll.name)}</span>
+        <h3 id="luxModalTitle">${esc(p.name)}</h3>
+        <p>${esc(p.overview || p.description || "")}</p>
+        <ul class="lux-feat">${[p.feature1, p.feature2, p.feature3, p.feature4].filter(Boolean).map(f => `<li>${esc(f)}</li>`).join("")}</ul>
+        <table class="lux-spec-table">${rows.map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>
+        <div class="lux-price-row"><span class="lux-price">${money(lad[0] ? lad[0].price : priceAt(p, v.moq))}</span><span class="lux-per">/ ${unitWord(p)}</span></div>
+        ${lad.length > 1 ? `<div class="lux-ladder">${lad.map((s, k) => `<div class="${k ? "is-save" : ""}"><small>${esc(qtyLabel(v, s.qty))}</small><b>${money(s.price)}</b></div>`).join("")}</div>` : ""}
+        ${addBtnHtml(p, v)}
+        <a href="/product?item=${encodeURIComponent(p.slug)}" style="text-align:center;font-size:13px;font-weight:700;color:#0B1F38">Open full product page →</a>`;
+      $("#luxModal").classList.add("is-open");
+      document.body.style.overflow = "hidden";
+      if (typeof setupAddToCartButtons === "function") setupAddToCartButtons();
+      $(".lux-modal-close").focus();
+    }
+    function closeQuick() { $("#luxModal").classList.remove("is-open"); document.body.style.overflow = ""; }
+
+    /* ── Hero carousel ──────────────────────────────────────── */
+    let cur = 0, timer = null, paused = false;
+    function buildHero(products) {
+      const bySku = {};
+      products.forEach(p => { bySku[p.itemNumber] = p; });
+      $("#luxSlides").innerHTML = SLIDES.map((s, i) => {
+        const p = bySku[s.sku];
+        const v = p && BY_SKU[s.sku];
+        const pr = v ? priceAt(p, v.moq) : 0;
+        const href = p ? `/product?item=${encodeURIComponent(p.slug)}` : "#shop";
+        return `<div class="lux-slide" data-i="${i}" role="group" aria-roledescription="slide" aria-label="${i + 1} of ${SLIDES.length}: ${esc(s.title)}">
+          <div class="lux-hero-top">
+            <div class="lux-hero-kicker"><small>Luxury Collection</small>${esc(s.kicker)}</div>
+            ${pr ? `<div class="lux-price-chip">From <strong>${money(pr)}</strong> / ${unitWord(p)}</div>` : ""}
+          </div>
+          <div class="lux-giant" aria-hidden="true"><span>${esc(s.word)}</span></div>
+          <div class="lux-product" style="--ps:${s.scale || 1}"><img src="assets/img/luxury/${s.img}.webp" alt="${esc(s.title)}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}></div>
+          <div class="lux-hero-bottom">
+            <div class="lux-hero-info"><h3>${esc(s.title)}</h3><p>${esc(s.line)}</p></div>
+            <div class="lux-hero-cta">
+              <a class="lux-btn" href="${href}">Shop now, save more
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg></a>
+              <small><a href="#shop" data-shop-coll="${s.coll}" style="color:inherit;text-decoration:none">See the full collection</a></small>
+            </div>
+            <div class="lux-hero-side">${s.side}</div>
+          </div>
+        </div>`;
+      }).join("");
+      $("#luxDots").innerHTML = SLIDES.map((s, i) => `<button role="tab" aria-label="${esc(s.title)}" data-go="${i}"><i></i></button>`).join("");
+      $("#luxStage").style.setProperty("--hold", HOLD_MS + "ms");
+      $("#luxStage").style.setProperty("--enter", ENTER_MS + "ms");
+      go(0, true);
+    }
+    function go(n, first) {
+      const slides = $$(".lux-slide"), dots = $$("#luxDots button");
+      if (!slides.length) return;
+      const next = (n + slides.length) % slides.length;
+      if (!first && next === cur) return;
+      slides.forEach((s, i) => {
+        s.classList.toggle("is-leaving", !first && i === cur && i !== next);
+        s.classList.toggle("is-active", i === next);
+        s.setAttribute("aria-hidden", i === next ? "false" : "true");
+      });
+      setTimeout(() => slides.forEach(s => s.classList.remove("is-leaving")), ENTER_MS);
+      dots.forEach((d, i) => {
+        d.classList.remove("is-active", "is-done");
+        void d.offsetWidth;                 // restart the fill animation
+        if (i < next) d.classList.add("is-done");
+        if (i === next) d.classList.add("is-active");
+        d.setAttribute("aria-selected", i === next);
+      });
+      $("#luxStage").style.setProperty("--slide-bg", SLIDES[next].bg);
+      $("#luxCounter").innerHTML = `<b>${String(next + 1).padStart(2, "0")}</b> / ${String(slides.length).padStart(2, "0")}`;
+      cur = next;
+      schedule();
+    }
+    // Fast entrance, then a 3-second hold before moving on.
+    function schedule() {
+      clearTimeout(timer);
+      if (paused) return;
+      timer = setTimeout(() => go(cur + 1), ENTER_MS + HOLD_MS);
+    }
+
+    /* ── Events ─────────────────────────────────────────────── */
+    document.addEventListener("click", e => {
+      const t = e.target.closest("[data-dept],[data-coll],[data-quick],[data-close],[data-pick],[data-shop-coll],[data-go],[data-reset],[data-cmp]");
+      if (!t) return;
+      if (t.matches(".lux-tab, .lux-dept")) { setDept(t.dataset.dept, t.matches(".lux-dept")); }
+      else if (t.matches("[data-coll]")) { setColl(t.dataset.coll, false); }
+      else if (t.matches("[data-shop-coll]")) { e.preventDefault(); setColl(t.dataset.shopColl, true); }
+      else if (t.matches("[data-quick]")) { openQuick(t.dataset.quick); }
+      else if (t.matches("[data-close]")) { closeQuick(); }
+      else if (t.matches("[data-go]")) { go(Number(t.dataset.go)); }
+      else if (t.matches("[data-cmp]")) { renderCompare(t.dataset.cmp); }
+      else if (t.matches("[data-reset]")) { e.preventDefault(); state.q = ""; $("#luxSearch").value = ""; setDept("all"); }
+      else if (t.matches("[data-pick]")) { pick[t.dataset.lineKey] = t.dataset.pick; rerenderCard(t.dataset.lineKey); }
+    });
+    document.addEventListener("change", e => {
+      const s = e.target.closest("[data-size]");
+      if (!s) return;
+      const line = LINES.find(l => l.key === s.dataset.size);
+      const curV = BY_SKU[pick[line.key]];
+      const opts = line.variants.filter(v => v.sizeLabel === s.value);
+      // Keep the same pack type (single vs case) when the size changes.
+      const v = opts.find(o => o.isCase === curV.isCase && o.p.inStock !== false) || opts.find(o => o.p.inStock !== false) || opts[0];
+      pick[line.key] = v.p.itemNumber;
+      rerenderCard(line.key, true);
+    });
+    function rerenderCard(key, focusSize) {
+      const el = document.querySelector(`.lux-card[data-line="${CSS.escape(key)}"]`);
+      if (!el) return;
+      const i = visibleLines().findIndex(l => l.key === key);
+      const tmp = document.createElement("div");
+      tmp.innerHTML = cardHtml(LINES.find(l => l.key === key), i).trim();
+      const card = tmp.firstElementChild;
+      card.style.animation = "none";
+      el.replaceWith(card);
+      if (typeof setupAddToCartButtons === "function") setupAddToCartButtons();
+      if (focusSize) { const sel = card.querySelector("[data-size]"); if (sel) sel.focus(); }
+    }
+    $$(".lux-dept").forEach(b => b.addEventListener("keydown", e => { if (e.key === "Enter") setDept(b.dataset.dept, true); }));
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") closeQuick();
+      if (e.key === "Enter" && e.target.matches(".lux-card-media")) openQuick(e.target.dataset.quick);
+    });
+    let qt;
+    $("#luxSearch").addEventListener("input", e => { clearTimeout(qt); qt = setTimeout(() => { state.q = e.target.value; render(); }, 160); });
+    $("#luxSort").addEventListener("change", e => { state.sort = e.target.value; render(); });
+    $("#luxPrev").addEventListener("click", () => go(cur - 1));
+    $("#luxNext").addEventListener("click", () => go(cur + 1));
+    const stage = $("#luxStage");
+    stage.addEventListener("mouseenter", () => { paused = true; stage.classList.add("is-paused"); clearTimeout(timer); });
+    // Resuming restarts the current slide's 3-second hold (and its bar).
+    stage.addEventListener("mouseleave", () => { paused = false; stage.classList.remove("is-paused"); go(cur, true); });
+    stage.addEventListener("focusin", () => { paused = true; stage.classList.add("is-paused"); clearTimeout(timer); });
+    stage.addEventListener("focusout", e => { if (!stage.contains(e.relatedTarget)) { paused = false; stage.classList.remove("is-paused"); go(cur, true); } });
+    let sx = null;
+    stage.addEventListener("touchstart", e => { sx = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener("touchend", e => {
+      if (sx == null) return;
+      const dx = e.changedTouches[0].clientX - sx; sx = null;
+      if (Math.abs(dx) > 40) go(cur + (dx < 0 ? 1 : -1));
+    });
+    document.addEventListener("visibilitychange", () => { if (document.hidden) clearTimeout(timer); else if (!paused) schedule(); });
+
+    /* ── Boot ───────────────────────────────────────────────── */
+    (async function boot() {
+      let products = [];
+      try { products = await fetchCatalogProducts(); } catch (e) { console.warn("[luxury] catalog failed", e); }
+      buildLines(products);
+      const counts = { all: 0, bath: 0, bed: 0, protect: 0 };
+      LINES.forEach(l => { counts.all++; counts[l.coll.dept]++; });
+      $$("[data-count]").forEach(el => {
+        const n = counts[el.dataset.count];
+        if (el.tagName === "SUP") el.textContent = n || "";
+        else el.textContent = `${DEPTS[el.dataset.count]} · ${n} products`;
+      });
+      const skuCount = Object.keys(BY_SKU).length;
+      if (skuCount) $("#luxStatSkus").textContent = skuCount;
+      buildHero(products);
+      renderChips();
+      render();
+      renderCompare("bed");
+      const params = new URLSearchParams(location.search);
+      if (params.get("collection")) setColl(params.get("collection"), true);
+      else if (params.get("dept") && DEPTS[params.get("dept")]) setDept(params.get("dept"), true);
+    })();
+  })();
+  </script>
+</body>
+</html>

@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Wishlist — Room Ready Supply</title>
-  <link rel="stylesheet" href="style.css?v=20261014a" />
+  <link rel="stylesheet" href="style.css?v=20261014b" />
   <style>
     .wishlist-page { max-width:1100px; margin:60px auto; padding:0 24px; }
     .wishlist-page h1 { font-size:32px; color:#0b2d52; margin-bottom:8px; }
@@ -76,7 +76,13 @@
     <a href="/" class="logo"><picture><source srcset="assets/img/RR%20logo.webp" type="image/webp"><img width="634" height="192" src="assets/img/RR logo.png" alt="Room Ready Supply Logo" /></picture></a>
     <nav class="nav-links">
       <a href="/">Home</a>
-      <a href="/catalog">Catalog</a>
+      <div class="nav-dd">
+        <a href="/catalog">Catalog</a>
+        <div class="nav-dd-menu">
+          <a href="/catalog"><span>All Products</span><small>Every product in the catalog</small></a>
+          <a href="/luxury"><span>Luxury Products<span class="nav-dd-new">NEW</span></span><small>Premium linens &amp; mattress protection</small></a>
+        </div>
+      </div>
       <a href="/best-deals">Best Deals</a>
       <a href="/#reorder-header">Reorder Program</a>
       <a href="/quote">Case Pricing</a>
@@ -112,6 +118,7 @@
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
     <a href="/catalog">Catalog</a>
+    <a href="/luxury" class="mobile-nav-sub">Luxury Products</a>
     <a href="/best-deals">Best Deals</a>
     <a href="/#reorder-header">Reorder Program</a>
     <a href="/quote">Case Pricing</a>

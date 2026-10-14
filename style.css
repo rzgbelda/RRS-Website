@@ -11447,3 +11447,36 @@ html.rrs-quote-only .pp-price-cta {
 /* The deal tag sits bottom-center of the image. A Mix & Match product has
    its MOQ badge along the bottom, so the deal tag stacks just above it. */
 .product-image:has(.moq-group-badge) .best-deal-badge { bottom: 42px; }
+
+/* ── "Buy Now" dropdown (All Products / Luxury Products) ─────────
+   Opens on hover or keyboard focus. Touch screens below 768px use the
+   mobile menu instead, where Luxury Products is its own indented link. */
+.nav-dd { position: relative; display: inline-flex; align-items: center; }
+.nav-dd > a { display: inline-flex !important; align-items: center; gap: 6px; }
+.nav-dd > a::after {
+  content: ""; width: 7px; height: 7px; margin-top: -3px;
+  border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg); transition: transform .2s ease, margin .2s ease;
+}
+.nav-dd:hover > a::after, .nav-dd:focus-within > a::after { transform: rotate(225deg); margin-top: 3px; }
+.nav-dd-menu {
+  position: absolute; top: 100%; left: 50%; z-index: 9500;
+  min-width: 270px; padding: 8px; margin-top: 6px;
+  background: #fff; border: 1px solid #ece6dc; border-radius: 14px;
+  box-shadow: 0 24px 48px -20px rgba(11, 31, 56, .35);
+  opacity: 0; visibility: hidden; transform: translate(-50%, 8px);
+  transition: opacity .18s ease, transform .2s ease, visibility .2s;
+}
+.nav-dd-menu::before { content: ""; position: absolute; left: 0; right: 0; top: -12px; height: 12px; } /* hover bridge */
+.nav-dd:hover .nav-dd-menu, .nav-dd:focus-within .nav-dd-menu { opacity: 1; visibility: visible; transform: translate(-50%, 0); }
+.nav-links .nav-dd-menu a {
+  display: flex; flex-direction: column; gap: 2px; padding: 11px 14px; border-radius: 10px;
+  border: 0; font-size: 14px; font-weight: 600; color: #0B1F38; white-space: nowrap;
+}
+.nav-links .nav-dd-menu a small { font-size: 12px; font-weight: 500; color: #5B6C7E; }
+.nav-links .nav-dd-menu a:hover { background: #FAF7F2; color: #ED7226; border: 0; }
+.nav-dd-new {
+  display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px; vertical-align: 1px;
+  background: #ED7226; color: #fff; font-size: 9.5px; font-weight: 800; letter-spacing: .08em;
+}
+.mobile-nav a.mobile-nav-sub { padding-left: 42px; font-weight: 500; font-size: 14px; color: #5B6C7E; min-height: 42px; }

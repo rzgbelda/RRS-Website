@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261014a" />
+  <link rel="stylesheet" href="style.css?v=20261014b" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -75,7 +75,13 @@
 
     <nav class="nav-links">
       <a href="/">Home</a>
-      <a href="/catalog">Catalog</a>
+      <div class="nav-dd">
+        <a href="/catalog">Catalog</a>
+        <div class="nav-dd-menu">
+          <a href="/catalog"><span>All Products</span><small>Every product in the catalog</small></a>
+          <a href="/luxury"><span>Luxury Products<span class="nav-dd-new">NEW</span></span><small>Premium linens &amp; mattress protection</small></a>
+        </div>
+      </div>
       <a href="/best-deals">Best Deals</a>
       <a href="/#reorder-header">Reorder Program</a>
       <a href="/quote">Case Pricing</a>
@@ -124,6 +130,7 @@
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
     <a href="/catalog">Catalog</a>
+    <a href="/luxury" class="mobile-nav-sub">Luxury Products</a>
     <a href="/best-deals">Best Deals</a>
     <a href="/#reorder-header">Reorder Program</a>
     <a href="/quote">Case Pricing</a>

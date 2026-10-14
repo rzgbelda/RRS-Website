@@ -102,7 +102,7 @@
   ]
 }
   </script>
-  <link rel="stylesheet" href="/style.css?v=20261014a" />
+  <link rel="stylesheet" href="/style.css?v=20261014b" />
   <style>
     .cat-wrap { max-width:1180px; margin:0 auto; padding:0 24px; }
     .cat-head { background:#0B1F38; color:#fff; padding:46px 0 40px; }
@@ -151,7 +151,13 @@
 
     <nav class="nav-links">
       <a href="/">Home</a>
-      <a href="/catalog">Catalog</a>
+      <div class="nav-dd">
+        <a href="/catalog">Catalog</a>
+        <div class="nav-dd-menu">
+          <a href="/catalog"><span>All Products</span><small>Every product in the catalog</small></a>
+          <a href="/luxury"><span>Luxury Products<span class="nav-dd-new">NEW</span></span><small>Premium linens &amp; mattress protection</small></a>
+        </div>
+      </div>
 
       <a href="/#reorder-header">Reorder Program</a>
       <a href="/quote">Case Pricing</a>
@@ -200,6 +206,7 @@
   <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
     <a href="/">Home</a>
     <a href="/catalog">Catalog</a>
+    <a href="/luxury" class="mobile-nav-sub">Luxury Products</a>
 
     <a href="/#reorder-header">Reorder Program</a>
     <a href="/quote">Case Pricing</a>
