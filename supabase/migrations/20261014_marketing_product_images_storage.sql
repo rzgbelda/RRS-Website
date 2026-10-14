@@ -25,3 +25,10 @@ create policy "marketing_read_product_images" on storage.objects
 create policy "marketing_update_product_images" on storage.objects
   for update using (bucket_id = 'product-images' and public.is_marketing())
   with check (bucket_id = 'product-images' and public.is_marketing());
+
+-- Hero / About CMS: 20260907 made site_content writes admin-only
+-- (admin_write_site_content), so Save Changes failed for marketing too.
+drop policy if exists "marketing_write_site_content" on public.site_content;
+
+create policy "marketing_write_site_content" on public.site_content
+  for all using (public.is_marketing()) with check (public.is_marketing());
