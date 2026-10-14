@@ -91,7 +91,7 @@
       height: clamp(560px, 76vh, 720px);
       background: var(--slide-bg, #EDE4D6);
       transition: background-color .7s cubic-bezier(.2,.7,.2,1);
-      isolation: isolate;
+      isolation: isolate; container-type: inline-size;
       box-shadow: 0 30px 80px -40px rgba(11,31,56,.45);
     }
     .lux-stage::after { /* soft vignette for depth */
@@ -130,7 +130,10 @@
     .lux-giant {
       position: absolute; left: 0; right: 0; top: 17%; z-index: 1; text-align: center;
       font-family: var(--serif); font-weight: 700; text-transform: uppercase;
-      font-size: clamp(76px, 15vw, 230px); line-height: .82; letter-spacing: -.02em;
+      /* Sized from the stage width and the word's letter count (--chars),
+         so a long word can never run past the edge, font loaded or not. */
+      font-size: min(clamp(76px, 15vw, 230px), calc(86cqw / (var(--chars, 6) * .66)));
+      line-height: .82; letter-spacing: -.02em;
       color: var(--navy); white-space: nowrap; overflow: hidden; padding: 0 2vw;
     }
     .lux-giant span {
@@ -448,7 +451,7 @@
       .lux-hero-top { top: 24px; left: 22px; right: 22px; }
       .lux-counter { display: none; }
       .lux-progress { top: auto; bottom: 20px; }
-      .lux-giant { top: 22%; font-size: clamp(56px, 17vw, 120px); }
+      .lux-giant { top: 22%; font-size: min(clamp(40px, 17vw, 120px), calc(86cqw / (var(--chars, 6) * .66))); }
       .lux-product { width: 74%; height: 40%; bottom: 33%; }
       .lux-hero-bottom { left: 22px; right: 22px; bottom: 44px; grid-template-columns: 1fr; gap: 16px; text-align: center; }
       .lux-hero-info h3, .lux-hero-info p { max-width: none; }
@@ -1076,7 +1079,7 @@
             <div class="lux-hero-kicker"><small>Luxury Collection</small>${esc(s.kicker)}</div>
             ${pr ? `<div class="lux-price-chip">From <strong>${money(pr)}</strong> / ${unitWord(p)}</div>` : ""}
           </div>
-          <div class="lux-giant" aria-hidden="true"><span>${esc(s.word)}</span></div>
+          <div class="lux-giant" aria-hidden="true" style="--chars:${s.word.length}"><span>${esc(s.word)}</span></div>
           <div class="lux-product" style="--ps:${s.scale || 1}"><img src="assets/img/luxury/${s.img}.webp" alt="${esc(s.title)}" ${i ? 'loading="lazy"' : 'fetchpriority="high"'}></div>
           <div class="lux-hero-bottom">
             <div class="lux-hero-info"><h3>${esc(s.title)}</h3><p>${esc(s.line)}</p></div>
