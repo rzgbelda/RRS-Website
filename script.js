@@ -2063,6 +2063,7 @@ function openVariantModal(card) {
   let variants;
   try { variants = JSON.parse(card.dataset.variants || "[]"); } catch { return; }
   if (!variants.length) return;
+  variants = orderFamilyVariants(variants);
 
   const el = ensureVariantModal();
   const titleEl = card.querySelector("h3");
@@ -3318,9 +3319,31 @@ function renderProductFaq(product) {
   });
 }
 
+// Display order for a family's options. Rows arrive in whatever order the
+// database returns them, which shifts whenever a row is updated (Bargoose's
+// BedBug encasements came back "Queen 12, Queen 16, Queen 9"). Keeps each
+// base option (label text before the first " - ", e.g. the bed size) where
+// it first appears, and orders the options under one base by price, so
+// 9 / 12 / 16 in. deep read cheapest first. Labels with no " - " are their
+// own base, so families without sub-options keep their current order.
+function orderFamilyVariants(variants) {
+  const baseOf = v => String(v.variantLabel || v.name || "").split(" - ")[0];
+  const firstSeen = new Map();
+  variants.forEach((v, i) => { const b = baseOf(v); if (!firstSeen.has(b)) firstSeen.set(b, i); });
+  const priceOf = v => cleanPrice(v.price) || cleanPrice(v.price1) || 0;
+  return variants
+    .map((v, i) => ({ v, i }))
+    .sort((a, b) =>
+      (firstSeen.get(baseOf(a.v)) - firstSeen.get(baseOf(b.v))) ||
+      (priceOf(a.v) - priceOf(b.v)) ||
+      (a.i - b.i))
+    .map(x => x.v);
+}
+
 function injectProductVariantSelector(variants, activeProduct) {
   const existing = document.getElementById("product-variant-selector");
   if (existing) existing.remove();
+  variants = orderFamilyVariants(variants);
 
   injectVariantCSS();
 
