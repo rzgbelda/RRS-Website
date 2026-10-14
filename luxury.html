@@ -134,7 +134,7 @@
       color: var(--navy); white-space: nowrap; overflow: hidden; padding: 0 2vw;
     }
     .lux-giant span {
-      display: inline-block; opacity: 0; transform: translateY(55%);
+      display: inline-block; width: max-content; opacity: 0; transform: translateY(55%);
       transition: opacity .45s ease, transform .65s cubic-bezier(.2,.75,.15,1);
     }
     .lux-slide.is-active .lux-giant span { opacity: 1; transform: none; }
@@ -799,19 +799,19 @@
 
     /* ── Hero slides (SKUs from the request; prices read live) ─── */
     const SLIDES = [
-      { sku: "BT2758LC14", img: "turkish-bath-towel", bg: "#EDE3D3", word: "Turkish",
+      { sku: "BT2758LC14", img: "turkish-bath-towel", bg: "#EDE3D3", word: "Plush",
         kicker: "The Luxury Turkish Collection", title: "Prestige Luxury Turkish Bath Towel",
         line: "27 × 58 in. · 18 lb/dozen · Case of 14", side: "Made in Turkey<br>Plush &amp; quick drying", coll: "turkish" },
-      { sku: "SSQLC4", img: "t600-queen-sheet-set", bg: "#E1E7EE", word: "T600",
+      { sku: "SSQLC4", img: "t600-queen-sheet-set", bg: "#E1E7EE", word: "Dreamy",
         kicker: "Luxury Blend Bedding", title: "Prestige T600 Luxury Blend Queen Sheet Set",
         line: "Fresh White · Wrinkle-resistant · Case of 4 sets", side: "Cotton, poly &amp; lyocell<br>Easy-care softness", coll: "t600b" },
-      { sku: "96080Z-12T", img: "bedbug-encasement", bg: "#E5E9E8", word: "Sealed",
+      { sku: "96080Z-12T", img: "bedbug-encasement", bg: "#E5E9E8", word: "Safeguard",
         kicker: "Total Mattress Protection", title: "BedBug Solution Elite Mattress Encasement",
         line: "Queen · 60 × 80 in. · Fits up to 12 in. deep", side: "Patented BugStop Seal<br>Limited lifetime warranty", coll: "bedbug" },
-      { sku: "9221", img: "cleanair-pillow-protector", bg: "#E8E6F0", word: "Clean Air",
+      { sku: "9221", img: "cleanair-pillow-protector", bg: "#E8E6F0", word: "Breathe Easy",
         kicker: "Allergy Relief Pillows", title: "CleanAir Allergy Relief Pillow Protector",
         line: "Queen · 21 × 31 in. · Fully zippered", side: "Allergen barrier<br>Waterproof &amp; quiet", coll: "cleanair", scale: 1.35 },
-      { sku: "14071", img: "3ply-mattress-pad", bg: "#EFE6DA", word: "3-Ply",
+      { sku: "14071", img: "3ply-mattress-pad", bg: "#EFE6DA", word: "Comfort",
         kicker: "Quilted Comfort Layer", title: "3-Ply Quilted Waterproof Mattress Pad",
         line: "Queen · 60 × 80 in. · 16 in. fitted skirt", side: "Heavy-gauge vinyl core<br>Commercially washable", coll: "ply3" },
     ];
@@ -1090,10 +1090,31 @@
         </div>`;
       }).join("");
       $("#luxDots").innerHTML = SLIDES.map((s, i) => `<button role="tab" aria-label="${esc(s.title)}" data-go="${i}"><i></i></button>`).join("");
+      fitGiants();
+      // fonts.ready can settle before Cormorant is even requested, so wait
+      // for that face explicitly; measuring the fallback serif under-sizes.
+      if (document.fonts && document.fonts.load) document.fonts.load('700 100px "Cormorant Garamond"').then(fitGiants, () => {});
       $("#luxStage").style.setProperty("--hold", HOLD_MS + "ms");
       $("#luxStage").style.setProperty("--enter", ENTER_MS + "ms");
       go(0, true);
     }
+    // Keep every backdrop word inside the stage: long ones ("Breathe
+    // Easy") shrink to fit, short ones keep the full display size.
+    function fitGiants() {
+      $$(".lux-giant").forEach(el => {
+        el.style.fontSize = "";
+        // Measure the rendered glyphs, not the span box: the box is capped
+        // at the container width, so an overflowing word reads as a fit.
+        const range = document.createRange();
+        range.selectNodeContents(el.firstElementChild);
+        const max = el.clientWidth * 0.9;
+        const w = range.getBoundingClientRect().width;
+        if (w > max) el.style.fontSize = (parseFloat(getComputedStyle(el).fontSize) * max / w) + "px";
+      });
+    }
+    let fitT;
+    window.addEventListener("resize", () => { clearTimeout(fitT); fitT = setTimeout(fitGiants, 120); });
+
     function go(n, first) {
       const slides = $$(".lux-slide"), dots = $$("#luxDots button");
       if (!slides.length) return;
@@ -1112,6 +1133,7 @@
         if (i === next) d.classList.add("is-active");
         d.setAttribute("aria-selected", i === next);
       });
+      fitGiants();
       $("#luxStage").style.setProperty("--slide-bg", SLIDES[next].bg);
       $("#luxCounter").innerHTML = `<b>${String(next + 1).padStart(2, "0")}</b> / ${String(slides.length).padStart(2, "0")}`;
       cur = next;
