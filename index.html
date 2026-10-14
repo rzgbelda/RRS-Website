@@ -212,7 +212,7 @@
     </section>
 
     <section class="hero-image">
-      <picture id="heroBannerPicture"><source srcset="assets/img/banner1.webp" type="image/webp"><img fetchpriority="high" width="1600" height="900" src="assets/img/banner1.jpg" alt="Hero banner" id="heroBannerEl" /></picture>
+      <picture id="heroBannerPicture"><source srcset="assets/img/hero-delivery.webp" type="image/webp"><img fetchpriority="high" width="1600" height="900" src="assets/img/hero-delivery.jpg" alt="Delivery driver bringing sealed cases of supplies to a motel entrance" id="heroBannerEl" /></picture>
     </section>
   </main>
   <!-- ── Trust strip ──────────────────────────────────────────────
@@ -1427,7 +1427,11 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeVideoLi
     // silently reintroduce either -- see the admin Hero editor if these
     // fields need retiring there too.
     if (hero.btnPrimary)   document.getElementById("heroBtnPrimaryEl").childNodes[document.getElementById("heroBtnPrimaryEl").childNodes.length-1].textContent = " " + hero.btnPrimary;
-    if (hero.bannerUrl) {
+    // Skip when the CMS points at the banner already in the markup (or at
+    // the 2.6 MB PNG upload it was made from): swapping after load is what
+    // showed the old photo first and then flipped to the new one.
+    const STATIC_HERO = ["assets/img/hero-delivery.jpg", "assets/img/hero-delivery.webp", "site-content/hero-1791981388061.png"];
+    if (hero.bannerUrl && !STATIC_HERO.some(p => hero.bannerUrl.endsWith(p))) {
       document.getElementById("heroBannerEl").src = hero.bannerUrl;
       // A <picture><source> pointing at the original static banner's WebP
       // would otherwise keep winning over this new src in any browser that
