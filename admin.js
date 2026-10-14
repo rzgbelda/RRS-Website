@@ -2638,7 +2638,14 @@ function cvtDeriveVariant(name) {
     label = size ? `${size} - ${pack}` : pack;
   }
   if (boxFormat) label = label ? `${boxFormat} - ${label}` : boxFormat;
-  return { family, label: label.trim() };
+  // The comma parts after the size that aren't the pack ("60 x 80 in.",
+  // "Fits Up to 9 in. Deep"). Not part of the label by default; the
+  // collision pass in cvtGroupVariants uses them to tell apart two rows
+  // that would otherwise share one label (same bed size, different depth).
+  const extras = parts.slice(1)
+    .map(x => x.replace(CVT_UNAVAIL_RE, "").trim())
+    .filter(x => x && !CVT_PACK_RE.test(x));
+  return { family, label: label.trim(), extras };
 }
 
 /* Runs cvtDeriveVariant over every row and keeps only the groupings worth
@@ -2955,7 +2962,7 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
       const colorStripped = cvtStripColorPrefix(raw.family);
       const { family, tier, bedSize } = cvtStripTierPrefix(colorStripped.family);
       const label = bedSize && raw.label ? `${bedSize} - ${raw.label}` : raw.label;
-      d = { family, label, tier, color: colorStripped.color };
+      d = { family, label, tier, color: colorStripped.color, extras: raw.extras || [] };
     } else {
       // Comma path: family already carries brand/type as-is, with the
       // sub-line (if any) pulled into comma.tier by cvtDeriveVariantComma
@@ -3035,8 +3042,22 @@ function cvtGroupVariants(rows, nameCol, skuCol) {
   for (const famLabels of labelsByFamily.values()) {
     for (const [label, members] of famLabels) {
       if (members.length < 2) continue;
+      // Dash-named rows carry no dims; use the first extra comma part that
+      // differs across the colliding rows instead (Bargoose's BedBug
+      // encasements: three "Queen" rows that differ only in "Fits Up to
+      // 9/12/16 in. Deep"). Untiered families only: once a tier word has
+      // been stripped, two different product lines can share a family
+      // string ("Washcloth"), and extra words would group them wrongly.
+      let diffIdx = -1;
+      if (members.every(d => !d.dims && !d.tier && d.extras && d.extras.length)) {
+        const n = Math.max(...members.map(d => d.extras.length));
+        for (let i = 0; i < n && diffIdx < 0; i++) {
+          if (new Set(members.map(d => d.extras[i] || "")).size > 1) diffIdx = i;
+        }
+      }
       for (const d of members) {
         if (d.dims) d.label = `${label} - ${d.dims}`;
+        else if (diffIdx >= 0 && d.extras[diffIdx]) d.label = `${label} - ${d.extras[diffIdx]}`;
       }
     }
   }
