@@ -61,6 +61,38 @@ async function sendSalesCredentialsEmail({ email, full_name, password, tier }) {
   });
 }
 
+// Staff logins get their credentials by email too, same as sales reps --
+// staff were left waiting on someone to relay a temporary password by hand.
+const STAFF_ROLE_LABELS = {
+  developer: 'Web Developer', marketing: 'Marketing', operations: 'Head of Operations',
+  supply_chain: 'Supply Chain Manager', admin: 'Admin',
+};
+
+async function sendStaffCredentialsEmail({ email, full_name, password, role }) {
+  const resend = getResend();
+  const loginUrl = 'https://www.roomreadysupply.com/admin';
+  const html = `
+    <div style="font-family:sans-serif;color:#0B1F38;max-width:520px;margin:0 auto;">
+      <h2 style="color:#0B1F38;">Your Room Ready Supply staff account</h2>
+      <p>Hi ${escHtml(full_name || email)},</p>
+      <p>An account has been set up for you as <strong>${escHtml(STAFF_ROLE_LABELS[role] || role)}</strong>. Sign in to see your tasks on the Work Board.</p>
+      <table style="border-collapse:collapse;margin:18px 0;">
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Login URL</td><td><a href="${loginUrl}">${loginUrl}</a></td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Email</td><td>${escHtml(email)}</td></tr>
+        <tr><td style="padding:6px 12px 6px 0;color:#64748b;">Temporary Password</td><td><strong>${escHtml(password)}</strong></td></tr>
+      </table>
+      <p>For security, please sign in and change your password right away: click your name at the top right, then <strong>Change Password</strong>.</p>
+      <p style="font-size:12px;color:#94a3b8;margin-top:28px;padding-top:16px;border-top:1px solid #e2e8f0;">Room Ready Supply &bull; 609 Washington St, Plymouth, NC 27962</p>
+    </div>`;
+
+  await resend.emails.send({
+    from: 'Room Ready Supply <marketing@roomreadysupply.com>',
+    to: email,
+    subject: 'Your Room Ready Supply staff login',
+    html,
+  });
+}
+
 // 'owner' = full, unrestricted access (was 'admin' before the CEO/Owner vs
 // Admin role split). 'admin' = the narrower Users/Dev-Tickets/Hero/About
 // account-management role. Both may remove users and manage sales rep
@@ -296,11 +328,14 @@ module.exports = async (req, res) => {
       userId = created.user.id;
     }
 
+    // full_name is the display name the admin and Work Board show;
+    // contact_name alone left the list showing email addresses.
     const { error: profileErr } = await admin.from('profiles').upsert({
       id: userId,
       email,
       role,
       contact_name: full_name || email,
+      ...(full_name ? { full_name } : {}),
     });
 
     if (profileErr) {
@@ -311,7 +346,15 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: profileErr.message });
     }
 
-    return res.status(200).json({ success: true, user_id: userId, email, role, promoted: !created?.user });
+    let emailWarning = null;
+    try {
+      await sendStaffCredentialsEmail({ email, full_name, password, role });
+    } catch (e) {
+      console.error('create-dev-user (staff): credentials email failed:', e.message);
+      emailWarning = 'Account created, but the login email failed to send: ' + e.message + '. Share the password with them directly.';
+    }
+
+    return res.status(200).json({ success: true, user_id: userId, email, role, promoted: !created?.user, warning: emailWarning });
   } catch (err) {
     console.error('create-dev-user failed:', err);
     return res.status(500).json({ error: String(err.message || err) });

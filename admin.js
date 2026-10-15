@@ -9372,9 +9372,11 @@ async function createStaffAccount() {
     if (!res.ok) throw new Error(out.error || "Request failed");
 
     const roleLabel = STAFF_ROLE_LABEL[role] || "Developer";
-    showToast(out.promoted
-      ? `${email} already had an account -- promoted to ${roleLabel} and password reset.`
-      : `${roleLabel} account created for ${email}`);
+    showToast(out.warning
+      ? out.warning
+      : out.promoted
+      ? `${email} already had an account. Promoted to ${roleLabel}, password reset, and login details emailed.`
+      : `${roleLabel} account created. Login details emailed to ${email}.`);
     openDevTeamModal(); // re-fetch so the new account shows in the list without a full close/reopen
     document.getElementById("devTeamEmail").value = "";
     document.getElementById("devTeamName").value = "";
