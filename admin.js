@@ -9290,17 +9290,28 @@ async function openDevTeamModal() {
   document.getElementById("devTeamCreate").style.display = canCreate ? "" : "none";
   document.getElementById("devTeamCreateBtn").style.display = canCreate ? "" : "none";
 
-  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["operations","developer","marketing","supply_chain","admin"]).order("created_at");
+  // deactivated_at exists after 20261015e_deactivate_staff.sql; until that
+  // runs, fall back to the plain list.
+  const staffRoles = ["operations","developer","marketing","supply_chain","admin"];
+  let { data: staff, error: staffErr } = await window.sb.from("profiles").select("id,email,full_name,role,deactivated_at").in("role", staffRoles).order("created_at");
+  if (staffErr) ({ data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", staffRoles).order("created_at"));
+  const canDeactivate = ["owner", "developer"].includes(role);
   document.getElementById("devTeamList").innerHTML = staff?.length
     ? staff.map(d => {
-        const movable = canMove && STAFF_DEPARTMENT_ROLES[d.role] && d.id !== window._adminUserId;
+        const off = !!d.deactivated_at;
+        const movable = canMove && !off && STAFF_DEPARTMENT_ROLES[d.role] && d.id !== window._adminUserId;
+        const toggle = canDeactivate && d.id !== window._adminUserId && !staffErr
+          ? `<button class="a-btn-secondary" style="width:auto;padding:5px 10px;font-size:12px;${off ? "" : "color:#b91c1c"}"
+               onclick="setStaffActive('${d.id}', ${off ? "true" : "false"})">${off ? "Reactivate" : "Deactivate"}</button>`
+          : "";
         return `
-        <div class="tkt-teamrow">
+        <div class="tkt-teamrow"${off ? ' style="opacity:.6"' : ""}>
           ${tktAvatar(d.email, 32)}
           <div style="flex:1;min-width:0">
-            <strong>${escHtml(d.full_name || d.email || "")}</strong>
+            <strong>${escHtml(d.full_name || d.email || "")}${off ? ' <em style="font-style:normal;font-size:10.5px;color:#b91c1c">DEACTIVATED</em>' : ""}</strong>
             <span>${escHtml(d.email || "")}</span>
           </div>
+          ${toggle}
           ${movable
             ? `<select class="a-input" style="width:auto;padding:6px 8px;font-size:12.5px" title="Move to another department"
                  onchange="moveStaffDepartment('${d.id}', this, '${d.role}')">
@@ -9310,6 +9321,32 @@ async function openDevTeamModal() {
         </div>`;
       }).join("")
     : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet.${canCreate ? " Create one below." : ""}</p>`;
+}
+
+async function setStaffActive(userId, active) {
+  const row = [...document.querySelectorAll("#devTeamList .tkt-teamrow")].find(r => r.innerHTML.includes(`setStaffActive('${userId}'`));
+  const name = row?.querySelector("strong")?.firstChild?.textContent?.trim() || "this person";
+  const ok = confirm(active
+    ? `Reactivate ${name}? They will be able to sign in again.`
+    : `Deactivate ${name}?\n\nThey will no longer be able to sign in, and their unfinished tasks go back to "Needs an owner". ` +
+      `Their past tasks, comments and reports stay on record. You can reactivate them anytime.`);
+  if (!ok) return;
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/create-dev-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({ action: "set_staff_active", user_id: userId, active }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+    showToast(active ? `${name} reactivated.`
+      : `${name} deactivated.${out.released ? ` ${out.released} unfinished task${out.released > 1 ? "s" : ""} unassigned.` : ""}`);
+    openDevTeamModal();
+    if (document.getElementById("wbRoot") && typeof renderWorkBoard === "function") renderWorkBoard();
+  } catch (err) {
+    showToast("Couldn't update: " + err.message);
+  }
 }
 
 // Department -> the role that carries it. Moving someone changes their role,

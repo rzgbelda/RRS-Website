@@ -112,6 +112,14 @@ const STAFF_ACCOUNT_ROLES = ['owner', 'developer'];
 const STAFF_MOVER_ROLES = ['owner', 'operations', 'developer'];
 const DEPARTMENT_ROLES = ['developer', 'marketing', 'supply_chain', 'operations'];
 
+// Deactivating a staff login (they leave the company, or the account is no
+// longer needed): Owner and Developer only. It bans the login so they can't
+// sign in, but keeps the account row and every ticket / comment / report
+// entry they ever made. Reversible. Same account types as creation.
+const STAFF_DEACTIVATE_ROLES = ['owner', 'developer'];
+const DEACTIVATABLE_ROLES = ['developer', 'marketing', 'supply_chain', 'operations', 'admin'];
+const BAN_FOREVER = '876000h'; // ~100 years; 'none' lifts it
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -141,13 +149,17 @@ module.exports = async (req, res) => {
     const callerRole = callerProfile?.role;
     const isUserAction = body.action === 'delete_user' || body.action === 'create_sales_user';
     const isMove = body.action === 'change_staff_role';
+    const isActive = body.action === 'set_staff_active';
     if (isUserAction && !ACCOUNT_MANAGER_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner or Admin accounts can manage users.' });
     }
     if (isMove && !STAFF_MOVER_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner, Head of Operations or Developer accounts can move staff.' });
     }
-    if (!isUserAction && !isMove && !STAFF_ACCOUNT_ROLES.includes(callerRole)) {
+    if (isActive && !STAFF_DEACTIVATE_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only Owner or Developer accounts can deactivate staff.' });
+    }
+    if (!isUserAction && !isMove && !isActive && !STAFF_ACCOUNT_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner or Developer accounts can create staff accounts.' });
     }
 
@@ -171,6 +183,40 @@ module.exports = async (req, res) => {
       const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
       if (delErr) return res.status(400).json({ error: delErr.message });
       return res.status(200).json({ success: true });
+    }
+
+    // --- Deactivate / reactivate a staff login ---------------------------
+    if (isActive) {
+      const { user_id, active } = body;
+      if (!user_id || typeof active !== 'boolean') return res.status(400).json({ error: 'user_id and active (true/false) are required.' });
+      if (user_id === caller.user.id) return res.status(400).json({ error: "You can't deactivate your own account." });
+
+      const { data: target } = await admin.from('profiles').select('id, role').eq('id', user_id).single();
+      if (!target) return res.status(404).json({ error: 'Staff member not found.' });
+      if (!DEACTIVATABLE_ROLES.includes(target.role)) {
+        return res.status(400).json({ error: 'Only staff accounts can be deactivated here (not the Owner, customers, affiliates or sales reps).' });
+      }
+
+      // Ban first: if the profile write then fails the login is still
+      // blocked, which is the safe direction.
+      const { error: banErr } = await admin.auth.admin.updateUserById(user_id, { ban_duration: active ? 'none' : BAN_FOREVER });
+      if (banErr) return res.status(400).json({ error: banErr.message });
+
+      const { error: upErr } = await admin.from('profiles')
+        .update({ deactivated_at: active ? null : new Date().toISOString() }).eq('id', user_id);
+      if (upErr) return res.status(400).json({ error: 'Login ' + (active ? 'restored' : 'blocked') + ', but the account note failed to save: ' + upErr.message });
+
+      // Their unfinished tasks go back to "needs an owner" so nothing sits
+      // with someone who can no longer act on it. Finished work keeps
+      // their name for the daily report.
+      let released = 0;
+      if (!active) {
+        const { data: freed } = await admin.from('dev_tickets')
+          .update({ assignee_id: null, assignee_email: null })
+          .eq('assignee_id', user_id).in('status', ['open', 'in_progress']).select('id');
+        released = (freed || []).length;
+      }
+      return res.status(200).json({ success: true, active, released });
     }
 
     // --- Move a staff member to another department ----------------------
