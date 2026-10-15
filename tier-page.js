@@ -486,7 +486,9 @@
   }
   function schedule() {
     clearTimeout(timer);
-    if (paused || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Auto-advances even with reduced motion (the slide change itself is a
+    // fade then); it still pauses on hover, focus and touch.
+    if (paused) return;
     timer = setTimeout(() => go(cur + 1), HOLD_MS);
   }
 
