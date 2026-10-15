@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin | Room Ready Supply</title>
   <link rel="stylesheet" href="admin.css?v=16" />
-  <link rel="stylesheet" href="admin-work.css?v=3" />
+  <link rel="stylesheet" href="admin-work.css?v=4" />
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 </head>
 <body class="admin-body">
@@ -2145,16 +2145,18 @@
     </div>
 
     <div id="devTeamModal" class="a-modal-overlay" style="display:none">
-      <div class="a-modal" style="max-width:480px">
+      <div class="a-modal stf-modal">
         <div class="a-modal-header">
-          <h3>Staff Accounts</h3>
+          <h3>Staff Accounts <span id="devTeamCount" class="stf-count"></span></h3>
           <button class="a-modal-close" onclick="closeModal('devTeamModal')">&times;</button>
         </div>
         <div class="a-modal-body">
-          <div id="devTeamList" class="tkt-teamlist"></div>
+          <input id="devTeamSearch" class="a-input stf-search" type="search" placeholder="Search by name or email…" oninput="filterStaffList(this.value)" aria-label="Search staff">
+          <div id="devTeamList" class="stf-list"></div>
 
-          <div id="devTeamCreate">
-          <div class="tkt-teamdivider"><span>Add a staff account</span></div>
+          <div id="devTeamCreate" class="stf-create">
+          <button type="button" class="stf-add" id="devTeamAddToggle" onclick="toggleStaffCreate()">+ Add a staff account</button>
+          <div id="devTeamCreateFields" style="display:none">
 
           <div class="cms-form-group">
             <label class="cms-label">Account type</label>
@@ -2184,7 +2186,7 @@
             <input id="devTeamPassword" class="a-input" type="text" placeholder="Emailed to them with the login link">
           </div>
 
-          </div>
+          </div></div>
           <p id="devTeamError" class="tkt-formerror" style="display:none"></p>
         </div>
         <div class="a-modal-footer">
@@ -3501,7 +3503,7 @@
 <script src="supabase.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="tax-rates.js"></script>
-<script src="admin.js?v=129"></script>
+<script src="admin.js?v=130"></script>
 <script src="admin-work.js?v=5"></script>
 <script src="admin-seo.js?v=5"></script>
 <script>

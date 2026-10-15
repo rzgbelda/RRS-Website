@@ -9261,8 +9261,9 @@ const STAFF_ROLE_HINTS = {
   supply_chain: "Supply Chain Manager. The Work Board plus Products, Inventory, Mix & Match, Families, Orders, Vendors and Order Exceptions. No CRM, campaigns, revenue reports or Users.",
 };
 const STAFF_ROLE_LABEL = {
-  developer: "Developer", marketing: "Marketing", admin: "Admin",
+  developer: "Web Developer", marketing: "Head of Marketing", admin: "Admin",
   operations: "Head of Operations", supply_chain: "Supply Chain Manager",
+  owner: "Owner", sales_manager: "Head of Sales", sales: "Sales Closer",
 };
 
 function updateDevTeamRoleHint() {
@@ -9279,52 +9280,95 @@ async function openDevTeamModal() {
   document.getElementById("devTeamName").value = "";
   document.getElementById("devTeamPassword").value = "";
   document.getElementById("devTeamError").style.display = "none";
+  document.getElementById("devTeamSearch").value = "";
+  document.getElementById("devTeamCreateFields").style.display = "none";
+  document.getElementById("devTeamAddToggle").textContent = "+ Add a staff account";
   openModal("devTeamModal");
 
-  // Creating accounts: Owner and Developer. Moving staff between
-  // departments: Owner, Head of Operations and Developer (both enforced in
-  // api/create-dev-user.js; this only hides what would be refused).
+  // Creating accounts and deactivating: Owner and Developer. Moving staff
+  // between departments: Owner, Head of Operations and Developer (all
+  // enforced in api/create-dev-user.js; this only hides what would be
+  // refused).
   const role = window._adminRole;
   const canCreate = ["owner", "developer"].includes(role);
   const canMove = ["owner", "operations", "developer"].includes(role);
+  const canDeactivate = ["owner", "developer"].includes(role);
   document.getElementById("devTeamCreate").style.display = canCreate ? "" : "none";
-  document.getElementById("devTeamCreateBtn").style.display = canCreate ? "" : "none";
+  document.getElementById("devTeamCreateBtn").style.display = "none";
 
   // deactivated_at exists after 20261015e_deactivate_staff.sql; until that
   // runs, fall back to the plain list.
-  const staffRoles = ["operations","developer","marketing","supply_chain","admin"];
-  let { data: staff, error: staffErr } = await window.sb.from("profiles").select("id,email,full_name,role,deactivated_at").in("role", staffRoles).order("created_at");
-  if (staffErr) ({ data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", staffRoles).order("created_at"));
-  const canDeactivate = ["owner", "developer"].includes(role);
-  document.getElementById("devTeamList").innerHTML = staff?.length
-    ? staff.map(d => {
-        const off = !!d.deactivated_at;
-        const movable = canMove && !off && STAFF_DEPARTMENT_ROLES[d.role] && d.id !== window._adminUserId;
-        const toggle = canDeactivate && d.id !== window._adminUserId && !staffErr
-          ? `<button class="a-btn-secondary" style="width:auto;padding:5px 10px;font-size:12px;${off ? "" : "color:#b91c1c"}"
-               onclick="setStaffActive('${d.id}', ${off ? "true" : "false"})">${off ? "Reactivate" : "Deactivate"}</button>`
-          : "";
-        return `
-        <div class="tkt-teamrow"${off ? ' style="opacity:.6"' : ""}>
-          ${tktAvatar(d.email, 32)}
-          <div style="flex:1;min-width:0">
-            <strong>${escHtml(d.full_name || d.email || "")}${off ? ' <em style="font-style:normal;font-size:10.5px;color:#b91c1c">DEACTIVATED</em>' : ""}</strong>
-            <span>${escHtml(d.email || "")}</span>
-          </div>
-          ${toggle}
+  const cols = "id,email,full_name,contact_name,role";
+  const staffRoles = ["owner","operations","developer","marketing","supply_chain","admin","sales_manager","sales"];
+  let { data: staff, error: staffErr } = await window.sb.from("profiles").select(cols + ",deactivated_at").in("role", staffRoles).order("created_at");
+  if (staffErr) ({ data: staff } = await window.sb.from("profiles").select(cols).in("role", staffRoles).order("created_at"));
+  staff = staff || [];
+  document.getElementById("devTeamCount").textContent = staff.filter(d => !d.deactivated_at).length + " active";
+
+  const nameOf = d => (d.full_name || d.contact_name || "").trim() || d.email || "";
+  const GROUPS = [
+    { title: "Leadership",   roles: ["owner"] },
+    { title: "Operations",   roles: ["operations"] },
+    { title: "Web Dev",      roles: ["developer"] },
+    { title: "Marketing",    roles: ["marketing"] },
+    { title: "Supply Chain", roles: ["supply_chain"] },
+    { title: "Sales",        roles: ["sales_manager", "sales"] },
+    { title: "Admin",        roles: ["admin"] },
+  ];
+  const rowHtml = d => {
+    const off = !!d.deactivated_at;
+    const me = d.id === window._adminUserId;
+    const movable = canMove && !off && STAFF_DEPARTMENT_ROLES[d.role] && !me;
+    const canToggle = canDeactivate && !me && d.role !== "owner" && !staffErr;
+    const name = nameOf(d);
+    return `
+      <div class="stf-row${off ? " off" : ""}" data-q="${escHtml((name + " " + (d.email || "")).toLowerCase())}">
+        ${tktAvatar(d.email, 38)}
+        <div class="stf-id">
+          <strong>${escHtml(name)}${me ? ' <i class="stf-you">you</i>' : ""}${off ? ' <i class="stf-off">Deactivated</i>' : ""}</strong>
+          ${name !== d.email ? `<span>${escHtml(d.email || "")}</span>` : ""}
+        </div>
+        <div class="stf-act">
           ${movable
-            ? `<select class="a-input" style="width:auto;padding:6px 8px;font-size:12.5px" title="Move to another department"
+            ? `<select class="stf-select" title="Move to another team" aria-label="Team"
                  onchange="moveStaffDepartment('${d.id}', this, '${d.role}')">
                  ${Object.entries(STAFF_DEPARTMENT_ROLES).map(([r, label]) => `<option value="${r}"${r === d.role ? " selected" : ""}>${label}</option>`).join("")}
                </select>`
-            : `<span class="tkt-role-tag">${escHtml(STAFF_ROLE_LABEL[d.role] || d.role)}</span>`}
-        </div>`;
+            : `<span class="stf-role">${escHtml(STAFF_ROLE_LABEL[d.role] || d.role)}</span>`}
+          ${canToggle
+            ? `<button class="stf-btn${off ? "" : " danger"}" onclick="setStaffActive('${d.id}', ${off ? "true" : "false"})">${off ? "Reactivate" : "Deactivate"}</button>`
+            : ""}
+        </div>
+      </div>`;
+  };
+  const sortRows = rows => rows.slice().sort((a, b) => (a.deactivated_at ? 1 : 0) - (b.deactivated_at ? 1 : 0) || nameOf(a).localeCompare(nameOf(b)));
+  document.getElementById("devTeamList").innerHTML = staff.length
+    ? GROUPS.map(g => {
+        const rows = sortRows(staff.filter(d => g.roles.includes(d.role)));
+        return rows.length ? `<section class="stf-group"><h4>${g.title} <em>${rows.length}</em></h4>${rows.map(rowHtml).join("")}</section>` : "";
       }).join("")
-    : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet.${canCreate ? " Create one below." : ""}</p>`;
+    : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet.${canCreate ? " Add one below." : ""}</p>`;
+}
+
+function filterStaffList(q) {
+  const needle = String(q || "").trim().toLowerCase();
+  document.querySelectorAll("#devTeamList .stf-row").forEach(r => { r.style.display = !needle || r.dataset.q.includes(needle) ? "" : "none"; });
+  document.querySelectorAll("#devTeamList .stf-group").forEach(g => {
+    g.style.display = [...g.querySelectorAll(".stf-row")].some(r => r.style.display !== "none") ? "" : "none";
+  });
+}
+
+function toggleStaffCreate() {
+  const fields = document.getElementById("devTeamCreateFields");
+  const open = fields.style.display === "none";
+  fields.style.display = open ? "" : "none";
+  document.getElementById("devTeamAddToggle").textContent = open ? "− Hide the form" : "+ Add a staff account";
+  document.getElementById("devTeamCreateBtn").style.display = open ? "" : "none";
+  if (open) document.getElementById("devTeamName").focus();
 }
 
 async function setStaffActive(userId, active) {
-  const row = [...document.querySelectorAll("#devTeamList .tkt-teamrow")].find(r => r.innerHTML.includes(`setStaffActive('${userId}'`));
+  const row = [...document.querySelectorAll("#devTeamList .stf-row")].find(r => r.innerHTML.includes(`setStaffActive('${userId}'`));
   const name = row?.querySelector("strong")?.firstChild?.textContent?.trim() || "this person";
   const ok = confirm(active
     ? `Reactivate ${name}? They will be able to sign in again.`
@@ -9358,7 +9402,7 @@ const STAFF_DEPARTMENT_ROLES = {
 async function moveStaffDepartment(userId, sel, fromRole) {
   const toRole = sel.value;
   if (toRole === fromRole) return;
-  const name = sel.closest(".tkt-teamrow")?.querySelector("strong")?.textContent || "this person";
+  const name = sel.closest(".stf-row")?.querySelector("strong")?.firstChild?.textContent?.trim() || "this person";
   const ok = confirm(`Move ${name} from ${STAFF_DEPARTMENT_ROLES[fromRole]} to ${STAFF_DEPARTMENT_ROLES[toRole]}?\n\n` +
     `Their admin access changes to ${STAFF_ROLE_LABEL[toRole]}: ${STAFF_ROLE_HINTS[toRole]}\n\n` +
     `Tasks already assigned to them stay assigned. They need to sign out and back in to see the change.`);

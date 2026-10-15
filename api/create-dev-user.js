@@ -117,7 +117,7 @@ const DEPARTMENT_ROLES = ['developer', 'marketing', 'supply_chain', 'operations'
 // sign in, but keeps the account row and every ticket / comment / report
 // entry they ever made. Reversible. Same account types as creation.
 const STAFF_DEACTIVATE_ROLES = ['owner', 'developer'];
-const DEACTIVATABLE_ROLES = ['developer', 'marketing', 'supply_chain', 'operations', 'admin'];
+const DEACTIVATABLE_ROLES = ['developer', 'marketing', 'supply_chain', 'operations', 'admin', 'sales', 'sales_manager'];
 const BAN_FOREVER = '876000h'; // ~100 years; 'none' lifts it
 
 module.exports = async (req, res) => {
@@ -194,7 +194,7 @@ module.exports = async (req, res) => {
       const { data: target } = await admin.from('profiles').select('id, role').eq('id', user_id).single();
       if (!target) return res.status(404).json({ error: 'Staff member not found.' });
       if (!DEACTIVATABLE_ROLES.includes(target.role)) {
-        return res.status(400).json({ error: 'Only staff accounts can be deactivated here (not the Owner, customers, affiliates or sales reps).' });
+        return res.status(400).json({ error: 'Only staff accounts can be deactivated here (not the Owner, customers or affiliates).' });
       }
 
       // Ban first: if the profile write then fails the login is still
@@ -205,6 +205,12 @@ module.exports = async (req, res) => {
       const { error: upErr } = await admin.from('profiles')
         .update({ deactivated_at: active ? null : new Date().toISOString() }).eq('id', user_id);
       if (upErr) return res.status(400).json({ error: 'Login ' + (active ? 'restored' : 'blocked') + ', but the account note failed to save: ' + upErr.message });
+
+      // A sales rep's record goes inactive too, so their code stops
+      // resolving at checkout (lookup_sales_code only matches 'active').
+      if (target.role === 'sales' || target.role === 'sales_manager') {
+        await admin.from('sales_reps').update({ status: active ? 'active' : 'inactive' }).eq('user_id', user_id);
+      }
 
       // Their unfinished tasks go back to "needs an owner" so nothing sits
       // with someone who can no longer act on it. Finished work keeps
