@@ -3669,6 +3669,9 @@ function cvtNormalizeValue(key, value, srcRow) {
     // only recognises the full word -- unmapped, it skipped every EA row and
     // the import put per-case weights and piece-count tiers back.
     if (/^(ea|pc|pcs)$/i.test(v)) return "Each";
+    // Same for case/dozen: customers see the whole word, never "Cs"/"Dz".
+    if (/^(cs|cse|cas)$/i.test(v)) return "Case";
+    if (/^(dz|doz)$/i.test(v)) return "Dozen";
     return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
