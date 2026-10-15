@@ -1404,6 +1404,13 @@ const WB = (() => {
 
     const titleEl = body.querySelector("textarea.wbd-title");
     if (titleEl) { titleEl.style.height = "auto"; titleEl.style.height = titleEl.scrollHeight + "px"; }
+    // Details grow with their text instead of scrolling inside a box.
+    const descEl = $("wbdDesc");
+    if (descEl) {
+      const fit = () => { descEl.style.height = "auto"; descEl.style.height = Math.max(120, descEl.scrollHeight + 2) + "px"; };
+      descEl.addEventListener("input", fit);
+      fit();
+    }
     const box = $("wbComment");
     if (box) {
       box.value = draft;
