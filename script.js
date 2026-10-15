@@ -951,7 +951,7 @@ function productMoq(p) {
 // Customers always see the whole word.
 function normalizeUnitName(u) {
   const raw = String(u || "").trim();
-  const abbr = { cs: "Case", cse: "Case", cas: "Case", dz: "Dozen", doz: "Dozen" };
+  const abbr = { cs: "Case", cse: "Case", cas: "Case", dz: "Dozen", doz: "Dozen", ea: "Each", pc: "Each", pcs: "Each" };
   return abbr[raw.toLowerCase()] || raw;
 }
 
