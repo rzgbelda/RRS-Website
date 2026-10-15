@@ -762,7 +762,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20261015a"></script>
+  <script src="script.js?v=20261015b"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
   <script>
   (function () {
@@ -824,7 +824,7 @@
     const $$ = (s, el = document) => Array.from(el.querySelectorAll(s));
     const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const money = n => "$" + (Number(n) || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    const unitWord = p => ({ EA: "each", EACH: "each", SET: "set", PAIR: "pair" }[String(p.priceBy || "").toUpperCase()] || String(p.priceBy || "each").toLowerCase());
+    const unitWord = p => ({ EA: "each", EACH: "each", SET: "set", PAIR: "pair", CS: "case", CSE: "case", DZ: "dozen" }[String(p.priceBy || "").toUpperCase()] || String(p.priceBy || "each").toLowerCase());
     const unitPlural = p => ({ each: "pieces", set: "sets", pair: "pairs" }[unitWord(p)] || "units");
 
     /* ── Parse a live product into collection / type / size / pack ── */

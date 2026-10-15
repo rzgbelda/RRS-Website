@@ -487,7 +487,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
-  <script src="script.js?v=20261015a"></script>
+  <script src="script.js?v=20261015b"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
   <script>
     // Renders whatever the admin "Best Deals" tab currently has active --
@@ -553,7 +553,8 @@
         specs.push(`<li>${BD_CHECK_SVG}<span><b>Pack Size</b> ${escBd(p.pack_size)}</span></li>`);
       }
 
-      const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (p.unit === 'Case' ? 'Case' : (p.unit || 'Case'));
+      const unitName = ({ cs: 'Case', cse: 'Case', cas: 'Case', dz: 'Dozen', doz: 'Dozen' })[String(p.unit || '').trim().toLowerCase()] || p.unit;
+      const unitLabel = /pail/i.test(p.case_qty || '') ? 'Pail' : (unitName === 'Case' ? 'Case' : (unitName || 'Case'));
       const price = p.price != null ? Number(p.price).toFixed(2) : '—';
       const savingsPct = hasRetail ? Math.round((1 - Number(p.price) / strikeAt) * 100) : null;
       // NOT p.slug -- that's the raw products.slug DB column (generated
@@ -604,7 +605,7 @@
                 data-tier1-min-qty="${p.tier1_min_qty ?? ''}"
                 data-tier2-min-qty="${p.tier2_min_qty ?? ''}"
                 data-tier3-min-qty="${p.tier3_min_qty ?? ''}"
-                data-unit="${escBd(p.unit || 'Case')}"
+                data-unit="${escBd(unitName || 'Case')}"
                 data-moq="${p.moq || 1}"
                 data-moq-group="${escBd(p.moq_group || '')}"
                 data-moq-group-min="${p.moq_group_min || ''}"

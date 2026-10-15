@@ -439,7 +439,7 @@ function mapDbProductToLegacyShape(row) {
     category: row.category_name || "",
 
     sellByEach: row.sell_by_each || "",
-    priceBy: row.unit || "",
+    priceBy: normalizeUnitName(row.unit),
     // Minimum order in whatever priceBy says. 1 for anything sold by the
     // case or each; dozen-sold products carry a real minimum (50 dz for
     // economy wash cloths, 2 dz for most linens) that the cart enforces.
@@ -947,6 +947,14 @@ function productMoq(p) {
 // The word a minimum is counted in: the product's own selling unit, so a
 // case-only product sold per piece (InnStyle: 48 towels per case) reads
 // "48 pieces", not "48 cases". Mirrors moqUnitWord() in api/_lib/price-cart.js.
+// Product data sometimes carries supplier abbreviations ("Cs", "CS", "Dz").
+// Customers always see the whole word.
+function normalizeUnitName(u) {
+  const raw = String(u || "").trim();
+  const abbr = { cs: "Case", cse: "Case", cas: "Case", dz: "Dozen", doz: "Dozen" };
+  return abbr[raw.toLowerCase()] || raw;
+}
+
 function moqUnitWord(p) {
   const u = String(p && (p.priceBy || p.unit) || "").trim().toLowerCase();
   if (u === "dozen") return "dozen";
