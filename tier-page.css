@@ -617,8 +617,6 @@
   .tp-est-total b { font-size: 26px; }
   .tp-est-actions .tp-btn { flex: 1 1 100%; }
 }
-@media (prefers-reduced-motion: reduce) {
-  .tp *, .tp-sticky, .tp-modal-box { animation: none !important; transition: none !important; }
-  .tp-reveal { opacity: 1; transform: none; }
-  .tp .tp-marquee-track { animation: tpMarquee 80s linear infinite !important; }
-}
+/* Motion is part of these pages by design (business decision, 2026-10-16):
+   animations run even when the device asks for reduced motion. Moving
+   content still pauses on hover and focus (hero, marquee). */

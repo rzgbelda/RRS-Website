@@ -478,9 +478,8 @@
       .lux-tab { padding: 0 14px; height: 38px; font-size: 12.5px; }
       .lux-select.lux-sort { flex: none; }
     }
-    @media (prefers-reduced-motion: reduce) {
-      .lux *, .lux *::before, .lux *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
-    }
+    /* Animations run even with reduced motion (business decision, 2026-10-16);
+       the hero still pauses on hover and focus. */
   </style>
 </head>
 
