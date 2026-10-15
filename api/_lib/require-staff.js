@@ -22,7 +22,9 @@ const { createClient } = require('@supabase/supabase-js');
  * therefore forge.
  */
 module.exports = async function requireStaff(req, res, opts = {}) {
-  const allowedRoles = opts.roles || ['owner', 'admin', 'marketing', 'developer'];
+  // operations (Head of Ops) has Marketing's access; supply_chain works
+  // the Orders tab (payment proof, UPS tracking, invoices, terms).
+  const allowedRoles = opts.roles || ['owner', 'admin', 'marketing', 'developer', 'operations', 'supply_chain'];
 
   const header = req.headers.authorization || req.headers.Authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';

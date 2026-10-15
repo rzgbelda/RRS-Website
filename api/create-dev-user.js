@@ -208,7 +208,7 @@ module.exports = async (req, res) => {
 
     // --- Create a staff account, OR promote an existing one --------------
     const { email, password, full_name } = body;
-    const role = ['marketing', 'admin'].includes(body.role) ? body.role : 'developer'; // allow-list, not a passthrough -- 'owner' is deliberately never self-service
+    const role = ['marketing', 'admin', 'operations', 'supply_chain'].includes(body.role) ? body.role : 'developer'; // allow-list, not a passthrough -- 'owner' is deliberately never self-service
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required.' });

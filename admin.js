@@ -16,9 +16,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", session.user.id).single();
   const role = profile?.role;
 
-  // Allow "admin" full access, "sub_distributor" limited access,
-  // and "developer" the ticket board only
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales" && role !== "sales_manager") {
+  // Every role that has some panel; each one's tabs are scoped below
+  // (isTabAllowed / applyRoleRestrictions).
+  if (!ADMIN_PANEL_ROLES.includes(role)) {
     showLogin();
     showLoginError("Access denied. Admin privileges required.");
     return;
@@ -32,6 +32,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   showDashboard();
   switchTab(landingTabFor(role));
   updateNotifBadgeFromStorage();
+  if (location.hash.startsWith("#ticket=") && isTabAllowed("dev-tickets")) switchTab("dev-tickets"); // emailed ticket link
 
   /* Wire buttons */
   document.getElementById("openCsvImport")?.addEventListener("click", openCsvImport);
@@ -66,7 +67,7 @@ document.getElementById("adminLoginForm")?.addEventListener("submit", async e =>
 
   const { data: profile } = await window.sb.from("profiles").select("role, full_name").eq("id", data.user.id).single();
   const role = profile?.role;
-  if (role !== "owner" && role !== "admin" && role !== "sub_distributor" && role !== "developer" && role !== "marketing" && role !== "sales" && role !== "sales_manager") {
+  if (!ADMIN_PANEL_ROLES.includes(role)) {
     await window.sb.auth.signOut();
     showLoginError("This account does not have admin access.");
     return;
@@ -225,6 +226,8 @@ async function saveMyProfile() {
 
 /* ── Role-based access control ─────────────────────────────── */
 
+const ADMIN_PANEL_ROLES = ["owner", "admin", "sub_distributor", "developer", "marketing", "operations", "supply_chain", "sales", "sales_manager"];
+
 const ADMIN_ONLY_TABS = ["products","inventory","mix-match","product-families","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
@@ -240,6 +243,17 @@ const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "visitor-insights", "products", "inventory", "mix-match", "product-families", "orders",
   "quote-requests", "price-match-requests", "manage-hero", "manage-about", "best-deals",
   "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
+];
+
+// Head of Operations: everything Marketing has (same RLS via is_marketing(),
+// 20261015_work_board_departments.sql), and hands out work on the Work
+// Board ("dev-tickets" tab).
+const OPERATIONS_TABS = MARKETING_TABS;
+
+// Supply Chain Manager: the Work Board plus the product, stock, order and
+// vendor tabs -- no CRM, campaigns, content, revenue reports or users.
+const SUPPLY_CHAIN_TABS = [
+  "dev-tickets", "products", "inventory", "mix-match", "product-families", "orders", "vendors", "order-exceptions",
 ];
 
 // Per direct CEO instruction: role='admin' is now the narrow, Azure-style
@@ -270,6 +284,8 @@ function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
   if (window._adminRole === "developer") return DEVELOPER_TABS.includes(tab);
   if (window._adminRole === "marketing") return MARKETING_TABS.includes(tab);
+  if (window._adminRole === "operations") return OPERATIONS_TABS.includes(tab);
+  if (window._adminRole === "supply_chain") return SUPPLY_CHAIN_TABS.includes(tab);
   if (window._adminRole === "admin") return ADMIN_ROLE_TABS.includes(tab);
   if (window._adminRole === "sub_distributor") return AFFILIATE_TABS.includes(tab);
   if (window._adminRole === "sales") return SALES_TABS.includes(tab);
@@ -297,6 +313,8 @@ function blockIfCrmReadOnly() {
 function landingTabFor(role) {
   if (role === "developer") return "dev-tickets";
   if (role === "marketing") return "crm";
+  if (role === "operations") return "dev-tickets";
+  if (role === "supply_chain") return "dev-tickets";
   if (role === "admin") return "users";
   if (role === "sub_distributor") return "partner";
   if (role === "sales") return "sales-dashboard";
@@ -335,7 +353,7 @@ function applyRoleRestrictions(role) {
     return;
   }
 
-  if (role === "developer" || role === "marketing" || role === "admin" || role === "sub_distributor" || role === "sales" || role === "sales_manager") {
+  if (role === "developer" || role === "marketing" || role === "operations" || role === "supply_chain" || role === "admin" || role === "sub_distributor" || role === "sales" || role === "sales_manager") {
     // Hide every nav item except this role's allow-list, and every section
     // heading that ends up with nothing under it. sub_distributor used to
     // fall through to the plain "hide admin-only-nav" branch below, which
@@ -343,6 +361,8 @@ function applyRoleRestrictions(role) {
     // all showing company-wide figures, not this affiliate's own.
     const allowed = role === "developer" ? DEVELOPER_TABS
       : role === "marketing" ? MARKETING_TABS
+      : role === "operations" ? OPERATIONS_TABS
+      : role === "supply_chain" ? SUPPLY_CHAIN_TABS
       : role === "sub_distributor" ? AFFILIATE_TABS
       : role === "sales" ? SALES_TABS
       : role === "sales_manager" ? SALES_MANAGER_TABS
@@ -358,7 +378,11 @@ function applyRoleRestrictions(role) {
       }
       if (!keep) el.style.display = "none";
     });
-    addRoleBadge(role === "developer" ? "Developer Portal" : role === "marketing" ? "Marketing Portal" : role === "sub_distributor" ? "Partner Portal" : role === "sales" ? "Sales Portal" : role === "sales_manager" ? "Sales Operations" : "Admin Portal");
+    addRoleBadge({
+      developer: "Developer Portal", marketing: "Marketing Portal", operations: "Operations Portal",
+      supply_chain: "Supply Chain Portal", sub_distributor: "Partner Portal", sales: "Sales Portal",
+      sales_manager: "Sales Operations",
+    }[role] || "Admin Portal");
     return;
   }
 
@@ -387,8 +411,8 @@ function showAccessDeniedOverlay() {
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>' +
     '<h3 style="font-size:18px;font-weight:800;color:#0d1f38;margin:0 0 8px;letter-spacing:-.3px;">Access Restricted</h3>' +
     '<p style="font-size:13px;color:#8a9bb5;margin:0 0 24px;line-height:1.6;">' +
-      (window._adminRole === "developer"
-        ? 'This section is only available to administrators. Your developer account has access to the Developer Tickets board.'
+      (["developer", "operations", "supply_chain", "marketing"].includes(window._adminRole)
+        ? 'This section is not part of your account. Everything you can use is in the sidebar, including the Work Board.'
         : 'This section is only available to administrators. Your partner account has access to Dashboard, Affiliates, and Reports.') +
     '</p>' +
     '<button onclick="document.getElementById(\'accessDeniedOverlay\').style.display=\'none\'" style="background:linear-gradient(135deg,#f58220,#e0711a);color:#fff;border:none;border-radius:10px;padding:12px 28px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;">Got it</button>' +
@@ -436,7 +460,7 @@ function switchTab(tab) {
       "product-families":"Product Families",
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
-      "quote-requests":"Quote Requests", "price-match-requests":"Price Match Requests", "dev-tickets":"Developer Tickets",
+      "quote-requests":"Quote Requests", "price-match-requests":"Price Match Requests", "dev-tickets":"Work Board",
       "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
       "visitor-insights":"Visitor Insights",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
@@ -457,7 +481,7 @@ function switchTab(tab) {
   if (tab === "sales-team")       renderSalesTeamTab();
   if (tab === "quote-requests")   renderQuoteRequestsTable();
   if (tab === "price-match-requests") renderPriceMatchRequestsTable();
-  if (tab === "dev-tickets")      renderDevTicketsTab();
+  if (tab === "dev-tickets")      renderWorkBoard();   // admin-work.js
   if (tab === "best-deals")       renderBestDealsTab();
   if (tab === "crm")              renderCrmTab();
   if (tab === "campaigns")        renderCampaignsTab();
@@ -9195,7 +9219,9 @@ function setupSettings(userId) {
   });
 }
 
-/* ── Developer Tickets ─────────────────────────────────────── */
+/* ── Ticket helpers shared with other tabs ───────────────────
+   The Work Board itself (the "dev-tickets" tab) lives in admin-work.js.
+   These stay because the CRM, notifications and sales tabs use them. */
 
 const TKT_STATUS = [
   { key:"open",         label:"Open" },
@@ -9205,33 +9231,13 @@ const TKT_STATUS = [
 ];
 const TKT_STATUS_LABEL = Object.fromEntries(TKT_STATUS.map(s => [s.key, s.label]));
 const TKT_PRIORITY = {
-  critical:    { label:"Critical",    cls:"tkt-p-critical" },
-  medium:      { label:"Medium",      cls:"tkt-p-medium" },
-  enhancement: { label:"Enhancement", cls:"tkt-p-enhancement" },
-};
-const TKT_TYPE = {
-  bug:   { label:"Bug",         cls:"tkt-t-bug" },
-  error: { label:"Error",       cls:"tkt-t-error" },
-  idea:  { label:"Enhancement", cls:"tkt-t-idea" },
-};
-
-const _tkt = {
-  tickets: [],
-  comments: {},          // ticket_id -> count
-  developers: [],
-  view: "board",
-  filters: { priority:"all", type:"all", assignee:"all", q:"" },
+  critical: { label:"Critical", cls:"tkt-p-critical" },
+  high:     { label:"High",     cls:"tkt-p-medium" },
+  medium:   { label:"Medium",   cls:"tkt-p-medium" },
+  low:      { label:"Low",      cls:"tkt-p-enhancement" },
 };
 
 function tktIsAdmin()    { return window._adminRole === "admin" || window._adminRole === "owner"; }
-// Per direct CEO instruction: Owner, Admin, and Marketing can file/view/
-// comment on tickets, but only a Developer decides who's working one and
-// whether it's done -- Status and Assignee are gated to this, everything
-// else (Priority, comments) keeps its existing tktIsAdmin() gate.
-// Enforced server-side too (guard_dev_ticket_triage_fields trigger,
-// 20260901_dev_ticket_triage_gate.sql) -- this disables the UI control,
-// the trigger is what actually stops a bypass.
-function tktCanTriage()  { return window._adminRole === "developer"; }
 function tktAvatar(email, size) {
   const s = size || 26;
   if (!email) return `<span class="tkt-avatar tkt-avatar-empty" style="width:${s}px;height:${s}px" title="Unassigned">–</span>`;
@@ -9240,793 +9246,18 @@ function tktAvatar(email, size) {
   return `<span class="tkt-avatar" style="width:${s}px;height:${s}px;background:hsl(${h} 62% 42%)" title="${escHtml(email)}"></span>`;
 }
 
-async function renderDevTicketsTab() {
-  const panel = document.getElementById("tab-dev-tickets");
-  if (!panel) return;
-  panel.innerHTML = `<div class="a-empty" style="padding:50px">Loading tickets…</div>`;
-
-  // The assignee list was only ever fetched for tktIsAdmin() (owner/admin)
-  // -- backwards now that a Developer is the one actually setting the
-  // Assignee field (tktCanTriage()). Marketing can view Dev Tickets too
-  // now, so it gets the list as well, purely so the assigned person's name
-  // resolves in their (disabled) dropdown instead of showing blank.
-  const [ticketsRes, commentsRes, devsRes] = await Promise.all([
-    window.sb.from("dev_tickets").select("*").order("created_at", { ascending:false }),
-    window.sb.from("dev_ticket_comments").select("ticket_id"),
-    (tktIsAdmin() || tktCanTriage() || window._adminRole === "marketing")
-      ? window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","admin","owner"])
-      : Promise.resolve({ data: [] }),
-  ]);
-
-  if (ticketsRes.error) {
-    panel.innerHTML = `<div class="a-empty" style="padding:50px">Couldn't load tickets: ${escHtml(ticketsRes.error.message)}<br><span style="font-size:12px;color:#94a3b8">If this says the table is missing, run the 20260814_dev_tickets.sql migration.</span></div>`;
-    return;
-  }
-
-  _tkt.tickets    = ticketsRes.data || [];
-  _tkt.developers = devsRes.data || [];
-  _tkt.comments   = {};
-  (commentsRes.data || []).forEach(c => { _tkt.comments[c.ticket_id] = (_tkt.comments[c.ticket_id] || 0) + 1; });
-
-  panel.innerHTML = `
-    <div class="tkt-header">
-      <div>
-        <h1 class="a-page-title">Developer Tickets</h1>
-        <p class="a-page-sub">${tktIsAdmin()
-          ? "Report bugs, errors, and ideas found while testing — then track them to done."
-          : "Tickets assigned to the development team."}</p>
-      </div>
-      <div class="tkt-header-actions">
-        <div class="tkt-viewtoggle">
-          <button class="tkt-viewbtn${_tkt.view==="board"?" active":""}" onclick="setTicketView('board')" title="Board view">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18" rx="1"/><rect x="14" y="3" width="7" height="11" rx="1"/></svg>
-            Board
-          </button>
-          <button class="tkt-viewbtn${_tkt.view==="list"?" active":""}" onclick="setTicketView('list')" title="List view">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
-            List
-          </button>
-        </div>
-        ${tktIsAdmin() ? `<button class="a-btn-secondary" onclick="openDevTeamModal()">Staff Accounts</button>` : ""}
-        <button class="a-btn-primary" onclick="openNewTicket()">+ New Ticket</button>
-      </div>
-    </div>
-
-    <div class="tkt-statstrip" id="tktStats"></div>
-
-    <div class="tkt-filterbar">
-      <div class="tkt-search">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input id="tktSearch" type="text" placeholder="Search tickets…" value="${escHtml(_tkt.filters.q)}" oninput="setTicketFilter('q', this.value)">
-      </div>
-      <select class="tkt-filtersel" onchange="setTicketFilter('priority', this.value)">
-        <option value="all">All priorities</option>
-        ${Object.entries(TKT_PRIORITY).map(([k,v]) => `<option value="${k}"${_tkt.filters.priority===k?" selected":""}>${v.label}</option>`).join("")}
-      </select>
-      <select class="tkt-filtersel" onchange="setTicketFilter('type', this.value)">
-        <option value="all">All types</option>
-        ${Object.entries(TKT_TYPE).map(([k,v]) => `<option value="${k}"${_tkt.filters.type===k?" selected":""}>${v.label}</option>`).join("")}
-      </select>
-      <select class="tkt-filtersel" onchange="setTicketFilter('assignee', this.value)">
-        <option value="all">Everyone</option>
-        <option value="me"${_tkt.filters.assignee==="me"?" selected":""}>Assigned to me</option>
-        <option value="none"${_tkt.filters.assignee==="none"?" selected":""}>Unassigned</option>
-      </select>
-    </div>
-
-    <div id="tktBoardWrap"></div>
-  `;
-
-  renderTicketStats();
-  renderTicketBoard();
-  updateDevTicketNavCount();
-}
-
-function renderTicketStats() {
-  const el = document.getElementById("tktStats");
-  if (!el) return;
-  const open     = _tkt.tickets.filter(t => t.status === "open").length;
-  const progress = _tkt.tickets.filter(t => t.status === "in_progress").length;
-  const critical = _tkt.tickets.filter(t => t.priority === "critical" && !["done","not_possible"].includes(t.status)).length;
-  const done     = _tkt.tickets.filter(t => t.status === "done").length;
-
-  el.innerHTML = `
-    <div class="tkt-stat"><span class="tkt-stat-n">${open}</span><span class="tkt-stat-l">Open</span></div>
-    <div class="tkt-stat"><span class="tkt-stat-n">${progress}</span><span class="tkt-stat-l">In Progress</span></div>
-    <div class="tkt-stat tkt-stat-critical"><span class="tkt-stat-n">${critical}</span><span class="tkt-stat-l">Critical unresolved</span></div>
-    <div class="tkt-stat tkt-stat-done"><span class="tkt-stat-n">${done}</span><span class="tkt-stat-l">Done</span></div>
-  `;
-}
-
-function tktVisibleTickets() {
-  const f = _tkt.filters;
-  const q = f.q.trim().toLowerCase();
-  return _tkt.tickets.filter(t => {
-    if (f.priority !== "all" && t.priority !== f.priority) return false;
-    if (f.type !== "all" && t.ticket_type !== f.type) return false;
-    if (f.assignee === "none" && t.assignee_id) return false;
-    if (f.assignee === "me" && t.assignee_id !== window._adminUserId) return false;
-    if (q) {
-      const hay = `${t.ticket_number} ${t.title} ${t.description} ${t.assignee_email || ""}`.toLowerCase();
-      if (!hay.includes(q)) return false;
-    }
-    return true;
-  });
-}
-
-function setTicketView(v)         { _tkt.view = v; renderDevTicketsTab(); }
-function setTicketFilter(k, val)  {
-  _tkt.filters[k] = val;
-  renderTicketBoard();
-  if (k === "q") document.getElementById("tktSearch")?.focus();
-}
-
-function renderTicketBoard() {
-  const wrap = document.getElementById("tktBoardWrap");
-  if (!wrap) return;
-  const visible = tktVisibleTickets();
-
-  if (!_tkt.tickets.length) {
-    wrap.innerHTML = `<div class="tkt-empty">
-      <div class="tkt-empty-icon">
-        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 9V7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4z"/></svg>
-      </div>
-      <h3>No tickets yet</h3>
-      <p>File the first bug, error, or idea you run into while testing the site.</p>
-      <button class="a-btn-primary" onclick="openNewTicket()">+ New Ticket</button>
-    </div>`;
-    return;
-  }
-
-  if (_tkt.view === "list") { renderTicketList(wrap, visible); return; }
-
-  wrap.innerHTML = `<div class="tkt-board">${TKT_STATUS.map(col => {
-    const items = visible.filter(t => t.status === col.key);
-    return `
-      <section class="tkt-col" data-status="${col.key}"
-        ondragover="tktDragOver(event)" ondragleave="tktDragLeave(event)" ondrop="tktDrop(event,'${col.key}')">
-        <header class="tkt-col-head">
-          <span class="tkt-col-dot tkt-dot-${col.key}"></span>
-          <span class="tkt-col-title">${col.label}</span>
-          <span class="tkt-col-count">${items.length}</span>
-        </header>
-        <div class="tkt-col-body">
-          ${items.map(tktCard).join("") || `<div class="tkt-col-empty">Nothing here</div>`}
-        </div>
-      </section>`;
-  }).join("")}</div>`;
-}
-
-function tktCard(t) {
-  const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
-  const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
-  const cCount = _tkt.comments[t.id] || 0;
-  return `
-    <article class="tkt-card ${pr.cls}" draggable="${tktCanTriage()}"
-      ondragstart="tktDragStart(event,'${t.id}')" ondragend="tktDragEnd(event)"
-      onclick="openTicketDrawer('${t.id}')">
-      <div class="tkt-card-top">
-        <span class="tkt-num">${escHtml(t.ticket_number || "—")}</span>
-        <span class="tkt-pri ${pr.cls}">${pr.label}</span>
-      </div>
-      <p class="tkt-card-title">${escHtml(t.title)}</p>
-      <div class="tkt-card-foot">
-        <span class="tkt-type ${ty.cls}">${ty.label}</span>
-        <div class="tkt-card-meta">
-          ${t.screenshot_url ? `<span class="tkt-chip" title="Has screenshot"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></span>` : ""}
-          ${t.attachment_url ? `<span class="tkt-chip" title="Has attachment: ${escHtml(t.attachment_name || "")}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg></span>` : ""}
-          ${cCount ? `<span class="tkt-chip" title="${cCount} comment${cCount>1?"s":""}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 01-.9 3.8 8.5 8.5 0 01-7.6 4.7 8.38 8.38 0 01-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 01-.9-3.8 8.5 8.5 0 014.7-7.6 8.38 8.38 0 013.8-.9h.5a8.48 8.48 0 018 8v.5z"/></svg>${cCount}</span>` : ""}
-          ${tktAvatar(t.assignee_email, 24)}
-        </div>
-      </div>
-    </article>`;
-}
-
-function renderTicketList(wrap, visible) {
-  wrap.innerHTML = `
-    <div class="a-card" style="overflow:hidden">
-      <div style="overflow-x:auto">
-        <table class="a-table tkt-table">
-          <thead><tr>
-            <th>Ticket</th><th>Summary</th><th>Type</th><th>Priority</th><th>Status</th><th>Assignee</th><th>Created</th>
-          </tr></thead>
-          <tbody>
-            ${visible.map(t => {
-              const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
-              const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
-              return `<tr class="tkt-row" onclick="openTicketDrawer('${t.id}')">
-                <td><strong class="tkt-num">${escHtml(t.ticket_number || "—")}</strong></td>
-                <td>${escHtml(t.title)}</td>
-                <td><span class="tkt-type ${ty.cls}">${ty.label}</span></td>
-                <td><span class="tkt-pri ${pr.cls}">${pr.label}</span></td>
-                <td><span class="tkt-status-pill tkt-dotbg-${t.status}">${TKT_STATUS_LABEL[t.status] || t.status}</span></td>
-                <td>${tktAvatar(t.assignee_email, 24)}</td>
-                <td style="white-space:nowrap;color:#94a3b8;font-size:12px">${fmt(t.created_at)}</td>
-              </tr>`;
-            }).join("") || `<tr><td colspan="7" class="a-empty">No tickets match these filters.</td></tr>`}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-}
-
-/* Drag & drop between columns */
-let _tktDragId = null;
-function tktDragStart(e, id) { _tktDragId = id; e.dataTransfer.effectAllowed = "move"; e.currentTarget.classList.add("dragging"); }
-function tktDragEnd(e)       { _tktDragId = null; e.currentTarget.classList.remove("dragging"); document.querySelectorAll(".tkt-col.over").forEach(c => c.classList.remove("over")); }
-function tktDragOver(e)      { e.preventDefault(); e.currentTarget.classList.add("over"); }
-function tktDragLeave(e)     { e.currentTarget.classList.remove("over"); }
-async function tktDrop(e, status) {
-  e.preventDefault();
-  e.currentTarget.classList.remove("over");
-  if (!_tktDragId) return;
-  const id = _tktDragId; _tktDragId = null;
-  const t = _tkt.tickets.find(x => x.id === id);
-  if (!t || t.status === status) return;
-  await setTicketStatus(id, status);
-}
-
-async function setTicketStatus(id, status) {
-  const t = _tkt.tickets.find(x => x.id === id);
-  if (!t) return;
-  const prev = t.status;
-  t.status = status;                       // optimistic — board repaints instantly
-  renderTicketStats(); renderTicketBoard();
-
-  const { error } = await window.sb.from("dev_tickets").update({ status }).eq("id", id);
-  if (error) {
-    t.status = prev;
-    renderTicketStats(); renderTicketBoard();
-    showToast("Couldn't update status: " + error.message);
-    return;
-  }
-  updateDevTicketNavCount();
-  if (document.getElementById("tktDrawerOverlay").style.display === "flex") openTicketDrawer(id);
-  notifyTicketEvent(t, "status", `Status changed to “${TKT_STATUS_LABEL[status]}”`);
-}
-
-/* ── New / edit ticket ─────────────────────────────────────── */
-
-function openNewTicket() {
-  document.getElementById("devTicketModalTitle").textContent = "New Ticket";
-  document.getElementById("devTicketId").value = "";
-  document.getElementById("devTicketTitle").value = "";
-  document.getElementById("devTicketPageUrl").value = "";
-  document.getElementById("devTicketDescription").value = "";
-  document.getElementById("devTicketScreenshotFile").value = "";
-  clearTicketScreenshot();
-  document.getElementById("devTicketAttachFile").value = "";
-  clearTicketAttachment();
-  document.getElementById("devTicketSaveBtn").textContent = "Create Ticket";
-  pickTicketType("bug");
-  pickTicketPriority("medium");
-
-  const sel = document.getElementById("devTicketAssignee");
-  sel.innerHTML = `<option value="">Unassigned</option>` +
-    _tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email || "")}">${escHtml(d.full_name || d.email || "")}${d.role === "developer" ? " (developer)" : ""}</option>`).join("");
-  // Non-admins can't reassign work; the field is theirs to read, not change.
-  sel.disabled = !tktIsAdmin();
-  updateTicketAssigneeAvatar();
-
-  openModal("devTicketModal");
-}
-
-function pickTicketType(value) {
-  document.getElementById("devTicketType").value = value;
-  document.querySelectorAll("#devTicketTypePills .tkt-pillbtn").forEach(b => {
-    b.classList.toggle("active", b.dataset.value === value);
-  });
-}
-
-function pickTicketPriority(value) {
-  document.getElementById("devTicketPriority").value = value;
-  document.querySelectorAll("#devTicketPriorityPills .tkt-pillbtn").forEach(b => {
-    b.classList.toggle("active", b.dataset.value === value);
-  });
-}
-
-function updateTicketAssigneeAvatar() {
-  const sel = document.getElementById("devTicketAssignee");
-  const email = sel.selectedOptions[0]?.dataset.email || null;
-  document.getElementById("devTicketAssigneeAvatar").innerHTML = tktAvatar(email, 26);
-}
-
-function clearTicketScreenshot(e) {
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  document.getElementById("devTicketScreenshotFile").value = "";
-  document.getElementById("devTicketDropzoneEmpty").style.display = "flex";
-  document.getElementById("devTicketScreenshotPreviewWrap").style.display = "none";
-}
-
-function showTicketScreenshotFile(file) {
-  const wrap  = document.getElementById("devTicketScreenshotPreviewWrap");
-  const empty = document.getElementById("devTicketDropzoneEmpty");
-  const img   = document.getElementById("devTicketScreenshotPreview");
-  if (!file || !file.type?.startsWith("image/")) return;
-  img.src = URL.createObjectURL(file);
-  empty.style.display = "none";
-  wrap.style.display = "block";
-}
-
-document.getElementById("devTicketScreenshotFile")?.addEventListener("change", e => {
-  showTicketScreenshotFile(e.target.files[0]);
-});
-
-const _tktDropzone = document.getElementById("devTicketDropzone");
-if (_tktDropzone) {
-  ["dragenter", "dragover"].forEach(evt => _tktDropzone.addEventListener(evt, e => {
-    e.preventDefault(); _tktDropzone.classList.add("dragover");
-  }));
-  ["dragleave", "drop"].forEach(evt => _tktDropzone.addEventListener(evt, e => {
-    e.preventDefault(); _tktDropzone.classList.remove("dragover");
-  }));
-  _tktDropzone.addEventListener("drop", e => {
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    document.getElementById("devTicketScreenshotFile").files = e.dataTransfer.files;
-    showTicketScreenshotFile(file);
-  });
-}
-
-const TKT_ATTACH_EXTS = [".pdf", ".doc", ".docx", ".xls", ".xlsx"];
-
-function clearTicketAttachment(e) {
-  if (e) { e.preventDefault(); e.stopPropagation(); }
-  document.getElementById("devTicketAttachFile").value = "";
-  document.getElementById("devTicketAttachEmpty").style.display = "flex";
-  document.getElementById("devTicketAttachPreviewWrap").style.display = "none";
-}
-
-function showTicketAttachFile(file) {
-  if (!file) return;
-  const ext = "." + (file.name.split(".").pop() || "").toLowerCase();
-  if (!TKT_ATTACH_EXTS.includes(ext)) {
-    showToast("Please attach a PDF, Word, or Excel file.");
-    return;
-  }
-  document.getElementById("devTicketAttachName").textContent = file.name;
-  document.getElementById("devTicketAttachEmpty").style.display = "none";
-  document.getElementById("devTicketAttachPreviewWrap").style.display = "flex";
-}
-
-document.getElementById("devTicketAttachFile")?.addEventListener("change", e => {
-  showTicketAttachFile(e.target.files[0]);
-});
-
-const _tktAttachDropzone = document.getElementById("devTicketAttachDropzone");
-if (_tktAttachDropzone) {
-  ["dragenter", "dragover"].forEach(evt => _tktAttachDropzone.addEventListener(evt, e => {
-    e.preventDefault(); _tktAttachDropzone.classList.add("dragover");
-  }));
-  ["dragleave", "drop"].forEach(evt => _tktAttachDropzone.addEventListener(evt, e => {
-    e.preventDefault(); _tktAttachDropzone.classList.remove("dragover");
-  }));
-  _tktAttachDropzone.addEventListener("drop", e => {
-    const file = e.dataTransfer.files[0];
-    if (!file) return;
-    document.getElementById("devTicketAttachFile").files = e.dataTransfer.files;
-    showTicketAttachFile(file);
-  });
-}
-
-async function saveDevTicket() {
-  const title = document.getElementById("devTicketTitle").value.trim();
-  const description = document.getElementById("devTicketDescription").value.trim();
-  if (!title || !description) { showToast("Summary and description are required."); return; }
-
-  const btn = document.getElementById("devTicketSaveBtn");
-  btn.disabled = true; btn.textContent = "Saving…";
-
-  try {
-    const file = document.getElementById("devTicketScreenshotFile").files[0];
-    let screenshot_url = null;
-    if (file) {
-      const ext  = (file.name.split(".").pop() || "png").toLowerCase();
-      const path = `tickets/${Date.now()}.${ext}`;
-      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, file, { upsert:true });
-      if (upErr) throw upErr;
-      screenshot_url = path;
-    }
-
-    // Same private bucket as screenshots -- just a different path prefix so
-    // the two kinds of upload never collide. Kept as its own column rather
-    // than overloading screenshot_url since this is offered as a download
-    // link, not rendered inline, and needs the original filename preserved.
-    const attachFile = document.getElementById("devTicketAttachFile").files[0];
-    let attachment_url = null, attachment_name = null;
-    if (attachFile) {
-      const ext  = (attachFile.name.split(".").pop() || "bin").toLowerCase();
-      const path = `tickets/attachments/${Date.now()}.${ext}`;
-      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, attachFile, { upsert:true });
-      if (upErr) throw upErr;
-      attachment_url  = path;
-      attachment_name = attachFile.name;
-    }
-
-    const { data: { user } } = await window.sb.auth.getUser();
-    const sel = document.getElementById("devTicketAssignee");
-    const assignee_id = sel.value || null;
-    const assignee_email = assignee_id ? (sel.selectedOptions[0]?.dataset.email || null) : null;
-
-    const payload = {
-      title,
-      description,
-      ticket_type: document.getElementById("devTicketType").value,
-      priority:    document.getElementById("devTicketPriority").value,
-      page_url:    document.getElementById("devTicketPageUrl").value.trim() || null,
-      assignee_id, assignee_email,
-      reporter_id: user?.id || null,
-      reporter_email: user?.email || null,
-    };
-    if (screenshot_url) payload.screenshot_url = screenshot_url;
-    if (attachment_url) { payload.attachment_url = attachment_url; payload.attachment_name = attachment_name; }
-
-    const { data: created, error } = await window.sb.from("dev_tickets").insert(payload).select().single();
-    if (error) throw error;
-
-    closeModal("devTicketModal");
-    showToast(`Ticket ${created.ticket_number} created.`);
-    await renderDevTicketsTab();
-    if (created.assignee_email) notifyTicketEvent(created, "assigned", "You have been assigned a new ticket.");
-  } catch (err) {
-    showToast("Couldn't save ticket: " + err.message);
-  } finally {
-    btn.disabled = false; btn.textContent = "Create Ticket";
-  }
-}
-
-async function deleteDevTicket(id) {
-  const t = _tkt.tickets.find(x => x.id === id);
-  if (!t) return;
-  if (!confirm(`Delete ${t.ticket_number}? This also removes its comments and can't be undone.`)) return;
-  if (t.screenshot_url) await window.sb.storage.from("dev-note-screenshots").remove([t.screenshot_url]);
-  if (t.attachment_url) await window.sb.storage.from("dev-note-screenshots").remove([t.attachment_url]);
-  const { error } = await window.sb.from("dev_tickets").delete().eq("id", id);
-  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
-  closeTicketDrawer(true);
-  showToast("Ticket deleted.");
-  renderDevTicketsTab();
-}
-
-/* ── Ticket detail drawer ──────────────────────────────────── */
-
-async function openTicketDrawer(id) {
-  const overlay = document.getElementById("tktDrawerOverlay");
-  const body    = document.getElementById("tktDrawerBody");
-  overlay.style.display = "flex";
-  requestAnimationFrame(() => overlay.classList.add("open"));
-  _tktCommentScreenshotFile = null; // don't carry a pasted image between tickets/reopens
-
-  const t = _tkt.tickets.find(x => x.id === id);
-  if (!t) { body.innerHTML = `<div class="a-empty" style="padding:60px">Ticket not found.</div>`; return; }
-
-  const { data: comments } = await window.sb
-    .from("dev_ticket_comments").select("*").eq("ticket_id", id).order("created_at", { ascending:true });
-
-  const pr = TKT_PRIORITY[t.priority] || TKT_PRIORITY.medium;
-  const ty = TKT_TYPE[t.ticket_type] || TKT_TYPE.bug;
-
-  body.innerHTML = `
-    <header class="tkt-dr-head">
-      <div class="tkt-dr-headtop">
-        <span class="tkt-num tkt-num-lg">${escHtml(t.ticket_number || "—")}</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          ${tktIsAdmin() ? `<button class="tkt-iconbtn" title="Delete ticket" onclick="deleteDevTicket('${t.id}')">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
-          </button>` : ""}
-          <button class="tkt-iconbtn" title="Close" onclick="closeTicketDrawer(true)">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
-        </div>
-      </div>
-      <h2 class="tkt-dr-title">${escHtml(t.title)}</h2>
-      <div class="tkt-dr-badges">
-        <span class="tkt-type ${ty.cls}">${ty.label}</span>
-        <span class="tkt-pri ${pr.cls}">${pr.label}</span>
-        <span class="tkt-status-pill tkt-dotbg-${t.status}">${TKT_STATUS_LABEL[t.status] || t.status}</span>
-      </div>
-    </header>
-
-    <div class="tkt-dr-controls">
-      <label class="tkt-dr-ctl">
-        <span>Status</span>
-        <select class="a-input" onchange="setTicketStatus('${t.id}', this.value)" ${tktCanTriage()?"":"disabled"}>
-          ${TKT_STATUS.map(s => `<option value="${s.key}"${t.status===s.key?" selected":""}>${s.label}</option>`).join("")}
-        </select>
-      </label>
-      <label class="tkt-dr-ctl">
-        <span>Priority</span>
-        <select class="a-input" onchange="setTicketField('${t.id}','priority',this.value)" ${tktIsAdmin()?"":"disabled"}>
-          ${Object.entries(TKT_PRIORITY).map(([k,v]) => `<option value="${k}"${t.priority===k?" selected":""}>${v.label}</option>`).join("")}
-        </select>
-      </label>
-      <label class="tkt-dr-ctl">
-        <span>Assignee</span>
-        <select class="a-input" onchange="setTicketAssignee('${t.id}', this)" ${tktCanTriage()?"":"disabled"}>
-          <option value="">Unassigned</option>
-          ${_tkt.developers.map(d => `<option value="${d.id}" data-email="${escHtml(d.email||"")}"${t.assignee_id===d.id?" selected":""}>${escHtml(d.full_name || d.email || "")}${d.role==="developer"?" (developer)":""}</option>`).join("")}
-          ${(!tktIsAdmin() && t.assignee_email) ? `<option value="${t.assignee_id}" selected>${escHtml(t.assignee_email)}</option>` : ""}
-        </select>
-      </label>
-    </div>
-
-    <div class="tkt-dr-section">
-      <h4>Description</h4>
-      <p class="tkt-dr-desc">${escHtml(t.description)}</p>
-      ${t.page_url ? `<p class="tkt-dr-meta">Page: <code>${escHtml(t.page_url)}</code></p>` : ""}
-      ${t.screenshot_url ? `<div id="tktShot" class="tkt-dr-shot"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
-      ${t.attachment_url ? `<div id="tktAttach" class="tkt-dr-meta">Loading attachment…</div>` : ""}
-    </div>
-
-    <div class="tkt-dr-section tkt-dr-facts">
-      <div><span>Reported by</span><strong>${escHtml(t.reporter_email || "—")}</strong></div>
-      <div><span>Created</span><strong>${fmt(t.created_at)}</strong></div>
-      ${t.resolved_at ? `<div><span>Closed</span><strong>${fmt(t.resolved_at)}</strong></div>` : ""}
-    </div>
-
-    <div class="tkt-dr-section">
-      <h4>Activity <span class="tkt-cnt">${(comments||[]).length}</span></h4>
-      <div class="tkt-thread">
-        ${(comments||[]).map(c => {
-          const canManage = tktIsAdmin() || c.author_email === window._adminUserEmail;
-          return `
-          <div class="tkt-comment" data-comment-id="${c.id}">
-            ${tktAvatar(c.author_email, 30)}
-            <div class="tkt-comment-body">
-              <div class="tkt-comment-head">
-                <strong>${escHtml(c.author_name || c.author_email || "Unknown")}</strong>
-                ${c.author_role ? `<span class="tkt-role-tag">${escHtml(c.author_role)}</span>` : ""}
-                <span class="tkt-comment-time">${timeAgo(c.created_at)}${c.edited_at ? " · edited" : ""}</span>
-                ${canManage ? `
-                  <span class="tkt-comment-actions">
-                    <button type="button" onclick="startEditTicketComment('${c.id}')" title="Edit">Edit</button>
-                    <button type="button" onclick="deleteTicketComment('${c.id}','${t.id}')" title="Delete">Delete</button>
-                  </span>` : ""}
-              </div>
-              <p class="tkt-comment-text">${escHtml(c.body)}</p>
-              ${c.screenshot_url ? `<div class="tkt-comment-shot" id="tktCommentShot-${c.id}"><span class="tkt-dr-meta">Loading screenshot…</span></div>` : ""}
-            </div>
-          </div>`;
-        }).join("") || `<p class="tkt-dr-meta">No comments yet.</p>`}
-      </div>
-
-      <div class="tkt-composer">
-        ${tktAvatar(window._adminUserEmail, 30)}
-        <div style="flex:1">
-          <textarea id="tktCommentBody" class="a-input" rows="3" placeholder="Add a comment… (you can paste a screenshot here)" style="resize:vertical"></textarea>
-          <div id="tktCommentShotPreviewWrap" style="display:none;margin-top:8px;position:relative">
-            <img id="tktCommentShotPreview" alt="Pasted screenshot" style="max-width:100%;max-height:160px;border-radius:8px;border:1px solid #e2e8f0;display:block">
-            <button type="button" class="tkt-dropzone-remove" onclick="clearTicketCommentScreenshot()" title="Remove" style="position:absolute;top:-8px;right:-8px">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-          </div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
-            <label class="tkt-comment-attach" title="Attach a screenshot">
-              <input type="file" id="tktCommentShotFile" accept="image/*" hidden onchange="showTicketCommentScreenshot(this.files[0])">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-              Attach screenshot
-            </label>
-            <button class="a-btn-primary" id="tktCommentBtn" onclick="addTicketComment('${t.id}')">Comment</button>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  if (t.screenshot_url) {
-    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(t.screenshot_url, 3600);
-    const holder = document.getElementById("tktShot");
-    if (holder && data?.signedUrl) {
-      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Screenshot attached to ${escHtml(t.ticket_number||"ticket")}"></a>`;
-    } else if (holder) {
-      holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
-    }
-  }
-
-  if (t.attachment_url) {
-    // Signed, not the public getPublicUrl -- this bucket is private (same
-    // one screenshots use), so a plain public URL would 404.
-    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(t.attachment_url, 3600, { download: t.attachment_name || true });
-    const holder = document.getElementById("tktAttach");
-    if (holder && data?.signedUrl) {
-      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener" class="tkt-attach-link">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>
-        ${escHtml(t.attachment_name || "Download attachment")}
-      </a>`;
-    } else if (holder) {
-      holder.innerHTML = `<span class="tkt-dr-meta">Attachment unavailable.</span>`;
-    }
-  }
-
-  (comments || []).filter(c => c.screenshot_url).forEach(async c => {
-    const { data } = await window.sb.storage.from("dev-note-screenshots").createSignedUrl(c.screenshot_url, 3600);
-    const holder = document.getElementById(`tktCommentShot-${c.id}`);
-    if (holder && data?.signedUrl) {
-      holder.innerHTML = `<a href="${data.signedUrl}" target="_blank" rel="noopener"><img src="${data.signedUrl}" alt="Screenshot attached to comment"></a>`;
-    } else if (holder) {
-      holder.innerHTML = `<span class="tkt-dr-meta">Screenshot unavailable.</span>`;
-    }
-  });
-
-  // Paste-to-attach: Ctrl+V an image straight into the comment box.
-  const commentBox = document.getElementById("tktCommentBody");
-  if (commentBox) {
-    commentBox.onpaste = e => {
-      const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"));
-      if (!item) return;
-      e.preventDefault();
-      showTicketCommentScreenshot(item.getAsFile());
-    };
-  }
-}
-
-let _tktCommentScreenshotFile = null;
-function showTicketCommentScreenshot(file) {
-  if (!file || !file.type?.startsWith("image/")) return;
-  _tktCommentScreenshotFile = file;
-  const wrap = document.getElementById("tktCommentShotPreviewWrap");
-  const img  = document.getElementById("tktCommentShotPreview");
-  img.src = URL.createObjectURL(file);
-  wrap.style.display = "block";
-}
-function clearTicketCommentScreenshot() {
-  _tktCommentScreenshotFile = null;
-  document.getElementById("tktCommentShotFile").value = "";
-  document.getElementById("tktCommentShotPreviewWrap").style.display = "none";
-}
-
-function closeTicketDrawer(force) {
-  // Backdrop clicks pass the event; the drawer itself stops propagation.
-  if (force !== true && force && force.target && force.target.id !== "tktDrawerOverlay") return;
-  const overlay = document.getElementById("tktDrawerOverlay");
-  overlay.classList.remove("open");
-  setTimeout(() => { overlay.style.display = "none"; }, 180);
-}
-
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape" && document.getElementById("tktDrawerOverlay")?.style.display === "flex") closeTicketDrawer(true);
-});
-
-async function setTicketField(id, field, value) {
-  const t = _tkt.tickets.find(x => x.id === id);
-  const { error } = await window.sb.from("dev_tickets").update({ [field]: value }).eq("id", id);
-  if (error) { showToast("Couldn't update: " + friendlyDbError(error)); return; }
-  if (t) t[field] = value;
-  renderTicketStats(); renderTicketBoard();
-  showToast("Ticket updated.");
-}
-
-async function setTicketAssignee(id, sel) {
-  const assignee_id = sel.value || null;
-  const assignee_email = assignee_id ? (sel.selectedOptions[0]?.dataset.email || null) : null;
-  const { error } = await window.sb.from("dev_tickets").update({ assignee_id, assignee_email }).eq("id", id);
-  if (error) { showToast("Couldn't reassign: " + error.message); return; }
-  const t = _tkt.tickets.find(x => x.id === id);
-  if (t) { t.assignee_id = assignee_id; t.assignee_email = assignee_email; }
-  renderTicketBoard();
-  showToast(assignee_email ? "Assigned to " + assignee_email : "Unassigned.");
-  if (t && assignee_email) notifyTicketEvent(t, "assigned", "You have been assigned this ticket.");
-}
-
-/* ── Edit / delete a ticket comment ─────────────────────────────
-   Gated the same way in the template above and here: the comment's own
-   author, or an admin (tktIsAdmin()) -- a regular developer account
-   can't edit/delete someone else's comment, but staff can moderate. */
-
-function startEditTicketComment(commentId) {
-  const wrap = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-text`);
-  if (!wrap) return;
-  const original = wrap.textContent;
-  wrap.dataset.original = original;
-  wrap.outerHTML = `
-    <div class="tkt-comment-text" data-comment-id="${commentId}">
-      <textarea class="a-input tkt-comment-edit-box" rows="3" style="resize:vertical;margin-bottom:6px">${escHtml(original)}</textarea>
-      <div style="display:flex;gap:8px">
-        <button class="a-btn-primary" style="width:auto;padding:5px 12px;font-size:12px" onclick="saveEditTicketComment('${commentId}')">Save</button>
-        <button class="a-btn-outline" style="width:auto;padding:5px 12px;font-size:12px" onclick="cancelEditTicketComment('${commentId}','${escHtml(original).replace(/'/g, "\\'")}')">Cancel</button>
-      </div>
-    </div>`;
-}
-
-function cancelEditTicketComment(commentId, original) {
-  const wrap = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-text`);
-  if (wrap) wrap.outerHTML = `<p class="tkt-comment-text">${escHtml(original)}</p>`;
-}
-
-async function saveEditTicketComment(commentId) {
-  const box = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-edit-box`);
-  const body = box?.value.trim();
-  if (!body) { showToast("Comment can't be empty."); return; }
-
-  const { error } = await window.sb.from("dev_ticket_comments")
-    .update({ body, edited_at: new Date().toISOString() })
-    .eq("id", commentId);
-  if (error) { showToast("Couldn't save: " + error.message); return; }
-
-  const wrap = box.closest(".tkt-comment-text");
-  if (wrap) wrap.outerHTML = `<p class="tkt-comment-text">${escHtml(body)}</p>`;
-  const timeEl = document.querySelector(`.tkt-comment[data-comment-id="${commentId}"] .tkt-comment-time`);
-  if (timeEl && !timeEl.textContent.includes("edited")) timeEl.textContent += " · edited";
-}
-
-async function deleteTicketComment(commentId, ticketId) {
-  if (!confirm("Delete this comment? This cannot be undone.")) return;
-  const { error } = await window.sb.from("dev_ticket_comments").delete().eq("id", commentId);
-  if (error) { showToast("Couldn't delete: " + friendlyDbError(error)); return; }
-  showToast("Comment deleted.");
-  _tkt.comments[ticketId] = Math.max(0, (_tkt.comments[ticketId] || 1) - 1);
-  await openTicketDrawer(ticketId);
-  renderTicketBoard();
-}
-
-async function addTicketComment(ticketId) {
-  const box = document.getElementById("tktCommentBody");
-  let body = box.value.trim();
-  if (!body && !_tktCommentScreenshotFile) return;
-  if (!body) body = "📎 Screenshot attached.";
-
-  const btn = document.getElementById("tktCommentBtn");
-  btn.disabled = true; btn.textContent = "Posting…";
-
-  try {
-    let screenshot_url = null;
-    if (_tktCommentScreenshotFile) {
-      const ext  = (_tktCommentScreenshotFile.name?.split(".").pop() || "png").toLowerCase();
-      const path = `comments/${Date.now()}.${ext}`;
-      const { error: upErr } = await window.sb.storage.from("dev-note-screenshots").upload(path, _tktCommentScreenshotFile, { upsert: true });
-      if (upErr) throw upErr;
-      screenshot_url = path;
-    }
-
-    const { data: { user } } = await window.sb.auth.getUser();
-    let authorName = null;
-    if (user?.id) {
-      const { data: authorProfile } = await window.sb.from("profiles").select("full_name").eq("id", user.id).single();
-      authorName = authorProfile?.full_name || null;
-    }
-    const payload = {
-      ticket_id: ticketId,
-      author_id: user?.id || null,
-      author_email: user?.email || null,
-      author_name: authorName,
-      author_role: window._adminRole || null,
-      body,
-    };
-    if (screenshot_url) payload.screenshot_url = screenshot_url;
-
-    const { error } = await window.sb.from("dev_ticket_comments").insert(payload);
-    if (error) throw error;
-  } catch (err) {
-    btn.disabled = false; btn.textContent = "Comment";
-    showToast("Couldn't post comment: " + err.message);
-    return;
-  }
-
-  btn.disabled = false; btn.textContent = "Comment";
-  _tkt.comments[ticketId] = (_tkt.comments[ticketId] || 0) + 1;
-  box.value = "";
-  clearTicketCommentScreenshot();
-  await openTicketDrawer(ticketId);
-  renderTicketBoard();
-
-  const t = _tkt.tickets.find(x => x.id === ticketId);
-  if (t) notifyTicketEvent(t, "comment", body.slice(0, 240));
-}
-
-function updateDevTicketNavCount() {
-  const el = document.getElementById("devTicketNavCount");
-  if (!el) return;
-  const openCount = _tkt.tickets.filter(t => !["done","not_possible"].includes(t.status)).length;
-  el.textContent = openCount;
-  el.style.display = openCount ? "inline-flex" : "none";
-}
-
-/* ── Developer accounts ────────────────────────────────────── */
+/* ── Staff accounts ────────────────────────────────────────── */
 
 const STAFF_ROLE_HINTS = {
   developer: "They sign in at this same admin address, but only ever see the ticket board and SEO — no products, orders, customers, or revenue.",
   marketing: "They sign in at this same admin address, with full day-to-day operations access: CRM, products, inventory, orders, quote requests, affiliates, content, best deals, SEO, and reports. No access to Users, Settings, or the dev ticket board.",
   admin: "They sign in at this same admin address, scoped to account management: Users (including creating/removing staff), Dev Tickets, Hero Section, and About Section only — no products, orders, pricing, or revenue.",
+  operations: "Head of Operations. Hands out work to every team on the Work Board and sees the daily Team Report, plus everything Marketing can use. No Users or Settings.",
+  supply_chain: "Supply Chain Manager. The Work Board plus Products, Inventory, Mix & Match, Families, Orders, Vendors and Order Exceptions. No CRM, campaigns, revenue reports or Users.",
+};
+const STAFF_ROLE_LABEL = {
+  developer: "Developer", marketing: "Marketing", admin: "Admin",
+  operations: "Head of Operations", supply_chain: "Supply Chain Manager",
 };
 
 function updateDevTeamRoleHint() {
@@ -10045,10 +9276,8 @@ async function openDevTeamModal() {
   document.getElementById("devTeamError").style.display = "none";
   openModal("devTeamModal");
 
-  // Not _tkt.developers -- that list is scoped to developer+admin for the
-  // ticket-assignee dropdown specifically. This modal manages every staff
-  // account type (developer AND marketing), so it fetches its own list.
-  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["developer","marketing","admin"]).order("created_at");
+  // Every staff account type this modal can create.
+  const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["operations","developer","marketing","supply_chain","admin"]).order("created_at");
   document.getElementById("devTeamList").innerHTML = staff?.length
     ? staff.map(d => `
         <div class="tkt-teamrow">
@@ -10057,7 +9286,7 @@ async function openDevTeamModal() {
             <strong>${escHtml(d.full_name || d.email || "")}</strong>
             <span>${escHtml(d.email || "")}</span>
           </div>
-          <span class="tkt-role-tag">${escHtml(d.role)}</span>
+          <span class="tkt-role-tag">${escHtml(STAFF_ROLE_LABEL[d.role] || d.role)}</span>
         </div>`).join("")
     : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet. Create one below.</p>`;
 }
@@ -10089,7 +9318,7 @@ async function createStaffAccount() {
     const out = await res.json();
     if (!res.ok) throw new Error(out.error || "Request failed");
 
-    const roleLabel = role === "marketing" ? "Marketing" : "Developer";
+    const roleLabel = STAFF_ROLE_LABEL[role] || "Developer";
     showToast(out.promoted
       ? `${email} already had an account -- promoted to ${roleLabel} and password reset.`
       : `${roleLabel} account created for ${email}`);
@@ -10103,31 +9332,6 @@ async function createStaffAccount() {
   } finally {
     btn.disabled = false; btn.textContent = "Create Account";
   }
-}
-
-/* Email ping. Fire-and-forget: a mail failure must never block the board. */
-async function notifyTicketEvent(ticket, event, message) {
-  try {
-    const { data: { session } } = await window.sb.auth.getSession();
-    await fetch("/api/notify-ticket", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
-      body: JSON.stringify({
-        event,
-        message,
-        actor_email: session?.user?.email || null,
-        ticket: {
-          id: ticket.id,
-          ticket_number: ticket.ticket_number,
-          title: ticket.title,
-          priority: ticket.priority,
-          status: ticket.status,
-          assignee_email: ticket.assignee_email,
-          reporter_email: ticket.reporter_email,
-        },
-      }),
-    });
-  } catch (_) { /* email is best-effort */ }
 }
 
 /* ── Modal helpers ─────────────────────────────────────────── */
@@ -11932,14 +11136,15 @@ async function loadNotifications() {
 
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(); // last 7 days
 
-  // A developer account has no read access to orders or quote requests, so
-  // asking for them would only produce RLS errors. Their feed is tickets only.
+  // Roles without read access to orders / quote requests would only get RLS
+  // errors asking for them: developers see neither, supply chain no quotes.
   const isDev = window._adminRole === "developer";
+  const noQuotes = isDev || window._adminRole === "supply_chain";
 
   const [ordersRes, quotesRes, ticketsRes] = await Promise.all([
     isDev ? Promise.resolve({ data: [] })
           : window.sb.from("orders").select("id,created_at,status,shipping_name,total").gte("created_at", since).is("deleted_at", null).order("created_at", { ascending: false }).limit(10),
-    isDev ? Promise.resolve({ data: [] })
+    noQuotes ? Promise.resolve({ data: [] })
           : window.sb.from("quote_requests").select("id,created_at,status,business_name,contact_name").gte("created_at", since).order("created_at", { ascending: false }).limit(10),
     window.sb.from("dev_tickets")
       .select("id,ticket_number,title,priority,status,assignee_id,assignee_email,updated_at,created_at")
@@ -11980,7 +11185,8 @@ async function loadNotifications() {
       title: `${t.ticket_number} · ${t.title}`,
       sub: `${(TKT_PRIORITY[t.priority] || {}).label || t.priority} · ${TKT_STATUS_LABEL[t.status] || t.status}`,
       time: t.updated_at || t.created_at,
-      action: () => { switchTab("dev-tickets"); toggleNotifPanel(); },
+      // The Work Board opens whatever ticket the hash names once it loads.
+      action: () => { location.hash = "ticket=" + encodeURIComponent(t.ticket_number || ""); switchTab("dev-tickets"); toggleNotifPanel(); },
     })),
   ].sort((a, b) => new Date(b.time) - new Date(a.time));
 
@@ -12051,10 +11257,11 @@ async function updateNotifBadgeFromStorage() {
   if (!window.sb) return;
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const isDev = window._adminRole === "developer";
+  const noQuotes = isDev || window._adminRole === "supply_chain";
 
   const [o, q, t] = await Promise.all([
     isDev ? Promise.resolve({ data: [] }) : window.sb.from("orders").select("id,created_at").gte("created_at", since).is("deleted_at", null),
-    isDev ? Promise.resolve({ data: [] }) : window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
+    noQuotes ? Promise.resolve({ data: [] }) : window.sb.from("quote_requests").select("id,created_at").gte("created_at", since),
     window.sb.from("dev_tickets").select("id,updated_at,assignee_id").gte("updated_at", since),
   ]);
 
@@ -15319,7 +14526,7 @@ async function renderSalesTeamOverviewTab() {
 // dev_tickets system (20260814_dev_tickets.sql), scoped by the
 // sales_create_own_tickets/sales_read_own_tickets RLS policies added in
 // 20260928_sales_team.sql. Deliberately a smaller standalone UI rather
-// than reusing renderDevTicketsTab(), which is a full staff triage board
+// than reusing the Work Board (admin-work.js), which is a full staff board
 // (assignment, status changes, comments) sales reps have no access to.
 async function renderSalesTicketsTab() {
   const wrap = document.getElementById("tab-sales-tickets");

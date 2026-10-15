@@ -354,8 +354,8 @@ module.exports = async (req, res) => {
     const { data: caller, error: callerErr } = await supabase.auth.getUser(token);
     if (callerErr || !caller?.user) return res.status(401).json({ error: 'Invalid session.' });
     const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.user.id).single();
-    if (!['owner', 'marketing'].includes(callerProfile?.role)) {
-      return res.status(403).json({ error: 'Only Owner or Marketing accounts can send campaign emails.' });
+    if (!['owner', 'marketing', 'operations'].includes(callerProfile?.role)) {
+      return res.status(403).json({ error: 'Only Owner, Operations or Marketing accounts can send campaign emails.' });
     }
 
     let resend;
@@ -429,8 +429,8 @@ module.exports = async (req, res) => {
     const { data: caller, error: callerErr } = await supabase.auth.getUser(token);
     if (callerErr || !caller?.user) return res.status(401).json({ error: 'Invalid session.' });
     const { data: callerProfile } = await supabase.from('profiles').select('role').eq('id', caller.user.id).single();
-    if (!['owner', 'marketing'].includes(callerProfile?.role)) {
-      return res.status(403).json({ error: 'Only Owner or Marketing accounts can send vendor purchase orders.' });
+    if (!['owner', 'marketing', 'operations', 'supply_chain'].includes(callerProfile?.role)) {
+      return res.status(403).json({ error: 'Only Owner, Operations, Supply Chain or Marketing accounts can send vendor purchase orders.' });
     }
 
     const { data: vendor, error: vendorErr } = await supabase

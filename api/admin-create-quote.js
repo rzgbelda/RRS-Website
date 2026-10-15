@@ -25,7 +25,7 @@ module.exports = async (req, res) => {
   // Staff only: this writes to the CRM with the service role key, which
   // bypasses RLS. Without this, anyone on the internet could inject rows
   // into quote_requests.
-  const staff = await requireStaff(req, res);
+  const staff = await requireStaff(req, res, { roles: ['owner', 'admin', 'marketing', 'developer', 'operations'] });
   if (!staff) return;
 
   // Authenticated, but a throttle still matters: this sends mail /

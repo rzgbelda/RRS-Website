@@ -68,7 +68,7 @@ async function callerFromToken(supabase, req) {
     return { id: data.user.id, email: String(data.user.email || '').toLowerCase(), role: prof?.role || null };
   } catch { return null; }
 }
-const STAFF_ROLES = ['owner', 'admin', 'marketing'];
+const STAFF_ROLES = ['owner', 'admin', 'marketing', 'operations', 'supply_chain'];
 
 module.exports = async (req, res) => {
   const supabase = createClient(
