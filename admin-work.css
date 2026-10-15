@@ -740,3 +740,4 @@ textarea.wbd-title:focus { outline: none; border-color: var(--navy); background:
 .wb-table th.c-due  { width: 160px; }
 .wb-table th.c-upd  { width: 90px; }
 .wb-table td { overflow: hidden; text-overflow: ellipsis; }
+.wb-mine-grid-1 { grid-template-columns: minmax(0, 1fr); }

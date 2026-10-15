@@ -33,10 +33,9 @@ const DEPARTMENT_LABEL = {
 };
 // Who gets a new, unassigned ticket for each department: that team, plus
 // the Head of Operations, who hands work out. Unassigned Sales work goes to
-// the developer (who dispatches Sales) -- sales reps only ever see tickets
-// once they're assigned to them.
+// the Head of Sales -- closers only see tickets once assigned to them.
 const DEPARTMENT_ROLE = {
-  web_dev: 'developer', marketing: 'marketing', supply_chain: 'supply_chain', operations: 'operations', sales: 'developer',
+  web_dev: 'developer', marketing: 'marketing', supply_chain: 'supply_chain', operations: 'operations', sales: 'sales_manager',
 };
 const TEAM_ROLES = ['owner', 'admin', 'developer', 'marketing', 'operations', 'supply_chain', 'sales', 'sales_manager'];
 const STATUS_LABEL = {

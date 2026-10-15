@@ -66,7 +66,7 @@ const WB = (() => {
   const ROLE_LABEL = {
     owner: "Owner", operations: "Head of Operations", developer: "Web Developer",
     marketing: "Head of Marketing", supply_chain: "Supply Chain Manager", admin: "Admin",
-    sales: "Sales Closer", sales_manager: "Head of Sales Ops",
+    sales: "Sales Closer", sales_manager: "Head of Sales",
   };
   const REPORT_TZ = {
     local: { label: "My time",            tz: undefined },
@@ -110,20 +110,29 @@ const WB = (() => {
     return { id: window._adminUserId, email: window._adminUserEmail, role, dept: ROLE_DEPT[role] || null };
   }
   const canDispatch = () => ["owner", "operations"].includes(window._adminRole);
-  // Developer also hands out Sales work (and only Sales work).
-  const canDispatchFor = dept => canDispatch() || (window._adminRole === "developer" && dept === "sales");
+  // Developer and the Head of Sales also hand out Sales work (only Sales).
+  const canDispatchFor = dept => canDispatch() || (["developer", "sales_manager"].includes(window._adminRole) && dept === "sales");
   // Sales closers: status and comments on tickets assigned to them, nothing else.
-  const isSalesRep = () => ["sales", "sales_manager"].includes(window._adminRole);
+  const isSalesRep = () => window._adminRole === "sales";
+  // Head of Sales: runs the Sales team. On other teams' tickets assigned to
+  // them, status and comments only (same as a closer).
+  const isSalesLead = () => window._adminRole === "sales_manager";
+  const isSalesSide = () => isSalesRep() || isSalesLead();
   const canSeeReport = () => canDispatch();
   const canDelete = () => ["owner", "operations", "admin"].includes(window._adminRole);
   function canMove(t) {
     const m = me();
     if (isSalesRep()) return t.assignee_id === m.id;
+    if (isSalesLead()) return canDispatchFor(t.department) || t.assignee_id === m.id;
     return canDispatchFor(t.department) || (m.dept && t.department === m.dept) || t.assignee_id === m.id;
   }
-  const canEdit = t => !isSalesRep() && (canMove(t) || t.reporter_id === me().id);
-  const canTake = t => !isSalesRep() && !canDispatchFor(t.department) && !t.assignee_id && me().dept && t.department === me().dept;
-  const canRelease = t => !isSalesRep() && !canDispatchFor(t.department) && t.assignee_id === me().id;
+  const canEdit = t => isSalesSide() ? canDispatchFor(t.department) : (canMove(t) || t.reporter_id === me().id);
+  const canTake = t => !isSalesSide() && !canDispatchFor(t.department) && !t.assignee_id && me().dept && t.department === me().dept;
+  const canRelease = t => !isSalesSide() && !canDispatchFor(t.department) && t.assignee_id === me().id;
+  // Teams this person can file new work for. The Head of Sales files Sales work only.
+  const composeDepts = () => isSalesLead() ? ["sales"] : Object.keys(DEPTS);
+  // Sales accounts may only upload under sales/<uid>/ (storage policy).
+  const uploadFolder = sub => isSalesSide() ? `sales/${me().id}/${sub}` : sub;
 
   /* ── Small helpers ──────────────────────────────────────────── */
 
@@ -379,6 +388,7 @@ const WB = (() => {
 
     if (!S.view) S.view = isSalesRep() ? "mine" : "board";
     if (!S.dept) S.dept = canDispatch() || !me().dept || isSalesRep() ? "all" : me().dept;
+    if (isSalesLead() && !DEPTS[S.dept]) S.dept = "sales";
     if (S.view === "report" && !canSeeReport()) S.view = "board";
 
     panel.innerHTML = `<div id="wbRoot" class="wb"><div class="wb-loading">${icon(I.board, 22)}<span>Loading the Work Board…</span></div></div>`;
@@ -400,6 +410,8 @@ const WB = (() => {
             ? "Hand out work to each team and see what gets done every day."
             : isSalesRep()
             ? "Tasks assigned to you. Update the status as you go."
+            : isSalesLead()
+            ? "Hand out work to your sales team and track it to done."
             : "Your team's tasks, and anything you need from another team."}</p>
         </div>
         <div class="wb-head-actions">
@@ -696,9 +708,9 @@ const WB = (() => {
         </section>
       </div>
 
-      ${isSalesRep() ? "" : `<div class="wb-mine-grid wb-mine-grid-2">
+      ${isSalesRep() ? "" : `<div class="wb-mine-grid ${isSalesLead() ? "wb-mine-grid-1" : "wb-mine-grid-2"}">
         <section class="wb-panel">
-          <header>${icon(I.hand, 15)}<h3>${canDispatch() ? "Needs an owner" : m.role === "developer" ? "Unassigned in Web Dev & Sales" : `Unassigned in ${m.dept ? DEPTS[m.dept].label : "your team"}`}</h3><em>${waiting.length}</em></header>
+          <header>${icon(I.hand, 15)}<h3>${canDispatch() ? "Needs an owner" : m.role === "developer" ? "Unassigned in Web Dev & Sales" : isSalesLead() ? "Sales tasks that need a closer" : `Unassigned in ${m.dept ? DEPTS[m.dept].label : "your team"}`}</h3><em>${waiting.length}</em></header>
           <div class="wb-panel-body">
             ${waiting.slice(0, 12).map(t => mineRow(t, () => canDispatchFor(t.department)
                 ? assignSelect(t, "wb-act-sel")
@@ -708,10 +720,10 @@ const WB = (() => {
             ${waiting.length > 12 ? `<button class="wb-older" onclick="WB.setView('board');WB.quickFilter('unassigned')">See all ${waiting.length}</button>` : ""}
           </div>
         </section>
-        <section class="wb-panel wb-eod" id="wbEod">
+        ${isSalesLead() ? "" : `<section class="wb-panel wb-eod" id="wbEod">
           <header>${icon(I.report, 15)}<h3>End-of-day update</h3><em class="wb-opt">optional</em></header>
           <div class="wb-panel-body"><p class="wb-muted">Loading…</p></div>
-        </section>
+        </section>`}
       </div>`}
 
       ${filedByMe.length ? `
@@ -720,7 +732,7 @@ const WB = (() => {
         <div class="wb-panel-body">${filedByMe.map(t => mineRow(t, () => statusPill(t.status) + avatar(t.assignee_id, 22), { dept: true })).join("")}</div>
       </section>` : ""}`;
 
-    if (!isSalesRep()) paintEod(eodDraft);
+    if (!isSalesSide()) paintEod(eodDraft);
   }
 
   function minePanel(title, key, items, action, empty) {
@@ -743,7 +755,7 @@ const WB = (() => {
   }
 
   function assignSelect(t, cls) {
-    const people = S.team.filter(p => (ROLE_DEPT[p.role] || p.role === "owner") && (canDispatch() || t.department !== "sales" || p.department === "sales" || p.id === me().id));
+    const people = S.team.filter(p => (ROLE_DEPT[p.role] || p.role === "owner") && (canDispatch() || p.department === "sales" || p.id === me().id));
     const own = people.filter(p => p.department === t.department);
     const rest = people.filter(p => p.department !== t.department);
     const opt = p => `<option value="${p.id}"${t.assignee_id === p.id ? " selected" : ""}>${escHtml(p.full_name || p.email)}</option>`;
@@ -998,8 +1010,11 @@ const WB = (() => {
   function compose(preset = {}) {
     ensureChrome();
     const m = me();
+    const allowed = composeDepts();
+    let dept = preset.dept || (S.dept && S.dept !== "all" ? S.dept : (canDispatch() ? null : m.dept));
+    if (dept && !allowed.includes(dept)) dept = allowed.length === 1 ? allowed[0] : null;
     Object.assign(C, {
-      dept: preset.dept || (S.dept && S.dept !== "all" ? S.dept : (canDispatch() ? null : m.dept)),
+      dept,
       priority: "medium", type: "task", due: null, dueChip: "none",
     });
     C.assignee = defaultAssignee(C.dept);
@@ -1014,7 +1029,7 @@ const WB = (() => {
       <div class="wbc-field">
         <span class="wbc-lbl">Which team is this for? <b>*</b></span>
         <div class="wbc-depts" id="wbcDepts" role="radiogroup">
-          ${Object.entries(DEPTS).map(([k, d]) => `
+          ${Object.entries(DEPTS).filter(([k]) => composeDepts().includes(k)).map(([k, d]) => `
             <button type="button" role="radio" class="wbc-dept" data-v="${k}" style="--c:${d.color}" onclick="WB.cSet('dept','${k}')">
               <span class="wbc-dept-ic">${icon(DEPT_ICON[k], 16)}</span>
               <strong>${d.label}${k === m.dept ? ` <em>My team</em>` : ""}</strong>
@@ -1188,9 +1203,9 @@ const WB = (() => {
         page_url: C.dept === "web_dev" ? ($("wbcPage").value.trim() || null) : null,
         assignee_id: C.assignee || null,
       };
-      if (S.composer.shot) payload.screenshot_url = await upload(S.composer.shot, "tickets");
+      if (S.composer.shot) payload.screenshot_url = await upload(S.composer.shot, uploadFolder("tickets"));
       if (S.composer.file) {
-        payload.attachment_url = await upload(S.composer.file, "tickets/attachments");
+        payload.attachment_url = await upload(S.composer.file, uploadFolder("tickets/attachments"));
         payload.attachment_name = S.composer.file.name;
       }
       const created = await createTicket(payload);
@@ -1512,7 +1527,7 @@ const WB = (() => {
         ticket_id: id, author_id: m.id, author_email: m.email,
         author_name: S.teamById[m.id]?.full_name || null, author_role: m.role, body,
       };
-      if (S.commentShot) payload.screenshot_url = await upload(S.commentShot, isSalesRep() ? `sales/${m.id}/comments` : "comments");
+      if (S.commentShot) payload.screenshot_url = await upload(S.commentShot, uploadFolder("comments"));
       const { error } = await window.sb.from("dev_ticket_comments").insert(payload);
       if (error) throw error;
       box.value = "";
