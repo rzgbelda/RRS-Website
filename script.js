@@ -6695,7 +6695,7 @@ function updateMiniCart() {
 
   const rows = cart.map(i => {
     const qty = Number(i.quantity) || 0;
-    const unit = { dozen: "dz", case: "cs", piece: "pc" }[moqUnitWord(i)] || moqUnitWord(i);
+    const unit = moqUnitWord(i); // spelled out: case, dozen, piece, pallet
     return `
       <li class="mc-row">
         <img src="${i.image || "/assets/img/product-placeholder.svg"}" alt=""
