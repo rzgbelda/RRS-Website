@@ -63,10 +63,14 @@ async function sendSalesCredentialsEmail({ email, full_name, password, tier }) {
 
 // 'owner' = full, unrestricted access (was 'admin' before the CEO/Owner vs
 // Admin role split). 'admin' = the narrower Users/Dev-Tickets/Hero/About
-// account-management role. Both may manage staff accounts and users --
-// that IS the Admin role's job; Owner can do it too since Owner can do
-// everything.
+// account-management role. Both may remove users and manage sales rep
+// logins (Users and Sales Team tabs).
 const ACCOUNT_MANAGER_ROLES = ['owner', 'admin'];
+
+// Creating or granting a staff account (developer, marketing, operations,
+// supply chain, admin) is Owner and Developer only -- the developer is also
+// the company's IT. 'owner' itself is still never handed out here.
+const STAFF_ACCOUNT_ROLES = ['owner', 'developer'];
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
@@ -94,12 +98,17 @@ module.exports = async (req, res) => {
     const { data: callerProfile } = await admin
       .from('profiles').select('role').eq('id', caller.user.id).single();
 
-    if (!ACCOUNT_MANAGER_ROLES.includes(callerProfile?.role)) {
-      return res.status(403).json({ error: 'Only Owner or Admin accounts can manage staff/users.' });
+    const callerRole = callerProfile?.role;
+    const isUserAction = body.action === 'delete_user' || body.action === 'create_sales_user';
+    if (isUserAction && !ACCOUNT_MANAGER_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only Owner or Admin accounts can manage users.' });
+    }
+    if (!isUserAction && !STAFF_ACCOUNT_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only Owner or Developer accounts can create staff accounts.' });
     }
 
     // Creates and deletes real auth users. Throttled even though it is
-    // owner/admin-only, so a stolen admin session cannot mass-create or
+    // limited to account managers, so a stolen session cannot mass-create or
     // mass-delete accounts in a loop.
     if (!rateLimit(req, res, { bucket: 'staffmgmt', limit: 20, windowMs: 60000 })) return;
 

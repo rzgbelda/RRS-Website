@@ -395,7 +395,7 @@ const WB = (() => {
             ${viewBtn("mine", "My Work", I.mine)}
             ${canSeeReport() ? viewBtn("report", "Team Report", I.report) : ""}
           </div>
-          ${["owner", "admin"].includes(window._adminRole) && typeof openDevTeamModal === "function"
+          ${["owner", "developer"].includes(window._adminRole) && typeof openDevTeamModal === "function"
             ? `<button class="a-btn-secondary wb-btn-staff" onclick="openDevTeamModal()">${icon(I.users, 14)} Staff</button>` : ""}
           <button class="a-btn-primary wb-btn-new" onclick="WB.compose()">${icon(I.plus, 15)} New Task</button>
         </div>
