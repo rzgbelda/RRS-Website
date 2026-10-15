@@ -276,9 +276,11 @@ const AFFILIATE_TABS = ["partner", "partner-products"];
 // tickets (their own only, via the sales_* RLS policies added in
 // 20260928_sales_team.sql), and the bulk-order calculator. Same
 // allow-list-by-default reasoning as AFFILIATE_TABS above.
-const SALES_TABS = ["sales-dashboard", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders"];
+// "dev-tickets" is the Work Board: sales reps only see and update tickets
+// assigned to them there (20261015b_work_board_sales.sql).
+const SALES_TABS = ["sales-dashboard", "dev-tickets", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator", "sales-orders"];
 // Head of Sales Operations: broader team-wide view + invoice/payment capabilities
-const SALES_MANAGER_TABS = ["sales-team-overview", "sales-orders", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator"];
+const SALES_MANAGER_TABS = ["sales-team-overview", "dev-tickets", "sales-orders", "sales-account", "sales-catalog", "sales-tickets", "sales-calculator"];
 
 function isTabAllowed(tab) {
   if (window._adminRole === "owner") return true; // full, unrestricted access
@@ -14536,6 +14538,7 @@ async function renderSalesTicketsTab() {
   const { data: tickets, error } = await window.sb
     .from("dev_tickets")
     .select("ticket_number, title, description, ticket_type, priority, status, created_at")
+    .eq("reporter_id", window._adminUserId)
     .order("created_at", { ascending: false });
 
   if (error) {

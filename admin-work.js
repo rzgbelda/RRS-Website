@@ -29,11 +29,13 @@ const WB = (() => {
     marketing:    { label: "Marketing",    color: "#db2777", blurb: "Campaigns, content, SEO and leads" },
     supply_chain: { label: "Supply Chain", color: "#0d9488", blurb: "Vendors, stock, orders and shipping" },
     operations:   { label: "Operations",   color: "#ea580c", blurb: "Processes, admin and everything else" },
+    sales:        { label: "Sales",        color: "#0284c7", blurb: "Leads, quotes and closing deals" },
   };
   const DEPT_ICON = {
     web_dev:      `<path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/>`,
     marketing:    `<path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>`,
     supply_chain: `<path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>`,
+    sales:        `<path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>`,
     operations:   `<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>`,
   };
   const STATUSES = [
@@ -57,10 +59,14 @@ const WB = (() => {
     error:   { label: "Error", dev: true },
     idea:    { label: "Idea",  dev: true },
   };
-  const ROLE_DEPT = { developer: "web_dev", marketing: "marketing", supply_chain: "supply_chain", operations: "operations" };
+  const ROLE_DEPT = {
+    developer: "web_dev", marketing: "marketing", supply_chain: "supply_chain", operations: "operations",
+    sales: "sales", sales_manager: "sales",
+  };
   const ROLE_LABEL = {
     owner: "Owner", operations: "Head of Operations", developer: "Web Developer",
     marketing: "Head of Marketing", supply_chain: "Supply Chain Manager", admin: "Admin",
+    sales: "Sales Closer", sales_manager: "Head of Sales Ops",
   };
   const REPORT_TZ = {
     local: { label: "My time",            tz: undefined },
@@ -77,7 +83,7 @@ const WB = (() => {
     tickets: [],
     comments: {},              // ticket_id -> count
     team: [], teamById: {}, teamByEmail: {},
-    view: pref("view", "board"),
+    view: pref("view", null),
     dept: pref("dept", null),
     filters: { q: "", person: "all", priority: "all", due: "all" },
     showOldClosed: false,
@@ -104,15 +110,20 @@ const WB = (() => {
     return { id: window._adminUserId, email: window._adminUserEmail, role, dept: ROLE_DEPT[role] || null };
   }
   const canDispatch = () => ["owner", "operations"].includes(window._adminRole);
+  // Developer also hands out Sales work (and only Sales work).
+  const canDispatchFor = dept => canDispatch() || (window._adminRole === "developer" && dept === "sales");
+  // Sales closers: status and comments on tickets assigned to them, nothing else.
+  const isSalesRep = () => ["sales", "sales_manager"].includes(window._adminRole);
   const canSeeReport = () => canDispatch();
   const canDelete = () => ["owner", "operations", "admin"].includes(window._adminRole);
   function canMove(t) {
     const m = me();
-    return canDispatch() || (m.dept && t.department === m.dept) || t.assignee_id === m.id;
+    if (isSalesRep()) return t.assignee_id === m.id;
+    return canDispatchFor(t.department) || (m.dept && t.department === m.dept) || t.assignee_id === m.id;
   }
-  const canEdit = t => canMove(t) || t.reporter_id === me().id;
-  const canTake = t => !canDispatch() && !t.assignee_id && me().dept && t.department === me().dept;
-  const canRelease = t => !canDispatch() && t.assignee_id === me().id;
+  const canEdit = t => !isSalesRep() && (canMove(t) || t.reporter_id === me().id);
+  const canTake = t => !isSalesRep() && !canDispatchFor(t.department) && !t.assignee_id && me().dept && t.department === me().dept;
+  const canRelease = t => !isSalesRep() && !canDispatchFor(t.department) && t.assignee_id === me().id;
 
   /* ── Small helpers ──────────────────────────────────────────── */
 
@@ -366,7 +377,8 @@ const WB = (() => {
     if (!panel) return;
     ensureChrome();
 
-    if (!S.dept) S.dept = canDispatch() || !me().dept ? "all" : me().dept;
+    if (!S.view) S.view = isSalesRep() ? "mine" : "board";
+    if (!S.dept) S.dept = canDispatch() || !me().dept || isSalesRep() ? "all" : me().dept;
     if (S.view === "report" && !canSeeReport()) S.view = "board";
 
     panel.innerHTML = `<div id="wbRoot" class="wb"><div class="wb-loading">${icon(I.board, 22)}<span>Loading the Work Board…</span></div></div>`;
@@ -386,6 +398,8 @@ const WB = (() => {
           <h1 class="a-page-title">Work Board</h1>
           <p class="a-page-sub">${canDispatch()
             ? "Hand out work to each team and see what gets done every day."
+            : isSalesRep()
+            ? "Tasks assigned to you. Update the status as you go."
             : "Your team's tasks, and anything you need from another team."}</p>
         </div>
         <div class="wb-head-actions">
@@ -397,7 +411,7 @@ const WB = (() => {
           </div>
           ${["owner", "developer"].includes(window._adminRole) && typeof openDevTeamModal === "function"
             ? `<button class="a-btn-secondary wb-btn-staff" onclick="openDevTeamModal()">${icon(I.users, 14)} Staff</button>` : ""}
-          <button class="a-btn-primary wb-btn-new" onclick="WB.compose()">${icon(I.plus, 15)} New Task</button>
+          ${isSalesRep() ? "" : `<button class="a-btn-primary wb-btn-new" onclick="WB.compose()">${icon(I.plus, 15)} New Task</button>`}
         </div>
       </header>
       <nav class="wb-depts" id="wbDepts" aria-label="Team"></nav>
@@ -506,8 +520,10 @@ const WB = (() => {
       wrap.innerHTML = `<div class="wb-empty">
         <div class="wb-empty-ic">${icon(I.board, 26)}</div>
         <h3>Nothing on this board yet</h3>
-        <p>Add the first task for ${S.dept && S.dept !== "all" ? DEPTS[S.dept].label : "the team"}.</p>
-        <button class="a-btn-primary" onclick="WB.compose()">${icon(I.plus, 14)} New Task</button>
+        ${isSalesRep()
+          ? `<p>Tasks assigned to you will show up here.</p>`
+          : `<p>Add the first task for ${S.dept && S.dept !== "all" ? DEPTS[S.dept].label : "the team"}.</p>
+        <button class="a-btn-primary" onclick="WB.compose()">${icon(I.plus, 14)} New Task</button>`}
       </div>`;
       return;
     }
@@ -535,7 +551,7 @@ const WB = (() => {
             ${items.map(card).join("") || `<div class="wb-col-empty">${col.key === "open" ? "Nothing waiting" : col.key === "in_progress" ? "Drag a task here to start it" : "Nothing yet"}</div>`}
             ${older ? `<button class="wb-older" onclick="WB.toggleOld()">Show ${older} older</button>` : ""}
           </div>
-          ${col.key === "open" ? quickAddHtml() : ""}
+          ${col.key === "open" && !isSalesRep() ? quickAddHtml() : ""}
         </section>`;
     }).join("")}</div>
     ${S.showOldClosed && hidden === 0 && list.some(t => isClosed(t)) ? `<button class="wb-older wb-older-wide" onclick="WB.toggleOld()">Hide older finished tasks</button>` : ""}`;
@@ -642,7 +658,7 @@ const WB = (() => {
     const doneToday = mine.filter(t => t.status === "done" && t.resolved_at && dateKey(new Date(t.resolved_at)) === k)
       .sort((a, b) => new Date(b.resolved_at) - new Date(a.resolved_at));
     const late = mine.filter(t => dueState(t) === "overdue");
-    const waiting = S.tickets.filter(t => !isClosed(t) && !t.assignee_id && (canDispatch() || t.department === m.dept)).sort(urgencySort);
+    const waiting = isSalesRep() ? [] : S.tickets.filter(t => !isClosed(t) && !t.assignee_id && (canDispatchFor(t.department) || t.department === m.dept)).sort(urgencySort);
     const filedByMe = S.tickets.filter(t => t.reporter_id === m.id && t.assignee_id !== m.id && !isClosed(t)).sort(urgencySort);
 
     const hour = new Date().getHours();
@@ -674,17 +690,17 @@ const WB = (() => {
           <div class="wb-panel-body">
             ${doneToday.map(t => mineRow(t, () => `<span class="wb-time">${fmtTime(t.resolved_at)}</span>`)).join("") || `<p class="wb-muted">Finished tasks show up here.</p>`}
           </div>
-          ${m.dept ? `<form class="wb-quick wb-quick-log" onsubmit="event.preventDefault();WB.logDone(this)">
+          ${m.dept && !isSalesRep() ? `<form class="wb-quick wb-quick-log" onsubmit="event.preventDefault();WB.logDone(this)">
             ${icon(I.check, 14)}<input name="title" placeholder="Log something you already finished…" maxlength="200" autocomplete="off" aria-label="Log a finished task">
           </form>` : ""}
         </section>
       </div>
 
-      <div class="wb-mine-grid wb-mine-grid-2">
+      ${isSalesRep() ? "" : `<div class="wb-mine-grid wb-mine-grid-2">
         <section class="wb-panel">
-          <header>${icon(I.hand, 15)}<h3>${canDispatch() ? "Needs an owner" : `Unassigned in ${m.dept ? DEPTS[m.dept].label : "your team"}`}</h3><em>${waiting.length}</em></header>
+          <header>${icon(I.hand, 15)}<h3>${canDispatch() ? "Needs an owner" : m.role === "developer" ? "Unassigned in Web Dev & Sales" : `Unassigned in ${m.dept ? DEPTS[m.dept].label : "your team"}`}</h3><em>${waiting.length}</em></header>
           <div class="wb-panel-body">
-            ${waiting.slice(0, 12).map(t => mineRow(t, () => canDispatch()
+            ${waiting.slice(0, 12).map(t => mineRow(t, () => canDispatchFor(t.department)
                 ? assignSelect(t, "wb-act-sel")
                 : canTake(t) ? `<button class="wb-act" onclick="event.stopPropagation();WB.take('${t.id}')">Take it</button>` : "",
                 { dept: true })).join("")
@@ -696,7 +712,7 @@ const WB = (() => {
           <header>${icon(I.report, 15)}<h3>End-of-day update</h3><em class="wb-opt">optional</em></header>
           <div class="wb-panel-body"><p class="wb-muted">Loading…</p></div>
         </section>
-      </div>
+      </div>`}
 
       ${filedByMe.length ? `
       <section class="wb-panel wb-panel-wide">
@@ -704,7 +720,7 @@ const WB = (() => {
         <div class="wb-panel-body">${filedByMe.map(t => mineRow(t, () => statusPill(t.status) + avatar(t.assignee_id, 22), { dept: true })).join("")}</div>
       </section>` : ""}`;
 
-    paintEod(eodDraft);
+    if (!isSalesRep()) paintEod(eodDraft);
   }
 
   function minePanel(title, key, items, action, empty) {
@@ -727,7 +743,7 @@ const WB = (() => {
   }
 
   function assignSelect(t, cls) {
-    const people = S.team.filter(p => ROLE_DEPT[p.role] || p.role === "owner");
+    const people = S.team.filter(p => (ROLE_DEPT[p.role] || p.role === "owner") && (canDispatch() || t.department !== "sales" || p.department === "sales" || p.id === me().id));
     const own = people.filter(p => p.department === t.department);
     const rest = people.filter(p => p.department !== t.department);
     const opt = p => `<option value="${p.id}"${t.assignee_id === p.id ? " selected" : ""}>${escHtml(p.full_name || p.email)}</option>`;
@@ -1073,7 +1089,7 @@ const WB = (() => {
 
   // Filing for your own team usually means "I'll do it"; a lead or a
   // request to another team starts unassigned.
-  const defaultAssignee = dept => (!canDispatch() && dept && dept === me().dept ? me().id : "");
+  const defaultAssignee = dept => (!canDispatchFor(dept) && dept && dept === me().dept ? me().id : "");
 
   function cSet(k, v) {
     C[k] = v;
@@ -1124,12 +1140,12 @@ const WB = (() => {
     const wrap = $("wbcAssigneeWrap");
     if (!C.dept) {
       wrap.innerHTML = `<p class="wbc-note">Pick a team first.</p>`;
-    } else if (canDispatch()) {
-      const people = S.team.filter(p => ROLE_DEPT[p.role] || p.role === "owner");
+    } else if (canDispatchFor(C.dept)) {
+      const people = S.team.filter(p => (ROLE_DEPT[p.role] || p.role === "owner") && (canDispatch() || p.department === "sales" || p.id === m.id));
       const own = people.filter(p => p.department === C.dept), rest = people.filter(p => p.department !== C.dept);
       const opt = p => `<option value="${p.id}"${C.assignee === p.id ? " selected" : ""}>${escHtml(p.full_name || p.email)}${p.id === m.id ? " (me)" : ""}</option>`;
       wrap.innerHTML = `<select id="wbcAssignee" class="a-input" onchange="WB.cSet('assignee', this.value)">
-        <option value="">Nobody yet. ${DEPTS[C.dept].label} picks it up</option>
+        <option value="">${C.dept === "sales" ? "Nobody yet. Assign it later" : `Nobody yet. ${DEPTS[C.dept].label} picks it up`}</option>
         ${own.length ? `<optgroup label="${DEPTS[C.dept].label}">${own.map(opt).join("")}</optgroup>` : ""}
         ${rest.length ? `<optgroup label="Others">${rest.map(opt).join("")}</optgroup>` : ""}
       </select>`;
@@ -1345,7 +1361,7 @@ const WB = (() => {
         </div>
 
         <aside class="wbd-side">
-          ${sideField("Assigned to", canDispatch()
+          ${sideField("Assigned to", canDispatchFor(t.department)
               ? assignSelect(t, "a-input")
               : `<div class="wbd-person">${avatar(t.assignee_id || t.assignee_email, 26)}<span>${t.assignee_id ? escHtml(personName(t.assignee_id || t.assignee_email)) : "Nobody yet"}</span></div>
                  ${canTake(t) ? `<button class="wb-linkbtn" onclick="WB.take('${t.id}')">Assign to me</button>` : ""}
@@ -1496,7 +1512,7 @@ const WB = (() => {
         ticket_id: id, author_id: m.id, author_email: m.email,
         author_name: S.teamById[m.id]?.full_name || null, author_role: m.role, body,
       };
-      if (S.commentShot) payload.screenshot_url = await upload(S.commentShot, "comments");
+      if (S.commentShot) payload.screenshot_url = await upload(S.commentShot, isSalesRep() ? `sales/${m.id}/comments` : "comments");
       const { error } = await window.sb.from("dev_ticket_comments").insert(payload);
       if (error) throw error;
       box.value = "";
@@ -1640,7 +1656,7 @@ const WB = (() => {
     const m = me();
     const n = canDispatch()
       ? S.tickets.filter(t => !isClosed(t) && !t.assignee_id).length
-      : S.tickets.filter(t => !isClosed(t) && t.assignee_id === m.id).length;
+      : S.tickets.filter(t => !isClosed(t) && (t.assignee_id === m.id || (!t.assignee_id && canDispatchFor(t.department)))).length;
     el.textContent = n;
     el.title = canDispatch() ? "Tasks that need an owner" : "Your open tasks";
     el.style.display = n ? "inline-flex" : "none";

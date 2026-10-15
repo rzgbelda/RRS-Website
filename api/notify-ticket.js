@@ -29,14 +29,16 @@ const PRIORITY_STYLE = {
   low:      { label: 'Low',      bg: '#e2e8f0', fg: '#475569' },
 };
 const DEPARTMENT_LABEL = {
-  web_dev: 'Web Dev', marketing: 'Marketing', supply_chain: 'Supply Chain', operations: 'Operations',
+  web_dev: 'Web Dev', marketing: 'Marketing', supply_chain: 'Supply Chain', operations: 'Operations', sales: 'Sales',
 };
 // Who gets a new, unassigned ticket for each department: that team, plus
-// the Head of Operations, who hands work out.
+// the Head of Operations, who hands work out. Unassigned Sales work goes to
+// the developer (who dispatches Sales) -- sales reps only ever see tickets
+// once they're assigned to them.
 const DEPARTMENT_ROLE = {
-  web_dev: 'developer', marketing: 'marketing', supply_chain: 'supply_chain', operations: 'operations',
+  web_dev: 'developer', marketing: 'marketing', supply_chain: 'supply_chain', operations: 'operations', sales: 'developer',
 };
-const TEAM_ROLES = ['owner', 'admin', 'developer', 'marketing', 'operations', 'supply_chain'];
+const TEAM_ROLES = ['owner', 'admin', 'developer', 'marketing', 'operations', 'supply_chain', 'sales', 'sales_manager'];
 const STATUS_LABEL = {
   open: 'Open', in_progress: 'In Progress', done: 'Done', not_possible: 'Not Possible',
 };
