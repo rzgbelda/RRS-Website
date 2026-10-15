@@ -72,6 +72,14 @@ const ACCOUNT_MANAGER_ROLES = ['owner', 'admin'];
 // the company's IT. 'owner' itself is still never handed out here.
 const STAFF_ACCOUNT_ROLES = ['owner', 'developer'];
 
+// Moving an existing staff member to another department = changing their
+// role (department follows role on the Work Board, and so does their admin
+// access). Owner, Head of Operations and Developer may do this. Only these
+// department roles move; Owner, Admin and the sales roles (managed from
+// the Sales Team tab, with a sales code) never change here.
+const STAFF_MOVER_ROLES = ['owner', 'operations', 'developer'];
+const DEPARTMENT_ROLES = ['developer', 'marketing', 'supply_chain', 'operations'];
+
 module.exports = async (req, res) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -100,10 +108,14 @@ module.exports = async (req, res) => {
 
     const callerRole = callerProfile?.role;
     const isUserAction = body.action === 'delete_user' || body.action === 'create_sales_user';
+    const isMove = body.action === 'change_staff_role';
     if (isUserAction && !ACCOUNT_MANAGER_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner or Admin accounts can manage users.' });
     }
-    if (!isUserAction && !STAFF_ACCOUNT_ROLES.includes(callerRole)) {
+    if (isMove && !STAFF_MOVER_ROLES.includes(callerRole)) {
+      return res.status(403).json({ error: 'Only Owner, Head of Operations or Developer accounts can move staff.' });
+    }
+    if (!isUserAction && !isMove && !STAFF_ACCOUNT_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner or Developer accounts can create staff accounts.' });
     }
 
@@ -127,6 +139,26 @@ module.exports = async (req, res) => {
       const { error: delErr } = await admin.auth.admin.deleteUser(user_id);
       if (delErr) return res.status(400).json({ error: delErr.message });
       return res.status(200).json({ success: true });
+    }
+
+    // --- Move a staff member to another department ----------------------
+    if (isMove) {
+      const { user_id, role: newRole } = body;
+      if (!user_id || !DEPARTMENT_ROLES.includes(newRole)) {
+        return res.status(400).json({ error: 'Pick a staff member and one of: Web Dev, Marketing, Supply Chain, Operations.' });
+      }
+      if (user_id === caller.user.id) return res.status(400).json({ error: "You can't move your own account." });
+
+      const { data: target } = await admin.from('profiles').select('id, role').eq('id', user_id).single();
+      if (!target) return res.status(404).json({ error: 'Staff member not found.' });
+      if (!DEPARTMENT_ROLES.includes(target.role)) {
+        return res.status(400).json({ error: 'Only Web Dev, Marketing, Supply Chain and Operations staff can be moved here.' });
+      }
+      if (target.role === newRole) return res.status(200).json({ success: true, role: newRole, unchanged: true });
+
+      const { error: upErr } = await admin.from('profiles').update({ role: newRole }).eq('id', user_id);
+      if (upErr) return res.status(400).json({ error: upErr.message });
+      return res.status(200).json({ success: true, role: newRole, previous_role: target.role });
     }
 
     // --- Create/promote a sales rep account, emailing credentials --------

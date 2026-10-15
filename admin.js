@@ -9278,19 +9278,70 @@ async function openDevTeamModal() {
   document.getElementById("devTeamError").style.display = "none";
   openModal("devTeamModal");
 
-  // Every staff account type this modal can create.
+  // Creating accounts: Owner and Developer. Moving staff between
+  // departments: Owner, Head of Operations and Developer (both enforced in
+  // api/create-dev-user.js; this only hides what would be refused).
+  const role = window._adminRole;
+  const canCreate = ["owner", "developer"].includes(role);
+  const canMove = ["owner", "operations", "developer"].includes(role);
+  document.getElementById("devTeamCreate").style.display = canCreate ? "" : "none";
+  document.getElementById("devTeamCreateBtn").style.display = canCreate ? "" : "none";
+
   const { data: staff } = await window.sb.from("profiles").select("id,email,full_name,role").in("role", ["operations","developer","marketing","supply_chain","admin"]).order("created_at");
   document.getElementById("devTeamList").innerHTML = staff?.length
-    ? staff.map(d => `
+    ? staff.map(d => {
+        const movable = canMove && STAFF_DEPARTMENT_ROLES[d.role] && d.id !== window._adminUserId;
+        return `
         <div class="tkt-teamrow">
           ${tktAvatar(d.email, 32)}
           <div style="flex:1;min-width:0">
             <strong>${escHtml(d.full_name || d.email || "")}</strong>
             <span>${escHtml(d.email || "")}</span>
           </div>
-          <span class="tkt-role-tag">${escHtml(STAFF_ROLE_LABEL[d.role] || d.role)}</span>
-        </div>`).join("")
-    : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet. Create one below.</p>`;
+          ${movable
+            ? `<select class="a-input" style="width:auto;padding:6px 8px;font-size:12.5px" title="Move to another department"
+                 onchange="moveStaffDepartment('${d.id}', this, '${d.role}')">
+                 ${Object.entries(STAFF_DEPARTMENT_ROLES).map(([r, label]) => `<option value="${r}"${r === d.role ? " selected" : ""}>${label}</option>`).join("")}
+               </select>`
+            : `<span class="tkt-role-tag">${escHtml(STAFF_ROLE_LABEL[d.role] || d.role)}</span>`}
+        </div>`;
+      }).join("")
+    : `<p class="tkt-dr-meta" style="margin:0">No staff accounts yet.${canCreate ? " Create one below." : ""}</p>`;
+}
+
+// Department -> the role that carries it. Moving someone changes their role,
+// so their admin access changes with it.
+const STAFF_DEPARTMENT_ROLES = {
+  developer: "Web Dev", marketing: "Marketing", supply_chain: "Supply Chain", operations: "Operations",
+};
+
+async function moveStaffDepartment(userId, sel, fromRole) {
+  const toRole = sel.value;
+  if (toRole === fromRole) return;
+  const name = sel.closest(".tkt-teamrow")?.querySelector("strong")?.textContent || "this person";
+  const ok = confirm(`Move ${name} from ${STAFF_DEPARTMENT_ROLES[fromRole]} to ${STAFF_DEPARTMENT_ROLES[toRole]}?\n\n` +
+    `Their admin access changes to ${STAFF_ROLE_LABEL[toRole]}: ${STAFF_ROLE_HINTS[toRole]}\n\n` +
+    `Tasks already assigned to them stay assigned. They need to sign out and back in to see the change.`);
+  if (!ok) { sel.value = fromRole; return; }
+
+  sel.disabled = true;
+  try {
+    const { data: { session } } = await window.sb.auth.getSession();
+    const res = await fetch("/api/create-dev-user", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({ action: "change_staff_role", user_id: userId, role: toRole }),
+    });
+    const out = await res.json();
+    if (!res.ok) throw new Error(out.error || "Request failed");
+    showToast(`${name} moved to ${STAFF_DEPARTMENT_ROLES[toRole]}.`);
+    openDevTeamModal();
+    if (document.getElementById("wbRoot") && typeof renderWorkBoard === "function") renderWorkBoard();
+  } catch (err) {
+    sel.value = fromRole;
+    sel.disabled = false;
+    showToast("Couldn't move: " + err.message);
+  }
 }
 
 async function createStaffAccount() {
