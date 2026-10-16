@@ -674,8 +674,8 @@ textarea.wbd-title:focus { outline: none; border-color: var(--navy); background:
 .wbd-composer-main { flex: 1; min-width: 0; }
 .wbd-composer-foot { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
 .wbd-composer-foot .a-btn-primary { width: auto; }
-.wbd-cshot-prev { position: relative; margin-top: 8px; display: inline-block; }
-.wbd-cshot-prev img { max-height: 140px; border-radius: 8px; border: 1px solid var(--border); display: block; }
+.wbd-cshot-prev { position: relative; margin-top: 8px; display: inline-block; max-width: calc(100% - 20px); }   /* wide screenshots stay inside the composer */
+.wbd-cshot-prev img { max-height: 140px; max-width: 100%; width: auto; height: auto; object-fit: contain; border-radius: 8px; border: 1px solid var(--border); display: block; }
 .wbd-cshot-prev button {
   position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
   border: 0; background: var(--danger); color: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer;
