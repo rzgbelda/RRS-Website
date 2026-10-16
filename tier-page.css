@@ -543,15 +543,15 @@
 
 /* ── Sticky CTA bar ───────────────────────────────────────── */
 .tp-sticky {
-  position: fixed; left: 50%; bottom: 18px; z-index: 900; transform: translate(-50%, 140%);
+  position: fixed; left: 50%; bottom: 18px; z-index: 900; transform: translate(-50%, calc(100% + 120px)); visibility: hidden;
   width: min(600px, calc(100% - 24px)); display: flex; align-items: center; gap: 14px; justify-content: space-between;
   background: rgba(11,31,56,.94); color: #fff; backdrop-filter: blur(12px); border-radius: 999px; padding: 10px 10px 10px 22px;
-  box-shadow: 0 24px 50px -20px rgba(0,0,0,.55); transition: transform .45s cubic-bezier(.2,.7,.2,1);
+  box-shadow: 0 24px 50px -20px rgba(0,0,0,.55); transition: transform .45s cubic-bezier(.2,.7,.2,1), visibility 0s linear .45s;
   font-family: 'Inter', sans-serif;
 }
-.tp-sticky.is-on { transform: translate(-50%, 0); }
+.tp-sticky.is-on { transform: translate(-50%, 0); visibility: visible; transition-delay: 0s; }
 .tp-sticky-text { font-size: 13.5px; line-height: 1.35; min-width: 0; }
-.tp-sticky-text b { display: block; font-size: 14.5px; }
+.tp-sticky-text b { display: block; font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tp-sticky-text span { color: rgba(255,255,255,.7); }
 .tp-sticky-ctas { display: flex; gap: 8px; flex-shrink: 0; }
 .tp-sticky .tp-btn { min-height: 42px; padding: 0 18px; font-size: 13.5px; }
@@ -594,10 +594,18 @@
   .tp-next img { width: 52px; height: 52px; }
   .tp-dots { left: 22px; transform: none; bottom: 34px; }
   .tp-counter { display: none; }
-  .tp-cats { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
-  .tp-cat { min-height: 250px; padding: 16px 16px 0; }
-  .tp-cat h3 { font-size: 16px; }
+  /* department tiles: one per row, copy left and photo right */
+  .tp-cats { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .tp-cat { min-height: 150px; padding: 20px 44% 20px 20px; justify-content: center; }
+  .tp-cat h3 { font-size: 18px; }
   .tp-cat p { display: none; }
+  .tp-cat img, .tp-cat img.is-cut {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    width: 36%; max-height: 120px; margin: 0; padding: 0;
+  }
+  .tp-cat:hover img { transform: translateY(-50%) scale(1.04); }
+  .tp-search { flex: 1 1 0; min-width: 0; }
+  .tp-tools .tp-select { flex: none; width: 128px; text-overflow: ellipsis; }   /* sized to "Featured", not the longest option */
   .tp-benefits, .tp-band { grid-template-columns: minmax(0, 1fr); }
   .tp-grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .tp-card-media { aspect-ratio: 16 / 9; }
@@ -606,7 +614,10 @@
   .tp-card-feat { display: none; }
   .tp-price { font-size: 23px; }
   .tp-help-card { min-height: 0; }
-  .tp-sticky { border-radius: 20px; padding: 10px 10px 10px 16px; bottom: 84px; }  /* above the Price Match / chat buttons */
+  /* bottom-left, beside the chat bubble; the Price Match button steps aside while it shows */
+  .tp-sticky { left: 12px; width: calc(100% - 96px); bottom: 14px; border-radius: 20px; padding: 8px 8px 8px 16px; transform: translateY(calc(100% + 40px)); }
+  .tp-sticky.is-on { transform: none; }
+  body.tp-sticky-on .price-beat-fab { display: none; }
   .tp-sticky-text span { display: none; }
   .tp-sticky .tp-btn--ghost { display: none; }
   .tp-est { border-radius: 24px; }

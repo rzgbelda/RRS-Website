@@ -733,7 +733,11 @@
     // The site's mini-cart docks in the same strip once the cart has items,
     // and carries its own checkout button, so the bar steps aside for it.
     const cartShown = () => { const mc = document.getElementById("miniCart"); return !!(mc && mc.offsetParent !== null && mc.getBoundingClientRect().height > 0); };
-    const sync = () => bar.classList.toggle("is-on", heroOut && !finalIn && !cartShown() && !$("#tpModal").classList.contains("is-open"));
+    const sync = () => {
+      const on = heroOut && !finalIn && !cartShown() && !$("#tpModal").classList.contains("is-open");
+      bar.classList.toggle("is-on", on);
+      document.body.classList.toggle("tp-sticky-on", on);   // phones hide the Price Match button under it
+    };
     window.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
     new MutationObserver(sync).observe(document.body, { childList: true });
     new IntersectionObserver(([en]) => { heroOut = !en.isIntersecting; sync(); }, { threshold: 0 }).observe(hero);
