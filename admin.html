@@ -2171,7 +2171,24 @@
               <option value="marketing">Head of Marketing &mdash; full marketing access</option>
               <option value="supply_chain">Supply Chain Manager &mdash; products, stock, orders, vendors</option>
               <option value="admin">Admin &mdash; users, tickets, hero/about only</option>
+              <option value="sales">Sales Closer &mdash; sales portal, earns commission on their code</option>
             </select>
+          </div>
+          <div id="devTeamSalesFields" style="display:none">
+            <div class="cms-form-group">
+              <label class="cms-label">Sales code</label>
+              <div style="display:flex;gap:8px">
+                <input id="devTeamSalesCode" class="a-input" placeholder="e.g. JANE24" style="flex:1;text-transform:uppercase">
+                <button type="button" class="a-btn-secondary" style="white-space:nowrap" onclick="generateStaffSalesCode()">Auto-Generate</button>
+              </div>
+            </div>
+            <div class="cms-form-group">
+              <label class="cms-label">Commission tier</label>
+              <select id="devTeamSalesTier" class="a-input">
+                <option value="tier1">Tier 1 (8% commission)</option>
+                <option value="tier2">Tier 2 (5% commission)</option>
+              </select>
+            </div>
           </div>
           <p id="devTeamRoleHint" class="tkt-dr-meta" style="margin:0 0 14px">
             They sign in at this same admin address, but only ever see the ticket board &mdash;

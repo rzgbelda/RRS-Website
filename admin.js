@@ -9260,6 +9260,7 @@ const STAFF_ROLE_HINTS = {
   admin: "They sign in at this same admin address, scoped to account management: Users (including creating/removing staff), Dev Tickets, Hero Section, and About Section only — no products, orders, pricing, or revenue.",
   operations: "Head of Operations. Hands out work to every team on the Work Board and sees the daily Team Report, plus everything Marketing can use. No Users or Settings.",
   supply_chain: "Supply Chain Manager. The Work Board plus Products, Inventory, Mix & Match, Families, Orders, Vendors and Order Exceptions. No CRM, campaigns, revenue reports or Users.",
+  sales: "Sales Closer. Signs in to the sales portal and earns commission on orders placed with their sales code. Also listed in the Sales Team tab.",
 };
 const STAFF_ROLE_LABEL = {
   developer: "Web Developer", marketing: "Head of Marketing", admin: "Admin",
@@ -9271,6 +9272,14 @@ function updateDevTeamRoleHint() {
   const role = document.getElementById("devTeamRole")?.value || "developer";
   const hint = document.getElementById("devTeamRoleHint");
   if (hint) hint.textContent = STAFF_ROLE_HINTS[role] || "";
+  const salesFields = document.getElementById("devTeamSalesFields");
+  if (salesFields) salesFields.style.display = role === "sales" ? "" : "none";
+}
+
+function generateStaffSalesCode() {
+  const name = document.getElementById("devTeamName").value.trim();
+  const prefix = name ? name.replace(/\s+/g, "").toUpperCase().slice(0, 4) : "SLS";
+  document.getElementById("devTeamSalesCode").value = prefix + Math.floor(1000 + Math.random() * 9000);
 }
 
 async function openDevTeamModal() {
@@ -9280,6 +9289,8 @@ async function openDevTeamModal() {
   document.getElementById("devTeamEmail").value = "";
   document.getElementById("devTeamName").value = "";
   document.getElementById("devTeamPassword").value = "";
+  document.getElementById("devTeamSalesCode").value = "";
+  document.getElementById("devTeamSalesTier").value = "tier1";
   document.getElementById("devTeamError").style.display = "none";
   document.getElementById("devTeamSearch").value = "";
   document.getElementById("devTeamCreateFields").style.display = "none";
@@ -9440,6 +9451,18 @@ async function createStaffAccount() {
   if (!email || !password) { errEl.textContent = "Email and password are required."; errEl.style.display = "block"; return; }
   if (password.length < 8)  { errEl.textContent = "Password must be at least 8 characters."; errEl.style.display = "block"; return; }
 
+  // Sales Closers also need a sales_reps row (code + tier), so they go
+  // through the same create_sales_user action the Sales Team tab uses.
+  const isSales = role === "sales";
+  const sales_code = document.getElementById("devTeamSalesCode").value.trim().toUpperCase();
+  const tier = document.getElementById("devTeamSalesTier").value;
+  if (isSales && !full_name)  { errEl.textContent = "Name is required for Sales Closers."; errEl.style.display = "block"; return; }
+  if (isSales && !sales_code) { errEl.textContent = "Sales code is required for Sales Closers."; errEl.style.display = "block"; return; }
+
+  const payload = isSales
+    ? { action: "create_sales_user", email, password, full_name, sales_code, tier, role: "sales" }
+    : { email, password, full_name, role };
+
   const btn = document.getElementById("devTeamCreateBtn");
   btn.disabled = true; btn.textContent = "Creating…";
 
@@ -9451,10 +9474,10 @@ async function createStaffAccount() {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + (session?.access_token || ""),
       },
-      body: JSON.stringify({ email, password, full_name, role }),
+      body: JSON.stringify(payload),
     });
     const out = await res.json();
-    if (!res.ok) throw new Error(out.error || "Request failed");
+    if (!res.ok || out.error) throw new Error(out.error || "Request failed");
 
     const roleLabel = STAFF_ROLE_LABEL[role] || "Developer";
     showToast(out.warning
@@ -9466,6 +9489,8 @@ async function createStaffAccount() {
     document.getElementById("devTeamEmail").value = "";
     document.getElementById("devTeamName").value = "";
     document.getElementById("devTeamPassword").value = "";
+    document.getElementById("devTeamSalesCode").value = "";
+    if (isSales && typeof loadSalesRepsTable === "function") loadSalesRepsTable();
   } catch (err) {
     errEl.textContent = err.message;
     errEl.style.display = "block";

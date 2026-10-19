@@ -147,10 +147,17 @@ module.exports = async (req, res) => {
       .from('profiles').select('role').eq('id', caller.user.id).single();
 
     const callerRole = callerProfile?.role;
-    const isUserAction = body.action === 'delete_user' || body.action === 'create_sales_user';
+    const isSalesCreate = body.action === 'create_sales_user';
+    const isUserAction = body.action === 'delete_user' || isSalesCreate;
     const isMove = body.action === 'change_staff_role';
     const isActive = body.action === 'set_staff_active';
-    if (isUserAction && !ACCOUNT_MANAGER_ROLES.includes(callerRole)) {
+    // Sales Closer logins can also be made from Staff Accounts, which the
+    // Developer (company IT) runs -- so Developer may create them too.
+    // Deleting users stays Owner/Admin only.
+    if (isSalesCreate && ![...ACCOUNT_MANAGER_ROLES, 'developer'].includes(callerRole)) {
+      return res.status(403).json({ error: 'Only Owner, Admin or Developer accounts can create sales logins.' });
+    }
+    if (isUserAction && !isSalesCreate && !ACCOUNT_MANAGER_ROLES.includes(callerRole)) {
       return res.status(403).json({ error: 'Only Owner or Admin accounts can manage users.' });
     }
     if (isMove && !STAFF_MOVER_ROLES.includes(callerRole)) {
