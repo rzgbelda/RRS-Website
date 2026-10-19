@@ -228,7 +228,7 @@ async function saveMyProfile() {
 
 const ADMIN_PANEL_ROLES = ["owner", "admin", "sub_distributor", "developer", "marketing", "operations", "supply_chain", "sales", "sales_manager"];
 
-const ADMIN_ONLY_TABS = ["products","inventory","mix-match","product-families","orders","users","manage-hero","manage-about","settings","seo","best-deals","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
+const ADMIN_ONLY_TABS = ["products","inventory","mix-match","product-families","orders","users","manage-hero","manage-about","settings","seo","best-deals","coupons","crm","campaigns","vendors","order-exceptions","blog","sales-tax"];
 
 // A developer account is scoped to the ticket board -- plus SEO, shared
 // with marketing per the CEO's explicit instruction ("determine which SEO
@@ -241,7 +241,7 @@ const DEVELOPER_TABS = ["dev-tickets", "seo"];
 // account/user management and the dev ticket board.
 const MARKETING_TABS = [
   "dashboard", "crm", "campaigns", "visitor-insights", "products", "inventory", "mix-match", "product-families", "orders",
-  "quote-requests", "price-match-requests", "manage-hero", "manage-about", "best-deals",
+  "quote-requests", "price-match-requests", "manage-hero", "manage-about", "best-deals", "coupons",
   "sub-distributors", "seo", "reports", "dev-tickets", "vendors", "order-exceptions", "blog",
 ];
 
@@ -463,7 +463,7 @@ function switchTab(tab) {
       orders:"Orders", users:"Users", reports:"Reports & Analytics", settings:"Settings",
       seo:"SEO Health", "manage-hero":"Hero Section", "manage-about":"About Section",
       "quote-requests":"Quote Requests", "price-match-requests":"Price Match Requests", "dev-tickets":"Work Board",
-      "best-deals":"Best Deals Campaign", "crm":"CRM & Leads", "campaigns":"Campaigns",
+      "best-deals":"Best Deals Campaign", "coupons":"Coupons", "crm":"CRM & Leads", "campaigns":"Campaigns",
       "visitor-insights":"Visitor Insights",
       "vendors":"Vendors", "order-exceptions":"Order Exceptions", "blog":"Blog",
       "sales-tax":"Sales Tax", "partner":"My Dashboard", "partner-products":"Products" }[tab] || tab;
@@ -485,6 +485,7 @@ function switchTab(tab) {
   if (tab === "price-match-requests") renderPriceMatchRequestsTable();
   if (tab === "dev-tickets")      renderWorkBoard();   // admin-work.js
   if (tab === "best-deals")       renderBestDealsTab();
+  if (tab === "coupons")          renderCouponsTab();  // admin-coupons.js
   if (tab === "crm")              renderCrmTab();
   if (tab === "campaigns")        renderCampaignsTab();
   if (tab === "visitor-insights") renderVisitorInsightsTab();
