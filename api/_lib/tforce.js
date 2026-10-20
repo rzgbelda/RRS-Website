@@ -106,7 +106,6 @@ async function rateFreight({ origin, dest, weightLb }) {
 
   const maxPallet = Number(process.env.TFORCE_PALLET_MAX_LB) || 2000;
   const pallets = Math.max(1, Math.ceil(weightLb / maxPallet));
-  const perPallet = Math.round((weightLb / pallets) * 10) / 10;
   const dims = palletDims();
   const cls = String(process.env.TFORCE_DEFAULT_CLASS || '70');
 
@@ -141,16 +140,13 @@ async function rateFreight({ origin, dest, weightLb }) {
       billingCode: process.env.TFORCE_BILLING_CODE || '10',
     },
     serviceOptions: delivery.length ? { delivery } : undefined,
+    // No handlingUnits: with them the API switches to density rating, which
+    // RRS's account doesn't have, and answers 400 "NMFC and class number are
+    // missing" (tested 2026-10-20). Class rating on the commodity line only.
     commodities: [{
       class: cls,
       pieces: pallets,
       weight: { weight: Math.round(weightLb * 10) / 10, weightUnit: 'LBS' },
-      packagingType: 'PLT',
-      dimensions: dims,
-    }],
-    handlingUnits: [{
-      pieces: pallets,
-      weight: { weight: perPallet, weightUnit: 'LBS' },
       packagingType: 'PLT',
       dimensions: dims,
     }],
