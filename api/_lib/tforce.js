@@ -17,7 +17,11 @@
 //   TFORCE_SUBSCRIPTION_KEY    Ocp-Apim-Subscription-Key, only if TForce
 //                              issues one (the OAuth token alone may suffice)
 //   TFORCE_BASE_URL            default https://api.tforcefreight.com
-//   TFORCE_SERVICE_CODE        default 349 (Standard LTL); 308 = LTL
+//   TFORCE_API_VERSION         default v1 (production); cie-v1 = TForce's
+//                              test environment (its negotiated rates are not
+//                              the contract rates)
+//   TFORCE_SERVICE_CODE        default 308 (LTL, US/US and US/CA); 349 is
+//                              US/Mexico only
 //   TFORCE_BILLING_CODE        default 10 (prepaid by RRS)
 //   TFORCE_PAYER_ZIP/CITY/STATE  payer address (RRS billing address); defaults
 //                                to the Plymouth NC warehouse
@@ -120,7 +124,7 @@ async function rateFreight({ origin, dest, weightLb }) {
 
   const body = {
     requestOptions: {
-      serviceCode: process.env.TFORCE_SERVICE_CODE || '349',
+      serviceCode: process.env.TFORCE_SERVICE_CODE || '308',
       pickupDate: pickupDate(),
       type: 'L',
       densityEligible: false,
@@ -152,7 +156,8 @@ async function rateFreight({ origin, dest, weightLb }) {
     }],
   };
 
-  const resp = await fetchWithTimeout(`${BASE}/rating/getRate?api-version=v1`, {
+  const version = encodeURIComponent(process.env.TFORCE_API_VERSION || 'v1');
+  const resp = await fetchWithTimeout(`${BASE}/rating/getRate?api-version=${version}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -161,8 +166,17 @@ async function rateFreight({ origin, dest, weightLb }) {
     },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw new Error(`TForce rating failed (${resp.status})`);
+  if (!resp.ok) {
+    let why = '';
+    try { why = ' - ' + (await resp.text()).slice(0, 300); } catch (_) {}
+    throw new Error(`TForce rating failed (${resp.status})${why}`);
+  }
   const data = await resp.json();
+  // publishedRates=true means the tariff came back, not the contract rate --
+  // usually a payer address that doesn't match the TForce account.
+  if (data && data.summary && data.summary.publishedRates) {
+    console.warn('[tforce] published (non-negotiated) rates returned');
+  }
 
   const detail = (data && data.detail) || [];
   const priced = detail.map(d => {
