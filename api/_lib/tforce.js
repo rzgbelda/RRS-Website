@@ -22,7 +22,10 @@
 //                              the contract rates)
 //   TFORCE_SERVICE_CODE        default 308 (LTL, US/US and US/CA); 349 is
 //                              US/Mexico only
-//   TFORCE_BILLING_CODE        default 10 (prepaid by RRS)
+//   TFORCE_BILLING_CODE        default 30 (third party): the supplier is the
+//                              shipper and RRS pays. Only 30 returns the
+//                              contract rate from supplier warehouses; 10
+//                              (prepaid) does not (tested 2026-10-22)
 //   TFORCE_PAYER_ZIP/CITY/STATE  payer address (RRS billing address); defaults
 //                                to the Plymouth NC warehouse
 //   TFORCE_DEFAULT_CLASS       freight class, default 70
@@ -137,7 +140,7 @@ async function rateFreight({ origin, dest, weightLb }) {
     },
     payment: {
       payer: { address: addr(payer) },
-      billingCode: process.env.TFORCE_BILLING_CODE || '10',
+      billingCode: process.env.TFORCE_BILLING_CODE || '30',
     },
     serviceOptions: delivery.length ? { delivery } : undefined,
     // No handlingUnits: with them the API switches to density rating, which
