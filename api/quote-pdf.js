@@ -247,7 +247,9 @@ async function buildQuotePdf(q) {
   const hidePricing = !!q.hide_pricing;
   const COL_QTY   = hidePricing ? RIGHT : 348;
   const COL_PRICE = 448;
-  const COL_TOTAL = RIGHT;
+  // Inset like the Subtotal/Total figures below; flush with the navy header
+  // band the TOTAL label read as clipped.
+  const COL_TOTAL = RIGHT - 10;
 
   function drawTableHead() {
     page.drawRectangle({ x: MARGIN, y: y - 20, width: RIGHT - MARGIN, height: 20, color: NAVY });
@@ -332,7 +334,10 @@ async function buildQuotePdf(q) {
   // freight_fee stays on the record for staff margin reporting either way.
   const freightFee = 0;
   const qualifiesFreeShip = itemsSubtotal >= FREE_SHIPPING_MIN_SUBTOTAL;
-  if (!hidePricing) {
+  // Not when an in-house delivery fee is set: that row IS the delivery
+  // charge, and "Shipping -- Quoted separately" under it contradicted the
+  // terms ("Delivery ... is included in the total above").
+  if (!hidePricing && !(deliveryFee > 0)) {
     if (ensure(24)) drawTableHead();
     if ((items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 1) {
       page.drawRectangle({ x: MARGIN, y: y - 18, width: RIGHT - MARGIN, height: 18, color: rgb(0.980, 0.988, 0.996) });
@@ -357,7 +362,10 @@ async function buildQuotePdf(q) {
   const grand = q.grand_total != null ? Number(q.grand_total) : subtotal + taxAmount;
 
   if (!hidePricing) {
-    ensure(30 + 46);
+    ensure(30 + 46 + 16);
+    // Gap below the last table row: drawn straight at y, the Subtotal
+    // baseline sat 5pt under that row's text and the two overprinted.
+    y -= 16;
     const subLbl = 'Subtotal', subVal = money(subtotal);
     page.drawText(subLbl, { x: MARGIN, y, size: 8.5, font: reg, color: GRAY_MID });
     page.drawText(subVal, { x: rightOf(subVal, RIGHT - 12, 8.5, bold), y, size: 8.5, font: bold, color: NAVY });
