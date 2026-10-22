@@ -262,6 +262,11 @@
         </div>
 
         <label class="checkbox-line">
+          <input type="checkbox" id="checkout-liftgate">
+          Liftgate delivery needed (no loading dock). Applies to pallet shipments.
+        </label>
+
+        <label class="checkbox-line">
           <input type="checkbox">
           Billing address is the same as delivery address.
         </label>
@@ -455,7 +460,7 @@
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
 <script src="delivery-estimate.js?v=20261013n"></script>
-<script src="script.js?v=20261022a"></script>
+<script src="script.js?v=20261023a"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
@@ -591,6 +596,7 @@ async function saveCheckoutAndProceed() {
     state:    document.getElementById('checkout-state')?.value          || '',
     zip:      document.getElementById('checkout-zip')?.value.trim()    || '',
     notes:    document.getElementById('checkout-notes')?.value.trim()    || '',
+    liftgate: !!document.getElementById('checkout-liftgate')?.checked,
     orderType,
     reorderFrequency, reorderNextDate, reorderCustomDates,
     referral:  document.getElementById('checkout-referral-code')?.value.trim() || '',

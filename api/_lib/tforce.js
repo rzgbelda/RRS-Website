@@ -121,7 +121,7 @@ function classForDensity(pcf) {
 
 // One rate for `weightLb` of palletised freight from `origin` to `dest`.
 // Returns { amount, service, transitDays } or throws.
-async function rateFreight({ origin, dest, weightLb }) {
+async function rateFreight({ origin, dest, weightLb, liftgate }) {
   // The portal lists an Ocp-Apim-Subscription-Key header, but TForce's
   // integration guide only describes OAuth and a fresh developer profile has
   // no subscription to take a key from -- so it is sent only when set.
@@ -151,7 +151,11 @@ async function rateFreight({ origin, dest, weightLb }) {
   const residential = String(process.env.TFORCE_RESIDENTIAL || '').toLowerCase() === 'true';
   const delivery = [];
   if (residential) delivery.push('RESD');
-  if (String(process.env.TFORCE_LIFTGATE || 'true').toLowerCase() !== 'false') delivery.push('LIFD');
+  // The buyer's checkout choice wins; TFORCE_LIFTGATE is the default for a
+  // request that doesn't say (cart estimate, older page).
+  const wantLiftgate = typeof liftgate === 'boolean' ? liftgate
+    : String(process.env.TFORCE_LIFTGATE || 'true').toLowerCase() !== 'false';
+  if (wantLiftgate) delivery.push('LIFD');
 
   const body = {
     requestOptions: {

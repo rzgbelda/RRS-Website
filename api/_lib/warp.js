@@ -128,7 +128,7 @@ async function postOnce(body, pathName = '/freights/quote', timeoutMs = TIMEOUT_
  * freight takes `weightLb`. Returns { amount, transitDays, quoteId, mode }.
  * Throws if WARP gives no usable price -- the caller must not guess one.
  */
-async function rateWarp({ mode, origin, dest, packages, weightLb }) {
+async function rateWarp({ mode, origin, dest, packages, weightLb, liftgate }) {
   if (!process.env.WARP_API_KEY) throw new Error('WARP_API_KEY not configured');
   const body = {
     pickupDate: pickupDate(),
@@ -137,7 +137,11 @@ async function rateWarp({ mode, origin, dest, packages, weightLb }) {
     listItems: mode === 'parcel' ? parcelItems(packages) : palletItems(weightLb),
     shipmentType: mode === 'parcel' ? 'PARCEL' : 'LTL',
   };
-  const services = String(process.env.WARP_DELIVERY_SERVICES || '').split(',').map(s => s.trim()).filter(Boolean);
+  let services = String(process.env.WARP_DELIVERY_SERVICES || '').split(',').map(s => s.trim()).filter(Boolean);
+  // Checkout's liftgate checkbox overrides WARP_DELIVERY_SERVICES for that
+  // one service; undefined (no checkbox) keeps the env list as is.
+  if (liftgate === true && !services.includes('liftgate-delivery')) services.push('liftgate-delivery');
+  if (liftgate === false) services = services.filter(s => s !== 'liftgate-delivery');
   if (mode !== 'parcel' && services.length) body.deliveryServices = services.map(service => ({ service, quantity: 1 }));
 
   const single = (async () => {

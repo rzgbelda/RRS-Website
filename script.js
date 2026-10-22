@@ -4683,6 +4683,12 @@ function loadCheckoutProducts() {
     let t;
     zipEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(loadCheckoutProducts, 500); });
   }
+  // Liftgate changes the freight price (a flat accessorial), so re-quote.
+  const liftEl = document.getElementById('checkout-liftgate');
+  if (liftEl && !liftEl.dataset.shipListenerBound) {
+    liftEl.dataset.shipListenerBound = '1';
+    liftEl.addEventListener('change', loadCheckoutProducts);
+  }
 }
 
 // Real delivery fee for the checkout summary: asks the server (the same
@@ -4736,7 +4742,11 @@ function fetchCheckoutQuote() {
     state, zip,
   };
   rememberShipZip(zip);
-  const key = JSON.stringify([items, state, zip]);
+  // Only on the checkout page; the cart's ZIP estimate has no checkbox and
+  // leaves it to the server default.
+  const liftEl = document.getElementById('checkout-liftgate');
+  const liftgate = liftEl ? !!liftEl.checked : undefined;
+  const key = JSON.stringify([items, state, zip, liftgate]);
   if (_shipQuoteCache[key]) return _shipQuoteCache[key];
   const p = fetch('/api/create-payment-intent', {
     method: 'POST',
@@ -4746,7 +4756,7 @@ function fetchCheckoutQuote() {
       shipping_token: savedShipToken() || undefined,
       items,
       state,
-      metadata: { fulfillment_method: 'ship', shipping_address: JSON.stringify(addr) },
+      metadata: { fulfillment_method: 'ship', shipping_address: JSON.stringify(addr), liftgate },
     }),
   })
     .then(r => r.json())

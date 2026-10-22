@@ -44,8 +44,17 @@ function isAllowedOrigin(origin) {
 const ALLOWED_METADATA = [
   'order_number', 'customer_name', 'customer_email', 'business_name',
   'phone', 'shipping_address', 'items_count', 'notes', 'order_type',
-  'fulfillment_method', 'referral_code',
+  'fulfillment_method', 'referral_code', 'liftgate',
 ];
+
+// Checkout's liftgate checkbox: true/false when the page sent it, undefined
+// (server default) for an older page that has no checkbox.
+function liftgateOpt(md) {
+  const v = md && md.liftgate;
+  if (v === true || v === 'true') return true;
+  if (v === false || v === 'false') return false;
+  return undefined;
+}
 function safeMetadata(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
@@ -87,7 +96,7 @@ module.exports = async (req, res) => {
     if (qb && qb.quote_only === true) {
       if (!rateLimit(req, res, { bucket: 'quote', limit: 30, windowMs: 60000 })) return;
       const md = qb.metadata || {};
-      const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address, { shippingToken: qb.shipping_token });
+      const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address, { shippingToken: qb.shipping_token, liftgate: liftgateOpt(md) });
       if (!q.ok) return res.status(400).json({ error: q.error });
       // Volume (freight) orders get no delivery figure: they go to a custom
       // quote instead (see needsFreightQuote in _lib/price-cart.js).
@@ -128,7 +137,7 @@ module.exports = async (req, res) => {
     // checkout already puts it) rather than as its own body field.
     // The customer's address rides in metadata.shipping_address (JSON):
     // per-distributor shipping is rated from each warehouse to this ZIP.
-    const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address, { shippingToken: shipping_token });
+    const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address, { shippingToken: shipping_token, liftgate: liftgateOpt(metadata) });
     if (!priced.ok) return res.status(400).json({ error: priced.error });
     // Enforced here, not just in the checkout UI: a volume order is never
     // charged a guessed freight figure, even from a stale page or a

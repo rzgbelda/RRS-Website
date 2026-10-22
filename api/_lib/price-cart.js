@@ -386,6 +386,11 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // gave a ZIP; in every other case the flat formula above stands, so
   // deploying this changes nothing until it is switched on.
   const dest = parseDestination(destination);
+  // opts.liftgate: the checkout checkbox (true/false), undefined from a page
+  // without it. Part of the price-ticket key, since a liftgate changes the
+  // freight price for the same cart and ZIP.
+  const liftgate = typeof opts.liftgate === 'boolean' ? opts.liftgate : undefined;
+  const tokenZip = dest ? dest.zip + (liftgate ? '+liftgate' : '') : null;
   // UPS rates parcel shipments; TForce rates freight (over 150 lb). Each has
   // its own switch, and a shipment whose carrier is off or fails keeps the
   // weight estimate.
@@ -404,7 +409,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     if (!dest) {
       shipping = 0;
       shippingUnavailable = 'zip';
-    } else if ((ticketShipping = readShippingToken(opts.shippingToken, wanted, dest.zip)) != null) {
+    } else if ((ticketShipping = readShippingToken(opts.shippingToken, wanted, tokenZip)) != null) {
       shipping = ticketShipping;
       console.log('[shipping] reused quoted delivery', shipping, 'for ZIP', dest.zip);
     } else {
@@ -420,7 +425,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
       // checkout is never left without a price because of TForce.
       const tforceLtl = new Set(String(process.env.TFORCE_LTL_DISTRIBUTORS || '')
         .split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
-      const warpFreight = a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb });
+      const warpFreight = a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb, liftgate });
       const carrier = {
         name: 'warp',
         rateParcel: a => rateWarp({ mode: 'parcel', origin: a.origin, dest: a.dest, packages: a.packages }),
@@ -428,7 +433,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
           const slug = String((a.lines && a.lines[0] && a.lines[0].distributor) || '').trim().toLowerCase();
           if (tforceLtl.has(slug)) {
             try {
-              const r = await require('./tforce').rateFreight(a);
+              const r = await require('./tforce').rateFreight({ ...a, liftgate });
               console.log('[shipping] tforce', slug, a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
               return r;
             } catch (err) {
@@ -492,7 +497,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     needsFreightQuote,
     shippingUnavailable,
     // Ticket for this exact delivery price (WARP only), sent back by the page.
-    shippingToken: warpOn && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, dest.zip, shipping) : null,
+    shippingToken: warpOn && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, tokenZip, shipping) : null,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,
