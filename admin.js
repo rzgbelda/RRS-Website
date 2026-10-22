@@ -2070,7 +2070,7 @@ let _csvRunning = false;
 // The four combined values were added to the DB CHECK constraint by
 // 20261012c_prestige_combined_tier_values.sql; without them here an import
 // silently nulled product_tier on every Prestige sheet/set product.
-const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250","300","600","1.0 Mil","1.25 Mil","1.5 Mil","2 Mil","200 Hospitality","300 Hospitality","600 Luxury Blend","600 Wrinkle-Free"];
+const PRODUCT_TIERS = ["Economy","Premium","Ultra Luxury","Grand Luxury","Luxury","Suites","Ringspun","Hospitality","Wrinkle-Free","180","200","250","300","600","1.0 Mil","1.25 Mil","1.5 Mil","2 Mil","200 Hospitality","300 Hospitality","600 Luxury Blend","600 Wrinkle-Free"];
 
 /* Maps a spreadsheet cell to a valid product_tier, or null.
    Anything unrecognized becomes null rather than being passed through: the

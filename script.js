@@ -2118,7 +2118,7 @@ function openVariantModal(card) {
     // them here the 4 LDPE can-liner thicknesses would all share indexOf's
     // -1 and sort in whatever order Set() happened to produce, not
     // thinnest-to-thickest.
-    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Grand Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
     const sorted = [...tiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     body = sorted.map(t => `
       <div class="vm-group">
@@ -3426,7 +3426,7 @@ function injectProductVariantSelector(variants, activeProduct) {
     // Same tier vocabulary/sort order as openVariantModal's own `order`
     // above -- keep the two in sync, or the catalog-card modal and this
     // product-page picker can show a family's tiers in different sequence.
-    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
+    const order = ["180", "200", "250", "Economy", "Premium", "Suites", "Ringspun", "Luxury", "Grand Luxury", "Ultra Luxury", "Hospitality", "Wrinkle-Free", "1.0 Mil", "1.25 Mil", "1.5 Mil", "2 Mil"];
     const sortedTiers = [...sizeTiers].sort((a, b) => order.indexOf(a) - order.indexOf(b));
     // Active tier is whichever the current product belongs to, so a size
     // switch within a tier (switchProductVariant) never silently jumps the
