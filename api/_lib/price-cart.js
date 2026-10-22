@@ -410,10 +410,33 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     } else {
       const vendorsBySlug = await loadVendors(supabase, shipLines);
       const { rateWarp } = require('./warp');
+      // TForce LTL (2026-10-23): RRS books LTL itself on its TForce contract,
+      // billed third party, so for the distributors listed in
+      // TFORCE_LTL_DISTRIBUTORS (e.g. "starlinen,innstyle") the cart charges
+      // TForce's contract rate -- what RRS actually pays. Only linen
+      // suppliers belong there: the density class table is the linens one.
+      // Parcel stays on WARP, and a shipment TForce refuses (too many
+      // pallets, API error) falls back to WARP's freight quote, so the
+      // checkout is never left without a price because of TForce.
+      const tforceLtl = new Set(String(process.env.TFORCE_LTL_DISTRIBUTORS || '')
+        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
+      const warpFreight = a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb });
       const carrier = {
         name: 'warp',
         rateParcel: a => rateWarp({ mode: 'parcel', origin: a.origin, dest: a.dest, packages: a.packages }),
-        rateFreight: a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb }),
+        rateFreight: async a => {
+          const slug = String((a.lines && a.lines[0] && a.lines[0].distributor) || '').trim().toLowerCase();
+          if (tforceLtl.has(slug)) {
+            try {
+              const r = await require('./tforce').rateFreight(a);
+              console.log('[shipping] tforce', slug, a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
+              return r;
+            } catch (err) {
+              console.warn('[shipping] tforce failed for', slug, '- using WARP:', err.message);
+            }
+          }
+          return warpFreight(a);
+        },
       };
       const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier, strict: true });
       console.log('[shipping]', JSON.stringify(r.shipments));

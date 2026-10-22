@@ -4,9 +4,11 @@
 // Lives in _lib for the same reason ups.js does: Vercel's Hobby plan caps the
 // project at 12 serverless functions.
 //
-// Nothing here is used unless TFORCE_RATING_ENABLED=true (see price-cart.js),
-// and any failure falls back to the weight estimate in shipping.js, so
-// deploying this file changes no checkout behaviour by itself.
+// Used by price-cart.js in two places: with WARP on, for the LTL shipments
+// of the distributors in TFORCE_LTL_DISTRIBUTORS (a failure falls back to
+// WARP); with WARP off, for all freight when TFORCE_RATING_ENABLED=true (a
+// failure falls back to the weight estimate). With neither set, deploying
+// this file changes no checkout behaviour.
 //
 // Env (all required once enabled):
 //   TFORCE_CLIENT_ID, TFORCE_CLIENT_SECRET   OAuth app from the TForce portal
@@ -28,9 +30,16 @@
 //                              (prepaid) does not (tested 2026-10-22)
 //   TFORCE_PAYER_ZIP/CITY/STATE  payer address (RRS billing address); defaults
 //                                to the Plymouth NC warehouse
-//   TFORCE_DEFAULT_CLASS       freight class, default 70
-//   TFORCE_PALLET_MAX_LB       pallet weight used to count pallets, default 2000
+//   TFORCE_DEFAULT_CLASS       fixed freight class; unset = class from pallet
+//                              density (NMFC 049260 / 149265 table, below)
+//   TFORCE_PALLET_MAX_LB       goods per pallet used to count pallets, default
+//                              750 (a 48 in. pallet of linens rarely tops it)
+//   TFORCE_PALLET_TARE_LB      weight of the empty pallet, default 40
 //   TFORCE_PALLET_DIMS         "LxWxH" in inches, default 48x40x48
+//   TFORCE_MAX_PALLETS         above this many pallets the shipment is
+//                              refused (default 6, about 10 linear ft): over
+//                              12 ft TForce bills a volume/truckload quote
+//                              that only Bruce Basehore can price
 //   TFORCE_LIFTGATE            "false" to drop the liftgate-delivery default
 //   TFORCE_RESIDENTIAL         "true" to rate delivery as residential
 
@@ -98,6 +107,18 @@ function palletDims() {
   return m ? { length: Number(m[1]), width: Number(m[2]), height: Number(m[3]), unit: 'IN' } : { length: 48, width: 40, height: 48, unit: 'IN' };
 }
 
+// NMFC 049260 (sheets, towels) and 149265 (comforters, pillows, pads) share
+// one density scale: [pounds per cubic foot below which, class].
+const DENSITY_CLASSES = [
+  [1, '400'], [2, '300'], [4, '250'], [6, '175'], [8, '125'], [10, '100'],
+  [12, '92.5'], [15, '85'], [22.5, '70'], [30, '65'], [35, '60'], [50, '55'],
+];
+
+function classForDensity(pcf) {
+  const hit = DENSITY_CLASSES.find(([below]) => pcf < below);
+  return hit ? hit[1] : '50';
+}
+
 // One rate for `weightLb` of palletised freight from `origin` to `dest`.
 // Returns { amount, service, transitDays } or throws.
 async function rateFreight({ origin, dest, weightLb }) {
@@ -107,10 +128,18 @@ async function rateFreight({ origin, dest, weightLb }) {
   const key = process.env.TFORCE_SUBSCRIPTION_KEY;
   const token = await getToken();
 
-  const maxPallet = Number(process.env.TFORCE_PALLET_MAX_LB) || 2000;
+  const maxPallet = Number(process.env.TFORCE_PALLET_MAX_LB) || 750;
   const pallets = Math.max(1, Math.ceil(weightLb / maxPallet));
+  const maxPallets = Number(process.env.TFORCE_MAX_PALLETS) || 6;
+  if (pallets > maxPallets) throw new Error(`${pallets} pallets needs a volume/truckload quote`);
   const dims = palletDims();
-  const cls = String(process.env.TFORCE_DEFAULT_CLASS || '70');
+  // Billed weight includes the pallets themselves, as on a real BOL.
+  const tare = process.env.TFORCE_PALLET_TARE_LB != null ? Number(process.env.TFORCE_PALLET_TARE_LB) : 40;
+  const grossLb = weightLb + pallets * tare;
+  const cubicFt = pallets * dims.length * dims.width * dims.height / 1728;
+  // Class from density, as TForce rates it (Bruce's quotes: 227 lb on one
+  // pallet = class 175). A fixed TFORCE_DEFAULT_CLASS still overrides.
+  const cls = String(process.env.TFORCE_DEFAULT_CLASS || classForDensity(grossLb / cubicFt));
 
   const payer = {
     city: process.env.TFORCE_PAYER_CITY || 'Plymouth',
@@ -149,7 +178,7 @@ async function rateFreight({ origin, dest, weightLb }) {
     commodities: [{
       class: cls,
       pieces: pallets,
-      weight: { weight: Math.round(weightLb * 10) / 10, weightUnit: 'LBS' },
+      weight: { weight: Math.round(grossLb * 10) / 10, weightUnit: 'LBS' },
       packagingType: 'PLT',
       dimensions: dims,
     }],
