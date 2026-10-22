@@ -2314,8 +2314,17 @@ function searchTypeRank(product) {
   return i === -1 ? nouns.length : i;
 }
 
+// True when every word of the search is in the product's own name, family
+// or item number -- not just its marketing copy. A hand towel's overview says
+// "pair with matching bath towels", so it is no answer to a "bath towel"
+// search; applyFilters shows only these name matches whenever there are any.
+function searchNameMatch(product, keyword) {
+  const hay = [product.name, product.productFamily, product.itemNumber].join(" ").toLowerCase();
+  return keyword.split(/\s+/).filter(Boolean).every(w => hay.includes(w));
+}
+
 function sortSearchResults(products, keyword) {
-  const inName = p => (p.name || "").toLowerCase().includes(keyword) ? 0 : 1;
+  const inName = p => searchNameMatch(p, keyword) ? 0 : 1;
   return products.slice().sort((a, b) =>
     (inName(a) - inName(b)) ||
     (a.category || "").localeCompare(b.category || "") ||
@@ -2329,7 +2338,7 @@ function getActiveTypes() {
 }
 
 function applyFilters() {
-  const keyword   = (document.getElementById('search-input')?.value || '').toLowerCase();
+  const keyword   = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
   const categories = getActiveCategories();
   const sortAZ     = categories.includes('a-z');
   const catFilters = categories.filter(c => c !== 'a-z');
@@ -2371,6 +2380,13 @@ function applyFilters() {
 
     return true;
   });
+
+  // Products named after the search win outright; copy-only matches are the
+  // fallback for searches no product name answers (see searchNameMatch).
+  if (keyword) {
+    const named = filtered.filter(p => searchNameMatch(p, keyword));
+    if (named.length) filtered = named;
+  }
 
   if (sortAZ) {
     filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
