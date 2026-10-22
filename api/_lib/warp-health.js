@@ -13,6 +13,7 @@ const { sendShippingAlert } = require('./shipping-alert');
 
 async function runWarpHealthCheck(supabase) {
   if (String(process.env.WARP_RATING_ENABLED || '').toLowerCase() !== 'true') return { skipped: 'WARP_RATING_ENABLED is off' };
+  if (String(process.env.SHIPPING_RATER || '').trim().toLowerCase() === 'tforce') return { skipped: 'SHIPPING_RATER=tforce (WARP not used at checkout)' };
   const dest = { zip: process.env.WARP_HEALTH_ZIP || '27603' };
 
   const { data: products, error: pErr } = await supabase.from('products').select('distributor').eq('is_active', true);

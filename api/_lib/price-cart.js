@@ -402,10 +402,17 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // Strict: no estimate is ever charged in its place -- if WARP cannot
   // price a shipment, shippingUnavailable is set, payment is refused
   // (create-payment-intent.js) and Eric is emailed (_lib/shipping-alert.js).
-  const warpOn = String(process.env.WARP_RATING_ENABLED || '').toLowerCase() === 'true';
+  // SHIPPING_RATER=tforce (2026-10-23): WARP off. Pallet (LTL) shipments
+  // from every distributor are rated on RRS's TForce contract -- the freight
+  // RRS books itself on tforcefreight.com -- and parcels on UPS. Same strict
+  // rules as WARP: no price, no payment, and Eric is emailed. Overrides
+  // WARP_RATING_ENABLED, so switching back is just removing this variable.
+  const tforcePrimary = String(process.env.SHIPPING_RATER || '').trim().toLowerCase() === 'tforce';
+  const warpOn = !tforcePrimary && String(process.env.WARP_RATING_ENABLED || '').toLowerCase() === 'true';
+  const strictRating = warpOn || tforcePrimary;
   let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'unpriced'
   let ticketShipping = null;
-  if (!isPickup && warpOn) {
+  if (!isPickup && strictRating) {
     if (!dest) {
       shipping = 0;
       shippingUnavailable = 'zip';
@@ -414,6 +421,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
       console.log('[shipping] reused quoted delivery', shipping, 'for ZIP', dest.zip);
     } else {
       const vendorsBySlug = await loadVendors(supabase, shipLines);
+      const slugOf = a => String((a.lines && a.lines[0] && a.lines[0].distributor) || '').trim().toLowerCase();
       const { rateWarp } = require('./warp');
       // TForce LTL (2026-10-23): RRS books LTL itself on its TForce contract,
       // billed third party, so for the distributors listed in
@@ -426,14 +434,22 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
       const tforceLtl = new Set(String(process.env.TFORCE_LTL_DISTRIBUTORS || '')
         .split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
       const warpFreight = a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb, liftgate });
-      const carrier = {
+      const carrier = tforcePrimary ? {
+        name: 'tforce',
+        rateParcel: a => require('./ups').rateParcelCheapest(a),
+        rateFreight: async a => {
+          const r = await require('./tforce').rateFreight({ ...a, liftgate, distributor: slugOf(a) });
+          console.log('[shipping] tforce', slugOf(a), a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
+          return r;
+        },
+      } : {
         name: 'warp',
         rateParcel: a => rateWarp({ mode: 'parcel', origin: a.origin, dest: a.dest, packages: a.packages }),
         rateFreight: async a => {
-          const slug = String((a.lines && a.lines[0] && a.lines[0].distributor) || '').trim().toLowerCase();
+          const slug = slugOf(a);
           if (tforceLtl.has(slug)) {
             try {
-              const r = await require('./tforce').rateFreight({ ...a, liftgate });
+              const r = await require('./tforce').rateFreight({ ...a, liftgate, distributor: slug });
               console.log('[shipping] tforce', slug, a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
               return r;
             } catch (err) {
@@ -482,7 +498,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // pay online again (e.g. once TForce rating is live).
   const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
   // Never with WARP on: WARP prices freight at the cart like any order.
-  const needsFreightQuote = !isPickup && !warpOn && !freightCheckoutOn &&
+  const needsFreightQuote = !isPickup && !strictRating && !freightCheckoutOn &&
     groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
 
   const total = Math.round((discountedSubtotal + tax + shipping) * 100) / 100;
@@ -497,7 +513,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     needsFreightQuote,
     shippingUnavailable,
     // Ticket for this exact delivery price (WARP only), sent back by the page.
-    shippingToken: warpOn && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, tokenZip, shipping) : null,
+    shippingToken: strictRating && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, tokenZip, shipping) : null,
     amountCents: Math.round(total * 100),
     subtotal,
     discount,

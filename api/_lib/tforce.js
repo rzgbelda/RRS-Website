@@ -35,6 +35,11 @@
 //   TFORCE_PALLET_MAX_LB       goods per pallet used to count pallets, default
 //                              750 (a 48 in. pallet of linens rarely tops it)
 //   TFORCE_PALLET_TARE_LB      weight of the empty pallet, default 40
+//   TFORCE_PALLET_MAX_LB_BY_DISTRIBUTOR  per-supplier override of
+//                              TFORCE_PALLET_MAX_LB, "slug:lb,..." -- denser
+//                              goods fill a pallet with more weight
+//                              (defaults below: Sasso pails, NPS paper,
+//                              Imperial Brady and Wraptite cases)
 //   TFORCE_PALLET_DIMS         "LxWxH" in inches, default 48x40x48
 //   TFORCE_MAX_PALLETS         above this many pallets the shipment is
 //                              refused (default 6, about 10 linear ft): over
@@ -44,7 +49,9 @@
 //   TFORCE_RESIDENTIAL         "true" to rate delivery as residential
 
 const BASE = process.env.TFORCE_BASE_URL || 'https://api.tforcefreight.com';
-const TIMEOUT_MS = 6000;
+// 10 s: TForce is the primary rater now (SHIPPING_RATER=tforce), and a
+// timeout leaves the order unpriced; 6 s timed out on a live test.
+const TIMEOUT_MS = 10000;
 
 let cachedToken = null; // { token, expiresAt }
 
@@ -102,8 +109,9 @@ function pickupDate() {
   return d.toISOString().slice(0, 10);
 }
 
-function palletDims() {
-  const m = String(process.env.TFORCE_PALLET_DIMS || '48x40x48').match(/(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/);
+function palletDims(distributor) {
+  const slug = String(distributor || '').trim().toLowerCase();
+  const m = String(PALLET_DIMS_DEFAULTS[slug] || process.env.TFORCE_PALLET_DIMS || '48x40x48').match(/(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)\D+(\d+(?:\.\d+)?)/);
   return m ? { length: Number(m[1]), width: Number(m[2]), height: Number(m[3]), unit: 'IN' } : { length: 48, width: 40, height: 48, unit: 'IN' };
 }
 
@@ -119,20 +127,40 @@ function classForDensity(pcf) {
   return hit ? hit[1] : '50';
 }
 
+// Goods per pallet, by supplier. Linens (Starlinen, InnStyle) are light for
+// their size, 750 lb a 48 in. pallet; a Sasso pallet is 36 five-gallon pails
+// (~1,620 lb), an NPS pallet of paper ~650-1,500 lb (1,000 counts its
+// heavier pallets as two, the safe direction).
+const PALLET_MAX_LB_DEFAULTS = { sasso: 1700, nps: 1000, 'imperial-brady': 1200, wraptite: 1200 };
+// NPS paper pallets are ~104 in. tall (masterlist pallet dims, e.g. Retain
+// 2-ply: 51 x 42 x 105, 942 lb = class 125); rating them as 48 in. made them
+// look twice as dense and quoted class 70.
+const PALLET_DIMS_DEFAULTS = { nps: '50x42x102' }; // 102 in. is the API's height limit
+
+function palletMaxLb(distributor) {
+  const slug = String(distributor || '').trim().toLowerCase();
+  const map = { ...PALLET_MAX_LB_DEFAULTS };
+  for (const pair of String(process.env.TFORCE_PALLET_MAX_LB_BY_DISTRIBUTOR || '').split(',')) {
+    const [k, v] = pair.split(':').map(x => x && x.trim().toLowerCase());
+    if (k && Number(v) > 0) map[k] = Number(v);
+  }
+  return map[slug] || Number(process.env.TFORCE_PALLET_MAX_LB) || 750;
+}
+
 // One rate for `weightLb` of palletised freight from `origin` to `dest`.
 // Returns { amount, service, transitDays } or throws.
-async function rateFreight({ origin, dest, weightLb, liftgate }) {
+async function rateFreight({ origin, dest, weightLb, liftgate, distributor }) {
   // The portal lists an Ocp-Apim-Subscription-Key header, but TForce's
   // integration guide only describes OAuth and a fresh developer profile has
   // no subscription to take a key from -- so it is sent only when set.
   const key = process.env.TFORCE_SUBSCRIPTION_KEY;
   const token = await getToken();
 
-  const maxPallet = Number(process.env.TFORCE_PALLET_MAX_LB) || 750;
+  const maxPallet = palletMaxLb(distributor);
   const pallets = Math.max(1, Math.ceil(weightLb / maxPallet));
   const maxPallets = Number(process.env.TFORCE_MAX_PALLETS) || 6;
   if (pallets > maxPallets) throw new Error(`${pallets} pallets needs a volume/truckload quote`);
-  const dims = palletDims();
+  const dims = palletDims(distributor);
   // Billed weight includes the pallets themselves, as on a real BOL.
   const tare = process.env.TFORCE_PALLET_TARE_LB != null ? Number(process.env.TFORCE_PALLET_TARE_LB) : 40;
   const grossLb = weightLb + pallets * tare;
@@ -189,7 +217,7 @@ async function rateFreight({ origin, dest, weightLb, liftgate }) {
   };
 
   const version = encodeURIComponent(process.env.TFORCE_API_VERSION || 'v1');
-  const resp = await fetchWithTimeout(`${BASE}/rating/getRate?api-version=${version}`, {
+  const post = () => fetchWithTimeout(`${BASE}/rating/getRate?api-version=${version}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -198,6 +226,18 @@ async function rateFreight({ origin, dest, weightLb, liftgate }) {
     },
     body: JSON.stringify(body),
   });
+  // One retry on a timeout, 429 or 5xx: TForce occasionally stalls for
+  // >10 s on a lane that answers in 2-3 s a moment later (2026-10-23 tests),
+  // and with TForce as the primary rater a stall would block the sale.
+  let resp;
+  try {
+    resp = await post();
+    if (resp.status === 429 || resp.status >= 500) throw new Error('HTTP ' + resp.status);
+  } catch (err) {
+    console.warn('[tforce] retrying rating after', err.message);
+    await new Promise(r => setTimeout(r, 800));
+    resp = await post();
+  }
   if (!resp.ok) {
     let why = '';
     try { why = ' - ' + (await resp.text()).slice(0, 300); } catch (_) {}
