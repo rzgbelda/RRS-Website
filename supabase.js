@@ -32,6 +32,22 @@ window.sb = createClient(SUPABASE_URL, SUPABASE_ANON, {
   }
 });
 
+/* Account created from an emailed quote (see _proceedWithRegistration in
+   script.js). If the verification link landed somewhere other than the
+   quote page -- e.g. Supabase fell back to the Site URL -- send them back
+   to finish confirming. quote-confirm.html clears the token once the quote
+   is confirmed; the sessionStorage guard stops a redirect loop meanwhile. */
+window.sb.auth.onAuthStateChange((event, session) => {
+  const t = session?.user?.user_metadata?.pending_quote_token;
+  if (!t || (event !== 'SIGNED_IN' && event !== 'INITIAL_SESSION')) return;
+  if (/^\/(quote-confirm|login|admin|reset-password)(\.html)?$/.test(location.pathname)) return;
+  try {
+    if (sessionStorage.getItem('rrsQuoteBounce') === t) return;
+    sessionStorage.setItem('rrsQuoteBounce', t);
+  } catch (e) { return; }
+  location.replace('/quote-confirm?token=' + encodeURIComponent(t) + '&confirm=1');
+});
+
 /* Convenience: current session user */
 window.getUser = async () => {
   const { data: { user } } = await window.sb.auth.getUser();

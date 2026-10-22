@@ -6052,17 +6052,30 @@ async function _proceedWithRegistration() {
   const btn = document.querySelector('#reg-step-1 button[onclick="submitRegistration()"]');
   if (btn) { btn.disabled = true; btn.textContent = 'Creating account…'; }
 
+  // Signing up from an emailed quote's confirm page (/login?redirect=
+  // /quote-confirm?token=...). The verification link returns them there,
+  // and pending_quote_token lets supabase.js send them back even when
+  // Supabase drops the redirect for the Site URL (not on its allow list).
+  const authRedirect = sessionStorage.getItem('authRedirect') || '';
+  const quoteMatch = authRedirect.match(/\/quote-confirm(?:\.html)?\?token=([^&]+)/);
+  const quoteToken = quoteMatch ? decodeURIComponent(quoteMatch[1]) : null;
+  const signUpOptions = {
+    data: {
+      first_name: firstName,
+      last_name:  lastName,
+      business_name: business,
+      phone,
+    }
+  };
+  if (quoteToken) {
+    signUpOptions.data.pending_quote_token = quoteToken;
+    signUpOptions.emailRedirectTo = /^https?:/.test(authRedirect) ? authRedirect : window.location.origin + authRedirect;
+  }
+
   const { data: authData, error: authErr } = await window.sb.auth.signUp({
     email,
     password,
-    options: {
-      data: {
-        first_name: firstName,
-        last_name:  lastName,
-        business_name: business,
-        phone,
-      }
-    }
+    options: signUpOptions,
   });
 
   if (authErr) {
@@ -6099,9 +6112,21 @@ async function _proceedWithRegistration() {
     }
   }
 
+  // No email verification required -- already signed in, so go straight
+  // back to the quote to finish confirming.
+  if (quoteToken && authData?.session) {
+    sessionStorage.removeItem('authRedirect');
+    window.location.href = authRedirect;
+    return;
+  }
+
   if (btn) { btn.disabled = false; btn.textContent = 'Create Account'; }
   document.getElementById('reg-step-1').style.display = 'none';
   document.getElementById('reg-step-success').style.display = 'block';
+  if (quoteToken) {
+    const note = document.querySelector('#reg-step-success p');
+    if (note) note.textContent = 'Check your email to verify your account. The link brings you back to your quote and confirms your order.';
+  }
 }
 
 /* =========================

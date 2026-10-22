@@ -246,6 +246,18 @@ module.exports = async (req, res) => {
       return res.status(200).json({ success: true, already_confirmed: true });
     }
 
+    // Confirming requires an account so the resulting order lands in the
+    // customer's My Account. The quote page sends guests through
+    // /login (sign in or create an account) and back here afterwards.
+    const accessToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
+    const { data: callerData } = accessToken && !accessToken.startsWith('sb_publishable_')
+      ? await supabase.auth.getUser(accessToken)
+      : { data: null };
+    const caller = callerData?.user;
+    if (!caller) {
+      return res.status(401).json({ error: 'Please sign in or create an account to confirm this order.', auth_required: true });
+    }
+
     if (!Array.isArray(q.quote_items) || !q.quote_items.length) {
       return res.status(400).json({ error: 'This quote has no priced items to confirm.' });
     }
@@ -266,6 +278,7 @@ module.exports = async (req, res) => {
       .from('orders')
       .insert({
         order_number,
+        user_id:        caller.id,
         customer_name:  q.contact_name,
         customer_email: q.email,
         business_name:  q.business_name || 'N/A',

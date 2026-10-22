@@ -37,6 +37,8 @@ table.qc-items tfoot tr.qc-total td{font-size:16px;font-weight:800;color:#0B1F38
 .qc-confirm-btn{display:block;width:100%;background:#ED7226;color:#fff;border:none;text-align:center;padding:16px 24px;border-radius:10px;font-weight:800;font-size:16px;cursor:pointer;margin-top:8px}
 .qc-confirm-btn:hover{opacity:.92}
 .qc-confirm-btn:disabled{opacity:.6;cursor:not-allowed}
+.qc-signin-btn{display:block;width:100%;background:#fff;color:#0B1F38;border:1.5px solid #cbd5e1;text-align:center;padding:13px 24px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;margin-top:10px}
+.qc-signin-btn:disabled{opacity:.6;cursor:not-allowed}
 
 .qc-accepted{text-align:center;padding:20px 0}
 .qc-accepted .qc-check{width:56px;height:56px;border-radius:50%;background:#f0fdf4;border:2px solid #bbf7d0;display:flex;align-items:center;justify-content:center;margin:0 auto 16px}
@@ -65,6 +67,8 @@ table.qc-items tfoot tr.qc-total td{font-size:16px;font-weight:800;color:#0B1F38
   <a href="mailto:sales@roomreadysupply.com">sales@roomreadysupply.com</a> &bull; (252) 616-0088
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
 <script>
 function esc(s) {
   return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -76,6 +80,45 @@ function money(n) {
 const params = new URLSearchParams(location.search);
 const token = params.get('token');
 const card = document.getElementById('qcCard');
+let session = null;
+
+async function getSession() {
+  try {
+    const { data } = await window.sb.auth.getSession();
+    return data.session || null;
+  } catch (e) { return null; }
+}
+
+// Confirming needs an account so the order shows up in My Account. Guests
+// go to /login (sign in, or the Create Account modal pre-filled from the
+// quote) with a redirect back here; confirm=1 tells this page to finish
+// the confirmation on return, since they already ticked the acknowledgement.
+function goToAuth(mode) {
+  const back = '/quote-confirm?token=' + encodeURIComponent(token) + '&confirm=1';
+  let url = '/login?redirect=' + encodeURIComponent(back);
+  if (mode === 'register') {
+    const d = window._quoteData || {};
+    const nameParts = String(d.contact_name || '').trim().split(/\s+/);
+    try {
+      localStorage.setItem('rrs_signup_prefill', JSON.stringify({
+        firstName: nameParts[0] || '',
+        lastName:  nameParts.slice(1).join(' ') || '',
+        business:  d.business_name || '',
+        email:     d.email || '',
+      }));
+    } catch (e) {}
+    url += '&open=register';
+  }
+  location.href = url;
+}
+
+// Drops the pending quote supabase.js uses to bring a newly verified
+// account back here, once there's nothing left to confirm.
+function clearPendingQuote() {
+  if (session && session.user && session.user.user_metadata && session.user.user_metadata.pending_quote_token) {
+    window.sb.auth.updateUser({ data: { pending_quote_token: null } }).catch(function () {});
+  }
+}
 
 function renderError(msg) {
   card.innerHTML = '<div class="qc-error">' + esc(msg) + '</div>';
@@ -89,6 +132,7 @@ function renderConfirmed(data) {
     '<p>Thanks, ' + esc(data.contact_name) + ' &mdash; your order has been confirmed' +
     (data.confirmed_at ? ' on ' + new Date(data.confirmed_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '') +
     '.<br>We\'ll follow up shortly with a payment link to complete your order.</p>' +
+    '<p style="margin-top:12px"><a href="/account" style="color:#ED7226;font-weight:700;text-decoration:none">View it in My Account &rarr;</a></p>' +
     '</div>';
 }
 
@@ -140,11 +184,15 @@ function renderPending(data) {
     // Same acknowledgement as checkout, at the equivalent moment of
     // decision. Required, and recorded with the exact wording shown.
     '<label class="qc-ack" for="qcAck">' +
-      '<input type="checkbox" id="qcAck" onchange="document.getElementById(\'confirmBtn\').disabled = !this.checked">' +
+      '<input type="checkbox" id="qcAck" onchange="document.querySelectorAll(\'.qc-needs-ack\').forEach(function (b) { b.disabled = !this.checked; }, this)">' +
       '<span id="qcAckText">I acknowledge that the stated delivery date is an estimate only and may be affected by carrier delays, area conditions, weather, holidays, or other unforeseen circumstances beyond Room Ready Supply\'s control.</span>' +
     '</label>' +
-    '<button class="qc-confirm-btn" id="confirmBtn" disabled onclick="confirmOrder()">Confirm This Order</button>' +
-    '<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">Confirming lets us start preparing your order. We\'ll follow up with a payment link once it\'s confirmed.</p>';
+    (session
+      ? '<button class="qc-confirm-btn qc-needs-ack" id="confirmBtn" disabled onclick="confirmOrder()">Confirm This Order</button>' +
+        '<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">Confirming lets us start preparing your order. We\'ll follow up with a payment link once it\'s confirmed.</p>'
+      : '<button class="qc-confirm-btn qc-needs-ack" disabled onclick="goToAuth(\'register\')">Create Account &amp; Confirm Order</button>' +
+        '<button class="qc-signin-btn qc-needs-ack" disabled onclick="goToAuth(\'login\')">I already have an account &mdash; Sign In</button>' +
+        '<p style="text-align:center;font-size:12px;color:#94a3b8;margin-top:12px">An account lets you track this order and reorder anytime. Your order is confirmed automatically once you\'re signed in.</p>');
 }
 
 async function loadQuote() {
@@ -155,10 +203,21 @@ async function loadQuote() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Could not load this quote.');
 
-    if (data.status === 'accepted') renderConfirmed(data);
-    else renderPending(data);
-
     window._quoteData = data;
+    session = await getSession();
+
+    if (data.status === 'accepted') {
+      renderConfirmed(data);
+      clearPendingQuote();
+      return;
+    }
+    renderPending(data);
+
+    // Back from sign-in / account creation: finish what they started.
+    if (session && params.get('confirm') === '1') {
+      document.getElementById('qcAck').checked = true;
+      confirmOrder();
+    }
   } catch (err) {
     renderError(err.message);
   }
@@ -173,7 +232,10 @@ async function confirmOrder() {
   try {
     const res = await fetch('/api/send-invoice', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + (session ? session.access_token : ''),
+      },
       body: JSON.stringify({
         action: 'confirm_quote',
         confirm_token: token,
@@ -183,8 +245,15 @@ async function confirmOrder() {
       }),
     });
     const data = await res.json();
+    if (res.status === 401 && data.auth_required) {
+      // Session expired since the page loaded -- show the sign-in options.
+      session = null;
+      return renderPending(window._quoteData);
+    }
     if (!res.ok) throw new Error(data.error || 'Could not confirm your order.');
 
+    history.replaceState(null, '', '/quote-confirm?token=' + encodeURIComponent(token));
+    clearPendingQuote();
     renderConfirmed({ ...window._quoteData, confirmed_at: new Date().toISOString() });
   } catch (err) {
     if (btn) { btn.disabled = false; btn.textContent = 'Confirm This Order'; }
