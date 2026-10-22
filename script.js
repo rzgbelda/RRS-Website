@@ -2299,6 +2299,31 @@ function productType(product) {
   return nouns.find(n => haystack.endsWith(n)) || "";
 }
 
+// Search results order. Without it a search rendered in database order, so
+// related products ended up far apart: searching "towel" put bath towels at
+// #2 and #31 with paper towels and laundry detergent between them. Grouped
+// like the shelves instead: products named after the keyword first (ahead of
+// ones that only mention it in their copy), then category, then product type
+// (all bath towels, then all hand towels, ...), then family/tier/name, so
+// every collection's bath towel, hand towel and washcloth cards sit together.
+function searchTypeRank(product) {
+  const nouns = TYPE_NOUNS_BY_CATEGORY[categorySlug(product.category)];
+  if (!nouns) return 0;
+  const hay = (product.productFamily || product.name || "").toLowerCase();
+  const i = nouns.findIndex(n => hay.includes(n.toLowerCase()));
+  return i === -1 ? nouns.length : i;
+}
+
+function sortSearchResults(products, keyword) {
+  const inName = p => (p.name || "").toLowerCase().includes(keyword) ? 0 : 1;
+  return products.slice().sort((a, b) =>
+    (inName(a) - inName(b)) ||
+    (a.category || "").localeCompare(b.category || "") ||
+    (searchTypeRank(a) - searchTypeRank(b)) ||
+    compareCatalogFamily(a, b)
+  );
+}
+
 function getActiveTypes() {
   return Array.from(document.querySelectorAll('.type-filter:checked')).map(cb => cb.value);
 }
@@ -2349,7 +2374,9 @@ function applyFilters() {
 
   if (sortAZ) {
     filtered = filtered.slice().sort((a, b) => a.name.localeCompare(b.name));
-  } else if (catFilters.length === 0 && !keyword) {
+  } else if (keyword) {
+    filtered = sortSearchResults(filtered, keyword);
+  } else if (catFilters.length === 0) {
     // Default view: shuffled per page load (see shuffleCatalog). Related
     // sizes already share one card via familyKey grouping, so a random
     // family order doesn't separate them. The homepage still uses
