@@ -55,9 +55,9 @@ const TIMEOUT_MS = 10000;
 
 let cachedToken = null; // { token, expiresAt }
 
-async function fetchWithTimeout(url, opts) {
+async function fetchWithTimeout(url, opts, ms = TIMEOUT_MS) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const t = setTimeout(() => ctrl.abort(), ms);
   try {
     return await fetch(url, { ...opts, signal: ctrl.signal });
   } finally {
@@ -268,4 +268,125 @@ async function rateFreight({ origin, dest, weightLb, liftgate, distributor }) {
   return priced.reduce((best, r) => (r.amount < best.amount ? r : best), priced[0]);
 }
 
-module.exports = { rateFreight, getToken };
+// RRS, the third-party payer on every booking (billing code 30, as on
+// Bruce Basehore's sample eBOL: supplier ships, RRS pays).
+const RRS_PAYER = {
+  name: 'ROOM READY SUPPLY',
+  phone: { number: '2522270073' },
+  address: { addressLine: '609 WASHINGTON ST', city: 'PLYMOUTH', stateProvinceCode: 'NC', postalCode: '27962', country: 'US' },
+};
+
+const digits = s => String(s || '').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '').slice(0, 15);
+const up = (s, n = 100) => String(s || '').trim().toUpperCase().slice(0, n);
+// The Shipping API wants pickup times as HH:MM:SS (it rejects the HHMM its
+// manual shows -- tested in CIE 2026-10-23).
+function hms(t, fallback) {
+  const m = String(t || '').match(/^(\d{1,2}):?(\d{2})/);
+  return m ? `${m[1].padStart(2, '0')}:${m[2]}:00` : fallback;
+}
+
+// Books an LTL shipment: creates the BOL (PRO assigned), schedules the
+// pickup and returns the BOL and 4x6 label PDFs, in one Shipping API call.
+// test=true sends it to TForce's CIE test system -- same response, no real
+// pickup. Returns { bolId, pro, originTerminal, pickupConfirmation,
+// quotedTotal, transitDays, bolPdf, labelPdf, request } or throws.
+//
+// shipFrom/shipTo: { name, contact, phone, street, city, state, zip }
+// freight: { pallets, weightLb, freightClass, nmfcPrime, nmfcSub, description }
+// pickup: { date (YYYY-MM-DD), readyTime, closeTime (HH:MM) }
+// requester: { contactName, email, phone }
+async function createBol({ shipFrom, shipTo, freight, pickup, requester, liftgate, residential, reference, test }) {
+  const party = p => ({
+    name: up(p.name),
+    phone: { number: digits(p.phone) },
+    ...(p.contact ? { contact: up(p.contact) } : {}),
+    address: {
+      addressLine: up(p.street), city: up(p.city),
+      stateProvinceCode: up(p.state, 2), postalCode: String(p.zip || '').slice(0, 5), country: 'US',
+    },
+  });
+  const delivery = [];
+  if (liftgate) delivery.push('LIFD');
+  if (residential) delivery.push('RESD');
+  const nmfc = freight.nmfcPrime && freight.nmfcSub
+    ? { nmfc: { prime: String(freight.nmfcPrime).padStart(6, '0'), sub: String(freight.nmfcSub).padStart(2, '0') } }
+    : {};
+
+  const body = {
+    requestOptions: {
+      serviceCode: '308',
+      pickupDate: pickup.date,
+      previewRate: true,
+      timeInTransit: true,
+      bolPrintFormat: 'TFF',
+      ...(reference ? { customerContext: String(reference).slice(0, 40) } : {}),
+    },
+    shipFrom: party(shipFrom),
+    shipTo: { ...party(shipTo), ...(residential ? { isResidential: true } : {}) },
+    payment: { payer: RRS_PAYER, billingCode: '30' },
+    handlingUnitOne: { quantity: freight.pallets, typeCode: 'PLT' },
+    commodities: [{
+      description: up(freight.description || 'MERCHANDISE', 100),
+      class: String(freight.freightClass),
+      ...nmfc,
+      pieces: freight.pallets,
+      weight: { weight: Math.round(freight.weightLb), weightUnit: 'LBS' },
+      packagingType: 'PLT',
+    }],
+    ...(reference ? { references: [{ number: String(reference).slice(0, 30), type: 'PO' }] } : {}),
+    ...(delivery.length ? { serviceOptions: { delivery } } : {}),
+    pickupRequest: {
+      pickup: {
+        date: pickup.date,
+        time: hms(pickup.readyTime, '10:00:00'),
+        openTime: hms(pickup.readyTime, '10:00:00'),
+        closeTime: hms(pickup.closeTime, '16:00:00'),
+      },
+      requester: {
+        companyName: 'ROOM READY SUPPLY',
+        contactName: requester.contactName || 'Shipping Desk',
+        email: requester.email || 'sales@roomreadysupply.com',
+        phone: { number: digits(requester.phone) || '2522270073' },
+        thirdParty: true,
+      },
+      pomIndicator: false,
+    },
+    documents: { image: [
+      { type: '20', format: '01' },                                               // BOL, PDF
+      { type: '30', format: '01', label: { type: '07', startPosition: 1, numberOfStickers: freight.pallets } }, // 4x6 labels
+    ] },
+  };
+
+  const token = await getToken();
+  const version = test ? 'cie-v1' : 'v1';
+  const resp = await fetchWithTimeout(`${BASE}/shipping/bol/create?api-version=${version}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body),
+  }, 25000); // booking + pickup + PDFs is slower than a rate
+  const text = await resp.text();
+  let data = null;
+  try { data = JSON.parse(text); } catch (_) {}
+  const d = data && data.detail;
+  if (!resp.ok || !d || !d.pro) {
+    const msg = (data && ((data.summary && data.summary.message) || (data.responseStatus && data.responseStatus.description))) || text.slice(0, 300);
+    throw new Error(`TForce booking failed (${resp.status}): ${msg}`);
+  }
+  const rate = (d.rateDetail || [])[0] || {};
+  const doc = t => ((d.documents && d.documents.image) || []).find(i => String(i.type) === t && i.data);
+  return {
+    bolId: d.bolId != null ? String(d.bolId) : null,
+    pro: d.pro,
+    originTerminal: d.originServiceCenter || null,
+    pickupConfirmation: d.pickup && d.pickup.transactionReference && d.pickup.transactionReference.confirmationNumber || null,
+    pickupError: d.pickup && d.pickup.responseStatus && String(d.pickup.responseStatus.code) !== '1'
+      ? (d.pickup.responseStatus.description || 'pickup not scheduled') : null,
+    quotedTotal: rate.shipmentCharges && rate.shipmentCharges.total ? Number(rate.shipmentCharges.total.value) : null,
+    transitDays: rate.timeInTransit ? (rate.timeInTransit.timeInTransit || rate.timeInTransit.value || null) : null,
+    bolPdf: doc('20') ? doc('20').data : null,
+    labelPdf: doc('30') ? doc('30').data : null,
+    request: body,
+  };
+}
+
+module.exports = { rateFreight, getToken, createBol, classForDensity, palletMaxLb, palletDims };

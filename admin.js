@@ -6051,6 +6051,7 @@ async function openOrderModal(id) {
     </table>
     <div style="text-align:right;margin-top:14px;font-size:16px;font-weight:800;color:#0b2d52;">Total: $${Number(o.total).toFixed(2)}</div>
     <div id="orderVendorPoPanel-${o.id}"></div>
+    <div id="orderFreightPanel-${o.id}"></div>
     <div id="orderShipmentsPanel-${o.id}"></div>
     ${(o.label_url || o.tracking_number || o.bol_number || o.pro_number) ? `
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
@@ -6138,6 +6139,7 @@ async function openOrderModal(id) {
   if (taxStateEl) taxStateEl.value = addr.state || "";
   openModal("orderModal");
   renderOrderVendorPoPanel(o);
+  renderOrderFreightPanel(o);
   renderOrderShipmentsPanel(o);
 }
 
@@ -6420,6 +6422,191 @@ async function sendVendorPo(orderId, vendorId) {
   if (!sendRes.ok) { showToast("Couldn't send PO: " + (result.error || "unknown error")); return; }
 
   showToast(`Purchase order sent to ${result.sent_to}.`);
+  openOrderModal(orderId);
+}
+
+// ── TForce freight booking ───────────────────────────────────────────
+// One "Book TForce" form per supplier on the order. Booking calls
+// /api/ups-tracking (action 'tforce_book'): TForce creates the BOL and PRO,
+// schedules the pickup at the supplier's warehouse and returns the BOL and
+// 4x6 label PDFs. A real booking also becomes the customer's tracking row
+// and is emailed to the supplier; "Test booking" uses TForce's test system
+// (no real pickup). Pre-fills mirror api/_lib/tforce.js: goods per pallet
+// by supplier, 40 lb pallet tare, class from density.
+const FREIGHT_CLASSES = ["50","55","60","65","70","77.5","85","92.5","100","110","125","150","175","200","250","300","400","500"];
+// [pcf below which, class]; NMFC sub = position + 1 (049260 / 149265).
+const FREIGHT_DENSITY = [[1,"400"],[2,"300"],[4,"250"],[6,"175"],[8,"125"],[10,"100"],[12,"92.5"],[15,"85"],[22.5,"70"],[30,"65"],[35,"60"],[50,"55"],[Infinity,"50"]];
+const FREIGHT_PALLET_MAX_LB = { sasso: 1700, nps: 1000, "imperial-brady": 1200, wraptite: 1200 };
+const FREIGHT_PALLET_DIMS = { nps: [50, 42, 102] };
+const FREIGHT_LINENS = ["starlinen", "innstyle"];
+const FREIGHT_DESCRIPTION = {
+  starlinen: "LINENS/TOWELS", innstyle: "LINENS/TOWELS", nps: "PAPER PRODUCTS",
+  sasso: "CLEANING COMPOUNDS", "imperial-brady": "JANITORIAL SUPPLIES", wraptite: "JANITORIAL SUPPLIES",
+};
+
+function freightEstimate(slug, weightLb) {
+  const perPallet = FREIGHT_PALLET_MAX_LB[slug] || 750;
+  const pallets = Math.max(1, Math.ceil(weightLb / perPallet));
+  const [L, W, H] = FREIGHT_PALLET_DIMS[slug] || [48, 40, 48];
+  const gross = weightLb + pallets * 40;
+  const pcf = gross / (pallets * L * W * H / 1728);
+  const idx = FREIGHT_DENSITY.findIndex(([below]) => pcf < below);
+  return { pallets, gross: Math.round(gross), freightClass: FREIGHT_DENSITY[idx][1], sub: String(idx + 1).padStart(2, "0") };
+}
+
+function nextBusinessDay() {
+  const d = new Date();
+  do { d.setDate(d.getDate() + 1); } while (d.getDay() === 0 || d.getDay() === 6);
+  return d.toISOString().slice(0, 10);
+}
+
+function downloadBase64Pdf(b64, filename) {
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const url = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+async function downloadFreightDoc(bookingId, kind) {
+  const col = kind === "label" ? "label_pdf" : "bol_pdf";
+  const { data, error } = await window.sb.from("freight_bookings").select(`pro_number, ${col}`).eq("id", bookingId).single();
+  if (error || !data?.[col]) { showToast("That document isn't available."); return; }
+  downloadBase64Pdf(data[col], `${kind === "label" ? "Labels" : "BOL"}-${data.pro_number}.pdf`);
+}
+
+async function renderOrderFreightPanel(o) {
+  const panel = document.getElementById(`orderFreightPanel-${o.id}`);
+  if (!panel || o.fulfillment_method === "pickup" || !o.order_items?.length) return;
+
+  const productIds = [...new Set(o.order_items.map(i => i.product_id).filter(Boolean))];
+  if (!productIds.length) return;
+  const { data: products } = await window.sb.from("products").select("id, weight, distributor").in("id", productIds);
+  const byId = Object.fromEntries((products || []).map(p => [p.id, p]));
+
+  const groups = {};
+  o.order_items.forEach(i => {
+    const p = byId[i.product_id];
+    const slug = String(p?.distributor || "").trim().toLowerCase();
+    if (!slug) return;
+    groups[slug] = groups[slug] || { slug, weight: 0 };
+    groups[slug].weight += (Number(p.weight) || 0) * (Number(i.quantity) || 1);
+  });
+  const slugs = Object.keys(groups);
+  if (!slugs.length) return;
+
+  const [{ data: vendors }, { data: bookings, error: bookErr }] = await Promise.all([
+    window.sb.from("vendors").select("*").in("slug", slugs),
+    window.sb.from("freight_bookings")
+      .select("id, distributor, environment, pro_number, pickup_confirmation, pickup_date, pallets, weight_lb, freight_class, quoted_total, emailed_to, created_at")
+      .eq("order_id", o.id).order("created_at", { ascending: true }),
+  ]);
+  const vendorBySlug = Object.fromEntries((vendors || []).map(v => [v.slug, v]));
+  if (bookErr) {
+    panel.innerHTML = `<hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+      <p style="font-size:12.5px;color:#b45309;margin:0">TForce booking isn't set up on the database yet. Run the migration 20261023b_tforce_bookings.sql in Supabase.</p>`;
+    return;
+  }
+
+  const liftgateWanted = /\[LIFTGATE DELIVERY REQUESTED\]/i.test(o.notes || "");
+  const inputStyle = "height:32px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:12.5px;padding:0 8px";
+  const label = (t, html) => `<label style="display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.03em">${t}${html}</label>`;
+
+  const bookingRows = (bookings || []).map(bk => `
+    <tr style="border-top:1px solid #f0f4fa">
+      <td style="padding:7px 8px;font-size:12.5px">${escHtml(vendorBySlug[bk.distributor]?.name || bk.distributor)}</td>
+      <td style="padding:7px 8px;font-size:12.5px"><strong>${escHtml(bk.pro_number || "")}</strong>
+        ${bk.environment === "cie" ? '<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:1px 6px;font-size:10.5px;font-weight:700;margin-left:4px">TEST</span>' : ""}</td>
+      <td style="padding:7px 8px;font-size:12.5px">${escHtml(bk.pickup_date || "")} · ${escHtml(bk.pickup_confirmation || "no pickup #")}</td>
+      <td style="padding:7px 8px;font-size:12.5px">${bk.pallets} plt · ${Math.round(bk.weight_lb)} lb · cl ${escHtml(bk.freight_class)}</td>
+      <td style="padding:7px 8px;text-align:right;white-space:nowrap">
+        <button onclick="downloadFreightDoc('${bk.id}','bol')" style="border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:700;cursor:pointer">BOL</button>
+        <button onclick="downloadFreightDoc('${bk.id}','label')" style="border:1px solid #cbd5e1;background:#fff;border-radius:7px;padding:3px 9px;font-size:11.5px;font-weight:700;cursor:pointer">Labels</button>
+      </td>
+    </tr>`).join("");
+
+  const forms = slugs.map(slug => {
+    const g = groups[slug];
+    const v = vendorBySlug[slug] || {};
+    const est = freightEstimate(slug, g.weight);
+    const linens = FREIGHT_LINENS.includes(slug);
+    const id = `${o.id}-${slug}`;
+    return `<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px">
+      <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <strong style="font-size:13px;color:#0d1f38">${escHtml(v.name || slug)}</strong>
+        <span style="font-size:12px;color:#64748b">${escHtml([v.ship_from_city, v.ship_from_state].filter(Boolean).join(", "))} · ${Math.round(g.weight)} lb of goods${g.weight <= 150 ? ' · <span style="color:#b45309">parcel weight, normally UPS</span>' : ""}</span>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+        ${label("Pallets", `<input id="frPallets-${id}" type="number" min="1" max="30" value="${est.pallets}" style="${inputStyle};width:70px">`)}
+        ${label("Weight lb (with pallets)", `<input id="frWeight-${id}" type="number" min="1" value="${est.gross}" style="${inputStyle};width:110px">`)}
+        ${label("Class", `<select id="frClass-${id}" style="${inputStyle}">${FREIGHT_CLASSES.map(c => `<option${c === est.freightClass ? " selected" : ""}>${c}</option>`).join("")}</select>`)}
+        ${label("NMFC", `<span style="display:flex;gap:4px"><input id="frNmfc-${id}" value="${linens ? "049260" : ""}" placeholder="item" style="${inputStyle};width:80px"><input id="frSub-${id}" value="${linens ? est.sub : ""}" placeholder="sub" style="${inputStyle};width:46px"></span>`)}
+        ${label("Description", `<input id="frDesc-${id}" value="${escHtml(FREIGHT_DESCRIPTION[slug] || "MERCHANDISE")}" style="${inputStyle};width:170px">`)}
+        ${label("Pickup date", `<input id="frDate-${id}" type="date" value="${nextBusinessDay()}" style="${inputStyle}">`)}
+        ${label("Ready", `<input id="frReady-${id}" type="time" value="${escHtml(v.pickup_ready_time || "10:00")}" style="${inputStyle}">`)}
+        ${label("Dock closes", `<input id="frClose-${id}" type="time" value="${escHtml(v.pickup_close_time || "16:00")}" style="${inputStyle}">`)}
+        ${label("Warehouse phone", `<input id="frPhone-${id}" value="${escHtml(v.contact_phone || "")}" style="${inputStyle};width:130px">`)}
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin-top:10px;font-size:12.5px;color:#334155">
+        <label><input type="checkbox" id="frLift-${id}"${liftgateWanted ? " checked" : ""}> Liftgate delivery${liftgateWanted ? ' <span style="color:#15803d">(customer asked)</span>' : ""}</label>
+        <label><input type="checkbox" id="frResi-${id}"> Residential delivery</label>
+        <label><input type="checkbox" id="frEmail-${id}" checked> Email BOL + labels to ${escHtml(v.contact_email || "supplier (no email on file)")}</label>
+        <label style="color:#92400e"><input type="checkbox" id="frTest-${id}" checked> Test booking (TForce test system, no real pickup)</label>
+        <button onclick="bookTforce('${o.id}','${slug}')" id="frBtn-${id}"
+          style="margin-left:auto;background:#0b2d52;color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer">Book TForce</button>
+      </div>
+      <div style="font-size:11.5px;color:#94a3b8;margin-top:6px">Class and pallets are estimates from the catalog weights. Check them against the supplier's real pallet before booking; TForce bills on what it measures.</div>
+    </div>`;
+  }).join("");
+
+  panel.innerHTML = `
+    <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
+    <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">TForce Freight</h4>
+    ${bookingRows ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tbody>${bookingRows}</tbody></table>` : ""}
+    <div style="display:flex;flex-direction:column;gap:10px">${forms}</div>`;
+}
+
+async function bookTforce(orderId, slug) {
+  const id = `${orderId}-${slug}`;
+  const val = k => document.getElementById(`${k}-${id}`);
+  const test = val("frTest").checked;
+  if (!test && !confirm("Book a REAL TForce pickup? This schedules a truck at the supplier's warehouse and bills Room Ready Supply.")) return;
+
+  const btn = val("frBtn");
+  btn.disabled = true; btn.textContent = "Booking…";
+  const { data: { session } } = await window.sb.auth.getSession();
+  let data = {};
+  try {
+    const resp = await fetch("/api/ups-tracking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: "Bearer " + (session?.access_token || "") },
+      body: JSON.stringify({
+        action: "tforce_book", order_id: orderId, distributor: slug, test,
+        pallets: Number(val("frPallets").value), weight_lb: Number(val("frWeight").value),
+        freight_class: val("frClass").value, nmfc_prime: val("frNmfc").value.trim(), nmfc_sub: val("frSub").value.trim(),
+        description: val("frDesc").value.trim(), pickup_date: val("frDate").value,
+        ready_time: val("frReady").value, close_time: val("frClose").value, origin_phone: val("frPhone").value.trim(),
+        liftgate: val("frLift").checked, residential: val("frResi").checked, email_vendor: val("frEmail").checked,
+      }),
+    });
+    data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data.error || `HTTP ${resp.status}`);
+  } catch (err) {
+    btn.disabled = false; btn.textContent = "Book TForce";
+    alert("TForce booking failed: " + err.message);
+    return;
+  }
+
+  if (data.bolPdf) downloadBase64Pdf(data.bolPdf, `BOL-${data.pro}.pdf`);
+  if (data.labelPdf) downloadBase64Pdf(data.labelPdf, `Labels-${data.pro}.pdf`);
+  alert([
+    data.environment === "cie" ? "TEST booking (no real pickup)" : "Booked with TForce",
+    `PRO: ${data.pro}`,
+    `Pickup confirmation: ${data.pickupConfirmation || "none"}${data.pickupError ? " (" + data.pickupError + ")" : ""}`,
+    data.quotedTotal != null ? `TForce quote: $${Number(data.quotedTotal).toFixed(2)}${data.environment === "cie" ? " (test prices are not real)" : ""}` : "",
+    data.emailedTo ? `BOL + labels emailed to ${data.emailedTo}` : (data.emailError ? `Supplier email FAILED: ${data.emailError}` : ""),
+    data.saveError ? `Warning: booking not saved in admin: ${data.saveError}` : "",
+  ].filter(Boolean).join("\n"));
   openOrderModal(orderId);
 }
 

@@ -62,6 +62,12 @@ module.exports = async (req, res) => {
   const staff = await requireStaff(req, res);
   if (!staff) return; // guard already responded
 
+  // TForce LTL booking from the order screen. Lives in this function (it is
+  // shipment work) because the project is at Vercel's 12-function cap.
+  if ((req.body || {}).action === 'tforce_book') {
+    return require('./_lib/tforce-book')(req, res, staff);
+  }
+
   const { shipmentId } = req.body || {};
   if (!shipmentId) {
     res.status(400).json({ error: 'shipmentId is required' });

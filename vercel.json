@@ -6,6 +6,9 @@
     },
     "api/create-payment-intent.js": {
       "maxDuration": 30
+    },
+    "api/ups-tracking.js": {
+      "maxDuration": 30
     }
   },
   "crons": [
