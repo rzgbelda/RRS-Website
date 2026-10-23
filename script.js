@@ -6133,7 +6133,32 @@ async function _proceedWithRegistration() {
    REFERRAL CODE – CHECKOUT
 ========================= */
 
-let _checkoutReferral = null; // { sub_distributor_id, employee_id, commission_pct, name }
+let _checkoutReferral = null; // { sub_distributor_id, employee_id, commission_pct, name } or { sales_rep_id, name }
+
+// Referral links (?ref=CODE, made by the generator on the Sales > My Account
+// tab). Captured on whatever page the customer lands on and kept for 30
+// days, so the code still applies when they browse around and check out
+// later. The most recent link wins. Validated at checkout, not here.
+const REF_LINK_KEY = 'rrs_ref';
+const REF_LINK_DAYS = 30;
+
+(function captureRefLink() {
+  try {
+    const code = new URLSearchParams(window.location.search).get('ref');
+    if (code && /^[A-Za-z0-9_-]{2,40}$/.test(code.trim())) {
+      localStorage.setItem(REF_LINK_KEY, JSON.stringify({ code: code.trim().toUpperCase(), at: Date.now() }));
+    }
+  } catch (e) {}
+})();
+
+function storedRefCode() {
+  try {
+    const ref = JSON.parse(localStorage.getItem(REF_LINK_KEY) || 'null');
+    if (ref && ref.code && Date.now() - ref.at < REF_LINK_DAYS * 864e5) return ref.code;
+    localStorage.removeItem(REF_LINK_KEY);
+  } catch (e) {}
+  return null;
+}
 
 function clearReferralStatus() {
   const el = document.getElementById('referral-code-status');
@@ -6179,6 +6204,18 @@ async function validateReferralCode(code) {
     return;
   }
 
+  // Sales rep code. Commission is credited server-side by api/create-order.js
+  // (sales_referrals has no client insert policy); this only confirms it.
+  const { data: repRows } = await window.sb
+    .rpc('lookup_sales_code', { p_code: code });
+  const rep = Array.isArray(repRows) ? repRows[0] : repRows;
+
+  if (rep) {
+    _checkoutReferral = { sales_rep_id: rep.id, name: rep.full_name };
+    if (statusEl) { statusEl.style.color = '#22c55e'; statusEl.textContent = '✓ Applied – ' + rep.full_name; }
+    return;
+  }
+
   if (statusEl) { statusEl.style.color = '#ef4444'; statusEl.textContent = '✕ Invalid or inactive referral code.'; }
 }
 
@@ -6213,7 +6250,15 @@ async function autoFillReferralCode() {
     return;
   }
 
-  // Not on an affiliate subdomain -- fall back to the existing behavior:
+  // Arrived through someone's referral link -- pre-filled (editable).
+  const linkCode = storedRefCode();
+  if (linkCode) {
+    codeInput.value = linkCode;
+    await validateReferralCode(linkCode);
+    return;
+  }
+
+  // Otherwise fall back to the existing behavior:
   // a signed-in returning customer who previously used a code gets it
   // pre-filled (editable) so they don't have to remember/retype it.
   const { data: { user } } = await window.sb.auth.getUser().catch(function() { return { data: { user: null } }; });

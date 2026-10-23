@@ -371,7 +371,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20261023b"></script>
+  <script src="script.js?v=20261024a"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -927,6 +927,8 @@
               delivery_ack: !!checkout.deliveryAck,
               delivery_ack_text: checkout.deliveryAckText || '',
               cart_items: cartItems,
+              // Sales rep codes are credited server-side (sales_referrals).
+              referral_code: checkout.referral || '',
             }),
           });
           var createBody = await createRes.json().catch(function () { return {}; });
@@ -1096,6 +1098,8 @@
               delivery_ack_text: checkout.deliveryAckText || '',
                 stripe_payment_intent_id: pi.id,
                 cart_items: cartItems,
+                // Sales rep codes are credited server-side (sales_referrals).
+                referral_code: checkout.referral || '',
               }),
             });
             var createBody = await createRes.json().catch(function () { return {}; });

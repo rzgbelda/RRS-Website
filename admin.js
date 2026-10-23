@@ -14163,6 +14163,41 @@ async function renderSalesDashboardTab() {
   `;
 }
 
+// Referral link generator. The site captures ?ref= on any page and keeps it
+// for REF_LINK_DAYS in script.js (keep the two in step); checkout then
+// applies the code and api/create-order.js credits the rep.
+const REF_LINK_DAYS_ADMIN = 30;
+const SALES_LINK_PAGES = [
+  ["/", "Homepage"],
+  ["/catalog", "Full catalog"],
+  ["/best-deals", "Best Deals"],
+  ["/economy", "Economy line"],
+  ["/premium", "Premium line"],
+  ["/luxury", "Luxury collection"],
+];
+
+function salesBuildReferralLink(code) {
+  const out = document.getElementById("salesLinkOut");
+  const errEl = document.getElementById("salesLinkErr");
+  if (!out) return;
+  errEl.style.display = "none";
+  const pasted = (document.getElementById("salesLinkPaste")?.value || "").trim();
+  let url = new URL(document.getElementById("salesLinkPage")?.value || "/", "https://www.roomreadysupply.com");
+  if (pasted) {
+    let u = null;
+    try { u = new URL(/^https?:\/\//i.test(pasted) ? pasted : "https://" + pasted); } catch (e) {}
+    if (!u || !/(^|\.)roomreadysupply\.com$/i.test(u.hostname)) {
+      errEl.textContent = "That isn't a roomreadysupply.com link.";
+      errEl.style.display = "block";
+      out.value = "";
+      return;
+    }
+    url = new URL(u.pathname + u.search, "https://www.roomreadysupply.com");
+  }
+  url.searchParams.set("ref", code);
+  out.value = url.toString();
+}
+
 async function renderSalesAccountTab() {
   const wrap = document.getElementById("tab-sales-account");
   if (!wrap) return;
@@ -14188,6 +14223,22 @@ async function renderSalesAccountTab() {
         <p class="pt-code-label">Your sales code</p>
         <p class="pt-stat-value pt-code" style="margin:0">${escHtml(rep.sales_code)}</p>
         <p class="pt-code-note">Give this code to customers so their orders are automatically attributed to you (${escHtml(SALES_TIER_LABEL[rep.tier] || rep.tier)}).</p>
+      </div>
+    </div>
+
+    <div class="pt-card pt-code-card" style="margin-bottom:22px;display:block">
+      <p class="pt-code-label">Your referral link</p>
+      <p class="pt-code-note" style="max-width:none;margin:0 0 14px">Customers who open this link get your code applied at checkout automatically &mdash; even if they check out later (up to ${REF_LINK_DAYS_ADMIN} days).</p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        <select id="salesLinkPage" style="flex:1;min-width:180px;padding:10px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;background:#fff">
+          ${SALES_LINK_PAGES.map(([path, label]) => `<option value="${path}">${label}</option>`).join("")}
+        </select>
+        <input id="salesLinkPaste" type="text" placeholder="Or paste any roomreadysupply.com product link" style="flex:2;min-width:220px;padding:10px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;box-sizing:border-box" />
+      </div>
+      <div id="salesLinkErr" class="a-error" style="display:none;margin-bottom:10px"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <input id="salesLinkOut" type="text" readonly style="flex:1;min-width:220px;padding:10px 12px;border:1.5px solid #e4e9f2;border-radius:9px;font-size:13.5px;background:#f8fafd;color:#0f2b50;font-family:monospace;box-sizing:border-box" onclick="this.select()" />
+        <button type="button" id="salesLinkCopy" class="a-btn-primary" style="padding:10px 22px">Copy Link</button>
       </div>
     </div>
 
@@ -14218,6 +14269,15 @@ async function renderSalesAccountTab() {
     </div>
     </div>
   `;
+
+  const buildLink = () => salesBuildReferralLink(rep.sales_code);
+  document.getElementById("salesLinkPage")?.addEventListener("change", buildLink);
+  document.getElementById("salesLinkPaste")?.addEventListener("input", buildLink);
+  document.getElementById("salesLinkCopy")?.addEventListener("click", () => {
+    const url = document.getElementById("salesLinkOut")?.value;
+    if (url) ptCopyLink(url);
+  });
+  buildLink();
 
   document.getElementById("salesNameForm")?.addEventListener("submit", async e => {
     e.preventDefault();

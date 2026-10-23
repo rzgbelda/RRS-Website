@@ -2,6 +2,7 @@ const Stripe = require('stripe');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert } = require('./_lib/send-emails');
+const { attributeSalesReferral } = require('./_lib/sales-attribution');
 
 // Verifies a Svix-signed webhook (the scheme Resend's webhooks use) by hand
 // with Node's built-in crypto -- the `svix` npm package is ESM-only
@@ -271,6 +272,14 @@ module.exports = async (req, res) => {
       // which staff enter in admin (see order_shipments). There is no
       // carrier for this handler to book with.
       if (createdHere) {
+        // The browser never reached create-order, so credit the sales rep
+        // here instead (no-op for affiliate codes).
+        await attributeSalesReferral(supabase, {
+          orderId: upserted[0].id,
+          code: meta.referral_code,
+          orderValue: orderData.subtotal,
+        });
+
         // delivery_days rides only on the email (no orders column): the
         // per-supplier range create-payment-intent.js stored in metadata.
         const emailOrder = {

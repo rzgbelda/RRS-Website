@@ -3,6 +3,7 @@ const { Resend } = require('resend');
 const sendInvoiceHandler = require('./send-invoice.js');
 const { buildUnsubscribeUrl } = require('./product-meta.js');
 const { recordAcknowledgement } = require('./_lib/acknowledgements');
+const { attributeSalesReferral } = require('./_lib/sales-attribution');
 const rateLimit = require('./_lib/rate-limit');
 const { priceCart } = require('./_lib/price-cart');
 const { sendReceipt } = require('./_lib/receipt');
@@ -234,6 +235,17 @@ module.exports = async (req, res) => {
       user_id: orderData.user_id || null,
       email: orderData.customer_email || null,
       business_name: orderData.business_name || null,
+    });
+  }
+
+  // Sales rep commission when the code is a sales code (affiliate codes
+  // are recorded in order_referrals by payment.html). On item revenue --
+  // capped at the order total, since subtotal comes from the browser.
+  if (b.referral_code) {
+    await attributeSalesReferral(supabase, {
+      orderId: data.id,
+      code: b.referral_code,
+      orderValue: Math.min(Number(orderData.subtotal) || 0, Number(orderData.total) || 0),
     });
   }
 
