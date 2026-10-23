@@ -504,7 +504,7 @@
     const g = T.estimator.grades;
     const sizes = Object.keys(g[est.grade].sizes);
     if (!sizes.includes(est.size)) est.size = sizes.includes("Queen") ? "Queen" : sizes[0];
-    const seg = (name, opts, curV) => `<div class="tp-seg" role="group" aria-label="${esc(name)}">${opts.map(([v, l]) =>
+    const seg = (name, opts, curV, cls = "") => `<div class="tp-seg ${cls}" role="group" aria-label="${esc(name)}">${opts.map(([v, l]) =>
       `<button type="button" class="${String(v) === String(curV) ? "is-active" : ""}" data-est="${esc(name)}" data-val="${esc(v)}">${esc(l)}</button>`).join("")}</div>`;
     const towelSets = Object.entries(T.estimator.towels);
     $("#tpEstControls").innerHTML = `
@@ -518,7 +518,7 @@
       <div class="tp-ctl"><span>Pillows per bed</span>${seg("pillows", [[2, "2"], [3, "3"], [4, "4"]], est.pillows)}</div>
       <div class="tp-ctl"><span>Par level <small style="font-weight:500;opacity:.7">&nbsp;sets per bed</small></span>${seg("par", [[2, "2 par"], [3, "3 par"], [4, "4 par"]], est.par)}</div>
       <label class="tp-check"><input type="checkbox" id="tpTowels" ${est.towels ? "checked" : ""}> Include towels &amp; bath mats</label>
-      ${est.towels && towelSets.length > 1 ? `<div class="tp-ctl"><span>Towel collection</span>${seg("towelSet", towelSets.map(([k, v]) => [k, v.label]), est.towelSet)}</div>` : ""}
+      ${est.towels && towelSets.length > 1 ? `<div class="tp-ctl"><span>Towel collection</span>${seg("towelSet", towelSets.map(([k, v]) => [k, v.label]), est.towelSet, "tp-seg--grid")}</div>` : ""}
       <p class="tp-est-note">3 par is the hotel standard: one set on the bed, one in the laundry, one on the shelf. Towels assume 2 guests per room: 2 bath, 2 hand and 2 washcloths, plus 1 bath mat, times par.</p>`;
   }
 
