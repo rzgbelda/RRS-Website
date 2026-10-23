@@ -4,6 +4,7 @@ const sendInvoiceHandler = require('./send-invoice.js');
 const { buildUnsubscribeUrl } = require('./product-meta.js');
 const { recordAcknowledgement } = require('./_lib/acknowledgements');
 const { attributeSalesReferral } = require('./_lib/sales-attribution');
+const { redeemCoupon } = require('./_lib/coupons');
 const rateLimit = require('./_lib/rate-limit');
 const { priceCart } = require('./_lib/price-cart');
 const { sendReceipt } = require('./_lib/receipt');
@@ -177,6 +178,10 @@ module.exports = async (req, res) => {
   const caller = await callerFromToken(supabase, req);
   orderData.user_id = caller ? caller.id : null;
   const claimed = String(orderData.payment_status || 'pending');
+  // Coupon on this order: { id, code, discount } or null. Never taken from
+  // the browser's figures -- see the two branches below.
+  let couponApplied = null;
+  let piMeta = null;
   if (orderData.stripe_payment_intent_id) {
     const { data: dup } = await supabase.from('orders').select('id').eq('stripe_payment_intent_id', orderData.stripe_payment_intent_id).maybeSingle();
     if (dup) return res.status(200).json({ id: dup.id, duplicate: true });
@@ -188,6 +193,12 @@ module.exports = async (req, res) => {
         : pi.status === 'requires_capture' ? 'authorized'
         : 'pending';
       orderData.total = Math.round(Number(pi.amount)) / 100;
+      // Card order: the coupon the charge was actually priced with, stamped
+      // on the PaymentIntent by create-payment-intent.js.
+      const md = piMeta = pi.metadata || {};
+      if (md.coupon_id && md.coupon_code) {
+        couponApplied = { id: md.coupon_id, code: md.coupon_code, discount: (Number(md.coupon_discount) || 0) / 100 };
+      }
     } catch (e) {
       console.error('[create-order] could not verify PaymentIntent', orderData.stripe_payment_intent_id, e.message);
       orderData.payment_status = 'pending';
@@ -196,21 +207,39 @@ module.exports = async (req, res) => {
     orderData.payment_status = 'pending';
   }
 
+  // Invoice / PO order: there is no charge to read the coupon from, so the
+  // cart is re-priced with it here -- the browser only names the code.
+  if (!orderData.stripe_payment_intent_id && b.coupon_code) {
+    const addr = orderData.shipping_address || {};
+    const priced = await priceCart(cartPricingItems(orderData, b), addr.state, 'pickup', addr, {
+      coupon: { code: String(b.coupon_code), choice: b.coupon_choice, email: orderData.customer_email },
+    });
+    if (priced.ok && priced.coupon && priced.coupon.applied) {
+      couponApplied = { id: priced.coupon.id, code: priced.coupon.code, discount: priced.coupon.discount };
+    } else {
+      console.warn('[create-order] coupon', b.coupon_code, 'not applied to', orderData.order_number, '-', (priced.coupon && priced.coupon.error) || priced.error || 'reorder discount chosen');
+    }
+  }
+  if (couponApplied) {
+    orderData.coupon_code = couponApplied.code;
+    orderData.coupon_discount = couponApplied.discount;
+  }
+
   let { data, error } = await supabase
     .from('orders')
     .insert(orderData)
     .select('id')
     .single();
 
-  // PGRST204 = a column in the write body doesn't exist. freight_fee is the
-  // only optional one here (migration 20260831b_orders_freight_fee.sql,
-  // which admin.js guards for the same way). The card path calls this
-  // AFTER the charge succeeded, so failing the whole insert over it would
-  // show "we hit a problem" to a customer who has already been charged --
-  // retry without the column instead.
+  // PGRST204 = a column in the write body doesn't exist. freight_fee
+  // (20260831b_orders_freight_fee.sql) and the coupon columns
+  // (20261024_coupons_phase2.sql) are the optional ones here. The card
+  // path calls this AFTER the charge succeeded, so failing the whole insert
+  // over them would show "we hit a problem" to a customer who has already
+  // been charged -- retry without them instead.
   if (error && error.code === 'PGRST204') {
-    console.warn('[create-order] orders.freight_fee missing -- retrying without it. Run 20260831b_orders_freight_fee.sql.');
-    const { freight_fee, ...withoutFreight } = orderData;
+    console.warn('[create-order] optional orders column missing (' + error.message + ') -- retrying without freight_fee/coupon columns.');
+    const { freight_fee, coupon_code, coupon_discount, ...withoutFreight } = orderData;
     ({ data, error } = await supabase
       .from('orders')
       .insert(withoutFreight)
@@ -245,7 +274,16 @@ module.exports = async (req, res) => {
     await attributeSalesReferral(supabase, {
       orderId: data.id,
       code: b.referral_code,
-      orderValue: Math.min(Number(orderData.subtotal) || 0, Number(orderData.total) || 0),
+      // What the client actually pays for the items: less any coupon.
+      orderValue: Math.min((Number(orderData.subtotal) || 0) - (couponApplied ? couponApplied.discount : 0), Number(orderData.total) || 0),
+    });
+  }
+
+  // Counts toward the coupon's usage and per-customer limits.
+  if (couponApplied) {
+    await redeemCoupon(supabase, {
+      couponId: couponApplied.id, orderId: data.id, code: couponApplied.code,
+      email: orderData.customer_email, discount: couponApplied.discount,
     });
   }
 
@@ -273,7 +311,7 @@ module.exports = async (req, res) => {
   // logged, never returned as an error.
   if (orderData.stripe_payment_intent_id && ['paid', 'authorized', 'processing'].includes(orderData.payment_status)) {
     try {
-      await sendOrderReceipt(orderData, b);
+      await sendOrderReceipt(orderData, b, { couponApplied, piMeta });
     } catch (err) {
       console.error('[create-order] receipt email failed for', orderData.order_number, '-', err.message);
     }
@@ -286,20 +324,33 @@ module.exports = async (req, res) => {
 // as 'pickup' so no carrier is called), takes the total from Stripe, and
 // derives delivery as total - items - tax. Product names come from the
 // database, not the browser.
-async function sendOrderReceipt(orderData, b) {
-  const email = String(orderData.customer_email || '').trim();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+// The browser's cart lines as price-cart.js input. One-time orders price
+// every line as 'Once', so no reorder discount applies.
+function cartPricingItems(orderData, b) {
   const oneTime = orderData.order_type !== 'reorder';
-  const items = (Array.isArray(b.cart_items) ? b.cart_items : [])
+  return (Array.isArray(b.cart_items) ? b.cart_items : [])
     .map(i => ({ sku: String(i.itemNumber || i.sku || '').trim(), quantity: parseInt(i.quantity, 10) || 0, reorder: oneTime ? 'Once' : (i.reorder || '') }))
     .filter(i => i.sku && i.quantity > 0);
+}
+
+// extra.couponApplied / extra.piMeta: the coupon and the tax the charge was
+// actually priced with. Used as-is rather than re-evaluating the coupon,
+// which this order's own redemption may have just used up.
+async function sendOrderReceipt(orderData, b, extra = {}) {
+  const email = String(orderData.customer_email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+  const items = cartPricingItems(orderData, b);
   if (!items.length) return;
 
   const addr = orderData.shipping_address || {};
   const priced = await priceCart(items, addr.state, 'pickup', addr);
   if (!priced.ok) throw new Error('could not price receipt lines: ' + priced.error);
+  const coupon = extra.couponApplied;
+  const discount = coupon ? coupon.discount : priced.discount;
+  const meta = extra.piMeta || {};
+  const tax = meta.tax_amount != null && meta.tax_amount !== '' ? (Number(meta.tax_amount) || 0) / 100 : priced.tax;
   const total = Number(orderData.total) || 0;
-  const delivery = Math.max(0, Math.round((total - priced.discountedSubtotal - priced.tax) * 100) / 100);
+  const delivery = Math.max(0, Math.round((total - (priced.subtotal - discount) - tax) * 100) / 100);
 
   await sendReceipt({
     order_number: orderData.order_number,
@@ -313,8 +364,9 @@ async function sendOrderReceipt(orderData, b) {
     payment_status: orderData.payment_status,
     items: priced.lines.map(l => ({ name: l.name || l.sku, quantity: l.quantity, price: l.unitPrice })),
     subtotal: priced.subtotal,
-    discount: priced.discount,
-    tax: priced.tax,
+    discount,
+    discount_label: coupon ? 'Coupon ' + coupon.code : 'Reorder discount',
+    tax,
     delivery,
     total,
     deliveryRange: getDeliveryEstimateRange(null, priced.deliveryDays).rangeLabel,

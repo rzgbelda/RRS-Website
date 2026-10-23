@@ -4664,8 +4664,14 @@ function loadCheckoutProducts() {
   if (totalEl) totalEl.textContent = isPickup ? `$${(discountedSubtotal + tax + shipping).toFixed(2)}` : 'Calculating…';
   if (orderSubtotalEl) orderSubtotalEl.textContent = `$${subtotal.toFixed(2)}`;
 
-  // Delivery and the total come from the server's quote.
-  if (!isPickup) refreshCheckoutShippingQuote({ discountedSubtotal, tax });
+  // A coupon saved earlier in this checkout (survives a page reload).
+  const couponInput = document.getElementById('checkout-coupon-code');
+  const savedCoupon = getCheckoutCoupon();
+  if (couponInput && savedCoupon && !couponInput.value) couponInput.value = savedCoupon.code;
+
+  // Delivery and the total come from the server's quote. A pickup order
+  // asks too when a coupon is in play -- only the server prices coupons.
+  if (!isPickup || savedCoupon) refreshCheckoutShippingQuote({ discountedSubtotal, tax, isPickup });
 
   // Recalculate tax live as the customer picks/changes their state. Bound
   // once (not on every loadCheckoutProducts() call, which would stack a
@@ -4682,6 +4688,13 @@ function loadCheckoutProducts() {
     zipEl.dataset.shipListenerBound = '1';
     let t;
     zipEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(loadCheckoutProducts, 500); });
+  }
+  // A coupon's per-customer limit is checked against the email, so re-quote
+  // once it's filled in.
+  const emailEl = document.getElementById('checkout-email');
+  if (emailEl && !emailEl.dataset.couponListenerBound) {
+    emailEl.dataset.couponListenerBound = '1';
+    emailEl.addEventListener('change', () => { if (getCheckoutCoupon()) loadCheckoutProducts(); });
   }
   // Liftgate changes the freight price (a flat accessorial), so re-quote.
   const liftEl = document.getElementById('checkout-liftgate');
@@ -4746,7 +4759,12 @@ function fetchCheckoutQuote() {
   // leaves it to the server default.
   const liftEl = document.getElementById('checkout-liftgate');
   const liftgate = liftEl ? !!liftEl.checked : undefined;
-  const key = JSON.stringify([items, state, zip, liftgate]);
+  // Checkout page only: the cart page has no coupon field or pickup option.
+  const onCheckout = !!document.getElementById('checkout-zip');
+  const coupon = onCheckout ? getCheckoutCoupon() : null;
+  const email = onCheckout ? (document.getElementById('checkout-email')?.value || '').trim() : '';
+  const fulfillment = onCheckout && document.getElementById('fulfillPickup')?.checked ? 'pickup' : 'ship';
+  const key = JSON.stringify([items, state, zip, liftgate, coupon, email, fulfillment]);
   if (_shipQuoteCache[key]) return _shipQuoteCache[key];
   const p = fetch('/api/create-payment-intent', {
     method: 'POST',
@@ -4756,7 +4774,8 @@ function fetchCheckoutQuote() {
       shipping_token: savedShipToken() || undefined,
       items,
       state,
-      metadata: { fulfillment_method: 'ship', shipping_address: JSON.stringify(addr), liftgate },
+      coupon: coupon || undefined,
+      metadata: { fulfillment_method: fulfillment, shipping_address: JSON.stringify(addr), liftgate, customer_email: email },
     }),
   })
     .then(r => r.json())
@@ -4787,7 +4806,9 @@ function applyCheckoutDelivery(d, { discountedSubtotal, tax }) {
     el.style.color = priced || needZip ? '' : '#b91c1c';
     el.textContent = priced ? `$${d.shipping.toFixed(2)}` : needZip ? 'Enter ZIP code' : 'Unavailable';
   }
-  if (totalEl) totalEl.textContent = priced ? `$${(discountedSubtotal + tax + d.shipping).toFixed(2)}` : '—';
+  // The server's total when it sent one (it includes any coupon).
+  if (totalEl) totalEl.textContent = !priced ? '—'
+    : `$${(typeof d.total === 'number' ? d.total : discountedSubtotal + tax + d.shipping).toFixed(2)}`;
   if (!priced && !needZip) {
     if (!note && el) {
       note = document.createElement('p');
@@ -4809,11 +4830,18 @@ function applyCheckoutDelivery(d, { discountedSubtotal, tax }) {
   if (btn) btn.disabled = !priced;
 }
 
-function refreshCheckoutShippingQuote({ discountedSubtotal, tax }) {
+function refreshCheckoutShippingQuote({ discountedSubtotal, tax, isPickup }) {
   const seq = ++_shipQuoteSeq;
   fetchCheckoutQuote().then(d => {
     // A newer request (another keystroke) supersedes this one.
     if (seq !== _shipQuoteSeq) return;
+    renderCheckoutDiscount(d);
+    if (isPickup) {
+      // Pickup has no delivery to price; only the coupon changes the total.
+      const totalEl = document.getElementById('summary-total');
+      if (totalEl && d && typeof d.total === 'number') totalEl.textContent = `$${d.total.toFixed(2)}`;
+      return;
+    }
     // Per-supplier delivery range (business days after payment).
     if (d && d.deliveryDays) {
       window._rrsDeliveryDays = d.deliveryDays;
@@ -4826,6 +4854,126 @@ function refreshCheckoutShippingQuote({ discountedSubtotal, tax }) {
   });
 }
 
+
+/* =========================
+   COUPON – CHECKOUT (coupons phase 2)
+========================= */
+
+// Only the code (and, when the order also qualifies for the Reorder Program,
+// which discount the customer picked) is kept in the browser. Validity and
+// the amount always come back from the server's quote -- api/_lib/coupons.js.
+// payment.html reads the same key, so the coupon follows the customer there.
+const COUPON_KEY = 'rrs_coupon';
+
+function getCheckoutCoupon() {
+  try {
+    const c = JSON.parse(localStorage.getItem(COUPON_KEY) || 'null');
+    return c && c.code ? c : null;
+  } catch (e) { return null; }
+}
+
+function setCheckoutCoupon(c) {
+  try {
+    if (c) localStorage.setItem(COUPON_KEY, JSON.stringify(c));
+    else localStorage.removeItem(COUPON_KEY);
+  } catch (e) {}
+}
+
+function applyCheckoutCoupon() {
+  const input = document.getElementById('checkout-coupon-code');
+  const code = (input?.value || '').trim().toUpperCase();
+  if (!code) return removeCheckoutCoupon();
+  setCheckoutCoupon({ code });
+  const statusEl = document.getElementById('coupon-status');
+  if (statusEl) { statusEl.style.color = '#888'; statusEl.textContent = 'Checking…'; }
+  loadCheckoutProducts();
+}
+
+function removeCheckoutCoupon() {
+  setCheckoutCoupon(null);
+  const input = document.getElementById('checkout-coupon-code');
+  if (input) input.value = '';
+  const statusEl = document.getElementById('coupon-status');
+  if (statusEl) statusEl.textContent = '';
+  const choiceEl = document.getElementById('coupon-choice');
+  if (choiceEl) choiceEl.style.display = 'none';
+  loadCheckoutProducts();
+}
+
+function chooseCheckoutDiscount(choice) {
+  const c = getCheckoutCoupon();
+  if (!c) return;
+  c.choice = choice === 'reorder' ? 'reorder' : 'coupon';
+  setCheckoutCoupon(c);
+  loadCheckoutProducts();
+}
+
+// Paints the coupon status, the coupon-vs-Reorder choice and the discount
+// row from the server's quote. Tax follows the discount, so it is taken
+// from the quote too.
+function renderCheckoutDiscount(d) {
+  if (!d || d.error || typeof d.discount !== 'number') return;
+  const saved = getCheckoutCoupon();
+  const c = d.coupon;
+  const money = n => `$${Number(n).toFixed(2)}`;
+  const removeLink = '<button type="button" onclick="removeCheckoutCoupon()" style="background:none;border:none;padding:0;margin-left:6px;color:#64748b;font:inherit;text-decoration:underline;cursor:pointer">Remove</button>';
+
+  const statusEl = document.getElementById('coupon-status');
+  if (statusEl) {
+    if (!saved || !c) {
+      statusEl.textContent = '';
+    } else if (c.error) {
+      statusEl.style.color = '#ef4444';
+      statusEl.innerHTML = '✕ ' + escapeMiniCart(c.error) + removeLink;
+    } else if (c.applied) {
+      statusEl.style.color = '#22c55e';
+      statusEl.innerHTML = `✓ ${escapeMiniCart(c.code)} applied – ${money(c.discount)} off` + removeLink;
+    } else {
+      statusEl.style.color = '#64748b';
+      statusEl.innerHTML = `${escapeMiniCart(c.code)} would save ${money(c.discount)} – you're using the Reorder Program discount instead.` + removeLink;
+    }
+  }
+
+  const choiceEl = document.getElementById('coupon-choice');
+  if (choiceEl) {
+    if (saved && c && !c.error && d.reorderDiscount > 0) {
+      const isCoupon = d.discountKind === 'coupon';
+      const opt = (val, checked, label) =>
+        `<label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">` +
+        `<input type="radio" name="couponChoice" value="${val}" ${checked ? 'checked' : ''} onchange="chooseCheckoutDiscount('${val}')" style="accent-color:#ED7226">${label}</label>`;
+      choiceEl.innerHTML =
+        '<strong style="display:block;font-size:12.5px">One discount per order — pick one:</strong>' +
+        opt('coupon', isCoupon, `Coupon ${escapeMiniCart(c.code)} (&minus;${money(c.discount)})`) +
+        opt('reorder', !isCoupon, `Reorder Program 5% (&minus;${money(d.reorderDiscount)})`);
+      choiceEl.style.display = '';
+    } else {
+      choiceEl.style.display = 'none';
+    }
+  }
+
+  const subtotalEl = document.getElementById('summary-subtotal');
+  let row = document.getElementById('checkoutReorderDiscountRow');
+  if (d.discount > 0) {
+    if (!row && subtotalEl) {
+      row = document.createElement('p');
+      row.id = 'checkoutReorderDiscountRow';
+      row.className = 'cart-discount-row';
+      subtotalEl.closest('p')?.after(row);
+    }
+    if (row) {
+      const label = d.discountKind === 'coupon' && c
+        ? `Coupon ${escapeMiniCart(c.code)}`
+        : `Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})`;
+      row.innerHTML = `<span>${label}</span><strong>&minus;${money(d.discount)}</strong>`;
+      row.style.display = '';
+    }
+  } else if (row) {
+    row.style.display = 'none';
+  }
+
+  const taxEl = document.getElementById('summary-tax');
+  if (taxEl && typeof d.tax === 'number') taxEl.textContent = money(d.tax);
+}
 
 function setupCheckoutOrderTypeToggle() {
   const reorderOption = document.getElementById("reorderOption");

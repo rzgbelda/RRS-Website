@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { sendCustomerConfirmation, sendInternalAlert, sendPaymentFailedAlert } = require('./_lib/send-emails');
 const { attributeSalesReferral } = require('./_lib/sales-attribution');
+const { redeemCoupon } = require('./_lib/coupons');
 
 // Verifies a Svix-signed webhook (the scheme Resend's webhooks use) by hand
 // with Node's built-in crypto -- the `svix` npm package is ESM-only
@@ -217,6 +218,8 @@ module.exports = async (req, res) => {
       order_type:     meta.order_type || 'one_time',
       fulfillment_method: meta.fulfillment_method || 'ship',
       ...paymentProof,
+      // Stamped by create-payment-intent.js when a coupon priced this charge.
+      ...(meta.coupon_code ? { coupon_code: meta.coupon_code, coupon_discount: (Number(meta.coupon_discount) || 0) / 100 } : {}),
     };
 
     // Item detail no longer travels through Stripe metadata (it blew past
@@ -247,8 +250,8 @@ module.exports = async (req, res) => {
     // record, so losing the whole row over one optional column would cost
     // a paid order -- retry without it instead.
     if (error && error.code === 'PGRST204') {
-      console.warn('[webhook] orders.freight_fee missing -- retrying without it. Run 20260831b_orders_freight_fee.sql.');
-      const { freight_fee, ...withoutFreight } = orderData;
+      console.warn('[webhook] optional orders column missing (' + error.message + ') -- retrying without freight_fee/coupon columns.');
+      const { freight_fee, coupon_code, coupon_discount, ...withoutFreight } = orderData;
       ({ data: upserted, error } = await supabase
         .from('orders')
         .upsert(withoutFreight, { onConflict: 'order_number', ignoreDuplicates: true })
@@ -279,6 +282,12 @@ module.exports = async (req, res) => {
           code: meta.referral_code,
           orderValue: orderData.subtotal,
         });
+        if (meta.coupon_id && meta.coupon_code) {
+          await redeemCoupon(supabase, {
+            couponId: meta.coupon_id, orderId: upserted[0].id, code: meta.coupon_code,
+            email: meta.customer_email, discount: (Number(meta.coupon_discount) || 0) / 100,
+          });
+        }
 
         // delivery_days rides only on the email (no orders column): the
         // per-supplier range create-payment-intent.js stored in metadata.

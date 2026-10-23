@@ -253,9 +253,13 @@
                Reorder Program. Hidden by default so it never implies a
                discount the charge won't include. -->
           <div class="payment-summary-line" id="payment-discount-line" style="display:none;color:#15803d">
-            <span>Reorder Program (&minus;5%)</span>
+            <span id="payment-discount-label">Reorder Program (&minus;5%)</span>
             <strong id="payment-discount">&minus;$0.00</strong>
           </div>
+          <!-- A coupon carried over from checkout that the server no longer
+               accepts (expired, limit reached...) -- said out loud rather
+               than silently charging full price. -->
+          <p id="payment-coupon-note" style="display:none;margin:4px 0 8px;font-size:12.5px;color:#b91c1c;line-height:1.5"></p>
 
           <div class="payment-summary-line">
             <span>Tax<span id="payment-tax-rate"></span></span>
@@ -371,7 +375,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
-  <script src="script.js?v=20261024a"></script>
+  <script src="script.js?v=20261024b"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -714,6 +718,19 @@
       return h;
     }
 
+    function escapeHtmlLite(s) {
+      return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Coupon from checkout (script.js, COUPON_KEY). Only the code and the
+    // customer's coupon-vs-Reorder pick -- the server prices it.
+    function savedCoupon() {
+      try {
+        var c = JSON.parse(localStorage.getItem('rrs_coupon') || 'null');
+        return c && c.code ? { code: c.code, choice: c.choice } : undefined;
+      } catch (e) { return undefined; }
+    }
+
     function applyServerTotals(data) {
       if (!data || typeof data.total !== 'number') return;
       window._orderSubtotal = data.subtotal;
@@ -732,15 +749,30 @@
       // what's charged.
       var discLine = document.getElementById('payment-discount-line');
       var discEl = document.getElementById('payment-discount');
+      var discLabel = document.getElementById('payment-discount-label');
       var disc = Number(data.discount) || 0;
+      var cpn = data.coupon || null;
       if (discLine && discEl) {
         if (disc > 0) {
           discEl.textContent = '−$' + disc.toFixed(2);
+          if (discLabel) discLabel.textContent = data.discountKind === 'coupon' && cpn ? 'Coupon ' + cpn.code : 'Reorder Program (−5%)';
           discLine.style.display = '';
         } else {
           discLine.style.display = 'none';
         }
       }
+      var cpnNote = document.getElementById('payment-coupon-note');
+      if (cpnNote) {
+        if (cpn && cpn.error) {
+          cpnNote.innerHTML = 'Coupon ' + escapeHtmlLite(cpn.code) + ' was not applied: ' + escapeHtmlLite(cpn.error) + ' <a href="/checkout" style="color:inherit;font-weight:700">Change it at checkout</a>';
+          cpnNote.style.display = '';
+        } else {
+          cpnNote.style.display = 'none';
+        }
+      }
+      // Sent with the order so an invoice / PO order is priced with the
+      // same coupon (create-order re-checks it server-side).
+      window._couponForOrder = cpn && cpn.applied ? { code: cpn.code, choice: 'coupon' } : null;
 
       // Delivery, also straight from the server's pricing pass. Shown even
       // at $0 (a warehouse pickup) so the visible rows always add up to the
@@ -773,6 +805,7 @@
           // Signed delivery price from checkout (api/_lib/quote-token.js):
           // charges the delivery the buyer was shown, not a fresh re-quote.
           shipping_token: (function () { try { return localStorage.getItem('rrs_ship_token') || undefined; } catch (e) { return undefined; } })(),
+          coupon: savedCoupon(),
           metadata: {
             order_number: orderNumber,
             customer_name: checkout.contact || '',
@@ -929,6 +962,9 @@
               cart_items: cartItems,
               // Sales rep codes are credited server-side (sales_referrals).
               referral_code: checkout.referral || '',
+              // Re-validated and priced server-side; see create-order.js.
+              coupon_code: window._couponForOrder ? window._couponForOrder.code : '',
+              coupon_choice: window._couponForOrder ? window._couponForOrder.choice : '',
             }),
           });
           var createBody = await createRes.json().catch(function () { return {}; });
@@ -987,6 +1023,7 @@
           document.getElementById('orderModal').style.display = 'flex';
           trackOrderConversion(orderNum, method, window._orderTotal, window._orderItems);
           localStorage.removeItem('cart');
+          localStorage.removeItem('rrs_coupon');
         } catch(e) {
           console.error('[invoice order] unexpected error:', e);
           btn.disabled = false;
@@ -1152,6 +1189,7 @@
           }
           trackOrderConversion(orderNum, method, window._orderTotal, window._orderItems);
           localStorage.removeItem('cart');
+          localStorage.removeItem('rrs_coupon');
           localStorage.setItem('rrs_last_order', JSON.stringify(lastOrderData));
           window.location.href = '/order-confirmation?order=' + encodeURIComponent(orderNum);
     }

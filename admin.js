@@ -6041,6 +6041,12 @@ async function openOrderModal(id) {
           <td style="text-align:right;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${deliveryFee.toFixed(2)}</td>
         </tr>` : ""}
+        ${Number(o.coupon_discount) > 0 ? `<tr style="border-top:1px solid #f0f4fa">
+          <td style="padding:9px 12px">Coupon <code style="background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:5px;font-size:12px">${escHtml(o.coupon_code || "")}</code><span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Applied at checkout &middot; already taken off the total</span></td>
+          <td style="text-align:center;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px">&mdash;</td>
+          <td style="text-align:right;padding:9px 8px;font-weight:600;color:#15803d">&minus;$${Number(o.coupon_discount).toFixed(2)}</td>
+        </tr>` : ""}
         ${taxAmount > 0 ? `<tr style="border-top:1px solid #f0f4fa">
           <td style="padding:9px 12px">Sales Tax${addr.state ? ` <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">${escHtml(addr.state)}${taxRate ? ` &middot; ${(taxRate * 100).toFixed(2)}%` : ""}</span>` : ""}</td>
           <td style="text-align:center;padding:9px 8px">&mdash;</td>

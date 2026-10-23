@@ -55,6 +55,27 @@ function liftgateOpt(md) {
   if (v === false || v === 'false') return false;
   return undefined;
 }
+// Checkout's coupon ({ code, choice }) plus the customer's email for the
+// per-customer limit. Validated and priced in _lib/coupons.js, never here.
+function couponOpt(raw, email) {
+  if (!raw || typeof raw !== 'object' || !String(raw.code || '').trim()) return undefined;
+  return {
+    code: String(raw.code).slice(0, 40),
+    choice: raw.choice === 'reorder' ? 'reorder' : raw.choice === 'coupon' ? 'coupon' : undefined,
+    email: String(email || raw.email || '').slice(0, 200),
+  };
+}
+
+// What the page needs to show the discount row and the coupon's status.
+function discountInfo(q) {
+  return {
+    discount: q.discount,
+    discountKind: q.discountKind,
+    reorderDiscount: q.reorderDiscount,
+    coupon: q.coupon ? { code: q.coupon.code, applied: q.coupon.applied, discount: q.coupon.discount, description: q.coupon.description, error: q.coupon.error } : null,
+  };
+}
+
 function safeMetadata(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
@@ -96,19 +117,19 @@ module.exports = async (req, res) => {
     if (qb && qb.quote_only === true) {
       if (!rateLimit(req, res, { bucket: 'quote', limit: 30, windowMs: 60000 })) return;
       const md = qb.metadata || {};
-      const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address, { shippingToken: qb.shipping_token, liftgate: liftgateOpt(md) });
+      const q = await priceCart(qb.items, qb.state, md.fulfillment_method, md.shipping_address, { shippingToken: qb.shipping_token, liftgate: liftgateOpt(md), coupon: couponOpt(qb.coupon, md.customer_email) });
       if (!q.ok) return res.status(400).json({ error: q.error });
       // Volume (freight) orders get no delivery figure: they go to a custom
       // quote instead (see needsFreightQuote in _lib/price-cart.js).
       if (q.needsFreightQuote) {
-        return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal, deliveryDays: q.deliveryDays });
+        return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays });
       }
       // WARP could not price delivery yet ('zip': no destination entered;
       // 'unpriced': no rate came back). No figure is shown or charged.
       if (q.shippingUnavailable) {
-        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, shipping: null, tax: q.tax, subtotal: q.subtotal, discount: q.discount, deliveryDays: q.deliveryDays });
+        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, shipping: null, tax: q.tax, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays });
       }
-      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, discount: q.discount, deliveryDays: q.deliveryDays, shippingToken: q.shippingToken });
+      return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays, shippingToken: q.shippingToken });
     }
   } catch (err) {
     console.error('[quote]', err && err.message);
@@ -127,7 +148,7 @@ module.exports = async (req, res) => {
 
   try {
     const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
-    const { items, state, currency = 'usd', metadata = {}, method, shipping_token } = body;
+    const { items, state, currency = 'usd', metadata = {}, method, shipping_token, coupon } = body;
 
     // Price the order from the database. Whatever `amount` the caller may
     // have sent is deliberately not read.
@@ -137,7 +158,7 @@ module.exports = async (req, res) => {
     // checkout already puts it) rather than as its own body field.
     // The customer's address rides in metadata.shipping_address (JSON):
     // per-distributor shipping is rated from each warehouse to this ZIP.
-    const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address, { shippingToken: shipping_token, liftgate: liftgateOpt(metadata) });
+    const priced = await priceCart(items, state, metadata.fulfillment_method, metadata.shipping_address, { shippingToken: shipping_token, liftgate: liftgateOpt(metadata), coupon: couponOpt(coupon, metadata.customer_email) });
     if (!priced.ok) return res.status(400).json({ error: priced.error });
     // Enforced here, not just in the checkout UI: a volume order is never
     // charged a guessed freight figure, even from a stale page or a
@@ -196,6 +217,13 @@ module.exports = async (req, res) => {
         // the confirmation email shows the same range as checkout.
         delivery_days_min: String(priced.deliveryDays.min),
         delivery_days_max: String(priced.deliveryDays.max),
+        // The coupon this charge was priced with, so create-order and the
+        // webhook record exactly what was charged, not a re-evaluation.
+        ...(priced.coupon && priced.coupon.applied ? {
+          coupon_id: priced.coupon.id,
+          coupon_code: priced.coupon.code,
+          coupon_discount: String(Math.round(priced.coupon.discount * 100)),
+        } : {}),
       },
     });
 
@@ -210,7 +238,7 @@ module.exports = async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       subtotal: priced.subtotal,
-      discount: priced.discount,
+      ...discountInfo(priced),
       tax: priced.tax,
       shipping: priced.shipping,
       total: priced.total,

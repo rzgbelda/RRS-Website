@@ -572,6 +572,16 @@ module.exports = async (req, res) => {
     total       = Math.max(0, parseFloat(o.total) || 0);
     if (!total || total <= 0) return res.status(400).json({ error: 'Order total is $0 -- nothing to invoice.' });
 
+    // A coupon applied at checkout (20261024_coupons_phase2.sql) is already
+    // out of o.total. Billed through the same credit path quotes use (a
+    // Stripe amount_off coupon), so the payment link charges the total the
+    // customer was shown. Separate select: the columns may not exist yet.
+    const { data: cpn } = await supabase.from('orders').select('coupon_code, coupon_discount').eq('id', order_id).maybeSingle();
+    if (cpn && Number(cpn.coupon_discount) > 0) {
+      creditAmount = Math.round(Number(cpn.coupon_discount) * 100) / 100;
+      creditNote = 'Coupon ' + (cpn.coupon_code || '');
+    }
+
     if (hasTaxColumns && o.tax_amount != null) {
       // Real, staff-set tax (saveOrderTax() in admin.js) -- trust it
       // directly instead of re-deriving anything.
@@ -586,7 +596,7 @@ module.exports = async (req, res) => {
       // recordedFreight, not freightFee: the stored total for a legacy
       // order may still include carrier freight, and tax is whatever is
       // left after everything that total was built from.
-      taxAmount = Math.max(0, total - itemsTotal - deliveryFee - recordedFreight);
+      taxAmount = Math.max(0, total + creditAmount - itemsTotal - deliveryFee - recordedFreight);
       tax_rate  = 0;
     }
 

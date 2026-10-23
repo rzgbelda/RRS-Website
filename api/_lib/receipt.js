@@ -194,7 +194,7 @@ async function generateReceiptPdf(order) {
   // Totals: subtotal, discount (if any), delivery, tax, total
   {
     const lines = [['Subtotal', order.subtotal]];
-    if (Number(order.discount) > 0) lines.push(['Reorder discount', -Number(order.discount)]);
+    if (Number(order.discount) > 0) lines.push([order.discount_label || 'Reorder discount', -Number(order.discount)]);
     lines.push(['Delivery', order.delivery], ['Tax', order.tax]);
     ensure(40 + lines.length * 16);
     y -= 8;

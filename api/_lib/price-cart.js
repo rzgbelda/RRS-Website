@@ -3,6 +3,7 @@ const { taxRateFor } = require('../../tax-rates');
 const { computeShipping, groupByDistributor, classifyShipment } = require('./shipping');
 const { deliveryDaysForCart } = require('./delivery-days');
 const { issueShippingToken, readShippingToken } = require('./quote-token');
+const { evaluateCoupon } = require('./coupons');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -209,7 +210,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, length, width, height, distributor, moq_group, moq_group_min, moq')
+    .select('sku, name, category_name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, length, width, height, distributor, moq_group, moq_group_min, moq')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -340,7 +341,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
       quantity: qty, caseQty: caseMatch ? Number(caseMatch[1]) : null,
     });
 
-    lines.push({ sku, name: row.name, quantity: qty, unitPrice });
+    lines.push({ sku, name: row.name, category_name: row.category_name || null, quantity: qty, unitPrice });
   }
 
   // Rounded to cents at each step the same way the browser summary does,
@@ -354,9 +355,39 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // reference, and if the two disagree the customer is shown one number
   // and charged another.
   const REORDER_DISCOUNT_RATE = 0.05;
-  const discount = hasReorder
+  const reorderDiscount = hasReorder
     ? Math.round(subtotal * REORDER_DISCOUNT_RATE * 100) / 100
     : 0;
+
+  // Coupon (coupons phase 2). opts.coupon = { code, email, choice }.
+  // One discount per order (user decision, 2026-10-19): a coupon and the
+  // Reorder Program 5% never stack. The customer picks with `choice`
+  // ('coupon' | 'reorder'); without a pick the larger discount wins.
+  let coupon = null;
+  if (opts.coupon && String(opts.coupon.code || '').trim()) {
+    const r = await evaluateCoupon(supabase, {
+      code: opts.coupon.code,
+      email: opts.coupon.email,
+      lines: lines.map(l => ({ sku: l.sku, category_name: l.category_name, lineTotal: l.unitPrice * l.quantity })),
+      dealSkus: new Set(dealBySku.keys()),
+      subtotal,
+    });
+    coupon = r.ok
+      ? { id: r.coupon.id, code: r.coupon.code, description: r.coupon.description || '', discount: r.discount, applied: false }
+      : { code: String(opts.coupon.code).trim().toUpperCase(), error: r.error, applied: false };
+  }
+  let discount = reorderDiscount;
+  let discountKind = reorderDiscount > 0 ? 'reorder' : null;
+  if (coupon && !coupon.error) {
+    const choice = opts.coupon.choice;
+    const keepReorder = reorderDiscount > 0 &&
+      (choice === 'reorder' || (choice !== 'coupon' && reorderDiscount > coupon.discount));
+    if (!keepReorder) {
+      discount = coupon.discount;
+      discountKind = 'coupon';
+      coupon.applied = true;
+    }
+  }
   const discountedSubtotal = Math.round((subtotal - discount) * 100) / 100;
 
   // Tax follows the discounted subtotal -- taxing the pre-discount figure
@@ -517,6 +548,10 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     amountCents: Math.round(total * 100),
     subtotal,
     discount,
+    // 'reorder' | 'coupon' | null -- which one `discount` is.
+    discountKind,
+    reorderDiscount,
+    coupon,
     hasReorder,
     discountedSubtotal,
     tax,
