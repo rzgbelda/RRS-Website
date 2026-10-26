@@ -28,6 +28,9 @@ language sql security definer stable set search_path = public as $$
     and (public.is_admin() or public.is_marketing() or public.is_supply_chain());
 $$;
 revoke all on function public.staff_order_shipments(uuid) from public;
+-- Supabase's default privileges grant new functions to anon directly, not
+-- through public, so the revoke above alone leaves anon able to call it.
+revoke execute on function public.staff_order_shipments(uuid) from anon;
 grant execute on function public.staff_order_shipments(uuid) to authenticated;
 
 -- Verify (logged in as a customer, with their access token):
