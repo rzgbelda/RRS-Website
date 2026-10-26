@@ -83,7 +83,23 @@ function invoiceEmailHtml(o) {
     // line is still always shown rather than omitted below the threshold:
     // the Sept 15 audit flagged a silent delivery line as a conversion
     // blocker, so it says how shipping is priced either way.
-    Number(o.subtotal) >= FREE_SHIPPING_MIN_SUBTOTAL
+    //
+    // Unless delivery is already billed: an in-house delivery fee or a
+    // freight fee IS the delivery charge, and "Shipping -- Quoted
+    // separately" under it told the customer they'd pay twice (same rule
+    // as quote-pdf.js). A freight fee gets its own priced line -- it was
+    // in the total and subtotal but never shown.
+    Number(o.delivery_fee) > 0
+      ? ''
+    : Number(o.freight_fee) > 0
+      ? '<tr>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Freight to your address</span></td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
+        '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.freight_fee).toFixed(2) + '</td>' +
+        '</tr>'
+    : Number(o.subtotal) >= FREE_SHIPPING_MIN_SUBTOTAL
       ? '<tr>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
           '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Free shipping on orders $3,000+</span></td>' +
