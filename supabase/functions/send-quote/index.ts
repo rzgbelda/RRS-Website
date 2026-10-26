@@ -186,8 +186,8 @@ function buildQuoteHtml(payload: {
         </tr>` : ""}${freightFee > 0 ? `
         <tr style="background:${(items.length + (deliveryFee > 0 ? 1 : 0)) % 2 === 0 ? "#fff" : "#f8fafc"}">
           <td style="padding:12px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9">
-            Freight / Shipping
-            <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Carrier freight for this order</span>
+            Shipping
+            <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Delivery to your address</span>
           </td>
           <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:center;border-bottom:1px solid #f1f5f9">—</td>
           <td style="padding:12px 16px;font-size:13px;color:#475569;text-align:right;border-bottom:1px solid #f1f5f9">—</td>
@@ -234,8 +234,8 @@ function buildQuoteHtml(payload: {
         ${deliveryFee > 0
           ? `<li>Delivery is by Room Ready Supply and is included in the total above.</li>`
           : freightFee > 0
-            ? `<li>Freight is included in the total above.</li>`
-            : `<li>Freight is additional unless otherwise noted.</li>`}
+            ? `<li>Shipping is included in the total above.</li>`
+            : `<li>Shipping is additional unless otherwise noted.</li>`}
         <li>Minimum order quantities may apply.</li>
         <li>Any delivery date given is an estimate only and is not guaranteed. Delivery may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control. We will make reasonable efforts to process and ship promptly but cannot guarantee a specific delivery date.</li>
       </ul>

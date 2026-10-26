@@ -87,14 +87,15 @@ function invoiceEmailHtml(o) {
     // Unless delivery is already billed: an in-house delivery fee or a
     // freight fee IS the delivery charge, and "Shipping -- Quoted
     // separately" under it told the customer they'd pay twice (same rule
-    // as quote-pdf.js). A freight fee gets its own priced line -- it was
+    // as quote-pdf.js). A freight fee gets its own priced line, labelled
+    // plain "Shipping" -- most orders are parcel, and "freight" confused buyers -- it was
     // in the total and subtotal but never shown.
     Number(o.delivery_fee) > 0
       ? ''
     : Number(o.freight_fee) > 0
       ? '<tr>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#1e293b;">Shipping' +
-          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Freight to your address</span></td>' +
+          '<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px;">Delivery to your address</span></td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:center;">&mdash;</td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#64748b;text-align:right;">&mdash;</td>' +
         '<td style="padding:10px 12px;border-bottom:1px solid #f1f5f9;font-size:14px;color:#0B1F38;font-weight:700;text-align:right;">$' + Number(o.freight_fee).toFixed(2) + '</td>' +
@@ -857,7 +858,7 @@ module.exports = async (req, res) => {
       }] : []).concat(freightFee > 0 ? [{
         price_data: {
           currency: 'usd',
-          product_data: { name: 'Freight / Shipping' },
+          product_data: { name: 'Shipping' },
           unit_amount: Math.round(freightFee * 100),
         },
         quantity: 1,
