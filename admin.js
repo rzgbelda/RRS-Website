@@ -6024,6 +6024,7 @@ async function openOrderModal(id) {
     <table style="width:100%;font-size:13px;border-collapse:collapse">
       <thead><tr style="background:#f8fafd">
         <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Product</th>
+        ${window._adminRole === "sub_distributor" ? "" : `<th style="padding:8px;text-align:left;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase" title="Internal only -- never shown to customers">Distributor 🔒</th>`}
         <th style="padding:8px;text-align:center;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Qty</th>
         <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Price</th>
         <th style="padding:8px;text-align:right;font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase">Subtotal</th>
@@ -6031,24 +6032,28 @@ async function openOrderModal(id) {
       <tbody>
         ${(o.order_items || []).map(i => { const price = Number(i.price ?? i.price_per_case ?? 0); const qty = Number(i.quantity ?? 1); return `<tr style="border-top:1px solid #f0f4fa">
           <td style="padding:9px 12px">${escHtml(i.name || i.product_name || "Product")}</td>
+          ${window._adminRole === "sub_distributor" ? "" : `<td style="padding:9px 8px;font-size:12.5px">${distributorCell(i)}</td>`}
           <td style="text-align:center;padding:9px 8px">${qty}</td>
           <td style="text-align:right;padding:9px 8px">$${price.toFixed(2)}</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${(price * qty).toFixed(2)}</td>
         </tr>`; }).join("")}
         ${isInHouse && deliveryFee > 0 ? `<tr style="border-top:1px solid #f0f4fa">
           <td style="padding:9px 12px">In-House Delivery<span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Delivered by Room Ready Supply</span></td>
+          ${window._adminRole === "sub_distributor" ? "" : "<td></td>"}
           <td style="text-align:center;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${deliveryFee.toFixed(2)}</td>
         </tr>` : ""}
         ${Number(o.coupon_discount) > 0 ? `<tr style="border-top:1px solid #f0f4fa">
           <td style="padding:9px 12px">Coupon <code style="background:#f0fdf4;color:#15803d;padding:1px 6px;border-radius:5px;font-size:12px">${escHtml(o.coupon_code || "")}</code><span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">Applied at checkout &middot; already taken off the total</span></td>
+          ${window._adminRole === "sub_distributor" ? "" : "<td></td>"}
           <td style="text-align:center;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600;color:#15803d">&minus;$${Number(o.coupon_discount).toFixed(2)}</td>
         </tr>` : ""}
         ${taxAmount > 0 ? `<tr style="border-top:1px solid #f0f4fa">
           <td style="padding:9px 12px">Sales Tax${addr.state ? ` <span style="display:block;font-size:11px;color:#94a3b8;margin-top:2px">${escHtml(addr.state)}${taxRate ? ` &middot; ${(taxRate * 100).toFixed(2)}%` : ""}</span>` : ""}</td>
+          ${window._adminRole === "sub_distributor" ? "" : "<td></td>"}
           <td style="text-align:center;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px">&mdash;</td>
           <td style="text-align:right;padding:9px 8px;font-weight:600">$${taxAmount.toFixed(2)}</td>
@@ -6144,6 +6149,7 @@ async function openOrderModal(id) {
   const taxStateEl = document.getElementById("orderTaxState");
   if (taxStateEl) taxStateEl.value = addr.state || "";
   openModal("orderModal");
+  fillDistributorCells(document.getElementById("orderModal"));
   renderOrderVendorPoPanel(o);
   renderOrderFreightPanel(o);
   renderOrderShipmentsPanel(o);
@@ -6333,6 +6339,46 @@ async function refreshUpsTracking(shipmentId, orderId) {
   } catch (err) {
     alert("Could not refresh tracking: " + err.message);
   }
+}
+
+// Which distributor each line item is ordered from -- staff place these
+// orders by hand. Looked up from products.distributor at view time and
+// never copied onto order_items / quote rows, so nothing a customer can
+// read (their order rows, invoices, quote PDFs, emails) ever carries it;
+// the column itself is staff-only in RLS (20261003_lock_products_costs).
+// Cells are <span class="rrs-dist" data-pid data-sku data-name>.
+function distributorCell(item) {
+  if (window._adminRole === "sub_distributor") return "";
+  return `<span class="rrs-dist" data-pid="${escHtml(item.product_id || "")}" data-sku="${escHtml(item.sku || "")}" data-name="${escHtml(item.name || item.product_name || "")}" style="color:#94a3b8">…</span>`;
+}
+
+async function fillDistributorCells(root) {
+  const cells = [...(root || document).querySelectorAll(".rrs-dist")];
+  if (!cells.length) return;
+  const ids   = [...new Set(cells.map(c => c.dataset.pid).filter(Boolean))];
+  const skus  = [...new Set(cells.map(c => c.dataset.sku).filter(Boolean))];
+  const names = [...new Set(cells.map(c => c.dataset.name).filter(Boolean))];
+  const cols = "id, sku, name, distributor";
+  const [byIdRes, bySkuRes, byNameRes] = await Promise.all([
+    ids.length   ? window.sb.from("products").select(cols).in("id", ids)     : { data: [] },
+    skus.length  ? window.sb.from("products").select(cols).in("sku", skus)   : { data: [] },
+    names.length ? window.sb.from("products").select(cols).in("name", names) : { data: [] },
+  ]);
+  const products = [...(byIdRes.data || []), ...(bySkuRes.data || []), ...(byNameRes.data || [])];
+  const slugs = [...new Set(products.map(p => String(p.distributor || "").trim().toLowerCase()).filter(Boolean))];
+  const { data: vendors } = slugs.length
+    ? await window.sb.from("vendors").select("slug, name").in("slug", slugs)
+    : { data: [] };
+  const vendorName = Object.fromEntries((vendors || []).map(v => [v.slug, v.name]));
+  const pick = (key, val) => products.find(p => val && String(p[key] || "").toLowerCase() === val.toLowerCase());
+
+  cells.forEach(c => {
+    const p = pick("id", c.dataset.pid) || pick("sku", c.dataset.sku) || pick("name", c.dataset.name);
+    const slug = String(p?.distributor || "").trim().toLowerCase();
+    c.textContent = slug ? (vendorName[slug] || slug) : "—";
+    c.style.color = slug ? "#0b2d52" : "#94a3b8";
+    c.style.fontWeight = slug ? "600" : "400";
+  });
 }
 
 // Groups this order's line items by vendor (via products.vendor_id) and
@@ -12013,15 +12059,21 @@ function openQuoteDetail(id) {
   // clear which of the two is being shown.
   const usingQuoted = !r.requested_items?.length && r.quote_items?.length;
   const items = usingQuoted ? r.quote_items : r.requested_items;
+  // Staff-only distributor column (see fillDistributorCells). Lives in this
+  // modal only; the quote PDF / quote-view page are built from quote rows,
+  // which never carry it.
+  const showDist = window._adminRole !== "sub_distributor";
+  const qCols = showDist ? "1fr 150px 90px" : "1fr 90px";
   const itemsHtml = items?.length
     ? `${usingQuoted ? `<p style="margin:8px 0 0;font-size:11.5px;color:#94a3b8">Items you quoted (the customer didn't submit a product list).</p>` : ""}
        <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-top:8px">
-        <div style="display:grid;grid-template-columns:1fr 90px;background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
-          <span>Product</span><span style="text-align:center">Qty</span>
+        <div style="display:grid;grid-template-columns:${qCols};background:#f8fafc;padding:8px 14px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#64748b">
+          <span>Product</span>${showDist ? `<span title="Internal only -- never shown to customers">Distributor 🔒</span>` : ""}<span style="text-align:center">Qty</span>
         </div>
         ${items.map((i, idx) => `
-          <div style="display:grid;grid-template-columns:1fr 90px;padding:10px 14px;border-top:1px solid #f1f5f9;background:${idx%2===0?'#fff':'#fafbfc'};font-size:13px;align-items:center">
+          <div style="display:grid;grid-template-columns:${qCols};padding:10px 14px;border-top:1px solid #f1f5f9;background:${idx%2===0?'#fff':'#fafbfc'};font-size:13px;align-items:center">
             <span style="color:#1e293b;font-weight:500">${esc(i.name)}</span>
+            ${showDist ? `<span style="font-size:12.5px">${distributorCell(i)}</span>` : ""}
             <span style="text-align:center;font-weight:700;color:#0d2c50">${i.quantity}</span>
           </div>`).join("")}
       </div>`
@@ -12120,6 +12172,7 @@ function openQuoteDetail(id) {
 
     ${fileHtml ? `<div style="margin-bottom:8px">${fileHtml}</div>` : ""}
   `;
+  fillDistributorCells(document.getElementById("quoteDetailBody"));
 
   document.getElementById("quoteStatusSelect").value = r.status || "new";
   document.getElementById("quoteDetailShippingStreet").value = r.shipping_street || "";
