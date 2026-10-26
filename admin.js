@@ -6168,6 +6168,11 @@ const RRS_DISTRIBUTORS = [
   { value: "innstyle",    label: "InnStyle" },
   { value: "sasso",       label: "Sasso" },
   { value: "officecrave", label: "OfficeCrave" },
+  { value: "starlinen",   label: "Starlinen" },
+  { value: "nps",         label: "NPS" },
+  { value: "imperial-brady", label: "Imperial Brady" },
+  { value: "wraptite",    label: "Wraptite" },
+  { value: "bargoose",    label: "BarGoose" },
   { value: "other",       label: "Other" },
 ];
 
@@ -6184,11 +6189,29 @@ async function renderOrderShipmentsPanel(o) {
   // A warehouse pickup is never shipped, so there is nothing to track.
   if (o.fulfillment_method === "pickup") return;
 
+  // Logged-in users may only select the tracking columns
+  // (20261027_hide_shipment_distributor.sql) -- distributor is staff-only
+  // and comes from staff_order_shipments(). Before that migration runs the
+  // RPC doesn't exist, so fall back to reading the column directly.
   const { data: shipments, error } = await window.sb
     .from("order_shipments")
-    .select("*")
+    .select("id, order_id, status, tracking_number, tracking_url, carrier, shipped_at, delivered_at, created_at")
     .eq("order_id", o.id)
     .order("created_at", { ascending: true });
+  if (!error && shipments?.length) {
+    let { data: internal, error: rpcErr } = await window.sb.rpc("staff_order_shipments", { p_order_id: o.id });
+    if (rpcErr) ({ data: internal } = await window.sb.from("order_shipments").select("id, distributor").eq("order_id", o.id));
+    const distById = Object.fromEntries((internal || []).map(x => [x.id, x.distributor]));
+    shipments.forEach(s => { s.distributor = distById[s.id] || ""; });
+  }
+
+  // Preselect the distributor this order's products come from.
+  const productIds = [...new Set((o.order_items || []).map(i => i.product_id).filter(Boolean))];
+  const { data: orderProducts } = productIds.length
+    ? await window.sb.from("products").select("distributor").in("id", productIds)
+    : { data: [] };
+  const defaultDist = (orderProducts || []).map(p => String(p.distributor || "").trim().toLowerCase())
+    .find(slug => RRS_DISTRIBUTORS.some(d => d.value === slug)) || "";
 
   // 42P01 = table missing (migration not run yet). Say so plainly rather
   // than rendering an editor whose every save would fail.
@@ -6205,7 +6228,7 @@ async function renderOrderShipmentsPanel(o) {
 
   const rows = (shipments || []).map(s => `
     <tr style="border-top:1px solid #f0f4fa">
-      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(RRS_DISTRIBUTORS.find(d => d.value === s.distributor)?.label || s.distributor)}</td>
+      <td style="padding:8px 10px;font-size:12.5px;">${escHtml(RRS_DISTRIBUTORS.find(d => d.value === s.distributor)?.label || s.distributor || "—")}</td>
       <td style="padding:8px 10px;font-size:12.5px;">${escHtml(SHIPMENT_STATUS_LABEL[s.status] || s.status)}</td>
       <td style="padding:8px 10px;font-size:12.5px;">
         ${s.tracking_number
@@ -6252,7 +6275,7 @@ async function renderOrderShipmentsPanel(o) {
 
     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
       <select id="shipDistributor-${o.id}" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px;width:auto">
-        ${RRS_DISTRIBUTORS.map(d => `<option value="${d.value}">${d.label}</option>`).join("")}
+        ${RRS_DISTRIBUTORS.map(d => `<option value="${d.value}"${d.value === defaultDist ? " selected" : ""}>${d.label}</option>`).join("")}
       </select>
       <select id="shipStatus-${o.id}" class="a-select" style="height:34px;border-radius:8px;font-size:12.5px;padding:0 8px;width:auto">
         <option value="processing">Processing</option>
