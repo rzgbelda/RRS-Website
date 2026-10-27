@@ -517,6 +517,16 @@
     font-weight: 600;
     line-height: 1.5;
   }
+  .checkout-field-msg {
+    display: block;
+    margin: 6px 0 4px;
+    color: #b91c1c;
+    font-size: 12.5px;
+    font-weight: 600;
+    line-height: 1.45;
+    text-transform: none;
+    letter-spacing: normal;
+  }
   .checkout-field-error,
   .checkout-field-error:focus {
     border-color: #dc2626 !important;
@@ -591,6 +601,7 @@ function clearCheckoutError() {
   const box = document.getElementById('checkoutFormError');
   if (box) { box.textContent = ''; box.style.display = 'none'; }
   document.querySelectorAll('.checkout-field-error').forEach(el => el.classList.remove('checkout-field-error'));
+  document.querySelectorAll('.checkout-field-msg').forEach(el => el.remove());
 }
 function showCheckoutError(msg, fieldId) {
   const btn = document.getElementById('submitOrderBtn');
@@ -600,6 +611,13 @@ function showCheckoutError(msg, fieldId) {
   const field = fieldId && document.getElementById(fieldId);
   if (field) {
     field.classList.add('checkout-field-error');
+    // The same message right under the field: on a phone the box above
+    // the button is a long scroll away from the field it's about.
+    const msgEl = document.createElement('span');
+    msgEl.className = 'checkout-field-msg';
+    msgEl.textContent = msg;
+    const grid = field.closest('.address-grid');
+    if (grid) grid.after(msgEl); else field.after(msgEl);
     field.scrollIntoView({ behavior: 'smooth', block: 'center' });
     try { field.focus({ preventScroll: true }); } catch (e) {}
   } else if (box) {
