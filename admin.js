@@ -12872,12 +12872,11 @@ async function downloadQuotePreviewPdf() {
   try {
     const itemsTotal = payload.items.reduce((s, i) => s + i.quantity * i.unit_price, 0);
     const deliveryFee = payload.fulfillment_method === "in_house" ? (payload.in_house_delivery_fee || 0) : 0;
-    // Freight is an internal cost, never billed: it is excluded from both
-    // the taxable base and the grand total so the quoted figure is what the
-    // customer actually pays.
-    const freightFee = 0;
+    // Shipping is billed to the customer (since 2026-10-22): same taxable
+    // base and grand total as the emailed quote in send-quote.
+    const freightFee = payload.freight_fee || 0;
     const taxRate = payload.shipping_state ? (window.getTaxRate?.(payload.shipping_state) || 0) : 0;
-    const taxAmount = (itemsTotal + deliveryFee) * taxRate;
+    const taxAmount = (itemsTotal + deliveryFee + freightFee) * taxRate;
 
     const res = await fetch("/api/quote-pdf", {
       method: "POST",

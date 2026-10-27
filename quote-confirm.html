@@ -153,12 +153,16 @@ function renderPending(data) {
   // FREE_SHIPPING_ENABLED in warp-freight.js). Disabled here with an
   // unreachable threshold, the same way as api/send-invoice.js and
   // api/quote-pdf.js, so the FREE row below never renders and every
-  // quote shows "Quoted separately". freight_fee stays on the record as
-  // an internal cost either way.
+  // quote without a freight fee shows "Quoted separately". A saved freight
+  // fee is billed to the customer (since 2026-10-22) and shown as a priced
+  // Shipping row, matching the emailed quote.
   const FREE_SHIPPING_MIN_SUBTOTAL = Infinity;
   const qualifiesFreeShip = Number(data.subtotal) >= FREE_SHIPPING_MIN_SUBTOTAL;
+  const freightFee = deliveryFee > 0 ? 0 : Math.max(0, Number(data.freight_fee) || 0);
   const feeRow = deliveryFee > 0
     ? '<tr><td>In-House Delivery</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(deliveryFee) + '</td></tr>'
+    : freightFee > 0
+      ? '<tr><td>Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num">' + money(freightFee) + '</td></tr>'
     : qualifiesFreeShip
       ? '<tr><td>Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num" style="color:#15803d;font-weight:700;">FREE</td></tr>'
       : '<tr><td>Shipping</td><td class="qc-num">&mdash;</td><td class="qc-num">&mdash;</td><td class="qc-num" style="color:#64748b;font-weight:600;">Quoted separately</td></tr>';
@@ -174,7 +178,7 @@ function renderPending(data) {
     '<thead><tr><th>Product</th><th style="text-align:right">Qty</th><th style="text-align:right">Unit Price</th><th style="text-align:right">Total</th></tr></thead>' +
     '<tbody>' + rows + feeRow + '</tbody>' +
     '<tfoot>' +
-    '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Subtotal</td><td class="qc-num">' + money(data.subtotal) + '</td></tr>' +
+    '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Subtotal</td><td class="qc-num">' + money(Number(data.subtotal || 0) + deliveryFee + freightFee) + '</td></tr>' +
     (Number(data.tax_amount) > 0 ? '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Sales Tax' + (data.shipping_state ? ' (' + esc(data.shipping_state) + ')' : '') + '</td><td class="qc-num">' + money(data.tax_amount) + '</td></tr>' : '') +
     (Number(data.credit_amount) > 0 ? '<tr><td colspan="3" style="text-align:right;color:#64748b;font-size:12px">Credit' + (data.credit_note ? ' (' + esc(data.credit_note) + ')' : '') + '</td><td class="qc-num" style="color:#16a34a;font-weight:700">&minus;' + money(data.credit_amount) + '</td></tr>' : '') +
     '<tr class="qc-total"><td colspan="3" style="text-align:right">Total</td><td class="qc-num">' + money(data.grand_total) + '</td></tr>' +

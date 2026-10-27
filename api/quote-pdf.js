@@ -334,14 +334,13 @@ async function buildQuotePdf(q) {
     subtotal += deliveryFee;
   }
 
-  // Shipping row. Free at or above FREE_SHIPPING_MIN_SUBTOTAL ($3,000
-  // merchandise subtotal) -- this row used to print FREE unconditionally,
-  // which contradicted a smaller quote whose freight is still quoted and
-  // billed. `subtotal` at this point is merchandise plus any in-house
-  // delivery fee added just above; the threshold is measured on
-  // merchandise alone, so itemsSubtotal is captured before that addition.
-  // freight_fee stays on the record for staff margin reporting either way.
-  const freightFee = 0;
+  // Shipping row. A saved freight fee is billed to the customer (since
+  // 2026-10-22) and printed as a priced "Shipping" line, the same as the
+  // emailed quote (send-quote) -- this used to hardcode 0, so the PDF said
+  // "Quoted separately" and left shipping out of the total the email showed.
+  // Without a fee: FREE at or above FREE_SHIPPING_MIN_SUBTOTAL (measured on
+  // merchandise alone, hence itemsSubtotal), otherwise "Quoted separately".
+  const freightFee = hidePricing ? 0 : Math.max(0, Number(q.freight_fee) || 0);
   const qualifiesFreeShip = itemsSubtotal >= FREE_SHIPPING_MIN_SUBTOTAL;
   // Not when an in-house delivery fee is set: that row IS the delivery
   // charge, and "Shipping -- Quoted separately" under it contradicted the
@@ -354,8 +353,8 @@ async function buildQuotePdf(q) {
     const nameY = y - 12.5;
     page.drawText(fitText('Shipping', COL_QTY - MARGIN - 74, reg, 8.5),
       { x: MARGIN + 10, y: nameY, size: 8.5, font: reg, color: rgb(0.12, 0.18, 0.25) });
-    const fs = qualifiesFreeShip ? 'FREE' : 'Quoted separately';
-    const fsColor = qualifiesFreeShip ? rgb(0.082, 0.502, 0.239) : GRAY;
+    const fs = freightFee > 0 ? money(freightFee) : qualifiesFreeShip ? 'FREE' : 'Quoted separately';
+    const fsColor = freightFee > 0 ? NAVY : qualifiesFreeShip ? rgb(0.082, 0.502, 0.239) : GRAY;
     page.drawText('—', { x: rightOf('—', COL_QTY, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
     page.drawText('—', { x: rightOf('—', COL_PRICE, 8.5, reg), y: nameY, size: 8.5, font: reg, color: GRAY });
     page.drawText(fs, { x: rightOf(fs, COL_TOTAL, 8.5, bold), y: nameY, size: 8.5, font: bold, color: fsColor });
@@ -407,6 +406,8 @@ async function buildQuotePdf(q) {
     ...(q.net_30_terms ? ['Payment terms: Net 30 days upon credit approval.'] : []),
     deliveryFee > 0
       ? 'Delivery is by Room Ready Supply and is included in the total above.'
+      : freightFee > 0
+        ? 'Shipping to your address is included in the total above.'
       : qualifiesFreeShip
         ? 'Shipping is free on this quote.'
         : 'Shipping is quoted separately for your address and billed on the invoice.',
