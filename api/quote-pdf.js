@@ -266,7 +266,16 @@ async function buildQuotePdf(q) {
     y -= 20;
   }
 
-  ensure(60);
+  // Keep the table and its Subtotal/Tax/Total together: if the whole block
+  // won't fit in what's left of this page but would fit on a fresh one,
+  // start it on the next page instead of splitting the totals off from
+  // their rows. A table too long for any single page still flows across
+  // pages with its header repeated, as before.
+  const extraRows = hidePricing ? 0 : 1;  // delivery-fee or shipping row
+  const rowsH = items.length ? (items.length + extraRows) * 18 : 26 + extraRows * 18;
+  const tableH = 20 + rowsH + (hidePricing ? 0 : 30 + 46 + 16);
+  const freshPageRoom = (H - 108 - 26) - BODY_FLOOR;
+  ensure(tableH <= freshPageRoom ? tableH : 60);
   drawTableHead();
 
   let subtotal = 0;
