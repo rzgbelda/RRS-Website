@@ -1,4 +1,4 @@
-// Emails Eric when WARP cannot price a shipment (final update package,
+// Emails Eric when a shipment can't be priced at checkout (final update package,
 // 2026-10-13: "No silent fallback ... Surface the failure to Eric instead").
 // Same recipient as the new-order alert (INTERNAL_ALERT_EMAIL).
 //
@@ -15,7 +15,7 @@ const lastSent = new Map();
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 /**
- * context: 'checkout' (a buyer is waiting) or 'health-check' (daily test).
+ * context: 'checkout' (a buyer is waiting).
  * failed: shipments from computeShipping() with amount null.
  * destination: { zip, state }; items: [{ sku, quantity }].
  */
@@ -34,10 +34,8 @@ async function sendShippingAlert({ context, failed, destination, items }) {
     const cart = (items || []).map(i => `${esc(i.sku)} &times; ${esc(i.quantity)}`).join(', ');
     const html =
       `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:640px">` +
-      `<h2 style="color:#b91c1c;margin:0 0 8px">WARP could not price delivery</h2>` +
-      `<p style="margin:0 0 12px;color:#334155">${context === 'health-check'
-        ? 'The daily WARP test quote failed. Buyers ordering from this warehouse cannot check out until it is fixed.'
-        : 'A buyer was stopped at checkout because no delivery price came back. They were asked to try again or call (252) 616-0088.'}</p>` +
+      `<h2 style="color:#b91c1c;margin:0 0 8px">Shipping could not be priced</h2>` +
+      `<p style="margin:0 0 12px;color:#334155">A buyer was stopped at checkout because no delivery price came back (TForce for pallets, UPS for parcels). They were asked to try again or call (252) 616-0088.</p>` +
       `<p style="margin:0 0 12px;color:#334155"><strong>Destination:</strong> ${esc(destination && destination.zip) || '-'} ${esc(destination && destination.state)}` +
       (cart ? `<br><strong>Cart:</strong> ${cart}` : '') + `</p>` +
       `<table style="border-collapse:collapse;font-size:13px;width:100%"><tr style="background:#f8fafc">` +
@@ -47,7 +45,7 @@ async function sendShippingAlert({ context, failed, destination, items }) {
     await new Resend(process.env.RESEND_API_KEY).emails.send({
       from: 'Room Ready Supply Alerts <orders@roomreadysupply.com>',
       to: process.env.INTERNAL_ALERT_EMAIL || 'eric@roomreadysupply.com',
-      subject: `[Shipping] WARP could not price delivery${context === 'health-check' ? ' (daily check)' : ''}`,
+      subject: '[Shipping] Delivery could not be priced at checkout',
       html,
     });
     return true;

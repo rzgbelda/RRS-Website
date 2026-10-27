@@ -226,17 +226,27 @@ async function rateFreight({ origin, dest, weightLb, liftgate, distributor }) {
     },
     body: JSON.stringify(body),
   });
-  // One retry on a timeout, 429 or 5xx: TForce occasionally stalls for
-  // >10 s on a lane that answers in 2-3 s a moment later (2026-10-23 tests),
-  // and with TForce as the primary rater a stall would block the sale.
+  // Up to two retries on a timeout, 429 or 5xx: TForce occasionally stalls
+  // for >10 s on a lane that answers in 2-3 s a moment later (2026-10-23
+  // tests), and its rate limit answers 429 "Try again in 1 seconds" when a
+  // cart re-quotes quickly -- a single 0.8 s retry still hit the limit
+  // (2026-10-28 alert). Waits what Retry-After asks for, else 1.2 s, 2.4 s.
   let resp;
-  try {
-    resp = await post();
-    if (resp.status === 429 || resp.status >= 500) throw new Error('HTTP ' + resp.status);
-  } catch (err) {
-    console.warn('[tforce] retrying rating after', err.message);
-    await new Promise(r => setTimeout(r, 800));
-    resp = await post();
+  for (let attempt = 1; ; attempt++) {
+    let why;
+    try {
+      resp = await post();
+      if (resp.status !== 429 && resp.status < 500) break;
+      why = 'HTTP ' + resp.status;
+    } catch (err) {
+      if (attempt >= 3) throw err;
+      why = err.message;
+    }
+    if (attempt >= 3) break;
+    const retryAfter = Number(resp && resp.headers && resp.headers.get('retry-after'));
+    const waitMs = retryAfter > 0 ? Math.min(retryAfter * 1000 + 200, 4000) : 1200 * attempt;
+    console.warn('[tforce] retrying rating after', why, '- waiting', waitMs, 'ms');
+    await new Promise(r => setTimeout(r, waitMs));
   }
   if (!resp.ok) {
     let why = '';

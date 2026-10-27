@@ -91,7 +91,15 @@ async function rateParcelCheapest({ origin, dest, packages, shipper }) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, transId: 'rrs-' + Date.now(), transactionSrc: 'rrs' },
     body: JSON.stringify(body),
   });
-  if (!resp.ok) throw new Error(`UPS rating failed (${resp.status})`);
+  if (!resp.ok) {
+    let why = '';
+    try {
+      const err = await resp.json();
+      const e = err && err.response && err.response.errors && err.response.errors[0];
+      why = e ? ` - ${e.code}: ${e.message}` : '';
+    } catch (_) {}
+    throw new Error(`UPS rating failed (${resp.status})${why}`);
+  }
   const data = await resp.json();
 
   let shipments = data && data.RateResponse && data.RateResponse.RatedShipment;

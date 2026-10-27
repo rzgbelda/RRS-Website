@@ -433,20 +433,15 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // weight estimate.
   const upsOn = String(process.env.UPS_RATING_ENABLED || '').toLowerCase() === 'true';
   const tforceOn = String(process.env.TFORCE_RATING_ENABLED || '').toLowerCase() === 'true';
-  // WARP (final update package, 2026-10-13): every order, at every weight,
-  // is quoted by the WARP API from each supplier's warehouse and paid at
-  // checkout. Takes over from UPS/TForce while WARP_RATING_ENABLED=true.
-  // Strict: no estimate is ever charged in its place -- if WARP cannot
-  // price a shipment, shippingUnavailable is set, payment is refused
-  // (create-payment-intent.js) and Eric is emailed (_lib/shipping-alert.js).
-  // SHIPPING_RATER=tforce (2026-10-23): WARP off. Pallet (LTL) shipments
-  // from every distributor are rated on RRS's TForce contract -- the freight
-  // RRS books itself on tforcefreight.com -- and parcels on UPS. Same strict
-  // rules as WARP: no price, no payment, and Eric is emailed. Overrides
-  // WARP_RATING_ENABLED, so switching back is just removing this variable.
-  const tforcePrimary = String(process.env.SHIPPING_RATER || '').trim().toLowerCase() === 'tforce';
-  const warpOn = !tforcePrimary && String(process.env.WARP_RATING_ENABLED || '').toLowerCase() === 'true';
-  const strictRating = warpOn || tforcePrimary;
+  // Every order is priced live from each supplier's warehouse: pallet (LTL)
+  // shipments on RRS's TForce contract -- the freight RRS books itself on
+  // tforcefreight.com -- and parcels on UPS. Strict: no estimate is ever
+  // charged in its place -- if a shipment can't be priced,
+  // shippingUnavailable is set, payment is refused (create-payment-intent.js)
+  // and Eric is emailed (_lib/shipping-alert.js). This is the default;
+  // SHIPPING_RATER=legacy falls back to the old weight-estimate path below.
+  // (WARP rated checkout 2026-10-13 to 10-23 and has been removed.)
+  const strictRating = String(process.env.SHIPPING_RATER || 'tforce').trim().toLowerCase() === 'tforce';
   let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'unpriced'
   let ticketShipping = null;
   if (!isPickup && strictRating) {
@@ -459,41 +454,13 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     } else {
       const vendorsBySlug = await loadVendors(supabase, shipLines);
       const slugOf = a => String((a.lines && a.lines[0] && a.lines[0].distributor) || '').trim().toLowerCase();
-      const { rateWarp } = require('./warp');
-      // TForce LTL (2026-10-23): RRS books LTL itself on its TForce contract,
-      // billed third party, so for the distributors listed in
-      // TFORCE_LTL_DISTRIBUTORS (e.g. "starlinen,innstyle") the cart charges
-      // TForce's contract rate -- what RRS actually pays. Only linen
-      // suppliers belong there: the density class table is the linens one.
-      // Parcel stays on WARP, and a shipment TForce refuses (too many
-      // pallets, API error) falls back to WARP's freight quote, so the
-      // checkout is never left without a price because of TForce.
-      const tforceLtl = new Set(String(process.env.TFORCE_LTL_DISTRIBUTORS || '')
-        .split(',').map(s => s.trim().toLowerCase()).filter(Boolean));
-      const warpFreight = a => rateWarp({ mode: 'freight', origin: a.origin, dest: a.dest, weightLb: a.weightLb, liftgate });
-      const carrier = tforcePrimary ? {
+      const carrier = {
         name: 'tforce',
         rateParcel: a => require('./ups').rateParcelCheapest(a),
         rateFreight: async a => {
           const r = await require('./tforce').rateFreight({ ...a, liftgate, distributor: slugOf(a) });
           console.log('[shipping] tforce', slugOf(a), a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
           return r;
-        },
-      } : {
-        name: 'warp',
-        rateParcel: a => rateWarp({ mode: 'parcel', origin: a.origin, dest: a.dest, packages: a.packages }),
-        rateFreight: async a => {
-          const slug = slugOf(a);
-          if (tforceLtl.has(slug)) {
-            try {
-              const r = await require('./tforce').rateFreight({ ...a, liftgate, distributor: slug });
-              console.log('[shipping] tforce', slug, a.origin.zip, '->', a.dest.zip, a.weightLb, 'lb =', r.amount);
-              return r;
-            } catch (err) {
-              console.warn('[shipping] tforce failed for', slug, '- using WARP:', err.message);
-            }
-          }
-          return warpFreight(a);
         },
       };
       const r = await computeShipping({ lines: shipLines, vendorsBySlug, destination: dest, carrier, strict: true });
@@ -534,7 +501,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // ships separately. Set FREIGHT_CHECKOUT_ENABLED=true to let freight orders
   // pay online again (e.g. once TForce rating is live).
   const freightCheckoutOn = String(process.env.FREIGHT_CHECKOUT_ENABLED || '').toLowerCase() === 'true';
-  // Never with WARP on: WARP prices freight at the cart like any order.
+  // Never with strict rating: TForce prices freight at the cart like any order.
   const needsFreightQuote = !isPickup && !strictRating && !freightCheckoutOn &&
     groupByDistributor(shipLines, new Map()).some(g => classifyShipment(g.weightLb) === 'freight');
 
@@ -549,7 +516,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     ok: true,
     needsFreightQuote,
     shippingUnavailable,
-    // Ticket for this exact delivery price (WARP only), sent back by the page.
+    // Ticket for this exact delivery price (strict rating only), sent back by the page.
     shippingToken: strictRating && !isPickup && dest && !shippingUnavailable ? issueShippingToken(wanted, tokenZip, shipping) : null,
     amountCents: Math.round(total * 100),
     subtotal,

@@ -6528,6 +6528,10 @@ async function sendVendorPo(orderId, vendorId) {
 // and is emailed to the supplier; "Test booking" uses TForce's test system
 // (no real pickup). Pre-fills mirror api/_lib/tforce.js: goods per pallet
 // by supplier, 40 lb pallet tare, class from density.
+// Off since 2026-10-28: distributors ship on their own carrier accounts and
+// TForce only rates at checkout. Past bookings still list with their BOL and
+// labels; set true to bring the booking forms back.
+const FREIGHT_BOOKING_ENABLED = false;
 const FREIGHT_CLASSES = ["50","55","60","65","70","77.5","85","92.5","100","110","125","150","175","200","250","300","400","500"];
 // [pcf below which, class]; NMFC sub = position + 1 (049260 / 149265).
 const FREIGHT_DENSITY = [[1,"400"],[2,"300"],[4,"250"],[6,"175"],[8,"125"],[10,"100"],[12,"92.5"],[15,"85"],[22.5,"70"],[30,"65"],[35,"60"],[50,"55"],[Infinity,"50"]];
@@ -6658,7 +6662,9 @@ async function renderOrderFreightPanel(o) {
     <hr style="margin:18px 0;border:none;border-top:1px solid #f0f4fa">
     <h4 style="margin-bottom:10px;font-size:13px;font-weight:700;color:#0d1f38;text-transform:uppercase;letter-spacing:.04em">TForce Freight</h4>
     ${bookingRows ? `<table style="width:100%;border-collapse:collapse;margin-bottom:12px"><tbody>${bookingRows}</tbody></table>` : ""}
-    <div style="display:flex;flex-direction:column;gap:10px">${forms}</div>`;
+    ${FREIGHT_BOOKING_ENABLED
+      ? `<div style="display:flex;flex-direction:column;gap:10px">${forms}</div>`
+      : `<p style="font-size:12.5px;color:#64748b;margin:0">The distributor ships this order on their own carrier account. TForce is used only to price shipping at checkout, so there is nothing to book here.</p>`}`;
 }
 
 async function bookTforce(orderId, slug) {
