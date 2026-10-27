@@ -1868,7 +1868,10 @@ async function openEditProduct(id) {
   setVal("prodCaseQty",    p.case_qty       || 1);
   setVal("prodPackSize",   p.pack_size      || 1);
   setVal("prodStockQty",   p.inventory?.[0]?.stock_qty ?? 0);
-  setVal("prodStock",      p.inventory?.[0]?.status    || "in_stock");
+  // products.in_stock is what the storefront and checkout read; never let
+  // the modal show "In Stock" for a product the store treats as out, or a
+  // plain save would put it back on sale.
+  setVal("prodStock",      p.in_stock === false ? "out_of_stock" : (p.inventory?.[0]?.status || "in_stock"));
   setVal("prodImage",      p.image_url      || "");
   setVal("prodCostPerCase",  p.cost_per_case   || "");
   setVal("prodLandedCost",   p.landed_cost     || "");
@@ -2024,6 +2027,9 @@ async function saveProduct() {
 
   const stockQty    = parseInt(document.getElementById("prodStockQty")?.value) || 0;
   const stockStatus = document.getElementById("prodStock")?.value || "in_stock";
+  // The Stock Status dropdown used to land only in inventory.status, which
+  // the storefront never reads -- an "Out of Stock" product stayed sellable.
+  payload.in_stock = stockStatus !== "out_of_stock";
   let productId = id;
 
   if (id) {
@@ -4689,7 +4695,11 @@ async function runCsvImport() {
     // Defaults TRUE when the column is absent or unrecognised: a feed that
     // carries no stock data must leave products sellable rather than
     // silently pulling them off the storefront.
-    in_stock     : (r.in_stock || "").trim().toLowerCase() !== "false",
+    // A stock_status of out_of_stock counts too: it used to reach only the
+    // inventory table, so the admin showed Out of Stock while the store
+    // kept selling.
+    in_stock     : (r.in_stock || "").trim().toLowerCase() !== "false"
+                   && (r.stock_status || "").trim().toLowerCase() !== "out_of_stock",
     is_on_sale   : ["true","1","yes"].includes((r.is_on_sale || "").toLowerCase()),
     category_name: r.category_name || null,
     case_qty     : parseInt(r.case_qty)  || 1,
@@ -4788,11 +4798,12 @@ async function runCsvImport() {
       const idBySku = new Map((result.data || []).map(p => [p.sku, p.id]));
       const invPayloads = subset
         .map((r, i) => ({ r, id: hasSku ? idBySku.get(r.sku) : result.data?.[i]?.id }))
-        .filter(({ r, id }) => id && (String(r.stock_qty ?? "").trim() !== "" || String(r.stock_status ?? "").trim() !== ""))
+        .filter(({ r, id }) => id && (String(r.stock_qty ?? "").trim() !== "" || String(r.stock_status ?? "").trim() !== ""
+          || String(r.in_stock ?? "").trim().toLowerCase() === "false"))
         .map(({ r, id }) => ({
           product_id : id,
           stock_qty  : parseInt(r.stock_qty) || 0,
-          status     : r.stock_status || "in_stock",
+          status     : r.stock_status || (String(r.in_stock ?? "").trim().toLowerCase() === "false" ? "out_of_stock" : "in_stock"),
           updated_at : now,
         }));
       if (invPayloads.length) {
@@ -5021,7 +5032,16 @@ async function renderInventoryTable() {
 async function updateInventory(id) {
   const qty    = parseInt(document.querySelector(`.stock-qty-input[data-inv-id="${id}"]`)?.value) || 0;
   const status = document.querySelector(`.stock-status-select[data-inv-id="${id}"]`)?.value || "in_stock";
-  await window.sb.from("inventory").update({ stock_qty: qty, status, updated_at: new Date().toISOString() }).eq("id", id);
+  const { data: inv, error } = await window.sb.from("inventory")
+    .update({ stock_qty: qty, status, updated_at: new Date().toISOString() })
+    .eq("id", id).select("product_id").single();
+  if (error) { showToast("Error: " + error.message); return; }
+  // Mirror onto products.in_stock -- the only stock field the storefront,
+  // cart and checkout read.
+  const { error: pErr } = await window.sb.from("products")
+    .update({ in_stock: status !== "out_of_stock" }).eq("id", inv.product_id);
+  if (pErr) { showToast("Stock saved, but the storefront was not updated: " + pErr.message); return; }
+  renderInventoryTable();
   showToast("Inventory updated!");
 }
 

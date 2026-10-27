@@ -210,7 +210,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
 
   const { data: rows, error } = await supabase
     .from('products')
-    .select('sku, name, category_name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, weight, length, width, height, distributor, moq_group, moq_group_min, moq')
+    .select('sku, name, category_name, price, price_tier1, price_tier2, price_tier3, tier1_min_qty, tier2_min_qty, tier3_min_qty, unit, is_active, in_stock, weight, length, width, height, distributor, moq_group, moq_group_min, moq')
     .in('sku', Array.from(wanted.keys()));
 
   if (error) return { ok: false, error: 'Could not price this order.' };
@@ -297,6 +297,12 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     if (!row) return { ok: false, error: 'This item is no longer available: ' + sku };
     if (row.is_active === false) {
       return { ok: false, error: 'This item is no longer available: ' + (row.name || sku) };
+    }
+    // Out of stock: the storefront disables Add to Cart, but an item added
+    // before it went out stays in a saved cart -- refuse it here, before
+    // any PaymentIntent exists, so it can't be paid for.
+    if (row.in_stock === false) {
+      return { ok: false, error: (row.name || sku) + ' is currently out of stock. Please remove it from your cart to check out.' };
     }
 
     // Per-product minimum (e.g. NPS ships by the pallet: 30 cases, then
