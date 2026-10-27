@@ -4205,7 +4205,7 @@ function loadCartPage() {
   });
 
   const summaryLabel = document.querySelector(".summary-row span");
-  if (summaryLabel) summaryLabel.textContent = `Subtotal (${totalItems} items)`;
+  if (summaryLabel) summaryLabel.textContent = `Subtotal (${totalItems} ${totalItems === 1 ? "item" : "items"})`;
 
   enforceCartMinimums(cart);
 

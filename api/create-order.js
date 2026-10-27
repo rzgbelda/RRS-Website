@@ -93,7 +93,8 @@ module.exports = async (req, res) => {
     const automationResult = await runDueAutomations(supabase);
     const scheduledResult = await runDueScheduledSends(supabase);
     const purgedResult = await runDueOrderPurge(supabase);
-    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult, purged_orders: purgedResult });
+    const holdResult = await remindUncapturedHolds(supabase);
+    return res.status(200).json({ reorders: reorderBody, automations: automationResult, scheduled_sends: scheduledResult, purged_orders: purgedResult, uncaptured_holds: holdResult });
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -113,6 +114,10 @@ module.exports = async (req, res) => {
 
   if (b.action === 'update_reorder') {
     return updateReorder(supabase, b, res);
+  }
+
+  if (b.action === 'capture_payment') {
+    return capturePayment(supabase, req, b, res);
   }
 
   // Only the fields payment.html actually sends -- no arbitrary columns
@@ -179,27 +184,54 @@ module.exports = async (req, res) => {
   let piMeta = null;
   if (orderData.stripe_payment_intent_id) {
     const { data: dup } = await supabase.from('orders').select('id').eq('stripe_payment_intent_id', orderData.stripe_payment_intent_id).maybeSingle();
-    if (dup) return res.status(200).json({ id: dup.id, duplicate: true });
+    if (dup) {
+      // The Stripe webhook can record the order first (it carries no item
+      // detail) -- fill in its lines here so staff never see an empty order.
+      const itemsSaved = await saveServerPricedItems(supabase, dup.id, orderData, b, { onlyIfEmpty: true });
+      return res.status(200).json({ id: dup.id, duplicate: true, itemsSaved });
+    }
     try {
       const stripe = require('stripe')(String(process.env.STRIPE_SECRET_KEY || '').trim());
       const pi = await stripe.paymentIntents.retrieve(orderData.stripe_payment_intent_id);
+      // Only a payment that actually went through (or is clearing / on hold)
+      // can back an order: an abandoned PaymentIntent must not become an
+      // order in admin (2026-10-28 website audit, M5).
+      if (!['succeeded', 'processing', 'requires_capture'].includes(pi.status)) {
+        return res.status(402).json({ error: 'This payment has not been completed.' });
+      }
       orderData.payment_status = pi.status === 'succeeded' ? 'paid'
         : pi.status === 'processing' ? 'processing'
-        : pi.status === 'requires_capture' ? 'authorized'
-        : 'pending';
+        : 'authorized';
       orderData.total = Math.round(Number(pi.amount)) / 100;
       // Card order: the coupon the charge was actually priced with, stamped
       // on the PaymentIntent by create-payment-intent.js.
       const md = piMeta = pi.metadata || {};
+      // Order number and delivery charge come from the charge itself (the
+      // same pass that set its amount), not from the browser -- matching
+      // what api/stripe-webhook.js records for the same order.
+      if (md.order_number) orderData.order_number = md.order_number;
+      if (md.shipping_amount != null && md.shipping_amount !== '') {
+        orderData.freight_fee = (parseInt(md.shipping_amount, 10) || 0) / 100;
+      }
       if (md.coupon_id && md.coupon_code) {
         couponApplied = { id: md.coupon_id, code: md.coupon_code, discount: (Number(md.coupon_discount) || 0) / 100 };
       }
     } catch (e) {
+      // Stripe unreachable: record the order as pending rather than lose a
+      // payment that may have gone through -- the webhook flips it to paid.
       console.error('[create-order] could not verify PaymentIntent', orderData.stripe_payment_intent_id, e.message);
       orderData.payment_status = 'pending';
     }
-  } else if (!['pending', 'pending_invoice', 'unpaid'].includes(claimed)) {
-    orderData.payment_status = 'pending';
+  } else {
+    // No payment behind it. Invoice / PO checkout was removed (2026-09-19)
+    // and Net 30 is granted only by staff in admin, so the public endpoint
+    // no longer accepts unpaid orders from anyone but staff -- otherwise
+    // anyone could post fake "Awaiting Payment" orders with any totals
+    // (2026-10-28 website audit, M5).
+    if (!caller || !STAFF_ROLES.includes(caller.role)) {
+      return res.status(403).json({ error: 'Orders are placed by paying at checkout. Please call (252) 616-0088 to arrange invoice terms.' });
+    }
+    if (!['pending', 'pending_invoice', 'unpaid'].includes(claimed)) orderData.payment_status = 'pending';
   }
 
   // Invoice / PO order: there is no charge to read the coupon from, so the
@@ -246,6 +278,13 @@ module.exports = async (req, res) => {
     console.error('[create-order] insert failed:', error.message);
     return res.status(500).json({ error: error.message });
   }
+
+  // Line items priced by the server, the same pass that set the charge --
+  // not the browser's own arithmetic (M5). payment.html skips its own
+  // insert when this reports itemsSaved.
+  const itemsSaved = orderData.stripe_payment_intent_id
+    ? await saveServerPricedItems(supabase, data.id, orderData, b)
+    : false;
 
   // Audit row for the delivery-estimate box ticked at checkout. Best-effort
   // by design -- see api/_lib/acknowledgements.js -- so a failed audit write
@@ -312,8 +351,99 @@ module.exports = async (req, res) => {
     }
   }
 
-  res.status(200).json({ id: data.id });
+  res.status(200).json({ id: data.id, itemsSaved });
 };
+
+// Staff only: charges a card order that was only authorized at checkout
+// (orders over $10,000 use manual capture -- see create-payment-intent.js).
+// Stripe releases an uncaptured hold after 7 days, so this is the button
+// that keeps the money (2026-10-28 audit, H2). The webhook's
+// payment_intent.succeeded then sees the order already paid and sends
+// nothing twice; the receipt went out when the order was placed.
+async function capturePayment(supabase, req, b, res) {
+  const caller = await callerFromToken(supabase, req);
+  if (!caller || !STAFF_ROLES.includes(caller.role)) return res.status(403).json({ error: 'Staff only.' });
+  const { data: o, error } = await supabase.from('orders')
+    .select('id, order_number, payment_status, stripe_payment_intent_id')
+    .eq('id', String(b.order_id || '')).maybeSingle();
+  if (error || !o) return res.status(404).json({ error: 'Order not found.' });
+  if (!o.stripe_payment_intent_id) return res.status(400).json({ error: 'This order has no card payment to capture.' });
+  try {
+    const stripe = require('stripe')(String(process.env.STRIPE_SECRET_KEY || '').trim());
+    let pi = await stripe.paymentIntents.retrieve(o.stripe_payment_intent_id);
+    if (pi.status === 'requires_capture') pi = await stripe.paymentIntents.capture(o.stripe_payment_intent_id);
+    if (pi.status !== 'succeeded') {
+      return res.status(409).json({ error: 'Stripe reports this payment as "' + pi.status + '"' + (pi.status === 'canceled' ? ' -- the hold expired or was released. Ask the customer to pay again.' : '.') });
+    }
+    const chargeId = typeof pi.latest_charge === 'string' ? pi.latest_charge : (pi.latest_charge && pi.latest_charge.id) || null;
+    await supabase.from('orders').update({
+      payment_status: 'paid', paid_at: new Date().toISOString(), ...(chargeId ? { stripe_charge_id: chargeId } : {}),
+    }).eq('id', o.id);
+    console.log('[capture]', o.order_number, 'captured by', caller.email);
+    return res.status(200).json({ ok: true, payment_status: 'paid' });
+  } catch (err) {
+    console.error('[capture] failed for', o.order_number, '-', err.message);
+    return res.status(502).json({ error: err.message || 'Stripe capture failed.' });
+  }
+}
+
+// Daily cron: card holds (payment_status 'authorized') placed 4+ days ago
+// are emailed to staff until captured, since Stripe releases them at 7 days.
+async function remindUncapturedHolds(supabase) {
+  try {
+    const cutoff = new Date(Date.now() - 4 * 86400000).toISOString();
+    const { data: rows, error } = await supabase.from('orders')
+      .select('order_number, business_name, customer_name, total, created_at')
+      .eq('payment_status', 'authorized').lte('created_at', cutoff).order('created_at');
+    if (error) return { error: error.message };
+    if (!rows || !rows.length || !process.env.RESEND_API_KEY) return { count: (rows || []).length };
+    const esc = v => String(v == null ? '' : v).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    const list = rows.map(r => {
+      const due = new Date(new Date(r.created_at).getTime() + 7 * 86400000).toDateString();
+      return '<li><strong>' + esc(r.order_number) + '</strong> &middot; ' + esc(r.business_name || r.customer_name) +
+        ' &middot; $' + Number(r.total || 0).toFixed(2) + ' &middot; hold expires ' + esc(due) + '</li>';
+    }).join('');
+    await new Resend(process.env.RESEND_API_KEY).emails.send({
+      from: 'Room Ready Supply Alerts <orders@roomreadysupply.com>',
+      to: process.env.INTERNAL_ALERT_EMAIL || 'eric@roomreadysupply.com',
+      subject: '[Payments] ' + rows.length + ' card hold' + (rows.length === 1 ? '' : 's') + ' to capture',
+      html: '<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:640px">' +
+        '<h2 style="color:#b91c1c;margin:0 0 8px">Card payments on hold</h2>' +
+        '<p style="color:#334155">These orders were authorized but not charged yet. Open each in Admin &rarr; Orders and press <strong>Capture payment</strong> before the hold expires, or the money is released back to the customer.</p>' +
+        '<ul style="color:#334155;line-height:1.7">' + list + '</ul></div>',
+    });
+    return { count: rows.length, emailed: true };
+  } catch (err) {
+    console.error('[holds] reminder failed:', err.message);
+    return { error: err.message };
+  }
+}
+
+// Writes order_items for an order from the server's own pricing of the
+// cart lines (product names from the database). Returns true when lines
+// were written. Best-effort: any failure returns false and payment.html
+// falls back to writing them itself, so a paid order never ends up with no
+// lines. opts.onlyIfEmpty: leave an order that already has lines alone.
+async function saveServerPricedItems(supabase, orderId, orderData, b, opts = {}) {
+  try {
+    const items = cartPricingItems(orderData, b);
+    if (!items.length) return false;
+    if (opts.onlyIfEmpty) {
+      const { count } = await supabase.from('order_items').select('id', { count: 'exact', head: true }).eq('order_id', orderId);
+      if (count) return true;
+    }
+    const addr = orderData.shipping_address || {};
+    const priced = await priceCart(items, addr.state, 'pickup', addr);
+    if (!priced.ok) { console.warn('[create-order] items not priced for', orderData.order_number, '-', priced.error); return false; }
+    const rows = priced.lines.map(l => ({ order_id: orderId, product_name: l.name || l.sku, price_per_case: l.unitPrice, quantity: l.quantity }));
+    const { error } = await supabase.from('order_items').insert(rows);
+    if (error) { console.error('[create-order] order_items insert failed:', error.message); return false; }
+    return true;
+  } catch (err) {
+    console.error('[create-order] order_items failed for', orderData.order_number, '-', err.message);
+    return false;
+  }
+}
 
 // Prices the lines with the same code that set the charge (price-cart.js,
 // as 'pickup' so no carrier is called), takes the total from Stripe, and

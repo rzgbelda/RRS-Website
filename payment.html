@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20261014b" />
+  <link rel="stylesheet" href="style.css?v=20261028a" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -217,6 +217,10 @@
 
           <div id="payment-error-msg" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:12px 16px;margin-top:18px;font-size:14px;color:#dc2626;font-weight:600;"></div>
 
+          <!-- Phones/tablets only (style.css): the summary is below this
+               button there, so the amount is repeated above it. -->
+          <div class="payment-total-inline" aria-live="polite"><span>Total to pay</span><strong id="payment-total-inline">Calculating&hellip;</strong></div>
+
           <div class="payment-submit-row">
             <p class="cart-delivery-ack">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
             <div class="submit-order-group">
@@ -296,9 +300,9 @@
       <span class="brand-badge brand-badge--mc">Mastercard</span>
       <span class="brand-badge brand-badge--amex">AMEX</span>
       <span class="brand-badge brand-badge--discover">DISCOVER</span>
-      <span class="brand-badge">ACH</span>
     </div>
     <p class="stripe-processed-by">Payments securely processed by <strong>Stripe</strong></p>
+    <p class="stripe-processed-by bank-transfer-line">To use bank-to-bank transfer or ACH, give us a call &#9742; <a href="tel:+12526160088" style="color:inherit;font-weight:700;white-space:nowrap">252-616-0088</a></p>
     <button type="button" class="terms-link-btn" onclick="openTermsModal()">View Terms of Service</button>
   </div>
 
@@ -670,6 +674,7 @@
       window._orderShipping = shipping;
       window._orderTotal = total;
       window._orderItems = cart;
+      syncInlineTotal();
 
       var checkoutForShipping = checkoutForTax;
       var shipCostEl = document.getElementById('payment-shipping-cost');
@@ -731,6 +736,13 @@
       } catch (e) { return undefined; }
     }
 
+    // The phone copy of the total next to Submit Order mirrors the summary's.
+    function syncInlineTotal() {
+      var src = document.getElementById('payment-total');
+      var dst = document.getElementById('payment-total-inline');
+      if (src && dst) dst.textContent = src.textContent;
+    }
+
     function applyServerTotals(data) {
       if (!data || typeof data.total !== 'number') return;
       window._orderSubtotal = data.subtotal;
@@ -743,6 +755,7 @@
       if (sub) sub.textContent = '$' + Number(data.subtotal).toFixed(2);
       if (tax) tax.textContent = '$' + Number(data.tax).toFixed(2);
       if (tot) tot.textContent = '$' + Number(data.total).toFixed(2);
+      syncInlineTotal();
 
       // Reorder Program discount, straight from the server's own pricing
       // pass -- never computed here, so what's displayed can't drift from
@@ -836,7 +849,9 @@
         // No WARP delivery price: no payment (final update package,
         // 2026-10-13). Show the server's reason -- try again or call.
         if (data.shippingUnavailable) { showError(data.error); return; }
-        if (data.error) throw new Error(data.error);
+        // The server's own reason (missing email, item no longer
+        // available...) is worth more to the buyer than a generic retry.
+        if (data.error) { showError(data.error); return; }
         applyServerTotals(data);
         clientSecret = data.clientSecret;
         paymentIntentId = data.paymentIntentId;
@@ -1066,22 +1081,66 @@
 
         var pi = result.paymentIntent;
         if (pi.status === 'succeeded' || pi.status === 'requires_capture') {
-          await finalizeChargedOrder(pi, 'card', checkout, btn);
+          try {
+            await finalizeChargedOrder(pi, 'card', checkout, btn);
+          } catch (err) {
+            // The card WAS charged; only recording the order hit a problem
+            // (usually the connection). Say so plainly and keep the button
+            // off, so the customer doesn't pay a second time -- the Stripe
+            // webhook records the order regardless (2026-10-28 audit, M3).
+            console.error('[order] finalize failed after charge:', err);
+            btn.disabled = true;
+            showError('Your payment went through (reference ' + (window._orderNumber || '') + ', payment ' + pi.id + '), but your connection dropped while we were confirming the order. Please do not pay again. We have your payment and will email your confirmation. If it hasn’t arrived within 30 minutes, call (252) 616-0088.');
+          }
         }
+      }).catch(function (err) {
+        // Stripe itself could not be reached (network drop before or while
+        // confirming). Nothing was confirmed, so the customer may try again.
+        console.error('[payment] confirmCardPayment failed:', err);
+        _submitting = false;
+        btn.disabled = false;
+        document.getElementById('submitBtnText').style.display = 'inline';
+        document.getElementById('submitBtnLoading').style.display = 'none';
+        showError('We could not reach the payment processor. Please check your connection and try again. If you are unsure whether you were charged, call (252) 616-0088 before paying again.');
       });
     };
+
+    // POST /api/create-order, retried on a network error or a server error.
+    // Safe to repeat: the server records one order per Stripe payment and
+    // answers a repeat with the same order id.
+    async function postCreateOrder(body) {
+      var lastErr = null;
+      for (var attempt = 0; attempt < 3; attempt++) {
+        if (attempt) await new Promise(function (r) { setTimeout(r, 1500 * attempt); });
+        try {
+          var r = await fetch('/api/create-order', { method: 'POST', headers: await createOrderHeaders(), body: JSON.stringify(body) });
+          if (r.status < 500) return r;
+          lastErr = new Error('HTTP ' + r.status);
+        } catch (e) { lastErr = e; }
+      }
+      throw lastErr || new Error('create-order failed');
+    }
 
     // Shared by both the card and ACH confirm flows -- see their call sites
     // for what counts as "charged enough to record the order" for each
     // (card: succeeded/requires_capture; ACH: succeeded/processing, since a
     // bank debit takes days to actually clear and isn't instant like a card).
     async function finalizeChargedOrder(pi, method, checkout, btn) {
+          // The cart being paid for. This function is called from the card
+          // (and former ACH) confirm callbacks, outside handlePaymentSubmit,
+          // so that function's own `cartItems` is not in scope here --
+          // reading it threw a ReferenceError after every successful card
+          // charge, before the order was recorded (2026-10-28 audit).
+          var cartItems = JSON.parse(localStorage.getItem('cart') || '[]');
           var orderNum = window._orderNumber || ('RRS-' + Date.now());
           var lastOrderData = {
             orderNumber: orderNum,
             paymentIntentId: pi.id,
             paymentMethod: method,
             total: window._orderTotal,
+            // The server's split of that total, for the confirmation page.
+            tax: typeof window._orderTax === 'number' ? window._orderTax : undefined,
+            shipping: typeof window._orderShipping === 'number' ? window._orderShipping : undefined,
             items: window._orderItems,
             checkout: checkout
           };
@@ -1101,11 +1160,9 @@
             // webhook records the order a few seconds later regardless),
             // but without this the customer would see a false "we hit a
             // problem" error here even though their card was charged.
-            var createRes = await fetch('/api/create-order', {
-              method: 'POST',
-              // Session token: verified server-side to link the order to the signed-in account.
-              headers: await createOrderHeaders(),
-              body: JSON.stringify({
+            // Session token rides in createOrderHeaders(), verified
+            // server-side to link the order to the signed-in account.
+            var createRes = await postCreateOrder({
                 order_number: orderNum,
                 user_id: userId,
                 customer_name: checkout.contact || '',
@@ -1137,7 +1194,6 @@
                 cart_items: cartItems,
                 // Sales rep codes are credited server-side (sales_referrals).
                 referral_code: checkout.referral || '',
-              }),
             });
             var createBody = await createRes.json().catch(function () { return {}; });
             var orderInsert = { data: createRes.ok ? { id: createBody.id } : null, error: createRes.ok ? null : { message: createBody.error || ('HTTP ' + createRes.status) } };
@@ -1154,7 +1210,9 @@
                 var q = parseInt(i.quantity) || 1;
                 return { order_id: orderInsert.data.id, product_name: i.name || 'Product', price_per_case: p, quantity: q };
               });
-              if (cardItems.length) {
+              // The server writes the lines itself from its own pricing
+              // (itemsSaved); this browser copy is only the fallback.
+              if (cardItems.length && !createBody.itemsSaved) {
                 var cardItemsRes = await window.sb.from('order_items').insert(cardItems);
                 if (cardItemsRes.error) console.error('[order_items] save error:', cardItemsRes.error.message);
               }

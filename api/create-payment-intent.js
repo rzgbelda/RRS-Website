@@ -76,6 +76,8 @@ function discountInfo(q) {
   };
 }
 
+const BAD_ZIP_MESSAGE = "That ZIP code doesn't look right. Please check it and try again.";
+
 function safeMetadata(raw) {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
@@ -124,10 +126,11 @@ module.exports = async (req, res) => {
       if (q.needsFreightQuote) {
         return res.status(200).json({ freightQuote: true, shipping: null, tax: q.tax, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays });
       }
-      // WARP could not price delivery yet ('zip': no destination entered;
-      // 'unpriced': no rate came back). No figure is shown or charged.
+      // Delivery could not be priced yet ('zip': no destination entered;
+      // 'badzip': no such ZIP; 'unpriced': no rate came back). No figure is
+      // shown or charged. A bad ZIP carries the message the page shows.
       if (q.shippingUnavailable) {
-        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, shipping: null, tax: q.tax, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays });
+        return res.status(200).json({ shippingUnavailable: q.shippingUnavailable, ...(q.shippingUnavailable === 'badzip' ? { error: BAD_ZIP_MESSAGE } : {}), shipping: null, tax: q.tax, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays });
       }
       return res.status(200).json({ shipping: q.shipping, tax: q.tax, total: q.total, subtotal: q.subtotal, ...discountInfo(q), deliveryDays: q.deliveryDays, shippingToken: q.shippingToken });
     }
@@ -141,6 +144,17 @@ module.exports = async (req, res) => {
   // of Stripe objects plus burnt function quota. See _lib/rate-limit.js
   // for what this does and does not actually cover.
   if (!rateLimit(req, res, { bucket: 'pi', limit: 10, windowMs: 60000 })) return;
+
+  // A paid order needs an email for its receipt and order updates
+  // (2026-10-28 website audit, H1). Checkout requires one; this catches a
+  // stale page or a hand-built request before a charge exists.
+  {
+    const b0 = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+    const email = String((b0.metadata && b0.metadata.customer_email) || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) {
+      return res.status(400).json({ error: 'Please go back to checkout and enter a valid email address. Your receipt is sent there.' });
+    }
+  }
 
   const rawKey = process.env.STRIPE_SECRET_KEY || '';
   const stripeKey = rawKey.trim().replace(/[\r\n\t]/g, '');
@@ -176,6 +190,7 @@ module.exports = async (req, res) => {
         shippingUnavailable: priced.shippingUnavailable,
         error: priced.shippingUnavailable === 'zip'
           ? 'Please enter your delivery ZIP code so we can price delivery.'
+          : priced.shippingUnavailable === 'badzip' ? BAD_ZIP_MESSAGE
           : "We couldn't calculate delivery for this order right now. Please try again in a minute, or call (252) 616-0088 and we'll help you complete your order.",
       });
     }

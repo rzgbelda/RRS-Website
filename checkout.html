@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20261014b" />
+  <link rel="stylesheet" href="style.css?v=20261028a" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -181,12 +181,12 @@
                buyers away at checkout. Orders without one are labelled by
                contact name instead (see the submit handler). -->
           <label id="checkoutBusinessLabel">Business Name <span style="font-weight:400;color:#94a3b8">(optional)</span> <input type="text" id="checkout-business" placeholder="Leave blank if ordering personally"></label>
-          <label>Contact Name: <input type="text" id="checkout-contact" placeholder="Enter contact name"></label>
+          <label>Contact Name* <input type="text" id="checkout-contact" placeholder="Enter contact name" autocomplete="name"></label>
           <!-- Placeholder is a FORMAT hint, never RRS's own number: the real
                (252) 616-0088 here read as a prefilled value, so buyers left
                it alone and we captured our own phone number on their order. -->
           <label>Phone Number* <input type="text" id="checkout-phone" placeholder="(555) 123-4567" autocomplete="tel"></label>
-          <label>Email Address: <input type="email" id="checkout-email" placeholder="email@business.com"></label>
+          <label>Email Address* <input type="email" id="checkout-email" placeholder="email@business.com" autocomplete="email"></label>
         </div>
 
         <!-- Warehouse pickup was removed as a checkout option per CEO
@@ -198,12 +198,12 @@
              pickup. -->
 
         <div id="shipToBlock">
-        <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address"></label>
+        <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address" autocomplete="address-line1"></label>
 
         <div class="address-grid">
-          <input type="text" id="checkout-city" placeholder="City" />
-            <select id="checkout-state">
-              <option value="">Select State</option>
+          <input type="text" id="checkout-city" placeholder="City*" autocomplete="address-level2" aria-label="City" />
+            <select id="checkout-state" autocomplete="address-level1" aria-label="State">
+              <option value="">Select State*</option>
 
               <option value="AL">Alabama</option>
               <option value="AK">Alaska</option>
@@ -258,7 +258,7 @@
 
               <option value="DC">District of Columbia</option>
             </select>
-          <input type="text" id="checkout-zip" placeholder="ZIP Code" maxlength="5" inputmode="numeric">
+          <input type="text" id="checkout-zip" placeholder="ZIP Code*" maxlength="5" inputmode="numeric" autocomplete="postal-code" aria-label="ZIP code">
         </div>
 
         <label class="checkbox-line">
@@ -266,10 +266,10 @@
           Liftgate delivery needed (no loading dock). Applies to pallet shipments.
         </label>
 
-        <label class="checkbox-line">
-          <input type="checkbox">
-          Billing address is the same as delivery address.
-        </label>
+        <!-- The "Billing address is the same as delivery address" checkbox
+             was removed (2026-10-28 audit, L3): there are no billing fields
+             -- Stripe collects the card's billing details on the payment
+             page -- so it did nothing. -->
         </div><!-- /shipToBlock -->
 
         <!-- Coupon code (coupons phase 2). Only the code is kept in the
@@ -445,6 +445,8 @@
            longer gating submission. -->
       <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
 
+      <div id="checkoutFormError" role="alert" style="display:none"></div>
+
       <div class="submit-order-actions">
         <button
           class="submit-order-btn"
@@ -466,7 +468,6 @@
           <span class="brand-badge brand-badge--mc">Mastercard</span>
           <span class="brand-badge brand-badge--amex">AMEX</span>
           <span class="brand-badge brand-badge--discover">DISCOVER</span>
-          <span class="brand-badge">ACH</span>
         </div>
         <p class="stripe-processed-by">Payments securely processed by <strong>Stripe</strong></p>
         <p class="stripe-processed-by bank-transfer-line">To use bank-to-bank transfer or ACH, give us a call &#9742; <a href="tel:+12526160088" style="color:inherit;font-weight:700;white-space:nowrap">252-616-0088</a></p>
@@ -485,6 +486,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="supabase.js"></script>
 <script src="tax-rates.js"></script>
+<script src="zip-states.js?v=20261028a"></script>
 <script src="delivery-estimate.js?v=20261013n"></script>
 <script src="script.js?v=20261024b"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -504,6 +506,22 @@
     padding: 16px 22px 18px;
   }
   .submit-order-btn:disabled { opacity: .55; cursor: not-allowed; }
+  #checkoutFormError {
+    margin: 0 22px 14px;
+    padding: 11px 14px;
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    border-radius: 9px;
+    color: #b91c1c;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.5;
+  }
+  .checkout-field-error,
+  .checkout-field-error:focus {
+    border-color: #dc2626 !important;
+    box-shadow: 0 0 0 3px rgba(220, 38, 38, .12) !important;
+  }
   .checkout-trust-block {
     margin: 18px 22px 18px;
     padding-top: 16px;
@@ -565,25 +583,121 @@ function computeFirstReorderDate(frequency) {
   return d.toISOString().slice(0, 10);
 }
 
-async function saveCheckoutAndProceed() {
-  // Every order, at every weight, is priced by the WARP API and paid here
-  // in full (final update package, 2026-10-13) -- no custom-quote path. So
-  // payment only starts once the server has a real delivery price for this
-  // address. Asked again on click, so a stale summary can't let an
-  // unpriced order through; the payment API refuses one as well.
+// Checkout errors are shown next to the Continue button, with the field
+// outlined and scrolled into view, instead of a browser alert() (2026-10-28
+// website audit, L7). Re-enables the button, since every error path stops
+// the submit.
+function clearCheckoutError() {
+  const box = document.getElementById('checkoutFormError');
+  if (box) { box.textContent = ''; box.style.display = 'none'; }
+  document.querySelectorAll('.checkout-field-error').forEach(el => el.classList.remove('checkout-field-error'));
+}
+function showCheckoutError(msg, fieldId) {
   const btn = document.getElementById('submitOrderBtn');
-  if (btn) btn.disabled = true;
-  const zipVal = document.getElementById('checkout-zip')?.value.trim() || '';
-  if (!/^\d{5}$/.test(zipVal)) {
-    alert('Please enter your 5-digit delivery ZIP code so we can price delivery.');
-    if (btn) btn.disabled = false;
-    return;
+  if (btn) btn.disabled = false;
+  const box = document.getElementById('checkoutFormError');
+  if (box) { box.textContent = msg; box.style.display = 'block'; }
+  const field = fieldId && document.getElementById(fieldId);
+  if (field) {
+    field.classList.add('checkout-field-error');
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    try { field.focus({ preventScroll: true }); } catch (e) {}
+  } else if (box) {
+    box.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
+}
+
+// Typing a ZIP fills in an empty state from it, and editing a field that
+// was flagged clears its red outline.
+document.addEventListener('DOMContentLoaded', function () {
+  const zipEl = document.getElementById('checkout-zip');
+  const stateEl = document.getElementById('checkout-state');
+  if (zipEl && stateEl) {
+    zipEl.addEventListener('input', function () {
+      const st = typeof zipStateFor === 'function' ? zipStateFor(zipEl.value.trim()) : '';
+      if (st && !stateEl.value && stateEl.querySelector('option[value="' + st + '"]')) stateEl.value = st;
+    });
+  }
+  // Any edit to the customer details clears the last error, so a stale
+  // message never sits next to the button after it's been dealt with.
+  const clearOnEdit = function (e) {
+    if (e.target.closest && e.target.closest('.checkout-left')) clearCheckoutError();
+  };
+  document.querySelector('.checkout-layout')?.addEventListener('input', clearOnEdit);
+  document.querySelector('.checkout-layout')?.addEventListener('change', clearOnEdit);
+});
+
+// The ZIP/state pair last warned about: a second Continue with the same
+// pair goes through, so a real address the ZIP table gets wrong is never
+// blocked outright.
+let checkoutZipStateWarned = '';
+
+// Required customer details (2026-10-28 website audit, H1): a paid order
+// with no email gets no receipt, and one with no city/state or a 1-digit
+// phone can't be delivered or followed up. Returns true when the form is
+// complete; otherwise shows the first problem and returns false.
+function validateCheckoutDetails() {
+  const val = id => (document.getElementById(id)?.value || '').trim();
+  if (!val('checkout-business') && !val('checkout-contact')) {
+    showCheckoutError('Please enter a contact name (or a business name).', 'checkout-contact');
+    return false;
+  }
+  const phoneDigits = val('checkout-phone').replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  if (phoneDigits.length !== 10) {
+    showCheckoutError('Please enter a 10-digit phone number so the carrier and our team can reach you.', 'checkout-phone');
+    return false;
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(val('checkout-email'))) {
+    showCheckoutError('Please enter a valid email address. Your receipt and order updates are sent there.', 'checkout-email');
+    return false;
+  }
+  if (val('checkout-street').length < 4) {
+    showCheckoutError('Please enter your full street address.', 'checkout-street');
+    return false;
+  }
+  if (val('checkout-city').length < 2) {
+    showCheckoutError('Please enter your city.', 'checkout-city');
+    return false;
+  }
+  const state = val('checkout-state');
+  if (!state) {
+    showCheckoutError('Please select your state.', 'checkout-state');
+    return false;
+  }
+  const zip = val('checkout-zip');
+  if (!/^\d{5}$/.test(zip)) {
+    showCheckoutError('Please enter your 5-digit delivery ZIP code so we can price delivery.', 'checkout-zip');
+    return false;
+  }
+  const zipState = typeof zipStateFor === 'function' ? zipStateFor(zip) : '';
+  if (typeof zipStateFor === 'function' && !zipState) {
+    showCheckoutError('ZIP code ' + zip + " doesn't look right. Please check it.", 'checkout-zip');
+    return false;
+  }
+  const pair = zip + '|' + state;
+  if (zipState && zipState !== state && checkoutZipStateWarned !== pair) {
+    checkoutZipStateWarned = pair;
+    showCheckoutError('ZIP code ' + zip + ' is usually in ' + zipState + ', but ' + state + ' is selected. Please check both. If they are correct, press Continue to Payment again.', 'checkout-state');
+    return false;
+  }
+  return true;
+}
+
+async function saveCheckoutAndProceed() {
+  // Every order, at every weight, is priced live (TForce/UPS) and paid here
+  // in full -- no custom-quote path. So payment only starts once the
+  // server has a real delivery price for this address. Asked again on
+  // click, so a stale summary can't let an unpriced order through; the
+  // payment API refuses one as well.
+  const btn = document.getElementById('submitOrderBtn');
+  clearCheckoutError();
+  if (!validateCheckoutDetails()) return;
+  if (btn) btn.disabled = true;
   let quote = null;
   try { quote = await fetchCheckoutQuote(); } catch (e) {}
   if (!quote || quote.error || quote.shippingUnavailable || typeof quote.shipping !== 'number') {
-    alert((quote && quote.error) || "We couldn't calculate delivery right now. Please try again in a minute, or call (252) 616-0088.");
     loadCheckoutProducts();
+    showCheckoutError((quote && quote.error) || "We couldn't calculate delivery right now. Please try again in a minute, or call (252) 616-0088.", quote && quote.shippingUnavailable === 'badzip' ? 'checkout-zip' : null);
     return;
   }
 
@@ -604,7 +718,7 @@ async function saveCheckoutAndProceed() {
         .map(s => { const d = new Date(s); return isNaN(d) ? null : d.toISOString().slice(0, 10); })
         .filter(Boolean)
         .sort();
-      if (!isoDates.length) { alert('Pick at least one date for your custom reorder schedule.'); return; }
+      if (!isoDates.length) { showCheckoutError('Pick at least one date for your custom reorder schedule.', 'checkoutReorderCustomDates'); return; }
       reorderCustomDates = isoDates;
       reorderNextDate = isoDates[0];
     } else {
@@ -636,15 +750,8 @@ async function saveCheckoutAndProceed() {
     deliveryAckText: document.getElementById('ackDeliveryEstimateText')?.textContent || '',
   };
   // Business name is optional -- RRS sells to homes, rentals and salons too.
-  // A contact name is required instead so every order still has a human name
-  // attached to it for support calls and the packing slip.
-  if (!data.business && !data.contact) {
-    alert('Please enter either a business name or a contact name.');
-    if (btn) btn.disabled = false;
-    return;
-  }
-  if (!data.phone)    { alert('Please enter your phone number.'); if (btn) btn.disabled = false; return; }
-  if (!data.street) { alert('Please enter your delivery address.'); if (btn) btn.disabled = false; return; }
+  // A contact name is required instead (with phone, email and the full
+  // address) -- checked up front in validateCheckoutDetails().
 
   // Cart persists in localStorage across visits, and a Mix & Match minimum
   // can change (or a group member can be removed) after items were added,
@@ -658,11 +765,10 @@ async function saveCheckoutAndProceed() {
       // (36, 72, 108...), not just clear it once -- g.needed/g.nextTarget
       // account for that; g.min - g.have alone would go negative once a
       // group is over the minimum but between multiples.
-      alert(shortfalls.map(g => g.have < g.min
+      showCheckoutError(shortfalls.map(g => g.have < g.min
         ? `${g.group} MOQ not met: Required ${g.min} combined units, cart has ${g.have}. Add ${g.needed} more from this group before checking out.`
         : `${g.group} must be ordered in multiples of ${g.min}: cart has ${g.have} combined units. Add ${g.needed} more (to reach ${g.nextTarget}) or remove some before checking out.`
-      ).join('\n'));
-      if (btn) btn.disabled = false;
+      ).join(' '));
       return;
     }
   }

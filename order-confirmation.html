@@ -148,7 +148,7 @@
       <div style="margin-top:18px;border-top:2px solid #f1f5f9;padding-top:14px;">
         <div class="totals-row"><span>Subtotal</span><span id="confSubtotal">...</span></div>
         <div class="totals-row"><span>Tax<span id="confTaxRate"></span></span><span id="confTax">...</span></div>
-        <div class="totals-row"><span>Shipping</span><span style="color:#64748b;font-size:13px;">Included in total</span></div>
+        <div class="totals-row"><span>Delivery</span><span id="confShipping" style="color:#64748b;font-size:13px;">Included in total</span></div>
         <div class="totals-row total"><span>Total Charged</span><span id="confTotal">...</span></div>
       </div>
     </div>
@@ -275,7 +275,25 @@ var _confirmCheckout = {};
   // Read order from localStorage (set by payment.html on success)
   const lastOrder = JSON.parse(localStorage.getItem('rrs_last_order') || '{}');
   const urlParams = new URLSearchParams(window.location.search);
-  const orderNum = urlParams.get('order') || lastOrder.orderNumber || 'RRS-' + Date.now();
+  const urlOrder = urlParams.get('order');
+
+  // No order placed from this browser (page opened directly, or a link to
+  // someone else's order): say so instead of "Order Confirmed!" over a
+  // made-up order number (2026-10-28 audit, L4).
+  if (!lastOrder.orderNumber || (urlOrder && urlOrder !== lastOrder.orderNumber)) {
+    document.title = 'Order Not Found — Room Ready Supply';
+    var hero = document.querySelector('.confirm-hero');
+    if (hero) {
+      hero.innerHTML = '<h1>No recent order found</h1>' +
+        '<p>We couldn’t find an order placed from this browser' + (urlOrder ? ' with number ' + urlOrder.replace(/[^A-Za-z0-9-]/g, '') : '') + '. ' +
+        'If you just paid, your confirmation is on its way to your email. Signed-in customers can see every order under My Account.</p>' +
+        '<p style="margin-top:18px"><a href="/account#orders" style="color:#ED7226;font-weight:700">My Account &rarr; Orders</a> &nbsp;&middot;&nbsp; <a href="/catalog" style="color:#ED7226;font-weight:700">Shop the catalog</a> &nbsp;&middot;&nbsp; Questions? Call (252) 616-0088</p>';
+    }
+    var body = document.querySelector('.confirm-body');
+    if (body) body.style.display = 'none';
+    return;
+  }
+  const orderNum = lastOrder.orderNumber;
 
   // Badge
   document.getElementById('confirmOrderBadge').textContent = 'Order #' + orderNum;
@@ -303,7 +321,8 @@ var _confirmCheckout = {};
   const itemsEl = document.getElementById('confirmItems');
   if (items.length) {
     itemsEl.innerHTML = items.map(function (item) {
-      const price = parseFloat(item.price) || 0;
+      // The volume-tier price charged, not the list price on the cart line.
+      const price = typeof getTierPrice === 'function' ? (Number(getTierPrice(item, items)) || 0) : (parseFloat(item.price) || 0);
       const qty = parseInt(item.quantity) || 1;
       return '<div class="order-item">' +
         '<img class="item-thumb" src="' + (item.image || '/assets/img/product-placeholder.svg') + '" onerror="this.onerror=null;this.src=\'/assets/img/product-placeholder.svg\'" alt="" loading="lazy">' +
@@ -319,16 +338,29 @@ var _confirmCheckout = {};
   // Totals. Back the tax out of the already-charged total by the actual
   // rate for the state it shipped to -- not a fixed 7% assumption, which
   // silently mis-split subtotal/tax for every other state's order.
+  //
+  // Orders from payment.html now carry the server's own tax and delivery
+  // figures; with them the rows add up exactly (items + tax + delivery =
+  // total). Older saved orders fall back to backing tax out of the total,
+  // where "Subtotal" also includes the delivery charge.
   const total = lastOrder.total || 0;
   const checkout = lastOrder.checkout || {};
   _confirmCheckout = checkout;
-  const taxRate = checkout.state ? (window.getTaxRate ? (window.getTaxRate(checkout.state) || 0) : 0) : 0;
-  const tax = taxRate > 0 ? (total / (1 + taxRate) * taxRate) : 0;
-  const subtotal = total - tax;
+  const taxState = window.taxStateFor ? window.taxStateFor(checkout.state || '', checkout.zip || '') : (checkout.state || '');
+  const taxRate = window.taxRateFor ? (window.taxRateFor(checkout.state || '', checkout.zip || '') || 0) : 0;
+  const hasServerSplit = typeof lastOrder.tax === 'number' && typeof lastOrder.shipping === 'number';
+  const tax = hasServerSplit ? lastOrder.tax : (taxRate > 0 ? (total / (1 + taxRate) * taxRate) : 0);
+  const shipping = hasServerSplit ? lastOrder.shipping : null;
+  const subtotal = total - tax - (shipping || 0);
   document.getElementById('confSubtotal').textContent = '$' + subtotal.toFixed(2);
   document.getElementById('confTax').textContent = '$' + tax.toFixed(2);
+  const confShipEl = document.getElementById('confShipping');
+  if (confShipEl && shipping != null) {
+    confShipEl.textContent = shipping > 0 ? '$' + shipping.toFixed(2) : 'Free';
+    confShipEl.style.cssText = '';
+  }
   const confTaxRateEl = document.getElementById('confTaxRate');
-  if (confTaxRateEl) confTaxRateEl.textContent = checkout.state ? ' (' + checkout.state + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
+  if (confTaxRateEl) confTaxRateEl.textContent = taxRate ? ' (' + taxState + ' · ' + (taxRate * 100).toFixed(2) + '%)' : '';
   document.getElementById('confTotal').textContent = '$' + total.toFixed(2);
 
   // GA4 purchase -- the event that lets Google Analytics attribute real

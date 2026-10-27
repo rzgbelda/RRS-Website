@@ -202,7 +202,7 @@ module.exports = async (req, res) => {
       order_number:   meta.order_number || `RRS-${Date.now()}`,
       status:         'pending',
       payment_status: 'paid',
-      payment_method: 'card',
+      payment_method: (pi.payment_method_types || []).includes('us_bank_account') ? 'ach' : 'card',
       customer_name:  meta.customer_name  || null,
       customer_email: meta.customer_email || null,
       business_name:  meta.business_name || meta.customer_name || 'N/A',
@@ -296,7 +296,9 @@ module.exports = async (req, res) => {
           delivery_days: { min: Number(meta.delivery_days_min), max: Number(meta.delivery_days_max) },
         };
 
-        Promise.all([
+        // Awaited: a serverless function can be frozen as soon as it
+        // responds, which used to drop these emails (2026-10-28 audit, M3).
+        await Promise.all([
           orderData.customer_email
             ? sendCustomerConfirmation(emailOrder).catch(function (e) { console.error('Customer email failed:', e.message); })
             : Promise.resolve(),
@@ -333,7 +335,8 @@ module.exports = async (req, res) => {
             amount_total: pi.amount,
           };
 
-          Promise.all([
+          // Awaited, same reason as above.
+          await Promise.all([
             existing.customer_email
               ? sendCustomerConfirmation(emailOrder).catch(function (e) { console.error('Customer email failed:', e.message); })
               : Promise.resolve(),
@@ -372,7 +375,7 @@ module.exports = async (req, res) => {
       await supabase.from('orders').update({ payment_status: 'failed' }).eq('id', existing.id);
       console.log('[webhook] payment failed for', existing.order_number, '-', pi.last_payment_error?.message || 'no reason given');
 
-      sendPaymentFailedAlert({
+      await sendPaymentFailedAlert({
         order_number: existing.order_number || meta.order_number,
         customer_name: existing.customer_name || meta.customer_name,
         customer_email: existing.customer_email || meta.customer_email,

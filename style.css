@@ -8917,13 +8917,15 @@ input.qty-input:focus {
   line-height: 1.5;
 }
 
+/* Phones: the cart items come first and the summary (with Proceed to
+   Checkout) after them, so the button follows what is being bought. The
+   summary used to be moved above the items (2026-10-28 audit, M1). */
 @media (max-width: 860px) {
   .cart-page {
     grid-template-columns: 1fr;
   }
   .order-summary {
     position: static;
-    order: -1;
   }
 }
 
@@ -9062,6 +9064,9 @@ input.qty-input:focus {
   .progress-step > span { display: none; }
   .step-circle { width: 28px; height: 28px; font-size: 12px; }
   .step-line { min-width: 18px; margin: 0 6px; }
+  /* Labels are hidden, so the four circles always fit: no scroll box to
+     clip the last circle or the active step's glow (2026-10-28 audit, L6). */
+  .progress-steps { overflow: visible; padding: 4px; }
 }
 
 .checkout-layout {
@@ -9566,13 +9571,15 @@ input.qty-input:focus {
 
 /* ── Checkout responsive ── */
 
+/* Phones: the customer form comes first and the summary with Continue to
+   Payment after it -- with the summary first, buyers pressed Continue
+   before filling the form in (2026-10-28 audit, M1). */
 @media (max-width: 960px) {
   .checkout-layout {
     grid-template-columns: 1fr;
   }
   .checkout-summary {
     position: static;
-    order: -1;
   }
   .submit-order-row { justify-content: stretch; }
   .submit-order-actions { align-items: stretch; }
@@ -11480,3 +11487,16 @@ html.rrs-quote-only .pp-price-cta {
   background: #ED7226; color: #fff; font-size: 9.5px; font-weight: 800; letter-spacing: .08em;
 }
 .mobile-nav a.mobile-nav-sub { padding-left: 42px; font-weight: 500; font-size: 14px; color: #5B6C7E; min-height: 42px; }
+
+/* Payment page, phones: the order summary sits below the Submit button, so
+   the amount being charged is repeated just above it (2026-10-28 audit, M1). */
+.payment-total-inline { display: none; }
+@media (max-width: 1100px) {
+  .payment-total-inline {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin: 0 0 12px; padding: 12px 14px; border-radius: 9px;
+    background: #fff7f0; border: 1.5px solid #f6d9be;
+    font-size: 14px; font-weight: 700; color: #0B1F38;
+  }
+  .payment-total-inline strong { font-size: 18px; color: #ED7226; }
+}

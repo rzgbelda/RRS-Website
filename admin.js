@@ -5570,6 +5570,32 @@ async function lookupPaymentProof(orderId) {
   }
 }
 
+// Card orders over $10,000 are authorized at checkout, not charged
+// (api/create-payment-intent.js). This charges the held amount; Stripe
+// releases an uncaptured hold after 7 days (2026-10-28 audit, H2).
+async function captureOrderPayment(orderId) {
+  const o = currentOrderData && currentOrderData.id === orderId ? currentOrderData : null;
+  const amount = o && o.total != null ? " of $" + Number(o.total).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "";
+  if (!confirm("Charge the customer's card now for the held amount" + amount + "?")) return;
+  const btn = document.getElementById("captureOrderBtn");
+  if (btn) { btn.disabled = true; btn.textContent = "Capturing…"; }
+  try {
+    const res = await fetch("/api/create-order", {
+      method: "POST",
+      headers: await adminAuthHeaders(),
+      body: JSON.stringify({ action: "capture_payment", order_id: orderId }),
+    });
+    const result = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(result.error || "HTTP " + res.status);
+    showToast("Payment captured — the order is now paid.");
+    openOrderModal(orderId);
+    renderOrdersTable();
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.textContent = "Capture payment"; }
+    alert("Couldn't capture the payment: " + err.message);
+  }
+}
+
 // Set on every openOrderModal() call so the invoice-preview/terms-agreement
 // flows below (shared with the quote-request modal) can read the currently
 // open order's email/business/total without a second query.
@@ -5968,6 +5994,12 @@ async function openOrderModal(id) {
             ${o.receipt_url ? "View Receipt" : "View in Stripe"} &rarr;
           </a>` : ""}
         ${o.payment_status === "paid" && o.paid_at ? `<div style="font-size:11px;color:#94a3b8;margin-top:2px">Paid ${fmt(o.paid_at)}</div>` : ""}
+        ${o.payment_status === "authorized" && o.stripe_payment_intent_id ? `
+          <div style="font-size:11.5px;color:#b91c1c;margin-top:4px;line-height:1.4">Card is on hold, not charged yet. Capture by <strong>${fmt(new Date(new Date(o.created_at).getTime() + 7 * 86400000).toISOString())}</strong> or the hold expires.</div>
+          <button onclick="captureOrderPayment('${o.id}')" id="captureOrderBtn"
+            style="margin-top:5px;height:28px;padding:0 12px;border-radius:7px;border:none;background:#16a34a;color:#fff;font-size:12px;font-weight:700;cursor:pointer">
+            Capture payment
+          </button>` : ""}
         ${o.payment_status === "paid" && !o.stripe_payment_intent_id ? `
           <button onclick="lookupPaymentProof('${o.id}')" id="lookupProofBtn"
             style="margin-top:4px;height:24px;padding:0 9px;border-radius:6px;border:1px solid #d0d7e0;background:#fff;color:#475569;font-size:11px;font-weight:600;cursor:pointer">
@@ -9861,6 +9893,8 @@ function paymentBadgeClass(paymentStatus) {
   const m = {
     paid: "a-badge-green", captured: "a-badge-green",
     pending_invoice: "a-badge-yellow", pending: "a-badge-yellow", requires_capture: "a-badge-yellow",
+    // Card order over $10,000: authorized only, must be captured within 7 days.
+    authorized: "a-badge-red",
     // ACH sits here from checkout until the bank debit actually clears,
     // days later (api/stripe-webhook.js flips it to 'paid' at that point) --
     // distinct blue from the yellow "awaiting payment" states above, since
@@ -9875,6 +9909,7 @@ function paymentBadgeLabel(paymentStatus) {
   const m = {
     paid: "Paid", captured: "Paid",
     pending_invoice: "Awaiting Payment", pending: "Awaiting Payment", requires_capture: "Awaiting Payment",
+    authorized: "On Hold — Capture",
     processing: "Bank Processing",
     failed: "Failed", refunded: "Refunded",
   };

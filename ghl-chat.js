@@ -34,7 +34,12 @@ const GHL_CHAT_EXCLUDED_PATHS = [
 function ghlChatAllowedHere() {
   if (!GHL_CHAT_HOSTS.includes(location.hostname)) return false;
   const p = (location.pathname || "/").toLowerCase().replace(/\.html$/, "").replace(/\/+$/, "");
-  return !GHL_CHAT_EXCLUDED_PATHS.includes(p);
+  if (GHL_CHAT_EXCLUDED_PATHS.includes(p)) return false;
+  // Phones: on the cart the widget's greeting bubble covered the Proceed to
+  // Checkout button (2026-10-28 audit, M2). The header phone number and
+  // email stay available there.
+  if (p === "/cart" && window.matchMedia && window.matchMedia("(max-width: 860px)").matches) return false;
+  return true;
 }
 
 function loadGhlChatWidget() {

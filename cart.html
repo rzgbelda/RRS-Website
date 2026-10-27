@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your Cart | Room Ready Supply</title>
-  <link rel="stylesheet" href="style.css?v=20261014b" />
+  <link rel="stylesheet" href="style.css?v=20261028a" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -141,10 +141,9 @@
       <span id="subtotal">$349.90</span>
     </div>
 
-    <div class="summary-row discount">
-      <span>Discount</span>
-      <span id="discount">-$0.00</span>
-    </div>
+    <!-- The static "Discount -$0.00" row was removed (2026-10-28 audit, L1):
+         nothing filled it in. The Reorder Program discount gets its own row
+         from script.js when it applies. -->
 
     <!-- Delivery: the WARP quote for this order from each supplier's
          warehouse to the buyer's ZIP (final update package, 2026-10-13),
@@ -208,7 +207,6 @@
               <span class="brand-badge brand-badge--mc">Mastercard</span>
               <span class="brand-badge brand-badge--amex">AMEX</span>
               <span class="brand-badge brand-badge--discover">DISCOVER</span>
-              <span class="brand-badge">ACH</span>
             </div>
             <p class="stripe-processed-by">Payments securely processed by <strong>Stripe</strong></p>
             <p class="stripe-processed-by bank-transfer-line">To use bank-to-bank transfer or ACH, give us a call &#9742; <a href="tel:+12526160088" style="color:inherit;font-weight:700;white-space:nowrap">252-616-0088</a></p>
@@ -237,8 +235,8 @@
   .cart-zip-row input:focus { outline: none; border-color: #ED7226; }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
-<script src="script.js?v=20261024b"></script>
-  <script src="ghl-chat.js?v=20260930a" defer></script>
+<script src="script.js?v=20261028a"></script>
+  <script src="ghl-chat.js?v=20261028a" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 </body>

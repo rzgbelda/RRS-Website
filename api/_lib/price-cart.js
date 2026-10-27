@@ -4,6 +4,7 @@ const { computeShipping, groupByDistributor, classifyShipment } = require('./shi
 const { deliveryDaysForCart } = require('./delivery-days');
 const { issueShippingToken, readShippingToken } = require('./quote-token');
 const { evaluateCoupon } = require('./coupons');
+const { isKnownZip } = require('../../zip-states');
 
 /**
  * Recomputes an order total from the database, ignoring whatever the
@@ -442,12 +443,18 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // SHIPPING_RATER=legacy falls back to the old weight-estimate path below.
   // (WARP rated checkout 2026-10-13 to 10-23 and has been removed.)
   const strictRating = String(process.env.SHIPPING_RATER || 'tforce').trim().toLowerCase() === 'tforce';
-  let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'unpriced'
+  let shippingUnavailable = null; // null | 'zip' (no destination yet) | 'badzip' (no such ZIP) | 'unpriced'
   let ticketShipping = null;
   if (!isPickup && strictRating) {
     if (!dest) {
       shipping = 0;
       shippingUnavailable = 'zip';
+    } else if (!isKnownZip(dest.zip)) {
+      // A ZIP no state uses (00000, a typo): not a carrier failure, so the
+      // buyer is asked to check it and no shipping alert is emailed
+      // (2026-10-28 website audit, M4).
+      shipping = 0;
+      shippingUnavailable = 'badzip';
     } else if ((ticketShipping = readShippingToken(opts.shippingToken, wanted, tokenZip)) != null) {
       shipping = ticketShipping;
       console.log('[shipping] reused quoted delivery', shipping, 'for ZIP', dest.zip);
