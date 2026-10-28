@@ -76,7 +76,7 @@ function discountInfo(q) {
   };
 }
 
-const BAD_ZIP_MESSAGE = "That ZIP code doesn't look right. Please check it and try again.";
+const BAD_ZIP_MESSAGE = "That ZIP code doesn't look right. Please check it and try again. We ship within the United States only.";
 
 function safeMetadata(raw) {
   const out = {};

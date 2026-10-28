@@ -198,6 +198,9 @@
              pickup. -->
 
         <div id="shipToBlock">
+        <!-- Shipping Policy section 1: US addresses only. A buyer abroad
+             typed 00000 to get past the ZIP field (2026-10-27 alert). -->
+        <p class="us-only-note">We ship within the United States only. For an order outside the US, please call (252) 616-0088.</p>
         <label class="full-field">Delivery Address* <input type="text" id="checkout-street" placeholder="Street address" autocomplete="address-line1"></label>
 
         <div class="address-grid">
@@ -541,6 +544,7 @@
   .checkout-trust-block > strong { display: block; color: #0B1F38; font-size: 14px; }
   .checkout-trust-block > p { margin: 4px 0 0; color: #506176; font-size: 13px; line-height: 1.45; }
   .checkout-trust-block .payment-brand-badges { justify-content: center; }
+  .us-only-note { margin: 0 0 10px; color: #506176; font-size: 13px; line-height: 1.45; }
 </style>
 <script>
 // Fires once the checkout page actually loads with a non-empty cart, rather
@@ -689,7 +693,7 @@ function validateCheckoutDetails() {
   }
   const zipState = typeof zipStateFor === 'function' ? zipStateFor(zip) : '';
   if (typeof zipStateFor === 'function' && !zipState) {
-    showCheckoutError('ZIP code ' + zip + " doesn't look right. Please check it.", 'checkout-zip');
+    showCheckoutError('ZIP code ' + zip + " doesn't look right. Please check it. We ship within the United States only.", 'checkout-zip');
     return false;
   }
   const pair = zip + '|' + state;
