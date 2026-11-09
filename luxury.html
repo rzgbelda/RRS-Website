@@ -888,7 +888,9 @@
       const out = [];
       [...new Set(steps)].sort((a, b) => a - b).forEach(q => {
         const pr = priceAt(p, q);
-        if (!out.length || pr < out[out.length - 1].price) out.push({ qty: q, price: pr });
+        // Show every tier, even one priced the same as the one before it --
+        // matches tier-page.js (consistent 1+ / 6+ / 30+ chips).
+        if (!out.length || pr <= out[out.length - 1].price) out.push({ qty: q, price: pr });
       });
       return out.slice(0, 3);
     }

@@ -141,6 +141,8 @@
   const priceAt = (p, qty) => getTierPrice(Object.assign({}, p, { quantity: qty }), []);
   const unitOf = p => moqUnitWord(p);                                  // dozen | piece | case | set ...
   const unitPlural = (p, n) => { const u = unitOf(p); return u === "dozen" || n === 1 ? u : u + "s"; };
+  // Minimum of one: a dozen pack is 12 pieces, not "sold individually".
+  const soldAlone = p => unitOf(p) === "dozen" ? "Sold by the dozen (12 pieces)" : "Sold individually";
   const ARROW = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>`;
 
   // Volume ladder exactly as the cart prices it: the minimum order, then
@@ -154,7 +156,11 @@
     const out = [];
     [...new Set(steps)].sort((a, b) => a - b).forEach(q => {
       const pr = priceAt(p, q);
-      if (!out.length || pr < out[out.length - 1].price) out.push({ qty: q, price: pr });
+      // Every tier the product has is shown, even when a later tier costs
+      // the same as the one before it (6+ and 30+ both $115.84) -- a card
+      // with "1+ / 6+" next to one with "1+ / 6+ / 30+" read as missing a
+      // tier (CEO, 2026-11-10). Only a tier priced HIGHER is skipped.
+      if (!out.length || pr <= out[out.length - 1].price) out.push({ qty: q, price: pr });
     });
     return out.slice(0, 3);
   }
@@ -271,7 +277,7 @@
         </div>
         <div class="tp-price-row">
           <span class="tp-price">${money(now)}</span><span class="tp-per">/ ${esc(unitOf(p))}</span>
-          <span class="tp-case">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))} · <b>${money(now * moq)}</b>` : "Sold individually"}</span>
+          <span class="tp-case">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))} · <b>${money(now * moq)}</b>` : soldAlone(p)}</span>
         </div>
         ${lad.length > 1 ? `<div class="tp-ladder" aria-label="Volume pricing">
           ${lad.map((s, k) => `<div class="${k ? "is-save" : ""}"><small>${esc(cases(p, s.qty))}</small><b>${money(s.price)}</b></div>`).join("")}
@@ -435,7 +441,7 @@
         <h2>${esc(s.title)}</h2>
         ${p ? `
           <div class="tp-info-price"><b>${money(pr)}</b><span>/ ${esc(unitOf(p))}</span></div>
-          <p class="tp-info-note">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))} · <strong>${money(pr * moq)}</strong>` : "Sold individually"}</p>
+          <p class="tp-info-note">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))} · <strong>${money(pr * moq)}</strong>` : soldAlone(p)}</p>
           ${save > 0 ? `<span class="tp-info-save">↓ Up to ${save}% off at volume</span>` : ""}
           <div class="tp-info-actions">
             ${addBtnHtml(p)}
@@ -645,7 +651,7 @@
       <p>${esc(p.overview || p.description || "")}</p>
       <ul>${[p.feature1, p.feature2, p.feature3, p.feature4].filter(Boolean).map(f => `<li>${esc(f)}</li>`).join("")}</ul>
       <div class="tp-price-row"><span class="tp-price">${money(lad[0] ? lad[0].price : priceAt(p, moq))}</span><span class="tp-per">/ ${esc(unitOf(p))}</span>
-        <span class="tp-case">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))}` : "Sold individually"} · SKU ${esc(p.itemNumber)}</span></div>
+        <span class="tp-case">${moq > 1 ? `1 case = ${moq} ${esc(unitPlural(p, moq))}` : soldAlone(p)} · SKU ${esc(p.itemNumber)}</span></div>
       ${lad.length > 1 ? `<div class="tp-ladder">${lad.map((s, k) => `<div class="${k ? "is-save" : ""}"><small>${esc(cases(p, s.qty))}</small><b>${money(s.price)}</b></div>`).join("")}</div>` : ""}
       ${addBtnHtml(p)}
       <a class="tp-link" href="/product?item=${encodeURIComponent(p.slug)}" style="justify-content:center">Open the full product page ${ARROW}</a>`;
