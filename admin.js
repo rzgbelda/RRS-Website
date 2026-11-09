@@ -2549,10 +2549,19 @@ function cvtAutoMap(cols) {
     }
   }
 
+  // Fuzzy (substring) pass. A money column is only ever claimed by a money
+  // field: the masterfiles carry "Tier 1 Item Price", which contains
+  // product_tier's bare "tier" alias, and was mapped as the product tier --
+  // a "$5.26" no tier name matches, so new rows lost their auto-derived tier
+  // (Economy, T180...) and an "overwrite" import nulled existing ones.
+  const MONEY_KEYS = /^(price|sale_price|retail_price|price_tier[123]|cost_per_case|tier[123]_cost)$/;
   for (const col of cols) {
     if (claimed.has(col)) continue;
     const n = norm(col);
+    // "PRICE BY" is the unit column, not money.
+    const isMoneyCol = /price|cost/.test(n) && !n.startsWith("priceby");
     for (const [tk, al] of Object.entries(aliases)) {
+      if (isMoneyCol && !MONEY_KEYS.test(tk)) continue;
       if (!mapping[tk] && al.some(a => n.includes(a))) {
         mapping[tk] = col; claimed.add(col); break;
       }
@@ -4063,6 +4072,10 @@ function cvtApplyDozenTiers(rowObjs) {
       const t2 = parseInt(r.tier2_min_qty, 10), t3 = parseInt(r.tier3_min_qty, 10);
       if (t2 > 0 && t2 <= 6) r.tier2_min_qty = String(t2 * perCase);
       if (t3 > 0 && t3 <= 30) r.tier3_min_qty = String(t3 * perCase);
+      // Weight is NOT converted here. The site wants lbs per dozen, but the
+      // Starlinen masterfile mixes bases (most rows give the whole case,
+      // some already give one dozen), so no single rule is safe -- the
+      // preview flags the case-weight rows instead (cvtCheckRow).
     }
     changed++;
   }
