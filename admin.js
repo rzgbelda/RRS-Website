@@ -4838,9 +4838,29 @@ async function runCsvImport() {
         }
         return p;
       });
-      const result = hasSku
-        ? await window.sb.from("products").upsert(payloads, { onConflict: "sku", ignoreDuplicates: false }).select("id, sku")
-        : await window.sb.from("products").insert(payloads).select("id");
+      // One call per distinct set of columns. A bulk upsert/insert sends the
+      // UNION of every object's keys and writes NULL wherever an object lacks
+      // one -- so a single row carrying product_family/product_tier (filled
+      // grouping, 2026-11-10) nulled the family and tier of every other row
+      // in its call: 64 families and 53 tiers lost on the Nov 10 import.
+      // Each call now only ever holds payloads with identical keys.
+      const byKeys = new Map();
+      payloads.forEach((p, i) => {
+        const sig = Object.keys(p).sort().join(",");
+        if (!byKeys.has(sig)) byKeys.set(sig, { payloads: [], idx: [] });
+        byKeys.get(sig).payloads.push(p);
+        byKeys.get(sig).idx.push(i);
+      });
+      const result = { data: new Array(payloads.length), error: null };
+      for (const grp of byKeys.values()) {
+        const part = hasSku
+          ? await window.sb.from("products").upsert(grp.payloads, { onConflict: "sku", ignoreDuplicates: false }).select("id, sku")
+          : await window.sb.from("products").insert(grp.payloads).select("id");
+        if (part.error) { result.error = part.error; break; }
+        // insert() returns rows in input order; keep them aligned to subset
+        (part.data || []).forEach((row, j) => { result.data[grp.idx[j]] = row; });
+      }
+      result.data = result.data.filter(Boolean);
       if (result.error) {
         errLines.push(`"${subset[0].name}"${subset.length > 1 ? ` and ${subset.length - 1} more` : ""}: ${result.error.message}`);
         return;
