@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261014b" />
+  <link rel="stylesheet" href="style.css?v=20261110a" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -363,6 +363,29 @@
           </div>
         </div>
 
+        <!-- Bulk Pricing & Delivery Options (CEO, 2026-11-08): a closed
+             dropdown so the big-order answers are one click away without
+             pushing the specs down. Facts match the buy box, the tier cards
+             and shipping-policy.html; the phone number is swapped by
+             applySiteContact() like everywhere else. -->
+        <details class="pp-accordion" id="ppBulkInfo">
+          <summary>
+            <span class="pp-acc-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
+            </span>
+            Bulk Pricing &amp; Delivery Options
+          </summary>
+          <div class="pp-acc-body">
+            <ul>
+              <li id="ppBulkVolume"><strong>Volume pricing is automatic.</strong> The more of this item you order, the lower the price per unit. The breaks are shown in the price cards on this page.</li>
+              <li><strong>Large or multi-property orders:</strong> call <a href="tel:2526160088">(252) 616-0088</a> or <a href="/quote">send us your list</a> for a custom quote.</li>
+              <li><strong>Delivery:</strong> orders go to the supplier within 1&ndash;2 business days of payment and ship direct from the supplier&rsquo;s warehouse, by parcel or LTL freight depending on size. We ship within the US only.</li>
+              <li><strong>Auto-Reorder:</strong> set a delivery schedule and save an extra 5% on every order.</li>
+            </ul>
+            <p class="pp-acc-note">Ask about bulk pricing for high-volume properties. <a href="/shipping-policy">Shipping policy</a></p>
+          </div>
+        </details>
+
       </div>
 
       <!-- Own grid item, placed at row 2 (see .pp-tier-cards-block in
@@ -551,9 +574,25 @@
       <span>Buying guide: <span class="product-guide-title"></span></span>
     </a>
 
+    <!-- Related Products: more from the same category so a buyer can keep
+         shopping instead of backing out to the catalog (CEO, 2026-11-08).
+         Filled by renderRelatedProducts() in script.js; stays hidden when
+         there is nothing to show. -->
+    <section class="pp-related" id="ppRelated" hidden>
+      <div class="pp-related-head">
+        <h2>Related Products</h2>
+        <div class="pp-related-nav">
+          <button type="button" class="pp-related-btn" data-dir="-1" aria-label="Scroll related products left">&#8249;</button>
+          <button type="button" class="pp-related-btn" data-dir="1" aria-label="Scroll related products right">&#8250;</button>
+        </div>
+      </div>
+      <div class="products-grid pp-related-grid" id="ppRelatedGrid"></div>
+    </section>
+
   </section>
 
-  <script src="script.js?v=20261024b"></script>
+  <script src="linen-meta.js?v=20261110a"></script>
+  <script src="script.js?v=20261110a"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 </body>

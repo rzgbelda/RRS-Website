@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+// Shared with the browser (loaded before script.js), so the towel/bedding
+// titles crawlers get match the H1 shoppers see.
+const RRSLinen = require('../linen-meta.js');
 
 /**
  * Serves /product?item=... with its SEO tags already filled in.
@@ -36,7 +39,7 @@ const CATALOG_COLUMNS = [
 ].join(',');
 // Mirrors CATALOG_DEAL_COLUMNS in script.js.
 const CATALOG_DEAL_COLUMNS = 'is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3';
-const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit';
+const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit,product_tier,feature1,feature2,feature3,feature4';
 
 /* ── the HTML shell ──────────────────────────────────────────── */
 
@@ -379,7 +382,11 @@ function buildBreadcrumbJsonLd(p, pageUrl) {
 }
 
 function injectMeta(html, p, { quoteOnly = false } = {}) {
-  const seoTitle = buildSeoTitle(p);
+  // Towels and bedding use the hospitality title format (size / quality /
+  // weight / color; brand / thread count / size / color / fabric) -- see
+  // linen-meta.js. Mirrors populateProductPage() in script.js.
+  const linenTitle = RRSLinen.seoTitle(p);
+  const seoTitle = linenTitle || buildSeoTitle(p);
   // Admin's SEO Title override, when set, IS the full <title>/og:title --
   // no " | Room Ready Supply" auto-suffix, since a manually-written title
   // may already include the brand (or deliberately not). The auto-generated
@@ -388,7 +395,7 @@ function injectMeta(html, p, { quoteOnly = false } = {}) {
   // structured data describing the actual product, not search-snippet
   // copy, so a marketing-crafted override shouldn't make a product's own
   // rich-result entry disagree with what it actually is.
-  const titleTag = (p.meta_title || '').trim() || (buildSeoTitleTag(p) + ' | Room Ready Supply');
+  const titleTag = (p.meta_title || '').trim() || ((linenTitle || buildSeoTitleTag(p)) + ' | Room Ready Supply');
   const metaDesc = (p.meta_description || '').trim() || buildMetaDesc(p);
   const slug = slugify(p.sku || p.name);
   const pageUrl = 'https://www.roomreadysupply.com/product?item=' + encodeURIComponent(slug);

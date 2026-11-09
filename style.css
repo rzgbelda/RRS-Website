@@ -11500,3 +11500,68 @@ html.rrs-quote-only .pp-price-cta {
   }
   .payment-total-inline strong { font-size: 18px; color: #ED7226; }
 }
+
+/* ── Linen Product Details, Bulk Pricing dropdown, Related Products ──
+   (CEO direction, 2026-11-08). */
+.features-card ul.pp-detail-list li { margin-bottom: 9px; line-height: 1.55; }
+.features-card ul.pp-detail-list li strong { color: #0d2c50; font-weight: 800; }
+.features-card ul.pp-detail-list li.pp-detail-sub {
+  padding-left: 0; margin: 16px 0 8px; font-size: 13.5px; font-weight: 800; color: #0d2c50;
+}
+.features-card ul.pp-detail-list li.pp-detail-sub::before { content: none; }
+.pp-applications { margin-top: 16px; }
+.pp-applications h4 { margin: 0 0 6px; font-size: 14px; font-weight: 800; color: #0d2c50; }
+.pp-applications p { margin: 0; }
+
+.pp-accordion {
+  margin-top: 16px;
+  background: #fff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(13,44,80,.05);
+}
+.pp-accordion summary {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 18px;
+  font-size: 14.5px; font-weight: 800; color: #0d2c50;
+  cursor: pointer; list-style: none;
+}
+.pp-accordion summary::-webkit-details-marker { display: none; }
+.pp-accordion summary::after {
+  content: ""; margin-left: auto; width: 9px; height: 9px;
+  border-right: 2px solid #0d2c50; border-bottom: 2px solid #0d2c50;
+  transform: rotate(45deg); transition: transform .2s;
+}
+.pp-accordion[open] summary::after { transform: rotate(-135deg); }
+.pp-accordion summary:focus-visible { outline: 2px solid #ED7226; outline-offset: 2px; border-radius: 10px; }
+.pp-acc-icon { color: #ED7226; display: inline-flex; }
+.pp-acc-body { padding: 0 18px 16px; font-size: 13px; line-height: 1.6; color: #33475b; }
+.pp-acc-body ul { margin: 0 0 10px; padding-left: 18px; }
+.pp-acc-body li { margin-bottom: 6px; }
+.pp-acc-body a { color: #ED7226; font-weight: 700; }
+.pp-acc-note { margin: 0; font-style: italic; color: #5B6C7E; }
+
+.pp-related { margin: 36px 0 12px; padding-top: 28px; border-top: 1px solid #e5eaf0; }
+.pp-related[hidden] { display: none; }
+.pp-related-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.pp-related-head h2 { margin: 0; font-size: 20px; color: #0d2c50; }
+.pp-related-nav { display: flex; gap: 8px; }
+.pp-related-btn {
+  width: 36px; height: 36px; border-radius: 50%;
+  border: 1.5px solid #d8dce3; background: #fff; color: #0d2c50;
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.pp-related-btn:hover { border-color: #ED7226; color: #ED7226; }
+.pp-related-grid.products-grid {
+  display: flex; gap: 16px;
+  overflow-x: auto; scroll-snap-type: x mandatory;
+  padding: 4px 4px 16px; margin: 0 -4px;
+  grid-template-columns: none;
+}
+.pp-related-grid .product-card {
+  flex: 0 0 260px; width: 260px; scroll-snap-align: start;
+}
+@media (max-width: 600px) {
+  .pp-related-nav { display: none; }
+  .pp-related-grid .product-card { flex-basis: 78vw; width: 78vw; }
+}

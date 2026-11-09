@@ -1247,7 +1247,15 @@ function tierMinQty(item, snake, camel) {
 // plain number so PRODUCT_TIERS-style exact-match logic elsewhere is
 // unaffected.
 function tierDisplayLabel(tier) {
-  return /^\d+$/.test(tier) ? "T" + tier : tier;
+  // "200 Hospitality" (InnStyle) is a thread count too: "T200 Hospitality".
+  return /^\d+$/.test(tier) ? "T" + tier
+    : /^\d{3}\s/.test(String(tier || "")) ? "T" + tier : tier;
+}
+
+// Linen helpers (linen-meta.js, loaded before this file). Every call goes
+// through these so a page that hasn't loaded it degrades to the old output.
+function linenOptionLabel(v, label) {
+  return typeof RRSLinen !== "undefined" ? RRSLinen.optionLabel(v, label) : label;
 }
 
 function injectVariantCSS() {
@@ -1418,7 +1426,8 @@ function renderSingleCard(product) {
         <img src="${cardImageUrl(product.image, 400)}" alt="${product.name}" loading="lazy" decoding="async" onerror="this.src='/assets/img/product-placeholder.svg'">
       </div>
       <div class="product-content">
-        ${product.productTier ? `<span class="tier-badge">${tierDisplayLabel(product.productTier)}</span>` : ""}
+        ${product.productTier ? `<span class="tier-badge">${tierDisplayLabel(product.productTier)}</span>`
+          : (typeof RRSLinen !== "undefined" && RRSLinen.threadCountBadge([product])) ? `<span class="tier-badge">${RRSLinen.threadCountBadge([product])}</span>` : ""}
         <h3>${product.name}</h3>
         <p class="product-description">${product.description || ""}</p>
         <div class="product-details">
@@ -1650,7 +1659,7 @@ function renderVariantCard(variants) {
   // for the same reason: v.size is pack_size here, always non-empty for a
   // tier-only family, so checking it first always wins and the button text
   // never reaches the real tier.
-  const currentLabel = v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option";
+  const currentLabel = linenOptionLabel(v, v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option");
   const triggerHtml = optionCount > 1 ? `
     <button type="button" class="variant-trigger" aria-haspopup="dialog">
       <span class="vt-label" data-field="variantLabel">${currentLabel}</span>
@@ -1661,8 +1670,14 @@ function renderVariantCard(variants) {
   // (Bath Towel spans Economy/Premium/Ringspun) would be misrepresented by
   // any single badge, so it shows none and the modal groups by tier instead.
   const famTiers = [...new Set(variants.map(vv => vv.productTier).filter(Boolean))];
+  // Bedding always shows its thread count at the card (CEO, 2026-11-08):
+  // a family spanning several gets them all ("T180 · T200 · T250") rather
+  // than no badge at all.
+  const tcBadge = famTiers.length !== 1 && typeof RRSLinen !== "undefined"
+    ? RRSLinen.threadCountBadge(variants) : "";
   const tierHtml = famTiers.length === 1
-    ? `<span class="tier-badge">${tierDisplayLabel(famTiers[0])}</span>` : "";
+    ? `<span class="tier-badge">${tierDisplayLabel(famTiers[0])}</span>`
+    : tcBadge ? `<span class="tier-badge">${tcBadge}</span>` : "";
 
   // Color pills: one per distinct color, each anchored to the DISPLAYED
   // variant's size when that color has a sibling there, falling back to
@@ -1834,7 +1849,7 @@ function applyVariantToCard(card, v) {
   // tier-only family (no variantLabel/size on any row) needs this or the
   // button goes blank the moment a tier is picked inside the modal.
   const labelEl = card.querySelector('[data-field="variantLabel"]');
-  if (labelEl) labelEl.textContent = v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option";
+  if (labelEl) labelEl.textContent = linenOptionLabel(v, v.variantLabel || (v.productTier ? tierDisplayLabel(v.productTier) : "") || v.size || "Select option");
 
   card.dataset.url = "/product?item=" + encodeURIComponent(v.slug);
 
@@ -2099,7 +2114,7 @@ function openVariantModal(card) {
         <img class="vm-row-img" src="${vmEsc(v.image)}" alt=""
              onerror="this.src='/assets/img/product-placeholder.svg'">
         <span class="vm-row-main">
-          <span class="vm-row-label">${vmEsc(v.variantLabel || v.name)}</span>
+          <span class="vm-row-label">${vmEsc(linenOptionLabel(v, v.variantLabel || v.name))}</span>
           ${bits.length ? `<span class="vm-row-meta">${bits.join(" &middot; ")}</span>` : ""}
         </span>
         <span class="vm-row-price">$${price.toFixed(2)}<small>/ ${vmEsc(v.priceBy || "Case")}</small></span>
@@ -2720,13 +2735,19 @@ function renderProductDealBanner(product) {
 function populateProductPage(product) {
   const price = cleanPrice(product.price);
 
-  const seoTitle = buildSeoTitle(product);
+  // Towels and bedding title themselves the way hospitality buyers search:
+  // size / quality / weight / color, and brand / thread count / size /
+  // color / fabric (linen-meta.js, CEO 2026-11-08). Per SKU, not per
+  // family, so each option's URL carries its own distinct title. Mirrors
+  // api/product-meta.js's injectMeta().
+  const linenTitle = typeof RRSLinen !== "undefined" ? RRSLinen.seoTitle(product) : "";
+  const seoTitle = linenTitle || buildSeoTitle(product);
   // Mirrors api/product-meta.js's injectMeta(): an admin-set SEO Title IS
   // the full tag, no auto brand-suffix; JSON-LD's Product.name below still
   // uses the real, untruncated seoTitle regardless, so an override never
   // makes the structured data disagree with what the product actually is.
   const titleOverride = (product.metaTitle || "").trim();
-  const titleTag = titleOverride || `${buildSeoTitleTag(product)} | Room Ready Supply`;
+  const titleTag = titleOverride || `${linenTitle || buildSeoTitleTag(product)} | Room Ready Supply`;
   const autoMetaDesc = (product.overview || product.description || "")
     .replace(/\s+/g, " ").trim().slice(0, 155) + (
     (product.overview || "").length > 155 ? "…" : ""
@@ -3123,6 +3144,12 @@ function populateProductPage(product) {
     }
   }
 
+  // The Bulk Pricing dropdown promises "volume pricing is automatic" -- only
+  // true when the tier cards above actually show a price break.
+  const bulkVolume = document.getElementById("ppBulkVolume");
+  if (bulkVolume) bulkVolume.hidden = !tierCardsEl || tierCardsEl.style.display === "none" ||
+    (isSoldByDozen(product) && !dozenHasTiers(product));
+
   const altText = product.size ? `${product.name} – ${product.size}` : product.name;
   const mainImage = document.getElementById("mainProductImage");
   if (mainImage) { mainImage.src = product.image; mainImage.alt = altText; }
@@ -3149,12 +3176,31 @@ function populateProductPage(product) {
     }
   }
 
+  // Linens get a labelled Product Details list first (Dimensions, Weight,
+  // Material, Color, Packaging...), the format hospitality buyers compare
+  // towels and bedding by, followed by the product's own feature bullets.
+  // Everything else keeps the plain Key Features list.
   const featuresList = document.getElementById("featuresList");
   if (featuresList) {
-    featuresList.innerHTML = [product.feature1, product.feature2, product.feature3, product.feature4]
-      .filter(f => f && f.trim())
-      .map(f => `<li>${f}</li>`)
-      .join("");
+    const feats = [product.feature1, product.feature2, product.feature3, product.feature4]
+      .filter(f => f && f.trim());
+    const details = typeof RRSLinen !== "undefined" ? RRSLinen.details(product) : [];
+    const heading = featuresList.closest(".features-card")?.querySelector(".tabs h3");
+    if (heading) heading.textContent = details.length ? "Product Details" : "Key Features";
+    featuresList.classList.toggle("pp-detail-list", details.length > 0);
+    featuresList.innerHTML = details.length
+      ? details.map(d => `<li><strong>${escAttr(d.label)}:</strong> ${escAttr(d.value)}</li>`).join("") +
+        (feats.length ? `<li class="pp-detail-sub">Features</li>` + feats.map(f => `<li class="pp-detail-feat">${f}</li>`).join("") : "")
+      : feats.map(f => `<li>${f}</li>`).join("");
+  }
+
+  // "Applications" line under the Overview text, for linens.
+  const descEl = document.getElementById("productDescription");
+  document.getElementById("productApplications")?.remove();
+  const apps = typeof RRSLinen !== "undefined" ? RRSLinen.applications(product) : "";
+  if (descEl && apps) {
+    descEl.insertAdjacentHTML("afterend",
+      `<div id="productApplications" class="pp-applications"><h4>Applications</h4><p>${escAttr(apps)}</p></div>`);
   }
 
   renderProductFaq(product);
@@ -3378,6 +3424,21 @@ function renderProductFaq(product) {
 // 9 / 12 / 16 in. deep read cheapest first. Labels with no " - " are their
 // own base, so families without sub-options keep their current order.
 function orderFamilyVariants(variants) {
+  // Linens and bed-sized products run smallest to biggest -- Twin, Twin XL,
+  // Full, Full XL, Queen, King, California King; towels by size -- instead
+  // of first-seen order, which put King ahead of Queen and Full XL last
+  // (CEO, 2026-11-08). Only when every option has a size to sort by.
+  if (typeof RRSLinen !== "undefined" && variants.length > 1) {
+    const keys = variants.map(v => RRSLinen.sizeKey(v, v.variantLabel));
+    const linen = variants.every((v, i) => keys[i] && (RRSLinen.kind(v) || keys[i][0] > 0));
+    if (linen) {
+      const priceOf = v => cleanPrice(v.price) || cleanPrice(v.price1) || 0;
+      return variants
+        .map((v, i) => ({ v, i, k: keys[i] }))
+        .sort((a, b) => RRSLinen.compareSizeKeys(a.k, b.k) || (priceOf(a.v) - priceOf(b.v)) || (a.i - b.i))
+        .map(x => x.v);
+    }
+  }
   const baseOf = v => String(v.variantLabel || v.name || "").split(" - ")[0];
   const firstSeen = new Map();
   variants.forEach((v, i) => { const b = baseOf(v); if (!firstSeen.has(b)) firstSeen.set(b, i); });
@@ -3409,8 +3470,8 @@ function injectProductVariantSelector(variants, activeProduct) {
     const out = v.inStock === false;
     return `<button type="button" class="variant-pill${v.itemNumber === activeProduct.itemNumber ? " active" : ""}${out ? " is-out" : ""}"
              data-slug="${v.slug}"
-             ${out ? `disabled aria-disabled="true" title="${(v.variantLabel || v.size || v.name)} — Out of Stock"` : `onclick="switchProductVariant('${v.slug}')"`}
-     >${v.variantLabel || v.size || v.name}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
+             ${out ? `disabled aria-disabled="true" title="${linenOptionLabel(v, v.variantLabel || v.size || v.name)} — Out of Stock"` : `onclick="switchProductVariant('${v.slug}')"`}
+     >${linenOptionLabel(v, v.variantLabel || v.size || v.name)}${out ? ` <span class="pill-oos-tag">Out of Stock</span>` : ""}</button>`;
   };
 
   // Two independent choices when the family actually spans more than one
@@ -3620,6 +3681,64 @@ function loadProductPage() {
 
   populateProductPage(product);
   reveal();
+  renderRelatedProducts(product);
+}
+
+// Related Products row at the foot of the product page (CEO, 2026-11-08):
+// other families from the same category, topped up from a neighbouring one
+// (towels <-> bedding, chemicals <-> laundry...) when the category is small.
+// Rendered once per page -- switching size keeps the same category.
+const RELATED_CATEGORY_FALLBACK = {
+  "Towels": ["Bed Sheets & Linens", "Pillows & Mattress Protectors"],
+  "Bed Sheets & Linens": ["Pillows & Mattress Protectors", "Towels"],
+  "Pillows & Mattress Protectors": ["Bed Sheets & Linens", "Towels"],
+  "Cleaning Chemicals": ["Laundry & Cleaning Chemicals", "Housekeeping Supplies"],
+  "Laundry & Cleaning Chemicals": ["Cleaning Chemicals", "Housekeeping Supplies"],
+  "Housekeeping Supplies": ["Cleaning Chemicals", "Gloves & PPE"],
+  "Gloves & PPE": ["Housekeeping Supplies", "Cleaning Chemicals"],
+  "Paper Products": ["Trash Liners & Can Liners", "Housekeeping Supplies"],
+  "Trash Liners & Can Liners": ["Paper Products", "Housekeeping Supplies"],
+  "Foodservice Linens": ["Foodservice Disposables", "Towels"],
+  "Foodservice Disposables": ["Foodservice Linens", "Paper Products"],
+};
+const RELATED_MAX_FAMILIES = 10;
+
+function renderRelatedProducts(product) {
+  const wrap = document.getElementById("ppRelated");
+  const grid = document.getElementById("ppRelatedGrid");
+  if (!wrap || !grid || !product) return;
+
+  const famOf = p => p.familyKey || "__" + p.itemNumber;
+  const ownFam = famOf(product);
+  const cats = [product.category, ...(RELATED_CATEGORY_FALLBACK[product.category] || [])].filter(Boolean);
+
+  const chosenFams = [];
+  const picked = [];
+  for (const cat of cats) {
+    const pool = allProducts.filter(p => p.category === cat && famOf(p) !== ownFam && p.inStock !== false);
+    const ordered = typeof sortCatalogDefault === "function" ? sortCatalogDefault(pool) : pool;
+    for (const p of ordered) {
+      const f = famOf(p);
+      if (!chosenFams.includes(f)) {
+        if (chosenFams.length >= RELATED_MAX_FAMILIES) continue;
+        chosenFams.push(f);
+      }
+      picked.push(p);
+    }
+    if (chosenFams.length >= 6) break;
+  }
+  if (!chosenFams.length) { wrap.hidden = true; return; }
+
+  renderProductGrid(picked, grid);
+  wrap.hidden = false;
+
+  wrap.querySelectorAll(".pp-related-btn").forEach(btn => {
+    btn.onclick = () => {
+      const card = grid.querySelector(".product-card");
+      const step = card ? card.getBoundingClientRect().width + 16 : grid.clientWidth * 0.8;
+      grid.scrollBy({ left: Number(btn.dataset.dir) * step * 2, behavior: "smooth" });
+    };
+  });
 }
 
 function setText(id, value) {
