@@ -3700,6 +3700,7 @@ const RELATED_CATEGORY_FALLBACK = {
   "Trash Liners & Can Liners": ["Paper Products", "Housekeeping Supplies"],
   "Foodservice Linens": ["Foodservice Disposables", "Towels"],
   "Foodservice Disposables": ["Foodservice Linens", "Paper Products"],
+  "Flooring": ["Cleaning Chemicals", "Housekeeping Supplies"],
 };
 const RELATED_MAX_FAMILIES = 10;
 

@@ -2452,7 +2452,10 @@ function cvtAutoMap(cols) {
     // "priceby" is how all three supplier feeds head this column.
     unit:          ["priceby","unit","uom","unitofmeasure","unittype"],
     is_featured:   ["isfeatured","featured","highlight","top","bestseller"],
-    is_active:     ["isactive","active","status","enabled","available"],
+    // "remove"/"hide": the masterfile's "REMOVE - linen cleanup ..." column
+    // (REMOVE - hide / REMOVE - quote-only / KEEP / blank). Fuzzy-matched
+    // before product_tier, whose "line" alias otherwise claims it.
+    is_active:     ["isactive","active","status","enabled","available","remove","hide"],
     image_url:     ["imageurl","image","img","photo","picture","url","photourl"],
     weight:        ["weight","weightlbs","weightlb","itemweight"],
     length:        ["length","lengthin","itemlength"],
@@ -3691,6 +3694,14 @@ function cvtNormalizeValue(key, value, srcRow) {
     return v.charAt(0).toUpperCase() + v.slice(1).toLowerCase();
   }
 
+  // A REMOVE/hide column is a per-row decision about visibility: "REMOVE..."
+  // hides the product, anything else (KEEP, blank) shows it. Emitted as
+  // "hide"/"show" -- not true/false -- so the importer knows the file set it
+  // on purpose and applies it to existing products too (runCsvImport).
+  if (key === "is_active" && /remove|hide/i.test(_cvtMapping.is_active || "")) {
+    return /^\s*(remove|hide)/i.test(v) ? "hide" : "show";
+  }
+
   if (key === "in_stock") {
     if (!v) return "true";
     return /out\s*of\s*stock|^no$|^false$|^0$/i.test(v) ? "false" : "true";
@@ -3787,9 +3798,6 @@ function cvtBuildRows() {
   // Auto-derive the variant columns only when the vendor file didn't supply
   // them -- an explicit mapping always wins over anything guessed here.
   const autoVariants = !_cvtMapping.product_family && !_cvtMapping.variant_label;
-  const derived = autoVariants
-    ? cvtGroupVariants(_cvtSourceRows.filter((_, i) => !_cvtExcluded.has(i)), _cvtMapping.name, _cvtMapping.sku)
-    : new Map();
   // product_tier is auto-filled from the same derivation, independently of
   // whether product_family/variant_label were auto-derived too -- a vendor
   // file can supply its own family/label mapping and still need the tier
@@ -3803,6 +3811,13 @@ function cvtBuildRows() {
   // this). Independent flags because a vendor file can map its own color
   // columns while still needing size auto-derived, or vice versa.
   const autoColor = !_cvtMapping.color_group && !_cvtMapping.color_label;
+  // Derived whenever ANY of the three is auto. It used to run only for
+  // autoVariants, so a file with its own family columns silently lost the
+  // auto tier too (new Prestige 1-piece sheets imported with no "T200
+  // Hospitality" tier and fell outside their family's tier group).
+  const derived = autoVariants || autoTier || autoColor
+    ? cvtGroupVariants(_cvtSourceRows.filter((_, i) => !_cvtExcluded.has(i)), _cvtMapping.name, _cvtMapping.sku)
+    : new Map();
 
   const rowObjs = [];
   _cvtSourceRows.forEach((srcRow, srcIdx) => {
@@ -4513,11 +4528,14 @@ async function runCsvImport() {
     // unbounded select() at 1000 rows, which would silently stop detecting
     // duplicates past the first 1000 products as the catalog grows.
     const { data: existingProds } = await window.sb
-      .from("products").select("sku, name, slug").limit(50000);
+      .from("products").select("sku, name, slug, product_family, variant_label, family_key, product_tier").limit(50000);
     if (existingProds) existingProds.forEach(p => {
       existingNames.add(normName(p.name));
       if (p.slug) existingSlugs.add(p.slug);
-      if (p.sku) existingBySku.set(String(p.sku).trim(), { name: p.name, slug: p.slug });
+      if (p.sku) existingBySku.set(String(p.sku).trim(), {
+        name: p.name, slug: p.slug,
+        hasFamily: !!(p.product_family && p.variant_label), hasTier: !!p.product_tier,
+      });
     });
   }
   const preValidationRows = deduped.filter(r => r.sku || !existingNames.has(normName(r.name)));
@@ -4719,7 +4737,9 @@ async function runCsvImport() {
     pack_size    : parseInt(r.pack_size) || 1,
     unit         : r.unit         || "Case",
     is_featured  : ["true","1","yes"].includes((r.is_featured || "").toLowerCase()),
-    is_active    : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
+    is_active    : /^(hide|show)$/i.test(r.is_active || "")
+                   ? /^show$/i.test(r.is_active)
+                   : r.is_active === "" || ["true","1","yes"].includes((r.is_active || "true").toLowerCase()),
     image_url    : r.image_url   || null,
     // Extra gallery photos beyond the one cover image (RRS-13) -- pipe-
     // separated so a single CSV cell can carry several URLs without
@@ -4792,7 +4812,26 @@ async function runCsvImport() {
       const payloads = subset.map(r => {
         const p = buildPayload(r, now);
         if (isUpdate && !overwriteContent) {
-          for (const k of CSV_PRESERVED_ON_UPDATE) delete p[k];
+          // An explicit hide/show from the Converter (masterfile REMOVE
+          // column) is applied even to existing products; a plain is_active
+          // column (the template's TRUE default) still is not.
+          const explicitVisibility = /^(hide|show)$/i.test(r.is_active || "");
+          // Grouping staff never set (no family / no tier on the product) is
+          // filled from the file instead of kept empty -- otherwise a size
+          // added to a family could never be joined by its existing sibling
+          // (vinyl gloves: new M/L, existing XL with no family). Grouping that
+          // IS set is never overwritten. Colors are left alone: the
+          // auto-derived single-color groups would add a one-option picker.
+          const ex = existingBySku.get(r.sku.trim()) || {};
+          const fill = new Set([
+            ...(ex.hasFamily || !p.family_key ? [] : ["product_family", "variant_label", "family_key"]),
+            ...(ex.hasTier || !p.product_tier ? [] : ["product_tier"]),
+          ]);
+          for (const k of CSV_PRESERVED_ON_UPDATE) {
+            if (k === "is_active" && explicitVisibility) continue;
+            if (fill.has(k)) continue;
+            delete p[k];
+          }
           // name is NOT NULL, so it stays in the payload -- as the name the
           // product already has.
           p.name = existingBySku.get(r.sku.trim()).name;
