@@ -3429,7 +3429,9 @@ function renderProductMoq(product) {
     rows.push(["Minimum order", `1 case (${casePack} pieces)`]);
     rows.push(["Order in", `Full cases: ${casePack}, ${casePack * 2}, ${casePack * 3}&hellip; pieces`]);
   } else {
-    rows.push(["Minimum order", `${moq} ${unitPl(moq)}${dozen ? ` (${moq * 12} pieces)` : ""}`]);
+    // No "(12 pieces)" suffix: it was read as a minimum of 12. The pieces
+    // per dozen are on the "In each dozen" row below.
+    rows.push(["Minimum order", `${moq} ${unitPl(moq)}`]);
     if (moq > 1) rows.push(["Order in", `Multiples of ${moq}: ${moq}, ${moq * 2}, ${moq * 3}&hellip;`]);
   }
   if (info) {
