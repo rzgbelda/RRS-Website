@@ -1252,6 +1252,53 @@ function tierDisplayLabel(tier) {
     : /^\d{3}\s/.test(String(tier || "")) ? "T" + tier : tier;
 }
 
+// Item price: what one piece inside the selling unit costs -- the
+// masterfile's "Tier N Item Price" = selling price / CS (case quantity). Shown
+// under every case/dozen price so a buyer can compare "$28.32 a case" with
+// "$1.77 a pack" at a glance (CEO, 2026-11-10). Returns null when the price
+// already IS per piece (sold by the each/set/pair) or the case holds one.
+const ITEM_NOUNS = ["kit", "liner", "glove", "napkin", "plate", "container", "sponge", "pad",
+  "cover", "wipe", "towel", "roll", "bottle", "canister", "can", "box", "pack", "pail", "sheet",
+  "pillowcase", "washcloth", "mat", "apron", "mop", "holder", "cloth", "refill", "cartridge"];
+function singularNoun(w) {
+  w = String(w || "").toLowerCase();
+  if (/(box|ss)es$/.test(w)) return w.replace(/es$/, "");
+  return w.replace(/ies$/, "y").replace(/s$/, "");
+}
+function itemPriceInfo(p, price) {
+  const unit = String(p && (p.priceBy || p.unit) || "case").trim().toLowerCase();
+  if (/^(each|ea|piece|pc|pcs|set|pair)$/.test(unit)) return null;
+  const dozen = unit === "dozen" || unit === "dz";
+  let count = dozen ? 12 : parseInt(String(p.caseQty || "").replace(/[^0-9]/g, ""), 10);
+  const amount = Number(price);
+  if (!(count > 1) || !(amount > 0)) return null;
+  const name = String(p.name || "");
+  // Count words in the name: "16 Packs/Case", "96 Rolls", "4,000 Towels",
+  // "8 Packs of 500 per Case". Measurements ("12 in. Pocket") don't count.
+  const NOT_NOUN = /^(in|inch|inches|ft|oz|lb|lbs|mil|micron|gallon|gal|qt|ml|ply|x|per|of|count|dozen|sheets?)$/i;
+  const cands = [...name.matchAll(/(\d[\d,]*)\s+([A-Za-z]+)/g)]
+    .map(m => ({ n: parseInt(m[1].replace(/,/g, ""), 10), w: m[2], at: m.index, after: name.slice(m.index + m[0].length) }))
+    .filter(c => !NOT_NOUN.test(c.w));
+  let noun = "";
+  // 1) the count that matches the case quantity names the item
+  const exact = cands.find(c => c.n === count);
+  if (exact) noun = singularNoun(exact.w);
+  // 2) "1,000 Gloves/Case" when the CS column disagrees (counts boxes)
+  if (!noun && !dozen) {
+    const perCase = cands.find(c => /^\s*(\/|per\b)\s*case/i.test(c.after) && !/\bof\s*$/i.test(name.slice(0, c.at)));
+    if (perCase && perCase.n > 1) { count = perCase.n; noun = singularNoun(perCase.w); }
+  }
+  // 3) the product's own noun ("Can Liners", "Bath Mats"); a dozen pack is
+  //    counted in pieces, never "packs"
+  if (!noun) {
+    const low = name.toLowerCase();
+    noun = ITEM_NOUNS.filter(n => !(dozen && n === "pack"))
+      .find(n => new RegExp("\\b" + n + "(e?s)?\\b").test(low)) || (dozen ? "piece" : "item");
+  }
+  const each = amount / count;
+  return { each, count, noun, text: `$${each < 0.1 ? each.toFixed(3) : each.toFixed(2)} per ${noun}` };
+}
+
 // Linen helpers (linen-meta.js, loaded before this file). Every call goes
 // through these so a page that hasn't loaded it degrades to the old output.
 function linenOptionLabel(v, label) {
@@ -1447,6 +1494,7 @@ function renderSingleCard(product) {
               <span class="unit">/ ${product.priceBy || "Case"}</span>
               ${wasPriceHtml(product, price)}
             </div>
+            <span class="price-each">${itemPriceInfo(product, price)?.text || ""}</span>
           </div>
           <button
             class="add-btn"
@@ -1746,6 +1794,7 @@ function renderVariantCard(variants) {
               <span class="unit">/ ${v.priceBy || "Case"}</span>
               ${wasPriceHtml(v, price)}
             </div>
+            <span class="price-each" data-field="itemPrice">${itemPriceInfo(v, price)?.text || ""}</span>
           </div>
           <button
             class="add-btn"
@@ -1794,6 +1843,8 @@ function applyVariantToCard(card, v) {
 
   const unitEl = card.querySelector(".unit");
   if (unitEl) unitEl.textContent = "/ " + (v.priceBy || "Case");
+  const eachEl = card.querySelector('[data-field="itemPrice"]');
+  if (eachEl) eachEl.textContent = itemPriceInfo(v, price)?.text || "";
 
   // Best Deal tag and "was" price follow the selected variant.
   card.classList.toggle("is-best-deal", !!v.isBestDeal);
@@ -2914,6 +2965,17 @@ function populateProductPage(product) {
   // Update "Per Case" unit label dynamically
   const pricingBoxP = document.querySelector(".pricing-box p");
   if (pricingBoxP) pricingBoxP.textContent = `Per ${product.priceBy || "Case"}`;
+  const boxItem = itemPriceInfo(product, price);
+  let boxItemEl = document.getElementById("ppItemPrice");
+  if (boxItem && pricingBoxP) {
+    if (!boxItemEl) {
+      boxItemEl = document.createElement("p");
+      boxItemEl.id = "ppItemPrice";
+      boxItemEl.className = "pp-item-price";
+      pricingBoxP.insertAdjacentElement("afterend", boxItemEl);
+    }
+    boxItemEl.textContent = `${boxItem.text} · ${boxItem.count.toLocaleString()} per ${String(product.priceBy || "case").toLowerCase()}`;
+  } else if (boxItemEl) boxItemEl.remove();
 
   setText("specName", product.name);
   setText("specItemNumber", product.itemNumber);
@@ -3104,13 +3166,30 @@ function populateProductPage(product) {
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
       // Best Deal: the regular price for this tier, struck through.
       const priceEl = document.getElementById(`tier${i + 1}Price`);
+      // Item price right under the case price (CEO, 2026-11-10): the
+      // orange figure is what a case costs, this line is what one piece in
+      // it costs -- "$1.77 per pack".
+      let itemEl = document.getElementById(`tier${i + 1}Item`);
+      const itemInfo = itemPriceInfo(product, price);
+      if (itemInfo && priceEl) {
+        if (!itemEl) {
+          itemEl = document.createElement("span");
+          itemEl.id = `tier${i + 1}Item`;
+          itemEl.className = "tier-item";
+          priceEl.insertAdjacentElement("afterend", itemEl);
+        }
+        itemEl.textContent = itemInfo.text;
+      } else if (itemEl) {
+        itemEl.remove();
+        itemEl = null;
+      }
       let wasEl = document.getElementById(`tier${i + 1}Was`);
       if (regs[i] > price + 0.004) {
         if (!wasEl && priceEl) {
           wasEl = document.createElement("s");
           wasEl.id = `tier${i + 1}Was`;
           wasEl.className = "tier-was";
-          priceEl.insertAdjacentElement("afterend", wasEl);
+          (itemEl || priceEl).insertAdjacentElement("afterend", wasEl);
         }
         if (wasEl) wasEl.textContent = `$${regs[i].toFixed(2)}`;
       } else if (wasEl) {
@@ -3203,6 +3282,7 @@ function populateProductPage(product) {
       `<div id="productApplications" class="pp-applications"><h4>Applications</h4><p>${escAttr(apps)}</p></div>`);
   }
 
+  renderProductMoq(product);
   renderProductFaq(product);
 
   const addBtn = document.getElementById("productAddToCart");
@@ -3299,6 +3379,48 @@ function populateProductPage(product) {
  * ratio for a specific chemical without a real source would be
  * inventing a safety-relevant number, not a reasonable default.
  */
+// Minimum Order Quantity card (CEO, 2026-11-10): the smallest order, what is
+// inside one selling unit, what a piece costs and where volume pricing
+// starts -- all from the product's own data.
+function renderProductMoq(product) {
+  const body = document.getElementById("ppMoqBody");
+  const card = document.getElementById("ppMoqCard");
+  if (!body || !card) return;
+  const plural = (n, w) => n === 1 ? w : (/(x|s|sh|ch)$/.test(w) ? w + "es" : w + "s");
+  const dozen = isSoldByDozen(product);
+  const unit = dozen ? "dozen" : moqUnitWord(product);
+  const unitPl = n => dozen ? "dozen" : plural(n, unit);
+  const moq = productMoq(product);
+  const price = cleanPrice(product.price1) || cleanPrice(product.price);
+  const info = itemPriceInfo(product, price);
+  const casePack = (String(product.name || "").match(/Case of (\d+)/i) || [])[1];
+  const rows = [];
+
+  if (product.moqGroup && product.moqGroupMin > 0) {
+    rows.push(["Minimum order", `${product.moqGroupMin} ${plural(product.moqGroupMin, unit)} combined across the Mix &amp; Match group`]);
+  } else if (unit === "piece" && casePack && moq === Number(casePack)) {
+    rows.push(["Minimum order", `1 case (${casePack} pieces)`]);
+    rows.push(["Order in", `Full cases: ${casePack}, ${casePack * 2}, ${casePack * 3}&hellip; pieces`]);
+  } else {
+    rows.push(["Minimum order", `${moq} ${unitPl(moq)}${dozen ? ` (${moq * 12} pieces)` : ""}`]);
+    if (moq > 1) rows.push(["Order in", `Multiples of ${moq}: ${moq}, ${moq * 2}, ${moq * 3}&hellip;`]);
+  }
+  if (info) {
+    rows.push([`In each ${dozen ? "dozen" : String(product.priceBy || "case").toLowerCase()}`,
+      `${info.count.toLocaleString()} ${plural(info.count, info.noun)}`]);
+    rows.push([`Price per ${info.noun}`, info.text.replace(/ per .*/, "")]);
+  }
+  const mins = [tierMinQty(product, "tier2_min_qty", "tier2MinQty"), tierMinQty(product, "tier3_min_qty", "tier3MinQty")]
+    .filter((m, i) => m && cleanPrice([product.price2, product.price3][i]));
+  if (mins.length) {
+    rows.push(["Volume pricing", `Lower price from ${mins.map(m => `${m}+ ${unitPl(m)}`).join(" and from ")} of this item`]);
+  }
+
+  body.innerHTML = `<dl class="pp-moq-list">${rows.map(([k, v]) =>
+    `<div class="pp-moq-row"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+  card.style.display = "";
+}
+
 function renderProductFaq(product) {
   const card = document.getElementById("ppFaqCard");
   const list = document.getElementById("ppFaqList");
@@ -3344,12 +3466,22 @@ function renderProductFaq(product) {
   } else {
     q1Answer = `This item ships as a single unit per ${unitRaw}. Order as few as 1, and volume pricing applies automatically as you order more of this item.`;
   }
-  const q1 = {
-    q: isEach
-      ? `Is this sold individually, and is there a minimum order?`
-      : `How many come in ${article} ${unitRaw}, and is there a minimum order?`,
-    a: q1Answer,
-  };
+  // Case contents and the minimum now live in their own Minimum Order
+  // Quantity card (renderProductMoq, CEO 2026-11-10), so the first question
+  // here is the one buyers ask next: does a mixed cart earn volume pricing?
+  void q1Answer; void article;
+  const q1 = hasGroup && product.moqGroupMin > 0
+    ? {
+        q: `Can I combine this with other products to reach the minimum?`,
+        a: `Yes. This item is part of a Mix &amp; Match group: combine it with other products in the same group `
+          + `to reach the group's combined minimum of ${product.moqGroupMin} units, and the group's volume pricing applies to the total.`,
+      }
+    : {
+        q: `Do volume discounts combine across different products?`,
+        a: `No &mdash; volume pricing is per item. The price drops as you order more of <strong>this</strong> product; `
+          + `a cart with several different products is priced item by item. Need pricing for a large mixed list? `
+          + `<a href="/quote">Send it to us</a> for a quote.`,
+      };
 
   // Q2: shipping weight/dimensions -- what a facilities buyer needs to
   // plan freight, a loading dock, or storage space before ordering.

@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261110a" />
+  <link rel="stylesheet" href="style.css?v=20261110b" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -539,6 +539,17 @@
         </p>
       </section>
 
+      <!-- Minimum Order Quantity (CEO, 2026-11-10): its own card between
+           Overview and Common Questions -- what the smallest order is, what
+           is inside one unit and what each piece costs. Filled by
+           renderProductMoq() in script.js. -->
+      <section class="detail-card pp-moq-card" id="ppMoqCard">
+        <div class="tabs">
+          <h3>Minimum Order Quantity</h3>
+        </div>
+        <div id="ppMoqBody"></div>
+      </section>
+
       <!-- Two FAQs, generated from this product's own real data (case/dozen
            quantity, weight, dimensions, MOQ) rather than written per-SKU by
            hand for 110+ products or filled with invented specifics. The two
@@ -592,7 +603,7 @@
   </section>
 
   <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261110b"></script>
+  <script src="script.js?v=20261110c"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 </body>
