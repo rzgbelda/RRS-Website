@@ -156,11 +156,10 @@
     const out = [];
     [...new Set(steps)].sort((a, b) => a - b).forEach(q => {
       const pr = priceAt(p, q);
-      // Every tier the product has is shown, even when a later tier costs
-      // the same as the one before it (6+ and 30+ both $115.84) -- a card
-      // with "1+ / 6+" next to one with "1+ / 6+ / 30+" read as missing a
-      // tier (CEO, 2026-11-10). Only a tier priced HIGHER is skipped.
-      if (!out.length || pr <= out[out.length - 1].price) out.push({ qty: q, price: pr });
+      // A tier priced the same as the one before it is not a discount and is
+      // left out (6+ and 30+ both $115.84 -> "1+ / 6+"). The product page's
+      // tier cards follow the same rule (populateProductPage in script.js).
+      if (!out.length || pr < out[out.length - 1].price) out.push({ qty: q, price: pr });
     });
     return out.slice(0, 3);
   }

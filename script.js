@@ -3127,6 +3127,24 @@ function populateProductPage(product) {
         : `Price per ${unitLower} &mdash; buy more <strong>of this item</strong>, pay less`;
     }
 
+    // A tier priced the same as (or above) the tier before it is not a
+    // volume discount -- its card is left out, the same rule the Economy /
+    // Premium / Luxury pages use (tier-page.js ladder). The tier before it
+    // then reads open-ended ("6+ Cases") because nextMin skips the dropped
+    // tier. Pricing is untouched: the cart still charges that tier's price.
+    let lastTierPrice = null;
+    [0, 1, 2].forEach(i => {
+      if (!mins[i] || !prices[i]) return;
+      if (lastTierPrice != null && prices[i] >= lastTierPrice - 0.004) { mins[i] = null; prices[i] = 0; return; }
+      lastTierPrice = prices[i];
+    });
+    // Badges reset every render (a variant switch re-runs this), then the
+    // last card shown is the best value whether there are two or three.
+    setText("tier2Badge", "VOLUME");
+    document.getElementById("tier2Badge")?.classList.remove("best-value");
+    setText("tier3Badge", "BEST VALUE");
+    document.getElementById("tier3Badge")?.classList.add("best-value");
+
     [0, 1, 2].forEach(i => {
       const card = document.getElementById(`tier${i + 1}Price`)?.closest(".tier-card");
       const min = mins[i];
@@ -3213,6 +3231,15 @@ function populateProductPage(product) {
       setText("tier1Sub", "Standard Pricing");
       document.getElementById("tier1Badge")?.classList.remove("best-value");
     }
+    // Two cards (third tier dropped above): the second is the best price.
+    const shownIdx = [0, 1, 2].filter(i => mins[i] && prices[i]);
+    if (shownIdx.length === 2) {
+      const last = shownIdx[1] + 1;
+      setText(`tier${last}Badge`, "BEST VALUE");
+      document.getElementById(`tier${last}Badge`)?.classList.add("best-value");
+      if (!byPallet) setText(`tier${last}Sub`, `Best Price Per ${unitWord}`);
+    }
+    if (tierCardsEl) tierCardsEl.classList.toggle("is-two", shownIdx.length === 2);
 
     if (tierCardsEl) {
       // Hidden when every visible tier is the same price (no actual

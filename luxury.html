@@ -777,7 +777,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
   <script src="supabase.js"></script>
   <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261110c"></script>
+  <script src="script.js?v=20261110d"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
   <script>
   (function () {
@@ -888,9 +888,9 @@
       const out = [];
       [...new Set(steps)].sort((a, b) => a - b).forEach(q => {
         const pr = priceAt(p, q);
-        // Show every tier, even one priced the same as the one before it --
-        // matches tier-page.js (consistent 1+ / 6+ / 30+ chips).
-        if (!out.length || pr <= out[out.length - 1].price) out.push({ qty: q, price: pr });
+        // A tier priced the same as the one before it is left out -- same
+        // rule as tier-page.js and the product page's tier cards.
+        if (!out.length || pr < out[out.length - 1].price) out.push({ qty: q, price: pr });
       });
       return out.slice(0, 3);
     }
