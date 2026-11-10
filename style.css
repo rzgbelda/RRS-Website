@@ -11627,3 +11627,6 @@ html.rrs-quote-only .pp-price-cta {
 .cq-err { color: #b91c1c; font-size: 13px; margin: 0 0 10px; }
 .cq-send { width: 100%; padding: 12px; background: #ED7226; color: #fff; border: 0; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; }
 .cq-send:disabled { opacity: .6; cursor: default; }
+
+.dq-price { font-size: 34px; font-weight: 800; margin: 4px 0 8px; color: #0f172a; }
+.dq-dates { font-size: 16px; margin: 0 0 8px; color: #0f172a; }

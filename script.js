@@ -4680,16 +4680,9 @@ function loadCartPage() {
   // supplier is internal, so only day counts come back); until that answer
   // arrives, the last known range or the flat fallback shows.
   const estimateEl = document.getElementById("cart-delivery-estimate");
-  if (estimateEl && typeof window.getDeliveryEstimateRange === "function") {
-    const est = window.getDeliveryEstimateRange(null, window._rrsDeliveryDays);
-    estimateEl.textContent = `Estimated delivery: ${est.rangeLabel}`;
-    fetchCheckoutQuote().then(d => {
-      if (!d || !d.deliveryDays) return;
-      window._rrsDeliveryDays = d.deliveryDays;
-      const e = window.getDeliveryEstimateRange(null, d.deliveryDays);
-      estimateEl.textContent = `Estimated delivery: ${e.rangeLabel}`;
-    });
-  }
+  // Eric (Part B, B2): never show a made-up or standard window. The dates
+  // appear only once a ZIP has been priced (refreshCartDelivery below).
+  if (estimateEl) estimateEl.textContent = "";
 
   const cart = getCart();
   cartItemsContainer.innerHTML = "";
@@ -4808,7 +4801,43 @@ function loadCartPage() {
 // quote and same rules as checkout -- no ZIP, no price; no WARP price,
 // "Unavailable" and the buyer is told to try again or call.
 let _cartDeliverySeq = 0;
-function refreshCartDelivery(itemsTotal) {
+// Delivery-quote pop-up (Eric, Part B, B2): the buyer enters a ZIP and gets
+// the delivery price in a box; the page does not change or reload. Real
+// dates only -- if the cart cannot be priced there are NO dates, and the
+// quote path (Quote this cart) is offered instead.
+function showDeliveryQuotePopup(zip, price, range) {
+  let m = document.getElementById('deliveryQuoteModal');
+  if (m) m.remove();
+  m = document.createElement('div');
+  m.id = 'deliveryQuoteModal';
+  m.className = 'cq-overlay';
+  const longDate = d => d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+  let body;
+  if (typeof price === 'number') {
+    body =
+      `<h3>Delivery to ${zip}</h3>` +
+      `<p class="dq-price">$${price.toFixed(2)}</p>` +
+      (range
+        ? `<p class="dq-dates">Delivery between <strong>${longDate(range.start)}</strong> and <strong>${longDate(range.end)}</strong></p>` +
+          `<p class="cq-sub">Your order goes to the supplier within two business days, then ships. Dates are estimates, not guarantees.</p>`
+        : '') +
+      `<button type="button" class="cq-send" id="dqOk">OK</button>`;
+  } else {
+    body =
+      `<h3>We can\u2019t price delivery to ${zip} right now</h3>` +
+      `<p class="cq-sub">We won\u2019t guess at a price or a date. Send us this cart and we\u2019ll reply with a written quote, delivered total included \u2014 or call (252) 616-0088.</p>` +
+      `<button type="button" class="cq-send" id="dqQuote">Quote this cart</button>`;
+  }
+  m.innerHTML = `<div class="cq-modal" role="dialog" aria-modal="true"><button type="button" class="cq-close" aria-label="Close">&times;</button>${body}</div>`;
+  document.body.appendChild(m);
+  const close = () => m.remove();
+  m.addEventListener('click', e => { if (e.target === m) close(); });
+  m.querySelector('.cq-close').addEventListener('click', close);
+  const ok = m.querySelector('#dqOk'); if (ok) ok.addEventListener('click', close);
+  const q = m.querySelector('#dqQuote'); if (q) q.addEventListener('click', () => { close(); openCartQuote(); });
+}
+
+function refreshCartDelivery(itemsTotal, showPopup) {
   const el = document.getElementById('cart-delivery');
   const totalEl = document.getElementById('estimated-total');
   const zipEl = document.getElementById('cart-zip');
@@ -4821,7 +4850,7 @@ function refreshCartDelivery(itemsTotal) {
     zipEl.addEventListener('input', () => {
       zipEl.value = zipEl.value.replace(/\D/g, '').slice(0, 5);
       clearTimeout(t);
-      t = setTimeout(() => refreshCartDelivery(Number(zipEl.dataset.itemsTotal) || 0), 400);
+      t = setTimeout(() => refreshCartDelivery(Number(zipEl.dataset.itemsTotal) || 0, true), 400);
     });
   }
   zipEl.dataset.itemsTotal = String(itemsTotal);
@@ -4832,6 +4861,8 @@ function refreshCartDelivery(itemsTotal) {
   const taxRow = document.getElementById('cartTaxRow');
   if (taxRow) taxRow.style.display = 'none';
   el.style.color = '';
+  const estEl = document.getElementById('cart-delivery-estimate');
+  if (estEl) estEl.textContent = '';
   if (!/^\d{5}$/.test(zipEl.value.trim())) {
     el.textContent = 'Enter ZIP';
     return;
@@ -4850,10 +4881,19 @@ function refreshCartDelivery(itemsTotal) {
         document.getElementById('cart-tax').textContent = `$${tax.toFixed(2)}`;
       }
       if (totalEl) totalEl.textContent = `$${(itemsTotal + d.shipping + tax).toFixed(2)}`;
+      // Real dates for this ZIP and cart (per-supplier days, from the server).
+      let range = null;
+      if (d.deliveryDays && typeof window.getDeliveryEstimateRange === 'function') {
+        window._rrsDeliveryDays = d.deliveryDays;
+        range = window.getDeliveryEstimateRange(null, d.deliveryDays);
+        if (estEl) estEl.textContent = `Estimated delivery: ${range.rangeLabel}`;
+      }
+      if (showPopup) showDeliveryQuotePopup(zipEl.value.trim(), d.shipping, range);
       return;
     }
     el.textContent = 'Unavailable';
     el.style.color = '#b91c1c';
+    if (showPopup) showDeliveryQuotePopup(zipEl.value.trim(), null, null);
     if (problem && !(d && d.error && /^Almost there/.test(d.error))) {
       problem.innerHTML = (d && d.error)
         ? escapeMiniCart(d.error)
