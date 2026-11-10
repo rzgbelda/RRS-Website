@@ -927,6 +927,156 @@ function logCheckoutFailure(stage, message, extra) {
   } catch (err) {}
 }
 
+/* =========================
+   CART ACKNOWLEDGMENT + QUOTE THIS CART (Eric's Part B, B4 / B4b)
+========================= */
+// ONE sentence with an unticked checkbox, "Read more" for the rest. The
+// checkout button stays off until it is ticked. The exact wording (with its
+// version) goes to the order through checkout's deliveryAckText, which
+// api/create-order.js writes to the acknowledgements table with the order
+// id and timestamp. Revised wording from Eric: change it here, bump version.
+const RRS_ACK = {
+  version: "cart-ack-v1 (2026-11-11)",
+  short: "I understand my order goes to the supplier within two business days, then ships — most orders arrive within about a week — and my packages may arrive on different days.",
+  more: [
+    "The supplier ships it from there. Shipping usually takes 2 to 5 business days — your cart shows the estimated delivery dates for your address before you pay.",
+    "Delivery dates are estimates, not guarantees — carrier delays, weather, area conditions, and holidays can move them.",
+    "If your date slips, we notify you, and you can cancel for a full refund any time before it ships.",
+    "Full details are in the Terms of Sale.",
+  ],
+};
+function rrsAckFullText() {
+  return `[${RRS_ACK.version}] ${RRS_ACK.short} ${RRS_ACK.more.join(" ")}`;
+}
+function rrsAckAccepted() {
+  try {
+    const a = JSON.parse(sessionStorage.getItem("rrs_cart_ack") || "null");
+    return !!(a && a.version === RRS_ACK.version);
+  } catch (e) { return false; }
+}
+function rrsAckSet(on) {
+  try {
+    if (on) sessionStorage.setItem("rrs_cart_ack", JSON.stringify({ version: RRS_ACK.version, at: new Date().toISOString() }));
+    else sessionStorage.removeItem("rrs_cart_ack");
+  } catch (e) {}
+}
+// Draws the checkbox + Read more into `host`. Starts UNticked. onChange(bool).
+function rrsMountAck(host, onChange, startTicked) {
+  if (!host) return;
+  const more = RRS_ACK.more.map((t, i) => i === RRS_ACK.more.length - 1
+    ? `<li>Full details are in the <a href="/terms" target="_blank" rel="noopener">Terms of Sale</a>.</li>`
+    : `<li>${t}</li>`).join("");
+  host.innerHTML =
+    `<div class="cart-ack">` +
+      `<label class="cart-ack-row"><input type="checkbox" id="cartAckBox"${startTicked ? " checked" : ""}><span>${RRS_ACK.short}</span></label>` +
+      `<button type="button" class="cart-ack-more" id="cartAckMoreBtn" aria-expanded="false">Read more</button>` +
+      `<ul class="cart-ack-extra" id="cartAckExtra" hidden>${more}</ul>` +
+    `</div>`;
+  const box = document.getElementById("cartAckBox");
+  box.addEventListener("change", () => { rrsAckSet(box.checked); if (onChange) onChange(box.checked); });
+  const btn = document.getElementById("cartAckMoreBtn"), ex = document.getElementById("cartAckExtra");
+  btn.addEventListener("click", () => {
+    const open = ex.hidden;
+    ex.hidden = !open;
+    btn.setAttribute("aria-expanded", String(open));
+    btn.textContent = open ? "Show less" : "Read more";
+  });
+}
+
+// "Quote this cart": sends the cart to us through the same quote-request
+// function /quote uses (saves to quote_requests, emails sales@), guests
+// allowed. The buyer is told a written quote, delivered total included,
+// will follow.
+function openCartQuote() {
+  const cart = getCart();
+  if (!cart.length) return;
+  let m = document.getElementById("cartQuoteModal");
+  if (m) m.remove();
+  const zip = (document.getElementById("cart-zip") || {}).value || (typeof savedShipZip === "function" ? savedShipZip() : "") || "";
+  m = document.createElement("div");
+  m.id = "cartQuoteModal";
+  m.className = "cq-overlay";
+  m.innerHTML =
+    `<div class="cq-modal" role="dialog" aria-modal="true" aria-labelledby="cqTitle">` +
+      `<button type="button" class="cq-close" aria-label="Close" onclick="document.getElementById('cartQuoteModal').remove()">&times;</button>` +
+      `<h3 id="cqTitle">Quote this cart</h3>` +
+      `<p class="cq-sub">We’ll send your cart to our team and reply with a written quote, delivered total included.</p>` +
+      `<form id="cqForm" novalidate>` +
+        `<label>Contact name*<input id="cqName" autocomplete="name"></label>` +
+        `<label>Business name<input id="cqBiz" autocomplete="organization"></label>` +
+        `<label>Email*<input id="cqEmail" type="email" autocomplete="email"></label>` +
+        `<label>Delivery ZIP*<input id="cqZip" inputmode="numeric" maxlength="5" autocomplete="postal-code" value="${String(zip).replace(/\D/g, "").slice(0, 5)}"></label>` +
+        `<label>Notes<textarea id="cqNotes" rows="2" placeholder="Anything we should know?"></textarea></label>` +
+        `<p class="cq-err" id="cqErr" hidden></p>` +
+        `<button type="submit" class="cq-send" id="cqSend">Send my cart</button>` +
+      `</form>` +
+    `</div>`;
+  document.body.appendChild(m);
+  m.addEventListener("click", e => { if (e.target === m) m.remove(); });
+  // Prefill from checkout details / the signed-in account.
+  try {
+    const co = JSON.parse(localStorage.getItem("rrs_checkout_data") || "{}") || {};
+    if (co.contact) document.getElementById("cqName").value = co.contact;
+    if (co.business) document.getElementById("cqBiz").value = co.business;
+    if (co.email) document.getElementById("cqEmail").value = co.email;
+  } catch (e) {}
+  if (window.sb) window.sb.auth.getUser().then(({ data }) => {
+    const em = data && data.user && data.user.email;
+    const f = document.getElementById("cqEmail");
+    if (em && f && !f.value) f.value = em;
+  }).catch(() => {});
+
+  document.getElementById("cqForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const v = id => (document.getElementById(id).value || "").trim();
+    const err = document.getElementById("cqErr"), send = document.getElementById("cqSend");
+    const fail = msg => { err.textContent = msg; err.hidden = false; };
+    err.hidden = true;
+    if (!v("cqName")) return fail("Please enter a contact name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v("cqEmail"))) return fail("Please enter a valid email address.");
+    if (!/^\d{5}$/.test(v("cqZip"))) return fail("Please enter a 5-digit delivery ZIP.");
+    send.disabled = true; send.textContent = "Sending…";
+    let userId = null;
+    try { if (window.sb) { const { data } = await window.sb.auth.getUser(); userId = data && data.user ? data.user.id : null; } } catch (e) {}
+    const lines = getCart();
+    let sub = 0;
+    lines.forEach(i => { sub += (Number(typeof cleanPrice === "function" ? cleanPrice(i.price) : i.price) || 0) * (Number(i.quantity) || 1); });
+    const deliveryTxt = (document.getElementById("cart-delivery") || {}).textContent || "";
+    const notes = `[QUOTE THIS CART] Cart subtotal $${sub.toFixed(2)}; delivery ZIP ${v("cqZip")}` +
+      (/^\$/.test(deliveryTxt) ? `; delivery shown in cart ${deliveryTxt}` : "") + "." +
+      (v("cqNotes") ? " Buyer notes: " + v("cqNotes") : "");
+    try {
+      const res = await fetch("https://giprkvlyouwfzjlaibkq.supabase.co/functions/v1/quote-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: PRODUCTS_SUPABASE_ANON },
+        body: JSON.stringify({
+          business_name: v("cqBiz") || v("cqName"),
+          contact_name: v("cqName"),
+          email: v("cqEmail"),
+          shipping_zip: v("cqZip"),
+          notes,
+          requested_items: lines.map(i => ({ name: i.name, quantity: Number(i.quantity) || 1, sku: i.itemNumber || i.sku || null, unit: i.unit || null, source: "cart" })),
+          user_id: userId,
+          marketing_opt_in: false,
+          affiliate_subdomain: (typeof getAffiliateSubdomain === "function" ? getAffiliateSubdomain() : null),
+        }),
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || "Could not send");
+      if (typeof gtag === "function") gtag("event", "generate_lead", { currency: "USD", lead_type: "cart_quote", value: sub });
+      document.querySelector("#cartQuoteModal .cq-modal").innerHTML =
+        `<button type="button" class="cq-close" aria-label="Close" onclick="document.getElementById('cartQuoteModal').remove()">&times;</button>` +
+        `<h3>Got it — your cart is with our team</h3>` +
+        `<p class="cq-sub">We’ll reply to <strong>${v("cqEmail").replace(/</g, "&lt;")}</strong> with a written quote, delivered total included. Your cart stays here in the meantime.</p>` +
+        `<button type="button" class="cq-send" onclick="document.getElementById('cartQuoteModal').remove()">Close</button>`;
+    } catch (e) {
+      send.disabled = false; send.textContent = "Send my cart";
+      fail("We couldn’t send that just now. Please try again, or call (252) 616-0088.");
+      try { logCheckoutFailure("quote_cart", String(e && e.message || e)); } catch (x) {}
+    }
+  });
+}
+
 function updateCartBadge() {
   const cart = getCart();
   updateMoqGroupBar(cart);
@@ -1114,7 +1264,9 @@ function enforceCartMinimums(cart) {
     }
   }
   if (btn) {
-    if (below.length || groupShortfalls.length) {
+    const ackBox = document.getElementById("cartAckBox");
+    const ackBlocked = !!(ackBox && !ackBox.checked);
+    if (below.length || groupShortfalls.length || ackBlocked) {
       btn.setAttribute("aria-disabled", "true");
       btn.style.pointerEvents = "none";
       btn.style.opacity = ".55";
@@ -3653,15 +3805,15 @@ function renderProductFaq(product) {
   let q2Answer;
   if (product.weight && dims.length === 3) {
     q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs and ships in a carton measuring `
-      + `${dims.join('" × ')}". We process orders within 1&ndash;2 business days, then ship them as parcel or `
+      + `${dims.join('" × ')}". We process orders within two business days, then ship them as parcel or `
       + `palletized freight, whichever suits your order size &mdash; see our `
       + `<a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else if (product.weight) {
     q2Answer = `This ${unitRaw} weighs approximately ${product.weight} lbs. We process orders within `
-      + `1&ndash;2 business days, then ship them as parcel or palletized freight, whichever suits your order size `
+      + `two business days, then ship them as parcel or palletized freight, whichever suits your order size `
       + `&mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   } else {
-    q2Answer = `We process orders within 1&ndash;2 business days, then ship them as parcel or `
+    q2Answer = `We process orders within two business days, then ship them as parcel or `
       + `palletized freight, whichever suits your order size &mdash; see our <a href="/shipping-policy">Shipping Policy</a> for details.`;
   }
   const q2 = {

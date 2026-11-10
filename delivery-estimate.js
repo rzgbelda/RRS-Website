@@ -5,7 +5,7 @@
  * date reads as a promise, a range reads honest.
  *
  * Per supplier (final update package, 2026-10-13): RRS transmits the order
- * to the supplier within 1-2 business days after payment, and the
+ * to the supplier within two business days after payment, and the
  * supplier's own delivery time (from the RRS Supplier Information Report,
  * 2026-10-13) starts at the supplier's order acknowledgement, AFTER that.
  * So each supplier's range is

@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Checkout | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20261110b" />
+  <link rel="stylesheet" href="style.css?v=20261111b" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -389,6 +389,8 @@
 </div>
 
 <div class="special-instructions">
+  <label for="checkout-po">PO Number <span style="font-weight:400;color:#94a3b8">(optional)</span></label>
+  <input type="text" id="checkout-po" maxlength="60" placeholder="Your purchase order number, if you use one" autocomplete="off" style="width:100%;box-sizing:border-box;padding:11px 14px;border:1.5px solid #d0d7e0;border-radius:8px;font-size:14px;margin-bottom:14px">
   <label>Notes or Special Instructions</label>
   <textarea id="checkout-notes" placeholder="Any special delivery instructions, preferred brands, or other notes?"></textarea>
 </div>
@@ -440,7 +442,8 @@
            wording shown (see api/create-order.js / deliveryAckText) so
            there is evidence of what was on screen, even though it's no
            longer gating submission. -->
-      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+      <div id="ackCheckoutHost"></div>
+      <p class="cart-delivery-ack" id="ackDeliveryEstimateText">I understand my order goes to the supplier within two business days, then ships &mdash; most orders arrive within about a week &mdash; and my packages may arrive on different days. Delivery dates are estimates, not guarantees. Details are in the <a href="/terms" target="_blank" rel="noopener">Terms of Sale</a>.</p>
 
       <div id="checkoutFormError" role="alert" style="display:none"></div>
 
@@ -486,7 +489,7 @@
 <script src="zip-states.js?v=20261028a"></script>
 <script src="delivery-estimate.js?v=20261013n"></script>
 <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261111a"></script>
+  <script src="script.js?v=20261111b"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
@@ -655,6 +658,11 @@ let checkoutZipStateWarned = '';
 // complete; otherwise shows the first problem and returns false.
 function validateCheckoutDetails() {
   const val = id => (document.getElementById(id)?.value || '').trim();
+  if (typeof rrsAckAccepted === 'function' && !rrsAckAccepted()) {
+    showCheckoutError('Please tick the box to confirm you understand the delivery timing before continuing.');
+    document.getElementById('ackCheckoutHost')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return false;
+  }
   if (!val('checkout-business') && !val('checkout-contact')) {
     showCheckoutError('Please enter a contact name (or a business name).', 'checkout-contact');
     return false;
@@ -765,7 +773,8 @@ async function saveCheckoutAndProceed() {
     // api/create-order.js with the exact wording so the order's audit row
     // shows what was on screen.
     deliveryAck: true,
-    deliveryAckText: document.getElementById('ackDeliveryEstimateText')?.textContent || '',
+    deliveryAckText: (typeof rrsAckFullText === 'function') ? rrsAckFullText() : (document.getElementById('ackDeliveryEstimateText')?.textContent || ''),
+    po:       document.getElementById('checkout-po')?.value.trim().slice(0, 60) || '',
   };
   // Business name is optional -- RRS sells to homes, rentals and salons too.
   // A contact name is required instead (with phone, email and the full
@@ -799,6 +808,14 @@ async function saveCheckoutAndProceed() {
 }
 </script>
 
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    if (typeof rrsAckAccepted === 'function' && !rrsAckAccepted() && typeof rrsMountAck === 'function') {
+      document.getElementById('ackDeliveryEstimateText').style.display = 'none';
+      rrsMountAck(document.getElementById('ackCheckoutHost'), function () { clearCheckoutError && clearCheckoutError(); });
+    }
+  });
+</script>
 </body>
 
 

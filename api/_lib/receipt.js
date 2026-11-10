@@ -217,7 +217,7 @@ async function generateReceiptPdf(order) {
   // What happens next
   {
     const parts = [st.paid || order.payment_status === 'processing'
-      ? 'Your order is confirmed. It is transmitted to the supplier within 1-2 business days after payment is confirmed; transit time is additional. Tracking details are emailed when it ships.'
+      ? 'Your order is confirmed. It is transmitted to the supplier within two business days after payment is confirmed; transit time is additional. Tracking details are emailed when it ships.'
       : 'We have received your order. It is confirmed when your payment is accepted.'];
     if (order.deliveryRange) parts.push(`Estimated delivery: ${order.deliveryRange} (an estimate, not a guaranteed date).`);
     const note = pdfSafe(parts.join(' '));
@@ -275,7 +275,7 @@ function receiptEmailHtml(order) {
       ${order.deliveryRange ? `
       <div style="background:#fff;border:1.5px solid #e2e8f0;border-radius:10px;padding:14px 20px;margin-bottom:20px;">
         <p style="font-size:14px;color:#334155;margin:0;"><strong>Estimated delivery:</strong> ${esc(order.deliveryRange)}</p>
-        <p style="font-size:12px;color:#64748b;margin:6px 0 0;line-height:1.5;">Your order is transmitted to the supplier within 1&ndash;2 business days after payment is confirmed; transit time is additional. Delivery dates are estimates and may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+        <p style="font-size:12px;color:#64748b;margin:6px 0 0;line-height:1.5;">Your order is transmitted to the supplier within two business days after payment is confirmed; transit time is additional. Delivery dates are estimates and may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
       </div>` : ''}
       <p style="font-size:13px;color:#94a3b8;margin:0;">
         Questions? Email us at <a href="mailto:sales@roomreadysupply.com" style="color:#0B1F38;font-weight:600;">sales@roomreadysupply.com</a>

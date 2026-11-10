@@ -18,7 +18,7 @@
   <link rel="icon" type="image/png" href="/Favicon.png">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Your Cart | Room Ready Supply</title>
-  <link rel="stylesheet" href="style.css?v=20261110b" />
+  <link rel="stylesheet" href="style.css?v=20261111b" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 
@@ -169,11 +169,27 @@
 
     <p id="cartMoqWarning" style="display:none;background:#fff7ed;border:1.5px solid #fdba74;border-radius:9px;padding:11px 14px;margin-bottom:12px;font-size:13px;color:#9a3412;font-weight:600;line-height:1.5"></p>
 
-    <p class="cart-delivery-ack">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+    <p class="cart-terms-earned">Terms are earned here. Your first six orders are prepaid — pay by card, or call us to arrange ACH. After six paid orders with us, you can apply for terms.</p>
+
+    <div id="cartAckHost"></div>
 
     <a href="/checkout" class="checkout-btn" id="cartCheckoutBtn">
     Proceed to Checkout
     </a>
+    <button type="button" class="cart-quote-btn" id="cartQuoteBtn" onclick="openCartQuote()">Quote this cart</button>
+    <script>
+      // Acknowledgment starts UNticked on every cart load; the checkout
+      // button stays off until it is ticked (enforceCartMinimums reads it).
+      (function () {
+        function go() {
+          if (typeof rrsMountAck !== 'function') return setTimeout(go, 50);
+          rrsAckSet(false);
+          rrsMountAck(document.getElementById('cartAckHost'), function () { enforceCartMinimums(getCart()); });
+          enforceCartMinimums(getCart());
+        }
+        document.addEventListener('DOMContentLoaded', go);
+      })();
+    </script>
 
     <div class="summary-benefits">
 
@@ -232,7 +248,7 @@
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261111a"></script>
+  <script src="script.js?v=20261111b"></script>
   <script src="ghl-chat.js?v=20261028a" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 

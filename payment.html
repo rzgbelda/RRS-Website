@@ -19,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Payment | Room Ready Supply</title>
   <meta name="robots" content="noindex, nofollow" />
-  <link rel="stylesheet" href="style.css?v=20261110b" />
+  <link rel="stylesheet" href="style.css?v=20261111b" />
   <script src="https://js.stripe.com/v3/"></script>
 </head>
 
@@ -216,7 +216,7 @@
           <div class="payment-total-inline" aria-live="polite"><span>Total to pay</span><strong id="payment-total-inline">Calculating&hellip;</strong></div>
 
           <div class="payment-submit-row">
-            <p class="cart-delivery-ack">I acknowledge that the order is confirmed and transmitted to the supplier within 1&ndash;2 days after payment is confirmed, that transit time is additional and varies by destination and shipping method, and that any delivery estimate may be affected by carrier delays, area conditions, weather, holidays, or other circumstances beyond Room Ready Supply's control.</p>
+            <p class="cart-delivery-ack">I understand my order goes to the supplier within two business days, then ships &mdash; most orders arrive within about a week &mdash; and my packages may arrive on different days. Delivery dates are estimates, not guarantees. Details are in the <a href="/terms" target="_blank" rel="noopener">Terms of Sale</a>.</p>
             <div class="submit-order-group">
               <button id="submitOrderBtn" class="review-btn" onclick="handlePaymentSubmit(event)">
                 <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><rect x="4" y="10" width="16" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
@@ -374,7 +374,7 @@
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
   <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261111a"></script>
+  <script src="script.js?v=20261111b"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -967,6 +967,7 @@
               reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
               reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
               // Ticked at checkout; api/create-order.js writes the audit row.
+              po_number: checkout.po || '',
               delivery_ack: !!checkout.deliveryAck,
               delivery_ack_text: checkout.deliveryAckText || '',
               cart_items: cartItems,
@@ -1183,6 +1184,7 @@
                 reorder_custom_dates: checkout.orderType === 'reorder' ? (checkout.reorderCustomDates || null) : null,
                 reorder_active: checkout.orderType === 'reorder' && !!checkout.reorderNextDate,
               // Ticked at checkout; api/create-order.js writes the audit row.
+              po_number: checkout.po || '',
               delivery_ack: !!checkout.deliveryAck,
               delivery_ack_text: checkout.deliveryAckText || '',
                 stripe_payment_intent_id: pi.id,

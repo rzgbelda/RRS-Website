@@ -162,6 +162,8 @@ module.exports = async (req, res) => {
     reorder_custom_dates: b.reorder_custom_dates || null,
     reorder_active:       !!b.reorder_active,
   };
+  // Buyer's purchase order number (checkout PO field).
+  if (b.po_number && String(b.po_number).trim()) orderData.po_number = String(b.po_number).trim().slice(0, 60);
 
   if (!orderData.order_number) return res.status(400).json({ error: 'order_number is required' });
 

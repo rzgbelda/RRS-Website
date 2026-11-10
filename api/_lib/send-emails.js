@@ -121,7 +121,7 @@ function customerEmailHtml(order) {
     '<div style="background:#fffbf7;border:1.5px solid #fde8d4;border-radius:12px;padding:20px;margin-bottom:28px;">' +
     '<h2 style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;color:#ED7226;margin:0 0 14px;">What Happens Next</h2>' +
     '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x2705; <strong>Order received</strong> — we\'re reviewing your order now.</p>' +
-    '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x1F4E6; <strong>Order transmitted to supplier</strong> — within 1&ndash;2 business days of payment.</p>' +
+    '<p style="font-size:14px;color:#334155;margin:0 0 8px;">&#x1F4E6; <strong>Order transmitted to supplier</strong> — within two business days of payment.</p>' +
     '<p style="font-size:14px;color:#334155;margin:0;">&#x1F69A; <strong>Dispatch & tracking</strong> — you\'ll get tracking info when your order ships.</p>' +
     '</div>' +
 
