@@ -4805,7 +4805,7 @@ let _cartDeliverySeq = 0;
 // the delivery price in a box; the page does not change or reload. Real
 // dates only -- if the cart cannot be priced there are NO dates, and the
 // quote path (Quote this cart) is offered instead.
-function showDeliveryQuotePopup(zip, price, range) {
+function showDeliveryQuotePopup(zip, price, range, badZip) {
   let m = document.getElementById('deliveryQuoteModal');
   if (m) m.remove();
   m = document.createElement('div');
@@ -4822,6 +4822,11 @@ function showDeliveryQuotePopup(zip, price, range) {
           `<p class="cq-sub">Your order goes to the supplier within two business days, then ships. Dates are estimates, not guarantees.</p>`
         : '') +
       `<button type="button" class="cq-send" id="dqOk">OK</button>`;
+  } else if (badZip) {
+    body =
+      `<h3>Please double-check your ZIP code</h3>` +
+      `<p class="cq-sub"><strong>${zip}</strong> doesn\u2019t look like a valid delivery ZIP code, so we can\u2019t price delivery yet. Please check the digits and try again.</p>` +
+      `<button type="button" class="cq-send" id="dqFix">Re-enter ZIP</button>`;
   } else {
     body =
       `<h3>We can\u2019t price delivery to ${zip} right now</h3>` +
@@ -4834,6 +4839,8 @@ function showDeliveryQuotePopup(zip, price, range) {
   m.addEventListener('click', e => { if (e.target === m) close(); });
   m.querySelector('.cq-close').addEventListener('click', close);
   const ok = m.querySelector('#dqOk'); if (ok) ok.addEventListener('click', close);
+  const fix = m.querySelector('#dqFix');
+  if (fix) fix.addEventListener('click', () => { close(); const z = document.getElementById('cart-zip'); if (z) { z.focus(); z.select(); } });
   const q = m.querySelector('#dqQuote'); if (q) q.addEventListener('click', () => { close(); openCartQuote(); });
 }
 
@@ -4891,9 +4898,10 @@ function refreshCartDelivery(itemsTotal, showPopup) {
       if (showPopup) showDeliveryQuotePopup(zipEl.value.trim(), d.shipping, range);
       return;
     }
-    el.textContent = 'Unavailable';
+    const badZip = !!(d && d.shippingUnavailable === 'badzip');
+    el.textContent = badZip ? 'Check ZIP' : 'Unavailable';
     el.style.color = '#b91c1c';
-    if (showPopup) showDeliveryQuotePopup(zipEl.value.trim(), null, null);
+    if (showPopup) showDeliveryQuotePopup(zipEl.value.trim(), null, null, badZip);
     if (problem && !(d && d.error && /^Almost there/.test(d.error))) {
       problem.innerHTML = (d && d.error)
         ? escapeMiniCart(d.error)
