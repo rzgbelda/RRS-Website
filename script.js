@@ -3156,6 +3156,7 @@ function populateProductPage(product) {
         if (mins[i] && prices[i] && next && next <= eachMoq) { mins[i] = null; prices[i] = 0; }
       });
     }
+    setText("tier3Sub", eachSold ? "Best Price Per Piece" : "Best Price Per Case");
     setText("tier2Badge", "VOLUME");
     document.getElementById("tier2Badge")?.classList.remove("best-value");
     setText("tier3Badge", "BEST VALUE");
