@@ -4084,7 +4084,9 @@ function cvtApplyDozenTiers(rowObjs) {
     r.unit = "Dozen";
     const perCase = parseInt(r.moq, 10);
     if (perCase > 1) {
-      const t2 = parseInt(r.tier2_min_qty, 10), t3 = parseInt(r.tier3_min_qty, 10);
+      const t1 = parseInt(r.tier1_min_qty, 10), t2 = parseInt(r.tier2_min_qty, 10), t3 = parseInt(r.tier3_min_qty, 10);
+      // Tier 1 starts at the minimum order: 1 case = perCase dozen.
+      if (t1 > 0 && t1 < perCase) r.tier1_min_qty = String(perCase);
       if (t2 > 0 && t2 <= 6) r.tier2_min_qty = String(t2 * perCase);
       if (t3 > 0 && t3 <= 30) r.tier3_min_qty = String(t3 * perCase);
       // Weight is NOT converted here. The site wants lbs per dozen, but the

@@ -3428,6 +3428,12 @@ function renderProductMoq(product) {
   } else if (unit === "piece" && casePack && moq === Number(casePack)) {
     rows.push(["Minimum order", `1 case (${casePack} pieces)`]);
     rows.push(["Order in", `Full cases: ${casePack}, ${casePack * 2}, ${casePack * 3}&hellip; pieces`]);
+  } else if (dozen && moq > 1) {
+    // Starlinen: priced per dozen, sold by the case; moq = dozens per case.
+    const pcs = info && info.count ? ` (${(moq * info.count).toLocaleString()} ${plural(moq * info.count, info.noun)})` : "";
+    rows.push(["Minimum order", `1 case`]);
+    rows.push(["Case size", `${moq} dozen = 1 case${pcs}`]);
+    rows.push(["Order in", `Full cases: ${moq}, ${moq * 2}, ${moq * 3}&hellip; dozen`]);
   } else {
     // No "(12 pieces)" suffix: it was read as a minimum of 12. The pieces
     // per dozen are on the "In each dozen" row below.
@@ -3442,7 +3448,10 @@ function renderProductMoq(product) {
   const mins = [tierMinQty(product, "tier2_min_qty", "tier2MinQty"), tierMinQty(product, "tier3_min_qty", "tier3MinQty")]
     .filter((m, i) => m && cleanPrice([product.price2, product.price3][i]));
   if (mins.length) {
-    rows.push(["Volume pricing", `Lower price from ${mins.map(m => `${m}+ ${unitPl(m)}`).join(" and from ")} of this item`]);
+    // Dozen products sold by the case count their tiers in cases (60 dozen = 6 cases).
+    const byCase = dozen && moq > 1 && mins.every(m => m % moq === 0);
+    rows.push(["Volume pricing", `Lower price from ${mins.map(m => byCase
+      ? `${m / moq}+ cases (${m} dozen)` : `${m}+ ${unitPl(m)}`).join(" and from ")} of this item`]);
   }
 
   body.innerHTML = `<dl class="pp-moq-list">${rows.map(([k, v]) =>
