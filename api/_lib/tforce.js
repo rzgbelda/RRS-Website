@@ -147,19 +147,54 @@ function palletMaxLb(distributor) {
   return map[slug] || Number(process.env.TFORCE_PALLET_MAX_LB) || 750;
 }
 
+// Pallet count for a shipment. When every line knows its own pallet count
+// (NPS: an order is whole pallets, qty / cases-per-pallet -- see
+// price-cart.js), that is the real number; otherwise it is estimated from
+// weight. NPS by weight overcounted: 70 cases of 21250 is ONE 1,370 lb pallet,
+// rated as two at 1,000 lb a pallet.
+function palletCount({ weightLb, distributor, lines }) {
+  const known = Array.isArray(lines) && lines.length && lines.every(l => Number(l.pallets) > 0);
+  if (known) return Math.max(1, Math.ceil(lines.reduce((s, l) => s + Number(l.pallets), 0) - 1e-9));
+  return Math.max(1, Math.ceil(weightLb / palletMaxLb(distributor)));
+}
+
 // One rate for `weightLb` of palletised freight from `origin` to `dest`.
 // Returns { amount, service, transitDays } or throws.
-async function rateFreight({ origin, dest, weightLb, liftgate, distributor }) {
+//
+// Above TFORCE_MAX_PALLETS (default 6, ~10 linear ft) TForce bills a
+// volume/truckload quote the API can't give, so a bigger order is rated as
+// several LTL shipments of up to that many pallets, and the charges summed.
+// Before 2026-11-10 it was refused outright, which made NPS's 9+ pallet tier
+// (and any order past 6 pallets) impossible to check out. Separate LTL
+// shipments are the upper bound of what that freight costs, never a guess
+// below it. Above TFORCE_MAX_SPLIT shipments (default 4, i.e. 24 pallets) it
+// is truckload territory and still refused.
+async function rateFreight({ origin, dest, weightLb, liftgate, distributor, lines }) {
+  const pallets = palletCount({ weightLb, distributor, lines });
+  const maxPallets = Number(process.env.TFORCE_MAX_PALLETS) || 6;
+  if (pallets <= maxPallets) return rateLtl({ origin, dest, weightLb, liftgate, distributor, pallets });
+
+  const maxSplit = Number(process.env.TFORCE_MAX_SPLIT) || 4;
+  const full = Math.floor(pallets / maxPallets);
+  const rest = pallets - full * maxPallets;
+  if (full + (rest ? 1 : 0) > maxSplit) throw new Error(`${pallets} pallets needs a volume/truckload quote`);
+  const perPallet = weightLb / pallets;
+  // Full shipments are identical, so one rate covers them all; sequential
+  // calls, to stay under TForce's rate limit.
+  const big = await rateLtl({ origin, dest, weightLb: perPallet * maxPallets, liftgate, distributor, pallets: maxPallets });
+  const small = rest ? await rateLtl({ origin, dest, weightLb: perPallet * rest, liftgate, distributor, pallets: rest }) : null;
+  const amount = Math.round((big.amount * full + (small ? small.amount : 0)) * 100) / 100;
+  const transitDays = Math.max(Number(big.transitDays) || 0, Number(small && small.transitDays) || 0) || big.transitDays;
+  return { amount, service: big.service, transitDays, shipments: full + (rest ? 1 : 0) };
+}
+
+async function rateLtl({ origin, dest, weightLb, liftgate, distributor, pallets }) {
   // The portal lists an Ocp-Apim-Subscription-Key header, but TForce's
   // integration guide only describes OAuth and a fresh developer profile has
   // no subscription to take a key from -- so it is sent only when set.
   const key = process.env.TFORCE_SUBSCRIPTION_KEY;
   const token = await getToken();
 
-  const maxPallet = palletMaxLb(distributor);
-  const pallets = Math.max(1, Math.ceil(weightLb / maxPallet));
-  const maxPallets = Number(process.env.TFORCE_MAX_PALLETS) || 6;
-  if (pallets > maxPallets) throw new Error(`${pallets} pallets needs a volume/truckload quote`);
   const dims = palletDims(distributor);
   // Billed weight includes the pallets themselves, as on a real BOL.
   const tare = process.env.TFORCE_PALLET_TARE_LB != null ? Number(process.env.TFORCE_PALLET_TARE_LB) : 40;
@@ -399,4 +434,4 @@ async function createBol({ shipFrom, shipTo, freight, pickup, requester, liftgat
   };
 }
 
-module.exports = { rateFreight, getToken, createBol, classForDensity, palletMaxLb, palletDims };
+module.exports = { rateFreight, getToken, createBol, classForDensity, palletMaxLb, palletDims, palletCount };

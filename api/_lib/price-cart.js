@@ -343,9 +343,14 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
     // stored dimensions are the CASE box, so they only apply to a full case
     // (see usableDims() in shipping.js).
     const caseMatch = String(row.name || '').match(/Case of (\d+)/i);
+    // NPS sells by the pallet: moq = cases in one pallet and an order is a
+    // whole multiple of it (enforced above), so the pallet count is exact.
+    // TForce uses it instead of guessing pallets from weight (tforce.js).
+    const isNps = String(row.distributor || '').trim().toLowerCase() === 'nps';
     shipLines.push({
       distributor: row.distributor || null, weightLb: lineWeight, length: row.length, width: row.width, height: row.height,
       quantity: qty, caseQty: caseMatch ? Number(caseMatch[1]) : null,
+      ...(isNps && moq > 1 ? { pallets: qty / moq } : {}),
     });
 
     lines.push({ sku, name: row.name, category_name: row.category_name || null, quantity: qty, unitPrice });
