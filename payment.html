@@ -374,7 +374,7 @@
   <script src="supabase.js"></script>
   <script src="tax-rates.js"></script>
   <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261110f"></script>
+  <script src="script.js?v=20261111a"></script>
 
   <div id="orderModal" class="order-modal">
   <div class="order-modal-content">
@@ -1261,6 +1261,7 @@
     };
 
     function showError(msg) {
+      try { if (typeof logCheckoutFailure === 'function') logCheckoutFailure('payment', msg); } catch (e) {}
       var el = document.getElementById('payment-error-msg');
       el.textContent = msg;
       el.style.display = 'block';

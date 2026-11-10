@@ -8953,10 +8953,19 @@ async function renderVisitorInsightsTab() {
       </div>
       <div id="viCartsBox" class="vi-carts"><div class="vi-loading">Loading…</div></div>
     </section>
+
+    <section class="vi-card">
+      <div class="vi-card-head">
+        <h2>Checkout failures <span id="viFailCount" class="vi-chip"></span></h2>
+        <p>Every error a buyer hit in checkout or payment: when, what they saw, and what was in their cart. Newest first (last 100).</p>
+      </div>
+      <div id="viFailBox" class="vi-carts"><div class="vi-loading">Loading…</div></div>
+    </section>
    </div>`;
 
   renderVisitorFunnel();
   renderAbandonedCarts();
+  renderCheckoutFailures();
 }
 
 // PostgREST caps an unbounded select at 1000 rows -- with a few hundred
@@ -9083,6 +9092,38 @@ function viAgo(iso) {
   if (h < 1) return "less than an hour ago";
   if (h < 24) return `${h} hour${h === 1 ? "" : "s"} ago`;
   return `${d} day${d === 1 ? "" : "s"} ago`;
+}
+
+async function renderCheckoutFailures() {
+  const box = document.getElementById("viFailBox");
+  if (!box) return;
+  const { data, error } = await window.sb.from("checkout_failures")
+    .select("*").order("occurred_at", { ascending: false }).limit(100);
+  if (error) {
+    box.innerHTML = `<p class="vi-error">Couldn't load: ${escHtml(error.message)}<br><span>If this says a table is missing, run the 20261111d migration.</span></p>`;
+    return;
+  }
+  const chip = document.getElementById("viFailCount");
+  if (chip) chip.textContent = (data || []).length ? String(data.length) : "";
+  if (!data || !data.length) {
+    box.innerHTML = `<p class="vi-empty-line">No checkout failures recorded.</p>`;
+    return;
+  }
+  box.innerHTML = data.map(r => {
+    const when = new Date(r.occurred_at).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    const items = (Array.isArray(r.cart) ? r.cart : []).map(i => `<li><span class="vi-qty">${escHtml(i.qty)}×</span> ${escHtml(i.name)} <small>${escHtml(i.sku || "")}</small></li>`).join("");
+    const who = [r.email, r.zip ? "ZIP " + r.zip : "", r.user_id ? "signed in" : "guest"].filter(Boolean).join(" · ");
+    return `
+      <article class="vi-cart">
+        <div class="vi-cart-head">
+          <div><p class="vi-cart-name">${escHtml(r.stage)} · ${escHtml(when)}</p>
+            <p class="vi-cart-email">${escHtml(who)}</p></div>
+          <p class="vi-cart-value">$${(Number(r.cart_total) || 0).toFixed(2)}</p>
+        </div>
+        <p style="margin:6px 0">${escHtml(r.message)}</p>
+        ${items ? `<ul class="vi-cart-items">${items}</ul>` : ""}
+      </article>`;
+  }).join("");
 }
 
 async function renderAbandonedCarts() {

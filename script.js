@@ -781,28 +781,45 @@ function saveCart(cart) {
 // change already runs through (confirmed: no other file calls saveCart
 // directly), so this is the only hook needed to stay in sync.
 let _cartSyncInFlight = false;
+let _cartSyncQueued = null;      // latest cart that arrived while a sync was running
+let _cartRestoring = false;      // true while restoreServerCart() runs: don't wipe the mirror
+let _cartMirrorHasItem = true;   // false if the item column (20261111c) isn't migrated yet
 async function syncServerCart(cart) {
+  if (_cartRestoring) return;
+  if (_cartSyncInFlight) { _cartSyncQueued = cart; return; }
   try {
-    if (!window.sb || _cartSyncInFlight) return;
+    if (!window.sb) return;
     _cartSyncInFlight = true;
     const { data } = await window.sb.auth.getUser();
     const userId = data?.user?.id;
-    if (!userId) { _cartSyncInFlight = false; return; }
+    if (!userId) return;
 
     // Full replace rather than a diff: carts here are a handful of line
     // items at most, and computing an add/update/remove diff client-side
     // buys nothing a delete-then-reinsert doesn't already give for free.
     await window.sb.from("cart_mirror").delete().eq("user_id", userId);
     if (cart && cart.length) {
-      const rows = cart.map(i => ({
-        user_id: userId,
-        product_sku: i.itemNumber || i.sku || "",
-        product_name: i.name || "",
-        quantity: Number(i.quantity) || 1,
-        price_snapshot: (typeof cleanPrice === "function" ? cleanPrice(i.price || i.price1 || 0) : Number(i.price || i.price1 || 0)) || 0,
-      })).filter(r => r.product_sku);
+      const rows = cart.map(i => {
+        const row = {
+          user_id: userId,
+          product_sku: i.itemNumber || i.sku || "",
+          product_name: i.name || "",
+          quantity: Number(i.quantity) || 1,
+          price_snapshot: (typeof cleanPrice === "function" ? cleanPrice(i.price || i.price1 || 0) : Number(i.price || i.price1 || 0)) || 0,
+        };
+        // The whole line, so the cart can be rebuilt on another device or
+        // after the browser's storage is cleared (restoreServerCart below).
+        if (_cartMirrorHasItem) row.item = i;
+        return row;
+      }).filter(r => r.product_sku);
       if (rows.length) {
-        const { error } = await window.sb.from("cart_mirror").insert(rows);
+        let { error } = await window.sb.from("cart_mirror").insert(rows);
+        if (error && _cartMirrorHasItem && /item/i.test(error.message || "")) {
+          // 20261111c migration not run yet: fall back to the old shape.
+          _cartMirrorHasItem = false;
+          rows.forEach(r => { delete r.item; });
+          ({ error } = await window.sb.from("cart_mirror").insert(rows));
+        }
         if (error) console.warn("[cart-sync] insert failed:", error.message);
       }
     }
@@ -810,8 +827,44 @@ async function syncServerCart(cart) {
     console.warn("[cart-sync] failed:", err && err.message);
   } finally {
     _cartSyncInFlight = false;
+    if (_cartSyncQueued) {
+      const next = _cartSyncQueued;
+      _cartSyncQueued = null;
+      syncServerCart(next);
+    }
   }
 }
+
+// A signed-in buyer whose browser cart is empty (new device, cleared site
+// data, private window) gets their saved cart back from cart_mirror. Only
+// ever fills an EMPTY local cart, so it can't overwrite what they just
+// added; mirror rows older than 30 days are ignored as stale.
+async function restoreServerCart() {
+  try {
+    if (!window.sb) return;
+    if (getCart().length) return;
+    const { data: ud } = await window.sb.auth.getUser();
+    const userId = ud?.user?.id;
+    if (!userId) return;
+    _cartRestoring = true;
+    const since = new Date(Date.now() - 30 * 86400000).toISOString();
+    const { data, error } = await window.sb.from("cart_mirror")
+      .select("item,product_sku,product_name,quantity,updated_at")
+      .eq("user_id", userId).gte("updated_at", since);
+    if (error || !data || !data.length) return;
+    const lines = data.map(r => r.item).filter(it => it && it.name && (it.itemNumber || it.sku));
+    if (!lines.length || getCart().length) return;
+    localStorage.setItem("cart", JSON.stringify(lines));
+    updateCartBadge();
+    // Pages that draw the cart once on load need a fresh pass.
+    if (/^\/(cart|checkout|payment)(\.html)?$/.test(location.pathname)) location.reload();
+  } catch (err) {
+    console.warn("[cart-restore] failed:", err && err.message);
+  } finally {
+    _cartRestoring = false;
+  }
+}
+document.addEventListener("DOMContentLoaded", () => { restoreServerCart(); });
 
 // Called once an order is actually placed (order-confirmation.html) so a
 // completed purchase's items are never mistaken for an abandoned cart by
@@ -826,6 +879,52 @@ async function clearServerCart() {
   } catch (err) {
     console.warn("[cart-sync] clear failed:", err && err.message);
   }
+}
+
+/* =========================
+   CHECKOUT FAILURE LOG (Admin > Visitor Insights > Checkout failures)
+========================= */
+// Fire-and-forget record of an error a buyer hit in checkout/payment: what
+// stage, the message shown, and the cart at that moment. Never throws and
+// never blocks the buyer. Plain REST insert so it works with or without
+// window.sb (20261111d migration).
+function logCheckoutFailure(stage, message, extra) {
+  try {
+    const cart = getCart();
+    let total = 0;
+    cart.forEach(i => { total += (Number(typeof cleanPrice === "function" ? cleanPrice(i.price) : i.price) || 0) * (Number(i.quantity) || 1); });
+    let email = null, zip = null;
+    try {
+      const co = JSON.parse(localStorage.getItem("rrs_checkout_data") || "null") || {};
+      email = co.email || null;
+      zip = co.zip || co.shippingZip || (co.shipping && co.shipping.zip) || null;
+    } catch (e) {}
+    const row = Object.assign({
+      session_id: getTrackingSessionId(),
+      stage: String(stage || "unknown").slice(0, 60),
+      message: String(message || "").slice(0, 1000) || "(no message)",
+      path: location.pathname || "/",
+      email, zip,
+      cart: cart.map(i => ({ sku: i.itemNumber || i.sku || null, name: i.name, qty: i.quantity, price: i.price })),
+      cart_total: Math.round(total * 100) / 100,
+      user_agent: (navigator.userAgent || "").slice(0, 200),
+    }, extra || {});
+    const post = (userId) => {
+      if (userId) row.user_id = userId;
+      fetch(`${PRODUCTS_SUPABASE_URL}/rest/v1/checkout_failures`, {
+        method: "POST", keepalive: true,
+        headers: {
+          apikey: PRODUCTS_SUPABASE_ANON,
+          Authorization: `Bearer ${PRODUCTS_SUPABASE_ANON}`,
+          "Content-Type": "application/json",
+          Prefer: "return=minimal",
+        },
+        body: JSON.stringify(row),
+      }).catch(() => {});
+    };
+    if (window.sb) window.sb.auth.getUser().then(({ data }) => post(data?.user?.id || null)).catch(() => post(null));
+    else post(null);
+  } catch (err) {}
 }
 
 function updateCartBadge() {

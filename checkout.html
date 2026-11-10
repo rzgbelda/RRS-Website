@@ -486,7 +486,7 @@
 <script src="zip-states.js?v=20261028a"></script>
 <script src="delivery-estimate.js?v=20261013n"></script>
 <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261110f"></script>
+  <script src="script.js?v=20261111a"></script>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <style>
   /* Matches .summary-note's own 22px/18px rhythm (style.css, "CART &
@@ -714,6 +714,7 @@ async function saveCheckoutAndProceed() {
   try { quote = await fetchCheckoutQuote(); } catch (e) {}
   if (!quote || quote.error || quote.shippingUnavailable || typeof quote.shipping !== 'number') {
     loadCheckoutProducts();
+    try { logCheckoutFailure('delivery_quote', (quote && quote.error) || 'Delivery could not be priced' + (quote && quote.shippingUnavailable ? ' (' + quote.shippingUnavailable + ')' : ''), { zip: ((document.getElementById('checkout-zip') || {}).value || null) }); } catch (e) {}
     showCheckoutError((quote && quote.error) || "We couldn't calculate delivery right now. Please try again in a minute, or call (252) 616-0088.", quote && quote.shippingUnavailable === 'badzip' ? 'checkout-zip' : null);
     return;
   }
