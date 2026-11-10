@@ -3382,8 +3382,11 @@ function populateProductPage(product) {
   const moqNote = document.getElementById("moqNote");
   if (moqNote) {
     const moq = productMoq(product);
-    const show = moq > 1;
-    moqNote.style.display = show ? "" : "none";
+    // CEO (2026-11-11): the "Sold by the case -- N dozen per case (N, 2N,
+    // 3N...)" line is removed from every product. The Minimum Order Quantity
+    // card and the quantity stepper still state and enforce the minimum.
+    const show = false;
+    moqNote.style.display = "none";
     if (show) {
       moqNote.textContent = isSoldByDozen(product)
         ? `Sold by the case — ${moq} dozen per case (${moq}, ${moq * 2}, ${moq * 3}…)`

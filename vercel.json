@@ -97,6 +97,21 @@
   ],
   "redirects": [
     {
+      "source": "/economy",
+      "destination": "/catalog",
+      "permanent": false
+    },
+    {
+      "source": "/premium",
+      "destination": "/catalog",
+      "permanent": false
+    },
+    {
+      "source": "/luxury",
+      "destination": "/catalog",
+      "permanent": false
+    },
+    {
       "source": "/category/guest-amenities",
       "destination": "/catalog",
       "permanent": true
