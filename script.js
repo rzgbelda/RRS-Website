@@ -3113,7 +3113,17 @@ function populateProductPage(product) {
     // A case pack's price is per piece/set/pair, not per case.
     // A dozen-sold product (Starlinen) is priced per dozen and its counts
     // are in dozens: "1 case = 6 dozen", not "1 case = 6 case".
-    const unitLower = isCasePack || isSoldByDozen(product) ? moqUnitWord(product) : unitWord.toLowerCase();
+    // A product priced by the piece (unit Each: mattress encasements, pads,
+    // pillow protectors, comforters) has tiers counted in pieces at a
+    // per-piece price, so its cards say "piece", not "case" -- a buyer reading
+    // "$68.99 per case" for a single encasement is told the wrong thing
+    // (2026-11-11). Its first tier can sit below the minimum order (tier 1 =
+    // 1-5 pieces, minimum 12), which nobody can buy, so that card is dropped.
+    const eachSold = /^(each|ea|piece|pc)$/.test(String(product.priceBy || product.unit || "").trim().toLowerCase()) &&
+      !isCasePack && !product.moqGroup;
+    const eachMoq = eachSold ? Math.max(1, productMoq(product) || 1) : 1;
+    const unitLower = eachSold ? "piece"
+      : isCasePack || isSoldByDozen(product) ? moqUnitWord(product) : unitWord.toLowerCase();
     // What the tiers count: whole pallets for a case-priced pallet product
     // (NPS), whole cases for a dozen-priced one (Starlinen) or a case pack.
     const orderWord = isSoldByDozen(product) || isCasePack ? "Case" : "Pallet";
@@ -3140,6 +3150,12 @@ function populateProductPage(product) {
     });
     // Badges reset every render (a variant switch re-runs this), then the
     // last card shown is the best value whether there are two or three.
+    if (eachMoq > 1) {
+      [0, 1, 2].forEach(i => {
+        const next = mins.slice(i + 1).find((m, j) => m && prices[i + 1 + j]);
+        if (mins[i] && prices[i] && next && next <= eachMoq) { mins[i] = null; prices[i] = 0; }
+      });
+    }
     setText("tier2Badge", "VOLUME");
     document.getElementById("tier2Badge")?.classList.remove("best-value");
     setText("tier3Badge", "BEST VALUE");
@@ -3178,7 +3194,9 @@ function populateProductPage(product) {
           : hi === lo ? `${lo} ${plural(lo)}`
           : `${lo}–${hi} ${plural(hi)}`;
       } else {
-        label = nextMin ? `${min}–${nextMin - 1} ${unitWord}s` : `${min}+ ${unitWord}s`;
+        const word = eachSold ? "Pieces" : `${unitWord}s`;
+        const lo = Math.max(min, eachMoq);
+        label = nextMin ? `${lo}–${nextMin - 1} ${word}` : `${lo}+ ${word}`;
       }
 
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
