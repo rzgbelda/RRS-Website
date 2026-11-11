@@ -487,16 +487,9 @@
                  date. The checkout acknowledgment checkbox keeps the
                  original legal wording. -->
             <strong>Fast Order Processing</strong>
-            <p>Your order goes to the supplier within two business days of payment, then ships direct from the supplier&rsquo;s warehouse to your door.</p>
+            <p id="ppShipText">Your order goes to the supplier within two business days of payment, then ships direct from the supplier&rsquo;s warehouse to your door.</p>
           </div>
-
-          <div>
-            <!-- Was "Ships from our local warehouse", which is not true:
-                 RRS dropships, so each order ships from the supplier's own
-                 warehouse (NPS in WI, Starlinen in NJ, ...). -->
-            <strong class="stock">&#10003; In Stock</strong>
-            <p>Ships direct from our supplier&rsquo;s warehouse</p>
-          </div>
+          <!-- "In Stock" block removed (Eric, 2026-11-12): stock is handled at cart level. -->
         </div>
 
         <ul class="product-assurance">
@@ -596,8 +589,8 @@
 
   </section>
 
-  <script src="linen-meta.js?v=20261110a"></script>
-  <script src="script.js?v=20261111d"></script>
+  <script src="linen-meta.js?v=20261112a"></script>
+  <script src="script.js?v=20261112a"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 </body>

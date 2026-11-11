@@ -258,6 +258,13 @@
   // lack. Anything else is returned unchanged.
   function optionLabel(p, label) {
     label = String(label || "");
+    // Eric (2026-11-12): no "Pack of 12" / "Case of 12" in the option
+    // buttons of dozen-sold linens -- they are priced and sold by the dozen,
+    // so the pack wording only adds case language. Case packs of pieces
+    // ("Case of 36") stay: they tell apart SKUs of different sizes.
+    if (kind(p) === "bedding" || kind(p) === "towel") {
+      label = label.split(" - ").map(s => s.trim()).filter(s => s && !/^(Pack|Case) of 12$/i.test(s)).join(" - ");
+    }
     if (kind(p) !== "towel") return label;
     const f = fields(p);
     const lb = lbPerDozen(p);
@@ -333,7 +340,7 @@
       add("Material", towelMaterial(p));
       add("Color", color(f));
       if (/Pack of 12/i.test(pack)) {
-        add("Packaging", "12 towels (1 dozen) per pack. Towels are counted, priced and reordered by the dozen, so one pack is one dozen, ready for your linen-room par.");
+        add("Packaging", "Sold by the dozen: 12 towels. Towels are counted, priced and reordered by the dozen, ready for your linen-room par.");
       } else if (caseN) {
         add("Packaging", `${caseN} pieces per case, priced per piece. Packed by the case for efficient bulk ordering, shipping and linen-room storage.`);
       }
@@ -352,7 +359,7 @@
       add("Material", fabric(p, tc));
       add("Color", color(f));
       if (/Pack of 12|Case of 12$/i.test(pack) && !/Pieces/i.test(pack)) {
-        add("Packaging", "12 pieces (1 dozen) per pack. Bedding is priced and reordered by the dozen to match how housekeeping stocks rooms.");
+        add("Packaging", "Sold by the dozen: 12 pieces. Bedding is priced and reordered by the dozen to match how housekeeping stocks rooms.");
       } else if (caseN) {
         add("Packaging", `${caseN} pieces per case, priced per piece. Packed by the case for efficient bulk ordering and linen-room storage.`);
       } else if (/1 Piece|1 Each/i.test(pack) || !pack) {

@@ -456,6 +456,8 @@ function mapDbProductToLegacyShape(row) {
     // from stock/category -- see the migration comment on
     // products.is_fast_ship for why this has to stay a human decision.
     isFastShip: !!row.is_fast_ship,
+    // Neutral shipping tag (20261112_ship_profile.sql); the supplier itself never reaches the browser.
+    shipProfile: row.ship_profile || "",
     // Whether the distributor can supply this right now. Defaults to true
     // when the column is absent (an older cached row, or a feed that
     // carries no stock data) so a missing field never silently makes a
@@ -505,7 +507,7 @@ const CATALOG_COLUMNS = [
 // Best Deal fields (20261006_best_deal_pricing.sql). Requested separately so
 // that, if the view doesn't have them yet, the catalog retries without them
 // instead of failing to load (PostgREST rejects unknown columns).
-const CATALOG_DEAL_COLUMNS = "is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3";
+const CATALOG_DEAL_COLUMNS = "is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3,ship_profile";
 
 // 5 minutes: long enough that browsing (catalog -> product -> cart) reuses
 // one download, short enough that admin edits show up quickly. Add
@@ -3611,6 +3613,16 @@ function populateProductPage(product) {
     addBtn.disabled = ppOut;
     const ppAddLabel = document.getElementById("ppAddLabel");
     if (ppAddLabel) ppAddLabel.textContent = ppOut ? "OUT OF STOCK" : "ADD TO CART";
+  }
+
+  // Shipping details per supplier (Eric, 2026-11-12). Untagged products keep
+  // the generic text in the template. Stock status is handled at cart level,
+  // so the product page no longer shows an "In Stock" block.
+  const ppShip = document.getElementById("ppShipText");
+  if (ppShip) {
+    const TAIL = " Delivery is 3 to 5 business days after it ships. Your exact delivery dates show at checkout before you pay.";
+    if (product.shipProfile === "same_day_3pm") ppShip.textContent = "Order before 3 PM Eastern, ships same day." + TAIL;
+    else if (product.shipProfile === "ships_1_2") ppShip.textContent = "Ships within 1 to 2 business days." + TAIL;
   }
 
   // Mirrors the button state in the delivery panel beside it.
