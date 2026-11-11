@@ -38,7 +38,7 @@ const CATALOG_COLUMNS = [
   'meta_title','meta_description',
 ].join(',');
 // Mirrors CATALOG_DEAL_COLUMNS in script.js.
-const CATALOG_DEAL_COLUMNS = 'is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3';
+const CATALOG_DEAL_COLUMNS = 'is_best_deal,regular_price,regular_price_tier1,regular_price_tier2,regular_price_tier3,ship_profile';
 const SELECT = 'sku,name,description,overview,image_url,pack_size,price,price_tier1,category_name,meta_title,meta_description,weight,in_stock,moq,moq_group,unit,product_tier,feature1,feature2,feature3,feature4';
 
 /* ── the HTML shell ──────────────────────────────────────────── */

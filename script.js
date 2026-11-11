@@ -512,7 +512,7 @@ const CATALOG_DEAL_COLUMNS = "is_best_deal,regular_price,regular_price_tier1,reg
 // 5 minutes: long enough that browsing (catalog -> product -> cart) reuses
 // one download, short enough that admin edits show up quickly. Add
 // ?fresh to any URL to bypass it (handy right after editing a product).
-const CATALOG_CACHE_KEY = "rrs_catalog_cache_v2"; // v2: carries Best Deal fields
+const CATALOG_CACHE_KEY = "rrs_catalog_cache_v3"; // v3: carries ship_profile (v2: Best Deal fields)
 const CATALOG_CACHE_TTL_MS = 5 * 60 * 1000;
 function readCatalogCache() {
   try {
