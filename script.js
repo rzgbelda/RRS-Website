@@ -3218,17 +3218,9 @@ function populateProductPage(product) {
   // Update "Per Case" unit label dynamically
   const pricingBoxP = document.querySelector(".pricing-box p");
   if (pricingBoxP) pricingBoxP.textContent = `Per ${product.priceBy || "Case"}`;
-  const boxItem = itemPriceInfo(product, price);
-  let boxItemEl = document.getElementById("ppItemPrice");
-  if (boxItem && pricingBoxP) {
-    if (!boxItemEl) {
-      boxItemEl = document.createElement("p");
-      boxItemEl.id = "ppItemPrice";
-      boxItemEl.className = "pp-item-price";
-      pricingBoxP.insertAdjacentElement("afterend", boxItemEl);
-    }
-    boxItemEl.textContent = `${boxItem.text} · ${boxItem.count.toLocaleString()} per ${String(product.priceBy || "case").toLowerCase()}`;
-  } else if (boxItemEl) boxItemEl.remove();
+  // Eric (2026-11-12): no "per roll / per case" line under the price box; it read as
+  // confusing. The box says "Per Case"; the per-piece figure stays in the tier cards.
+  { const stale = document.getElementById("ppItemPrice"); if (stale) stale.parentNode.removeChild(stale); }
 
   setText("specName", product.name);
   setText("specItemNumber", product.itemNumber);
@@ -3454,6 +3446,8 @@ function populateProductPage(product) {
       }
 
       setText(`tier${i + 1}Price`, `$${price.toFixed(2)}`);
+      // "$36.58 / case": the price is shown per its ordering unit (Eric, 2026-11-12).
+      { const pe = document.getElementById(`tier${i + 1}Price`); if (pe) pe.innerHTML = `$${price.toFixed(2)}<small class="tier-unit"> / ${unitLower}</small>`; }
       // Best Deal: the regular price for this tier, struck through.
       const priceEl = document.getElementById(`tier${i + 1}Price`);
       // Item price right under the case price (CEO, 2026-11-10): the
@@ -3522,11 +3516,6 @@ function populateProductPage(product) {
     }
   }
 
-  // The Bulk Pricing dropdown promises "volume pricing is automatic" -- only
-  // true when the tier cards above actually show a price break.
-  const bulkVolume = document.getElementById("ppBulkVolume");
-  if (bulkVolume) bulkVolume.hidden = !tierCardsEl || tierCardsEl.style.display === "none" ||
-    (isSoldByDozen(product) && !dozenHasTiers(product));
 
   const altText = product.size ? `${product.name} – ${product.size}` : product.name;
   const mainImage = document.getElementById("mainProductImage");

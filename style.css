@@ -11584,7 +11584,7 @@ html.rrs-quote-only .pp-price-cta {
 .price-block .price-each:empty { display: none; }
 .pp-item-price { margin-top: 4px; font-size: 13px; font-weight: 700; color: #0d2c50; }
 
-.pp-below-layout { grid-template-columns: 1.3fr 1fr 1.3fr; }
+.pp-below-layout { grid-template-columns: 1fr 1fr; }
 @media (max-width: 1100px) {
   .pp-below-layout { grid-template-columns: 1fr 1fr; }
   .pp-below-layout .pp-faq-card { grid-column: 1 / -1; }
@@ -11630,3 +11630,6 @@ html.rrs-quote-only .pp-price-cta {
 
 .dq-price { font-size: 34px; font-weight: 800; margin: 4px 0 8px; color: #0f172a; }
 .dq-dates { font-size: 16px; margin: 0 0 8px; color: #0f172a; }
+
+.tier-card .tier-unit { display: inline; font-size: 14px; font-weight: 600; color: #5B6C7E; }
+.product-info .pp-moq-card { margin-top: 16px; }

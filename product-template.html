@@ -28,7 +28,7 @@
   <meta property="og:url" id="ogUrl" content="">
   <script type="application/ld+json" id="productJsonLd"></script>
   <script type="application/ld+json" id="breadcrumbJsonLd"></script>
-  <link rel="stylesheet" href="style.css?v=20261111c" />
+  <link rel="stylesheet" href="style.css?v=20261112c" />
   <!-- Inline (not in style.css) so this applies before the stylesheet
        finishes loading -- the whole page's real content only exists after
        a client-side fetch (loadProductPage() in script.js) resolves and
@@ -357,28 +357,15 @@
           </div>
         </div>
 
-        <!-- Bulk Pricing & Delivery Options (CEO, 2026-11-08): a closed
-             dropdown so the big-order answers are one click away without
-             pushing the specs down. Facts match the buy box, the tier cards
-             and shipping-policy.html; the phone number is swapped by
-             applySiteContact() like everywhere else. -->
-        <details class="pp-accordion" id="ppBulkInfo">
-          <summary>
-            <span class="pp-acc-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>
-            </span>
-            Bulk Pricing &amp; Delivery Options
-          </summary>
-          <div class="pp-acc-body">
-            <ul>
-              <li id="ppBulkVolume"><strong>Volume pricing is automatic.</strong> The more of this item you order, the lower the price per unit. The breaks are shown in the price cards on this page.</li>
-              <li><strong>Large or multi-property orders:</strong> call <a href="tel:2526160088">(252) 616-0088</a> or <a href="/quote">send us your list</a> for a custom quote.</li>
-              <li><strong>Delivery:</strong> orders go to the supplier within two business days of payment and ship direct from the supplier&rsquo;s warehouse, by parcel or LTL freight depending on size. We ship within the US only.</li>
-              <li><strong>Auto-Reorder:</strong> set a delivery schedule and save an extra 5% on every order.</li>
-            </ul>
-            <p class="pp-acc-note">Ask about bulk pricing for high-volume properties. <a href="/shipping-policy">Shipping policy</a></p>
+        <!-- Minimum Order Quantity (CEO, 2026-11-12): under Specifications and
+             Key Features at the full width of both, in place of the old
+             "Bulk Pricing & Delivery Options" dropdown. Filled by renderProductMoq(). -->
+        <section class="detail-card pp-moq-card" id="ppMoqCard">
+          <div class="tabs">
+            <h3>Minimum Order Quantity</h3>
           </div>
-        </details>
+          <div id="ppMoqBody"></div>
+        </section>
 
       </div>
 
@@ -526,16 +513,6 @@
         </p>
       </section>
 
-      <!-- Minimum Order Quantity (CEO, 2026-11-10): its own card between
-           Overview and Common Questions -- what the smallest order is, what
-           is inside one unit and what each piece costs. Filled by
-           renderProductMoq() in script.js. -->
-      <section class="detail-card pp-moq-card" id="ppMoqCard">
-        <div class="tabs">
-          <h3>Minimum Order Quantity</h3>
-        </div>
-        <div id="ppMoqBody"></div>
-      </section>
 
       <!-- Two FAQs, generated from this product's own real data (case/dozen
            quantity, weight, dimensions, MOQ) rather than written per-SKU by
@@ -590,7 +567,7 @@
   </section>
 
   <script src="linen-meta.js?v=20261112a"></script>
-  <script src="script.js?v=20261112b"></script>
+  <script src="script.js?v=20261112c"></script>
   <script src="ghl-chat.js?v=20260930a" defer></script>
 
 </body>
