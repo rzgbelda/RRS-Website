@@ -4601,6 +4601,26 @@ async function runCsvImport() {
       errLines.push(`"${r.name}": ${badField} "${r[badField]}" is not a valid number — row skipped, nothing imported for it.`);
       return;
     }
+    // Tier sanity (launch-readiness sweep 2026-11-11): a tier that is $0 or
+    // that costs MORE than a smaller-quantity tier is always a typing/sheet
+    // error (the Starlinen sheet had $0 tiers, a tier 2 of $3,393.65 and a
+    // tier 3 that went up). Reject the row, keep the product's current good
+    // prices, and say exactly what is wrong.
+    const tierVals = [[1, tier1Info], [2, tier2Info], [3, tier3Info]]
+      .filter(([, t]) => !t.empty);
+    const zeroTier = tierVals.find(([, t]) => !(t.value > 0));
+    if (zeroTier) {
+      invalidValueCount++;
+      errLines.push(`"${r.name}": price_tier${zeroTier[0]} must be greater than 0 — row skipped, nothing imported for it.`);
+      return;
+    }
+    for (let i = 1; i < tierVals.length; i++) {
+      if (tierVals[i][1].value > tierVals[i - 1][1].value) {
+        invalidValueCount++;
+        errLines.push(`"${r.name}": price_tier${tierVals[i][0]} ($${tierVals[i][1].value}) is higher than price_tier${tierVals[i - 1][0]} ($${tierVals[i - 1][1].value}) — a bigger quantity can't cost more. Row skipped, nothing imported for it.`);
+        return;
+      }
+    }
     rows.push(r);
   });
   const skippedTotal = csvDupCount + dbDupCount + missingPriceCount + invalidValueCount;

@@ -290,7 +290,7 @@ ${cat.intro.map(p => `      <p>${esc(p)}</p>`).join('\n')}
     <section class="cat-cta">
       <div>
         <h2>Need pricing for a whole property?</h2>
-        <p>Send us your list and we will quote it at your case volume, usually the same day.</p>
+        <p>Send us your list and we will quote it at your case volume within 1 business day.</p>
       </div>
       <a href="/quote">Case Pricing</a>
     </section>
