@@ -1328,8 +1328,10 @@ function cartMoqGroupShortfalls(cart) {
 // in api/_lib/price-cart.js, which is what actually charges the card. If
 // the rate changes it MUST change in both, or the customer is shown one
 // number and charged another.
-const REORDER_DISCOUNT_RATE = 0.05;
-const REORDER_DISCOUNT_LABEL = "5%";
+// Owner decision 2026-11-13: NO extra reorder discount. Rate is 0 so every
+// discount row/line stays hidden; the reorder schedule itself still works.
+const REORDER_DISCOUNT_RATE = 0;
+const REORDER_DISCOUNT_LABEL = "0%";
 
 // Shipping allowance per packaged pound. Same duplication constraint as the
 // reorder rate above: the authoritative copy is SHIPPING_RATE_PER_LB in
@@ -3482,7 +3484,7 @@ function populateProductPage(product) {
       // The reorder 5% stacks on every tier, so show the real best price
       // here rather than leaving it to look like the top tier is the floor.
       const reorderEl = document.getElementById(`tier${i + 1}Reorder`);
-      if (reorderEl) reorderEl.innerHTML = `<b>$${(price * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)}</b> with Auto-Reorder`;
+      if (reorderEl) reorderEl.innerHTML = "";
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
         ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitsLower}`
@@ -4623,7 +4625,7 @@ function setupProductQuantity() {
       b.setAttribute("aria-checked", active ? "true" : "false");
     });
     if (freqWrap) freqWrap.style.display = reorder ? "" : "none";
-    if (addLabel) addLabel.textContent = reorder ? "START AUTO-REORDER — EXTRA 5% OFF" : "ADD TO CART";
+    if (addLabel) addLabel.textContent = reorder ? "START AUTO-REORDER" : "ADD TO CART";
   }
 
   if (modeOnce)    modeOnce.onclick    = () => setPurchaseMode("once");
