@@ -1328,10 +1328,8 @@ function cartMoqGroupShortfalls(cart) {
 // in api/_lib/price-cart.js, which is what actually charges the card. If
 // the rate changes it MUST change in both, or the customer is shown one
 // number and charged another.
-// Owner decision 2026-11-13: NO extra reorder discount. Rate is 0 so every
-// discount row/line stays hidden; the reorder schedule itself still works.
-const REORDER_DISCOUNT_RATE = 0;
-const REORDER_DISCOUNT_LABEL = "0%";
+const REORDER_DISCOUNT_RATE = 0.05;
+const REORDER_DISCOUNT_LABEL = "5%";
 
 // Shipping allowance per packaged pound. Same duplication constraint as the
 // reorder rate above: the authoritative copy is SHIPPING_RATE_PER_LB in
@@ -3484,7 +3482,7 @@ function populateProductPage(product) {
       // The reorder 5% stacks on every tier, so show the real best price
       // here rather than leaving it to look like the top tier is the floor.
       const reorderEl = document.getElementById(`tier${i + 1}Reorder`);
-      if (reorderEl) reorderEl.innerHTML = "";
+      if (reorderEl) reorderEl.innerHTML = `<b>$${(price * (1 - REORDER_DISCOUNT_RATE)).toFixed(2)}</b> with Auto-Reorder`;
       setText(`tier${i + 1}Label`, label);
       setText(`tier${i + 1}Sub`, byPallet
         ? `Per ${unitLower} · ${nextMin ? `${startQty}–${nextMin - 1}` : `${startQty}+`} ${unitsLower}`
@@ -4625,7 +4623,7 @@ function setupProductQuantity() {
       b.setAttribute("aria-checked", active ? "true" : "false");
     });
     if (freqWrap) freqWrap.style.display = reorder ? "" : "none";
-    if (addLabel) addLabel.textContent = reorder ? "START AUTO-REORDER" : "ADD TO CART";
+    if (addLabel) addLabel.textContent = reorder ? "START AUTO-REORDER — EXTRA 5% OFF" : "ADD TO CART";
   }
 
   if (modeOnce)    modeOnce.onclick    = () => setPurchaseMode("once");
@@ -4784,7 +4782,7 @@ function loadCartPage() {
       estimatedTotalEl.closest(".summary-row, .summary-total")?.before(discountRow);
     }
     discountRow.innerHTML =
-      `<span>Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})</span>` +
+      `<span>Auto Reorder Discount &mdash; ${REORDER_DISCOUNT_LABEL}</span>` +
       `<strong>&minus;$${discount.toFixed(2)}</strong>`;
     discountRow.style.display = "";
   } else if (discountRow) {
@@ -5230,7 +5228,7 @@ function loadCheckoutProducts() {
     }
     if (coDiscountRow) {
       coDiscountRow.innerHTML =
-        `<span>Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})</span>` +
+        `<span>Auto Reorder Discount &mdash; ${REORDER_DISCOUNT_LABEL}</span>` +
         `<strong>&minus;$${discount.toFixed(2)}</strong>`;
       coDiscountRow.style.display = "";
     }
@@ -5558,7 +5556,7 @@ function renderCheckoutDiscount(d) {
       choiceEl.innerHTML =
         '<strong style="display:block;font-size:12.5px">One discount per order — pick one:</strong>' +
         opt('coupon', isCoupon, `Coupon ${escapeMiniCart(c.code)} (&minus;${money(c.discount)})`) +
-        opt('reorder', !isCoupon, `Reorder Program 5% (&minus;${money(d.reorderDiscount)})`);
+        opt('reorder', !isCoupon, `Auto Reorder Discount &mdash; 5% (&minus;${money(d.reorderDiscount)})`);
       choiceEl.style.display = '';
     } else {
       choiceEl.style.display = 'none';
@@ -5577,7 +5575,7 @@ function renderCheckoutDiscount(d) {
     if (row) {
       const label = d.discountKind === 'coupon' && c
         ? `Coupon ${escapeMiniCart(c.code)}`
-        : `Reorder Program (&minus;${REORDER_DISCOUNT_LABEL})`;
+        : `Auto Reorder Discount &mdash; ${REORDER_DISCOUNT_LABEL}`;
       row.innerHTML = `<span>${label}</span><strong>&minus;${money(d.discount)}</strong>`;
       row.style.display = '';
     }
@@ -7581,7 +7579,7 @@ function updateMiniCart() {
   const mcDiscount = reorderDiscountAmount(subtotal, cart);
   const reorderNote = mcDiscount > 0
     ? `<p class="mc-tier mc-tier-ship">
-         <strong>Reorder Program &minus;${REORDER_DISCOUNT_LABEL}</strong>
+         <strong>Auto Reorder Discount &mdash; ${REORDER_DISCOUNT_LABEL}</strong>
          <span>&minus;$${mcDiscount.toFixed(2)} applied at checkout</span>
        </p>`
     : "";

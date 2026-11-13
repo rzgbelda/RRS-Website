@@ -366,7 +366,7 @@ async function priceCart(items, state, fulfillmentMethod, destination, opts = {}
   // browser script with no exports, so the rate cannot be shared by
   // reference, and if the two disagree the customer is shown one number
   // and charged another.
-  const REORDER_DISCOUNT_RATE = 0; // owner decision 2026-11-13: no extra reorder discount
+  const REORDER_DISCOUNT_RATE = 0.05;
   const reorderDiscount = hasReorder
     ? Math.round(subtotal * REORDER_DISCOUNT_RATE * 100) / 100
     : 0;

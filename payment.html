@@ -251,7 +251,7 @@
                Reorder Program. Hidden by default so it never implies a
                discount the charge won't include. -->
           <div class="payment-summary-line" id="payment-discount-line" style="display:none;color:#15803d">
-            <span id="payment-discount-label">Reorder Program (&minus;5%)</span>
+            <span id="payment-discount-label">Auto Reorder Discount &mdash; 5%</span>
             <strong id="payment-discount">&minus;$0.00</strong>
           </div>
           <!-- A coupon carried over from checkout that the server no longer
@@ -763,7 +763,7 @@
       if (discLine && discEl) {
         if (disc > 0) {
           discEl.textContent = '−$' + disc.toFixed(2);
-          if (discLabel) discLabel.textContent = data.discountKind === 'coupon' && cpn ? 'Coupon ' + cpn.code : 'Reorder Program (−5%)';
+          if (discLabel) discLabel.textContent = data.discountKind === 'coupon' && cpn ? 'Coupon ' + cpn.code : 'Auto Reorder Discount — 5%';
           discLine.style.display = '';
         } else {
           discLine.style.display = 'none';
